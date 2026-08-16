@@ -1,0 +1,596 @@
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+
+import '../../core/models/models.dart';
+import '../../core/store/app_store.dart';
+import '../../core/utils/date_range.dart';
+import '../../core/utils/formatters.dart';
+import '../../shared/widgets/section_header.dart';
+import '../../shared/widgets/swipe_actions.dart';
+import '../../theme/app_colors.dart';
+import '../quick_add/quick_add_sheet.dart';
+import 'ledger_scope.dart';
+import 'widgets/ledger_txn_row.dart';
+import 'widgets/period_row.dart';
+
+/// The transaction list, scoped to everything / a group / one account.
+///
+/// Group and account ledgers are this one widget with a different
+/// [LedgerScope] — see [LedgerScope] for why they are not two screens.
+class ScopedLedgerScreen extends StatefulWidget {
+  const ScopedLedgerScreen({super.key, required this.initialScope});
+
+  final LedgerScope initialScope;
+
+  @override
+  State<ScopedLedgerScreen> createState() => _ScopedLedgerScreenState();
+}
+
+class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
+  late LedgerScope _scope = widget.initialScope;
+  late DateRange _range = RangePreset.thisMonth.resolve(AppStore.today);
+
+  FlowKind? _filter;
+
+  /// Rows the user has deleted but not yet committed. They stay out of the
+  /// list while the undo snackbar is up, so Undo restores them in place with
+  /// their original id and position — deleting from the store and re-adding
+  /// would mint a new id and drop the row at the end.
+  final Set<String> _pendingDelete = {};
+
+  /// A swipe leaves no trace on screen, so it is taught once. Held in memory
+  /// rather than on disk: the project has no persistence layer, and adding one
+  /// would reach past this screen's scope.
+  static bool _hintShown = false;
+
+  Timer? _hintTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    if (!_hintShown) {
+      _hintShown = true;
+      // Cancellable so leaving the screen early does not leave it pending.
+      _hintTimer = Timer(
+        const Duration(milliseconds: 600),
+        () => hintSwipeRow(),
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _hintTimer?.cancel();
+    super.dispose();
+  }
+
+  void _setScope(LedgerScope scope) {
+    // Changing scope does not push a route — the switcher is a filter on one
+    // screen, so Back stays one deep however long the user browses.
+    setState(() {
+      _scope = scope;
+      _filter = null;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final store = StoreScope.of(context);
+    final query = LedgerQuery(
+      store: store,
+      scope: _scope,
+      start: _range.start,
+      end: _range.end,
+    );
+
+    final all = query
+        .rows()
+        .where((r) => !_pendingDelete.contains(r.txn.id))
+        .toList();
+    final visible = _filter == null
+        ? all
+        : all.where((r) => r.kind == _filter).toList();
+
+    return Scaffold(
+      backgroundColor: AppColors.formBg,
+      body: SafeArea(
+        bottom: false,
+        child: Column(
+          children: [
+            _navBar(store),
+            _hero(store, query),
+            PeriodRow(
+              range: _range,
+              totalIn: query.totalIn,
+              totalOut: query.totalOut,
+              filter: _filter,
+              onStep: (steps) =>
+                  setState(() => _range = _range.copyShifted(steps)),
+              onPickRange: () => _pickRange(store),
+              // Tapping the active figure again clears it.
+              onFilter: (kind) =>
+                  setState(() => _filter = _filter == kind ? null : kind),
+            ),
+            _toolbar(all.length, visible.length),
+            Expanded(child: _list(visible)),
+            _addButton(store),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Chrome ────────────────────────────────────────────────────────────────
+
+  Widget _navBar(AppStore store) {
+    return SizedBox(
+      height: 42,
+      child: Row(
+        children: [
+          // Always reads Balance: the switcher changes what is shown, it never
+          // pushes, so there is only ever one thing behind this screen.
+          //
+          // Sized to its content rather than a fixed slot — the nav bar has no
+          // centre title to balance against, so a fixed width bought nothing
+          // and clipped the label to "Balan…".
+          Flexible(
+            child: InkWell(
+              onTap: () => Navigator.of(context).pop(),
+              child: const Row(
+                children: [
+                  SizedBox(width: 8),
+                  Icon(Icons.chevron_left_rounded,
+                      size: 17, color: AppColors.accent),
+                  Flexible(
+                    child: Text(
+                      'Balance',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w400,
+                        height: 1.2,
+                        color: AppColors.accent,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const Spacer(),
+          const Padding(
+            padding: EdgeInsets.only(right: 16),
+            child: Icon(Icons.more_horiz_rounded,
+                size: 19, color: AppColors.textSecondary),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Avatar, name-as-scope-switcher, subtitle and balance in one row. The nav
+  /// bar has no centre title precisely because this carries the name — two
+  /// copies of it would just push the list down.
+  Widget _hero(AppStore store, LedgerQuery query) {
+    final colour = _scopeColour(store);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(18, 2, 18, 12),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: colour,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(_scopeIcon(store), size: 20,
+                color: Color.lerp(colour, Colors.black, 0.72)),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                InkWell(
+                  onTap: () => _pickScope(store),
+                  child: ConstrainedBox(
+                    // The switcher is the name itself, so it has to clear 44pt.
+                    constraints: const BoxConstraints(minHeight: 44),
+                    child: Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            _scope.title(store),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: -0.015 * 17,
+                              height: 1.15,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Icon(Icons.keyboard_arrow_down_rounded,
+                            size: 10,
+                            color: AppColors.textPrimary
+                                .withValues(alpha: 0.55)),
+                      ],
+                    ),
+                  ),
+                ),
+                Text(
+                  _metaPrefix(store),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                      fontSize: 12, height: 1.25, color: AppColors.formDim2),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          Text(
+            money(query.balance, signless: true, masked: store.masked),
+            style: const TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w700,
+              letterSpacing: -0.022 * 22,
+              height: 1.15,
+              color: AppColors.textPrimary,
+              fontFeatures: [FontFeature.tabularFigures()],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Color _scopeColour(AppStore store) => switch (_scope) {
+        AllAccountsScope() => AppColors.accent,
+        GroupScope(:final group) => group.color,
+        AccountScope(:final accountId) =>
+          store.accountById(accountId)?.group.color ?? AppColors.accent,
+      };
+
+  IconData _scopeIcon(AppStore store) => switch (_scope) {
+        AllAccountsScope() => Icons.grid_view_rounded,
+        GroupScope(:final group) => group.icon,
+        AccountScope(:final accountId) =>
+          store.accountById(accountId)?.group.icon ?? Icons.wallet_rounded,
+      };
+
+  String _metaPrefix(AppStore store) {
+    switch (_scope) {
+      case AllAccountsScope():
+        return '${store.accounts.length} accounts';
+      case GroupScope(:final group):
+        final n = store.groupCount(group);
+        return '$n ${n == 1 ? 'account' : 'accounts'}  ·  '
+            '${percent(store.groupShare(group))} of '
+            '${group.isAsset ? 'assets' : 'liabilities'}';
+      case AccountScope(:final accountId):
+        final a = store.accountById(accountId);
+        return a == null ? '' : '${a.group.label}  ·  ${a.currency}';
+    }
+  }
+
+  Widget _toolbar(int total, int shown) {
+    final filtered = shown != total;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 11, 16, 8),
+      child: Row(
+        children: [
+          // Doubles as filter feedback.
+          Expanded(
+            child: RichText(
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              text: TextSpan(
+                style: const TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w600,
+                  height: 1.2,
+                  color: AppColors.textSecondary,
+                ),
+                children: [
+                  if (filtered)
+                    TextSpan(
+                      text: '$shown',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                  TextSpan(
+                    text: filtered
+                        ? ' of $total transactions'
+                        : '$total transactions',
+                  ),
+                ],
+              ),
+            ),
+          ),
+          ToolCluster(
+            tools: [
+              Tool(
+                icon: Icons.swap_vert_rounded,
+                tooltip: 'Sort',
+                onTap: () {},
+              ),
+              Tool(
+                icon: Icons.tune_rounded,
+                tooltip: 'Filter',
+                showDot: _filter != null,
+                onTap: () {},
+              ),
+              Tool(
+                icon: Icons.search_rounded,
+                tooltip: 'Search',
+                onTap: () {},
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Prefilled with the scope's account where there is exactly one.
+  Widget _addButton(AppStore store) {
+    final accounts = _scope.accountsIn(store);
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+          16, 8, 16, MediaQuery.paddingOf(context).bottom + 8),
+      child: SizedBox(
+        height: 50,
+        width: double.infinity,
+        child: FilledButton(
+          onPressed: () => showQuickAdd(
+            context,
+            fixedFromAccountId:
+                accounts.length == 1 ? accounts.first.id : null,
+          ),
+          style: FilledButton.styleFrom(
+            backgroundColor: AppColors.accent,
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
+          ),
+          child: const Text(
+            '+  Add expense',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── List ──────────────────────────────────────────────────────────────────
+
+  Widget _list(List<ScopedTxn> rows) {
+    if (rows.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.only(top: 64),
+        child: Text(
+          'No transactions',
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 14, color: AppColors.formDim2),
+        ),
+      );
+    }
+
+    final byDay = <DateTime, List<ScopedTxn>>{};
+    for (final r in rows) {
+      final key = DateTime(r.txn.date.year, r.txn.date.month, r.txn.date.day);
+      byDay.putIfAbsent(key, () => []).add(r);
+    }
+    final groups = (byDay.keys.toList()..sort((a, b) => b.compareTo(a)))
+        .map((d) => DayGroup(date: d, rows: byDay[d]!))
+        .toList();
+
+    return NotificationListener<ScrollStartNotification>(
+      // Scrolling closes an open swipe strip.
+      onNotification: (n) {
+        if (n.dragDetails != null) closeOpenSwipeRow();
+        return false;
+      },
+      child: ListView.builder(
+        padding: const EdgeInsets.only(bottom: 28),
+        itemCount: groups.length,
+        itemBuilder: (context, i) => LedgerDayCard(
+          isFirstCard: i == 0,
+          group: groups[i],
+          scope: _scope,
+          onEdit: (txn) => showQuickAdd(context, editing: txn),
+          // Opens the form on a copy dated today rather than saving silently —
+          // a duplicate appearing unannounced reads as a bug.
+          onCopy: (txn) => showQuickAdd(context, copyOf: txn),
+          onDelete: _deleteWithUndo,
+        ),
+      ),
+    );
+  }
+
+  /// No confirm dialog: a dialog costs every user a tap to guard against a
+  /// mistake undo already fixes better, and undo also covers realising a
+  /// second later, which a dialog does not.
+  void _deleteWithUndo(Txn txn) {
+    setState(() => _pendingDelete.add(txn.id));
+    final store = StoreScope.read(context);
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: const Text('Transaction deleted'),
+          duration: const Duration(seconds: 5),
+          action: SnackBarAction(
+            label: 'Undo',
+            onPressed: () {
+              if (mounted) setState(() => _pendingDelete.remove(txn.id));
+            },
+          ),
+        ),
+      ).closed.then((reason) {
+        if (reason == SnackBarClosedReason.action) return;
+        // Left to expire, or the user navigated away: commit.
+        if (_pendingDelete.remove(txn.id)) store.deleteTxn(txn);
+      });
+  }
+
+  // ── Sheets ────────────────────────────────────────────────────────────────
+
+  Future<void> _pickRange(AppStore store) async {
+    final picked = await showModalBottomSheet<RangePreset>(
+      context: context,
+      backgroundColor: AppColors.surfaceAlt,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            Container(
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.surfaceHigh,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const Padding(
+              padding: EdgeInsets.fromLTRB(20, 16, 20, 8),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Period',
+                  style: TextStyle(
+                    fontSize: 16.5,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+              ),
+            ),
+            for (final p in RangePreset.values)
+              ListTile(
+                title: Text(p.label,
+                    style: const TextStyle(
+                        fontSize: 15, color: AppColors.textPrimary)),
+                trailing: Text(
+                  p.resolve(AppStore.today).label(AppStore.today),
+                  style: const TextStyle(
+                      fontSize: 13.5, color: AppColors.formDim2),
+                ),
+                onTap: () => Navigator.of(sheetContext).pop(p),
+              ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+    if (picked != null) {
+      setState(() => _range = picked.resolve(AppStore.today));
+    }
+  }
+
+  Future<void> _pickScope(AppStore store) async {
+    final picked = await showModalBottomSheet<LedgerScope>(
+      context: context,
+      backgroundColor: AppColors.surfaceAlt,
+      isScrollControlled: true,
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.sizeOf(context).height * 0.76,
+      ),
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            Container(
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.surfaceHigh,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const Padding(
+              padding: EdgeInsets.fromLTRB(20, 16, 20, 8),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Show',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+              ),
+            ),
+            Flexible(
+              child: ListView(
+                shrinkWrap: true,
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.grid_view_rounded,
+                        size: 20, color: AppColors.textSecondary),
+                    title: const Text('All accounts',
+                        style: TextStyle(
+                            fontSize: 15, color: AppColors.textPrimary)),
+                    subtitle: Text(
+                      '${store.accounts.length} accounts · '
+                      '${AccountGroup.values.length} groups',
+                      style: const TextStyle(
+                          fontSize: 11.5, color: AppColors.formDim2),
+                    ),
+                    onTap: () => Navigator.of(sheetContext)
+                        .pop(const AllAccountsScope()),
+                  ),
+                  for (final g in AccountGroup.values)
+                    if (store.groupCount(g) > 0) ...[
+                      ListTile(
+                        leading: Icon(g.icon, size: 20, color: g.color),
+                        title: Text(g.label,
+                            style: const TextStyle(
+                                fontSize: 15, color: AppColors.textPrimary)),
+                        subtitle: Text(
+                          '${store.groupCount(g)} accounts',
+                          style: const TextStyle(
+                              fontSize: 11.5, color: AppColors.formDim2),
+                        ),
+                        onTap: () =>
+                            Navigator.of(sheetContext).pop(GroupScope(g)),
+                      ),
+                      for (final a in store.accountsIn(g))
+                        Padding(
+                          padding: const EdgeInsets.only(left: 40),
+                          child: ListTile(
+                            dense: true,
+                            title: Text(
+                              a.name,
+                              style: const TextStyle(
+                                  fontSize: 14, color: Color(0xFFD4D4D9)),
+                            ),
+                            onTap: () => Navigator.of(sheetContext)
+                                .pop(AccountScope(a.id)),
+                          ),
+                        ),
+                    ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (picked != null) _setScope(picked);
+  }
+}
