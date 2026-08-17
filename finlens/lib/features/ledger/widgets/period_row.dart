@@ -27,11 +27,15 @@ class PeriodRow extends StatelessWidget {
     required this.onStep,
     required this.onPickRange,
     required this.onFilter,
+    this.highlighted = false,
   });
 
   final DateRange range;
   final double totalIn;
   final double totalOut;
+
+  /// Tinted while the period sheet is open (spec §4).
+  final bool highlighted;
 
   /// Null means unfiltered — neither figure active *is* All, so there is no
   /// separate All cell and no clear button.
@@ -51,7 +55,10 @@ class PeriodRow extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 16),
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: AppColors.fieldCard,
+        color: highlighted
+            ? Color.alphaBlend(
+                AppColors.tint(AppColors.accent, 0.16), AppColors.fieldCard)
+            : AppColors.fieldCard,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -99,11 +106,15 @@ class PeriodRow extends StatelessWidget {
                                   ),
                                 ),
                               ),
-                              Icon(
-                                Icons.keyboard_arrow_down_rounded,
-                                size: 9,
-                                color:
-                                    AppColors.textPrimary.withValues(alpha: 0.5),
+                              const SizedBox(width: 2),
+                              // Marks the label as tappable (opens the sheet).
+                              const Text(
+                                '▾',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  height: 1,
+                                  color: AppColors.accentLight,
+                                ),
                               ),
                             ],
                           ),
@@ -225,18 +236,18 @@ class _Figure extends StatelessWidget {
                   color: colour,
                 ),
                 const SizedBox(width: 5),
-                Flexible(
-                  child: Text(
-                    moneyCompact(amount),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 13.5,
-                      fontWeight: FontWeight.w600,
-                      height: 1.2,
-                      color: colour,
-                      fontFeatures: const [FontFeature.tabularFigures()],
-                    ),
+                // Full form ($6,100), never abbreviated and never shrunk — the
+                // label truncates first, the figures hold their ground (spec 3b).
+                Text(
+                  money(amount,
+                      signless: true, masked: StoreScope.of(context).masked),
+                  maxLines: 1,
+                  style: TextStyle(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w600,
+                    height: 1.2,
+                    color: colour,
+                    fontFeatures: const [FontFeature.tabularFigures()],
                   ),
                 ),
               ],
