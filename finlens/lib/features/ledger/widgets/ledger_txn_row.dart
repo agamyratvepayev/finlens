@@ -168,17 +168,100 @@ class LedgerTxnRow extends StatelessWidget {
       FlowKind.outflow => AppColors.amountChildNeg,
     };
 
+    // Line 2 is the free-text description; the meta line carries the account
+    // (dropped where the screen already implies it — account scope — and for a
+    // transfer, whose title already names both sides) and the tag.
+    final note = txn.note.trim();
+    final hasNote = note.isNotEmpty;
+    final accountName = (scope is! AccountScope && !isTransfer)
+        ? (store
+                .accountById(txn.type == TxnType.income ? txn.toRef : txn.fromRef)
+                ?.name ??
+            '')
+        : '';
+    final tag = txn.tags.isEmpty ? null : txn.tags.first;
+    final hasMeta = accountName.isNotEmpty || tag != null;
+
     final money0 = money(row.signedAmount, signless: true, masked: store.masked);
-    // One label per row: a transfer names both accounts; other types name the
-    // direction (colour is the only visual cue, so words carry it).
-    final semanticsLabel = isTransfer
-        ? 'Transfer from ${parties!.from} to ${parties.to}, $money0'
-        : '$category, $money0, '
-            '${switch (row.kind) {
-                FlowKind.inflow => 'income',
-                FlowKind.outflow => 'expense',
-                FlowKind.internal => 'internal transfer',
-              }}';
+    final balance0 = money(_runningBalance(store, txn), masked: store.masked);
+    // Parts in reading order — title, amount, direction, description, balance,
+    // account, tag — not one merged string (spec §5).
+    final semanticsLabel = [
+      isTransfer ? 'Transfer from ${parties!.from} to ${parties.to}' : category,
+      money0,
+      if (!isTransfer)
+        switch (row.kind) {
+          FlowKind.inflow => 'income',
+          FlowKind.outflow => 'expense',
+          FlowKind.internal => 'internal transfer',
+        },
+      if (hasNote) note,
+      'balance $balance0',
+      if (accountName.isNotEmpty) accountName,
+      if (tag != null) 'tag $tag',
+    ].join(', ');
+
+    // Fonts/weights/colours are kept exactly as before — only the layout
+    // structure and heights change.
+    const titleStyle = TextStyle(
+      fontSize: 14.5,
+      fontWeight: FontWeight.w600,
+      height: 1.22,
+      color: AppColors.textPrimary,
+    );
+    const descStyle = TextStyle(
+      fontSize: 12.5,
+      fontWeight: FontWeight.w400,
+      height: 1.2,
+      color: AppColors.textSecondary,
+    );
+    const metaStyle = TextStyle(
+      fontSize: 11.5,
+      height: 1.2,
+      color: AppColors.runningBalance,
+    );
+
+    final amountWidget = Text(
+      money(row.displayAmount, signless: true, masked: store.masked),
+      style: TextStyle(
+        fontSize: 15,
+        fontWeight: FontWeight.w600,
+        height: 1.2,
+        color: amountColour,
+        fontFeatures: const [FontFeature.tabularFigures()],
+      ),
+    );
+    final balanceWidget = Text(
+      balance0,
+      style: const TextStyle(
+        fontSize: 11,
+        height: 1.2,
+        color: AppColors.runningBalance,
+        fontFeatures: [FontFeature.tabularFigures()],
+      ),
+    );
+    final titleWidget = isTransfer
+        ? TransferTitleText(
+            from: parties!.from,
+            to: parties.to,
+            style: titleStyle,
+          )
+        : Row(
+            children: [
+              Flexible(
+                child: Text(
+                  category,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: titleStyle,
+                ),
+              ),
+              if (!txn.movesCash) ...[
+                const SizedBox(width: 6),
+                const _NoCashPill(),
+              ],
+            ],
+          );
 
     return Semantics(
       // Swipe actions are invisible to assistive tech unless declared, so all
@@ -214,16 +297,21 @@ class LedgerTxnRow extends StatelessWidget {
         ],
         child: ColoredBox(
           color: AppColors.fieldCard,
-          child: Column(
-            children: [
-              SizedBox(
-                // Three lines in group/all scope, two in account scope where
-                // the account is identical on every row.
-                height: scope is AccountScope ? 52 : 66,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
-                  child: ExcludeSemantics(
-                    child: Row(
+          // No fixed height: a 44pt floor (tap + swipe target), everything else
+          // intrinsic from padding + content, so rows grow at large text scale.
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 44),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+              child: ExcludeSemantics(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // ── Top block: icon tile + the two-line text/figure column
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Container(
                           width: 30,
@@ -248,122 +336,89 @@ class LedgerTxnRow extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             mainAxisSize: MainAxisSize.min,
                             children: [
+                              // Line 1: title | amount. With no description the
+                              // balance sits beside the amount here instead of
+                              // on its own second line.
                               Row(
                                 children: [
-                                  if (isTransfer)
-                                    // "{source} → {destination}" — both sides
-                                    // ellipsize; the source was never shown here
-                                    // before (it was buried behind "Transfer").
-                                    Expanded(
-                                      child: TransferTitleText(
-                                        from: parties!.from,
-                                        to: parties.to,
-                                        style: const TextStyle(
-                                          fontSize: 14.5,
-                                          fontWeight: FontWeight.w600,
-                                          height: 1.25,
-                                          color: AppColors.textPrimary,
-                                        ),
-                                      ),
-                                    )
-                                  else ...[
-                                    Flexible(
-                                      child: Text(
-                                        category,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(
-                                          fontSize: 14.5,
-                                          fontWeight: FontWeight.w600,
-                                          height: 1.25,
-                                          color: AppColors.textPrimary,
-                                        ),
-                                      ),
+                                  Expanded(child: titleWidget),
+                                  const SizedBox(width: 10),
+                                  if (hasNote)
+                                    amountWidget
+                                  else
+                                    Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        amountWidget,
+                                        const SizedBox(width: 6),
+                                        balanceWidget,
+                                      ],
                                     ),
-                                    if (!txn.movesCash) ...[
-                                      const SizedBox(width: 6),
-                                      const _NoCashPill(),
-                                    ],
-                                  ],
                                 ],
                               ),
-                              const SizedBox(height: 1),
-                              _LineTwo(row: row, scope: scope),
-                              if (scope is! AccountScope) ...[
-                                const SizedBox(height: 1),
-                                Text(
-                                  _lineThree(store, txn),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    fontSize: 11.5,
-                                    height: 1.25,
-                                    color: AppColors.runningBalance,
-                                  ),
+                              if (hasNote) ...[
+                                const SizedBox(height: 2),
+                                // Line 2: description | balance.
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        note,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: descStyle,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    balanceWidget,
+                                  ],
                                 ),
                               ],
                             ],
                           ),
                         ),
-                        const SizedBox(width: 10),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              money(
-                                row.displayAmount,
-                                signless: true,
-                                masked: store.masked,
-                              ),
-                              style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w600,
-                                height: 1.2,
-                                color: amountColour,
-                                fontFeatures: const [
-                                  FontFeature.tabularFigures()
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 1),
-                            Text(
-                              money(_runningBalance(store, txn),
-                                  masked: store.masked),
-                              style: const TextStyle(
-                                fontSize: 11,
-                                height: 1.2,
-                                color: AppColors.runningBalance,
-                                fontFeatures: [FontFeature.tabularFigures()],
-                              ),
-                            ),
-                          ],
-                        ),
                       ],
                     ),
-                  ),
+                    // ── Meta line: account · tag, full width, left edge aligned
+                    // with the text column (icon 30 + gap 11 = 41pt). Nothing is
+                    // to its right, so the account stops sharing that width.
+                    if (hasMeta) ...[
+                      const SizedBox(height: 2),
+                      Padding(
+                        padding: const EdgeInsets.only(left: 41),
+                        child: Row(
+                          children: [
+                            if (accountName.isNotEmpty)
+                              Flexible(
+                                child: Text(
+                                  accountName,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: metaStyle,
+                                ),
+                              ),
+                            if (accountName.isNotEmpty && tag != null)
+                              const Text('  ·  ', style: metaStyle),
+                            // The tag is laid out first (fixed), so the account
+                            // ellipsizes to make room rather than the tag.
+                            if (tag != null)
+                              Text(
+                                tag,
+                                style: metaStyle.copyWith(
+                                    color: AppColors.tagDot),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
-            ],
+            ),
           ),
         ),
       ),
     );
-  }
-
-  /// Line 3 exists only where the account varies between neighbouring rows.
-  /// For a transfer it is the full path; otherwise the account, then the tag.
-  String _lineThree(AppStore store, Txn txn) {
-    if (txn.type == TxnType.transfer) {
-      // The "{from} → {to}" path is in the title now; don't repeat it here.
-      // Keep the tag if there is one, otherwise leave the third line empty
-      // (the row's height is fixed, so nothing shifts).
-      return txn.tags.isEmpty ? '' : txn.tags.first;
-    }
-    final ref = txn.type == TxnType.income ? txn.toRef : txn.fromRef;
-    final account = store.accountById(ref)?.name ?? '';
-    final tag = txn.tags.isEmpty ? null : txn.tags.first;
-    return tag == null ? account : '$account  ·  $tag';
   }
 
   /// The account's balance immediately after this transaction.
@@ -417,62 +472,4 @@ class _NoCashPill extends StatelessWidget {
           ),
         ),
       );
-}
-
-/// Line 2, which is never empty so the row height never varies.
-///
-/// Fallback chain: note + tag → note → tag → the time. The time is weak
-/// information, which is why it is last — but a row that collapses to one line
-/// makes the list jump as the user scrolls, and that is worse.
-class _LineTwo extends StatelessWidget {
-  const _LineTwo({required this.row, required this.scope});
-
-  final ScopedTxn row;
-  final LedgerScope scope;
-
-  @override
-  Widget build(BuildContext context) {
-    final txn = row.txn;
-    final note = txn.note.trim();
-    final tag = txn.tags.isEmpty ? null : txn.tags.first;
-    const base = TextStyle(
-      fontSize: 12.5,
-      fontWeight: FontWeight.w400,
-      height: 1.3,
-      color: AppColors.textSecondary,
-    );
-
-    // The tag only joins line 2 in account scope; elsewhere it rides line 3
-    // beside the account, which is the thing that actually varies there.
-    final showTag = scope is AccountScope && tag != null;
-
-    if (note.isEmpty && !showTag) {
-      return Text(hhmm(txn.date), style: base, maxLines: 1);
-    }
-
-    return Row(
-      children: [
-        if (note.isNotEmpty)
-          Flexible(
-            child: Text(
-              note,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: base,
-            ),
-          ),
-        if (note.isNotEmpty && showTag)
-          const Text('  ·  ', style: base),
-        if (showTag)
-          Flexible(
-            child: Text(
-              tag,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: base.copyWith(color: AppColors.tagDot),
-            ),
-          ),
-      ],
-    );
-  }
 }
