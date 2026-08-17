@@ -15,7 +15,16 @@ import 'account_icons.dart';
 import 'icon_picker_sheet.dart';
 
 /// Shell shared by every picker and create sheet: a drag handle, a title bar
-/// and a scrollable body that never exceeds 88% of the screen.
+/// and a scrollable body.
+///
+/// The modal itself is transparent and the background is painted by a
+/// content-hugging [Container] (§1): a full-height opaque sheet would swallow
+/// taps in the empty region above its visible content, so tap-to-dismiss failed
+/// at full expansion. With the sheet sized to its content, that region is the
+/// bare modal barrier at every height. The max extent is capped so at least
+/// 44pt of barrier stays tappable below the status bar, and
+/// [DraggableScrollableSheet.shouldCloseOnMinExtent] lets one downward drag
+/// close the sheet from any height.
 Future<T?> showAppSheet<T>(
   BuildContext context, {
   required String title,
@@ -26,43 +35,61 @@ Future<T?> showAppSheet<T>(
   return showModalBottomSheet<T>(
     context: context,
     isScrollControlled: true,
-    backgroundColor: AppColors.surfaceAlt,
-    builder: (context) => DraggableScrollableSheet(
-      initialChildSize: initialSize,
-      minChildSize: 0.4,
-      maxChildSize: 0.92,
-      expand: false,
-      builder: (context, controller) => Column(
-        children: [
-          const SizedBox(height: Insets.md),
-          Container(
-            width: 36,
-            height: 4,
-            decoration: BoxDecoration(
-              color: AppColors.surfaceHigh,
-              borderRadius: BorderRadius.circular(2),
-            ),
+    backgroundColor: Colors.transparent,
+    builder: (context) {
+      final media = MediaQuery.of(context);
+      // Leave ≥44pt of barrier tappable below the status bar at full extent.
+      final maxSize =
+          ((media.size.height - media.padding.top - 44) / media.size.height)
+              .clamp(0.5, 0.94);
+      final initial = initialSize > maxSize ? maxSize : initialSize;
+      return DraggableScrollableSheet(
+        initialChildSize: initial,
+        minChildSize: 0.4,
+        maxChildSize: maxSize,
+        expand: false,
+        shouldCloseOnMinExtent: true,
+        builder: (context, controller) => Container(
+          clipBehavior: Clip.antiAlias,
+          decoration: const BoxDecoration(
+            color: AppColors.surfaceAlt,
+            borderRadius:
+                BorderRadius.vertical(top: Radius.circular(Radii.sheet)),
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              Insets.gutter,
-              Insets.lg,
-              Insets.gutter,
-              Insets.md,
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(title, style: AppText.title.copyWith(fontSize: 19)),
+          child: Column(
+            children: [
+              const SizedBox(height: Insets.md),
+              Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceHigh,
+                  borderRadius: BorderRadius.circular(2),
                 ),
-                ...actions,
-              ],
-            ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  Insets.gutter,
+                  Insets.lg,
+                  Insets.gutter,
+                  Insets.md,
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(title,
+                          style: AppText.title.copyWith(fontSize: 19)),
+                    ),
+                    ...actions,
+                  ],
+                ),
+              ),
+              Expanded(child: builder(context, controller)),
+            ],
           ),
-          Expanded(child: builder(context, controller)),
-        ],
-      ),
-    ),
+        ),
+      );
+    },
   );
 }
 
@@ -191,11 +218,13 @@ class _AccountPickerBodyState extends State<_AccountPickerBody> {
   }
 }
 
-/// Spec 4.1 — category picker; its create action also lives in the header now.
+/// Spec 4.1 — category picker. A 3-column grid; its create action is the last
+/// cell of the grid (§3).
 Future<Category?> pickCategory(
   BuildContext context, {
   required CategoryType type,
   String? title,
+  String? selectedId,
 }) {
   return showAppSheet<Category>(
     context,
@@ -203,22 +232,23 @@ Future<Category?> pickCategory(
         (type == CategoryType.expense
             ? 'Expense category'
             : 'Income category'),
-    actions: [
-      _HeaderCreateAction<Category>(
-        label: 'New category',
-        onCreate: (ctx) => showNewCategorySheet(ctx, type: type),
-      ),
-    ],
-    builder: (context, controller) =>
-        _CategoryPickerBody(controller: controller, type: type),
+    builder: (context, controller) => _CategoryPickerBody(
+        controller: controller, type: type, selectedId: selectedId),
   );
 }
 
 class _CategoryPickerBody extends StatefulWidget {
-  const _CategoryPickerBody({required this.controller, required this.type});
+  const _CategoryPickerBody({
+    required this.controller,
+    required this.type,
+    this.selectedId,
+  });
 
   final ScrollController controller;
   final CategoryType type;
+
+  /// The transaction's current category, highlighted in the grid when supplied.
+  final String? selectedId;
 
   @override
   State<_CategoryPickerBody> createState() => _CategoryPickerBodyState();
@@ -243,72 +273,234 @@ class _CategoryPickerBodyState extends State<_CategoryPickerBody> {
           onChanged: (v) => setState(() => _query = v),
         ),
         Expanded(
-          child: ListView(
+          child: SingleChildScrollView(
             controller: widget.controller,
-            padding: const EdgeInsets.fromLTRB(
-              Insets.gutter,
-              Insets.md,
-              Insets.gutter,
-              Insets.xxl,
-            ),
-            children: [
-              if (items.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: Insets.xl),
-                  child: Text(
-                    'No category matches "$_query".',
-                    textAlign: TextAlign.center,
-                    style: AppText.caption,
-                  ),
-                ),
-              if (items.isNotEmpty)
-                AppCard(
-                  child: Column(
-                    children: [
-                      for (var i = 0; i < items.length; i++) ...[
-                        if (i > 0) const RowDivider(indent: Insets.md),
-                        _pickRow(
-                          context,
-                          icon: items[i].icon,
-                          color: items[i].color,
-                          title: items[i].name,
-                          // Spec 3.2/3.3 — spent-of-budget for expenses,
-                          // yearly total for income.
-                          trailing: _categoryPreview(store, items[i]),
-                          onTap: () => Navigator.of(context).pop(items[i]),
+            // No spent/budget figures here — this is a picker; budget progress
+            // lives on the Planner tab (§2).
+            padding:
+                const EdgeInsets.fromLTRB(14, Insets.md, 14, Insets.xxl),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                const columns = 3;
+                const gap = 8.0;
+                final cellWidth =
+                    (constraints.maxWidth - gap * (columns - 1)) / columns;
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (items.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: Insets.md),
+                        child: SizedBox(
+                          width: double.infinity,
+                          child: Text(
+                            'No category matches "$_query".',
+                            textAlign: TextAlign.center,
+                            style: AppText.caption,
+                          ),
+                        ),
+                      ),
+                    // Wrap, not a stretched grid: a partial last row stays
+                    // left-aligned and cells never stretch to fill it (§5).
+                    Wrap(
+                      spacing: gap,
+                      runSpacing: 10,
+                      children: [
+                        for (final c in items)
+                          SizedBox(
+                            width: cellWidth,
+                            child: _CategoryCell(
+                              category: c,
+                              selected: c.id == widget.selectedId,
+                              onTap: () => Navigator.of(context).pop(c),
+                            ),
+                          ),
+                        SizedBox(
+                          width: cellWidth,
+                          child: _NewCategoryCell(
+                            onTap: () async {
+                              final created = await showNewCategorySheet(
+                                  context,
+                                  type: widget.type);
+                              if (created != null && context.mounted) {
+                                Navigator.of(context).pop(created);
+                              }
+                            },
+                          ),
                         ),
                       ],
-                    ],
-                  ),
-                ),
-            ],
+                    ),
+                  ],
+                );
+              },
+            ),
           ),
         ),
       ],
     );
   }
+}
 
-  Widget _categoryPreview(AppStore store, Category c) {
-    if (widget.type == CategoryType.income) {
-      final yearly = store.earnedInCategory(c.id, store.period) * 12;
-      return Text(
-        '${moneyCompact(yearly)}/yr',
-        style: AppText.amount.copyWith(color: AppColors.textSecondary),
-      );
-    }
-    final spent = store.spentInCategory(c.id, store.period);
-    final limit = c.effectiveLimit;
-    return Text(
-      limit == null
-          ? money(spent)
-          : '${money(spent)} / ${money(limit)}',
-      style: AppText.amount.copyWith(
-        color: limit != null && spent > limit
-            ? AppColors.negative
-            : AppColors.textSecondary,
+/// One category in the picker grid (§3): a 46pt colour-tinted tile above a
+/// two-line, centred label. The selected cell is filled with the colour, its
+/// glyph white with a 2pt white ring, and its label white at weight 600.
+class _CategoryCell extends StatelessWidget {
+  const _CategoryCell({
+    required this.category,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final Category category;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: category.name,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 46,
+              height: 46,
+              decoration: BoxDecoration(
+                color: selected
+                    ? category.color
+                    : Color.alphaBlend(
+                        category.color.withValues(alpha: 0.18),
+                        AppColors.surfaceAlt),
+                borderRadius: BorderRadius.circular(13),
+                border:
+                    selected ? Border.all(color: Colors.white, width: 2) : null,
+              ),
+              child: Icon(
+                category.icon,
+                size: 22,
+                color: selected ? Colors.white : category.color,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              category.name,
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 12,
+                height: 1.25,
+                color: selected ? Colors.white : AppColors.sheetAccountName,
+                fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
+}
+
+/// The create cell, last in the grid (§3): a dashed accent tile + "New".
+class _NewCategoryCell extends StatelessWidget {
+  const _NewCategoryCell({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: 'New category',
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CustomPaint(
+              painter: _DashedRRectPainter(
+                color: AppColors.accent,
+                radius: 13,
+                strokeWidth: 1.5,
+              ),
+              child: Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(
+                  color: AppColors.sheetCard,
+                  borderRadius: BorderRadius.circular(13),
+                ),
+                child: const Icon(Icons.add_rounded,
+                    size: 22, color: AppColors.accentLight),
+              ),
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              'New',
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              style: TextStyle(
+                fontSize: 12,
+                height: 1.25,
+                color: AppColors.accentLight,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Strokes a dashed rounded rectangle — Flutter has no dashed border built in.
+class _DashedRRectPainter extends CustomPainter {
+  const _DashedRRectPainter({
+    required this.color,
+    required this.radius,
+    required this.strokeWidth,
+  });
+
+  final Color color;
+  final double radius;
+  final double strokeWidth;
+
+  static const _dash = 4.0;
+  static const _gap = 3.0;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth;
+    final inset = strokeWidth / 2;
+    final rrect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(inset, inset, size.width - strokeWidth,
+          size.height - strokeWidth),
+      Radius.circular(radius),
+    );
+    final path = Path()..addRRect(rrect);
+    for (final metric in path.computeMetrics()) {
+      var distance = 0.0;
+      while (distance < metric.length) {
+        final next = (distance + _dash).clamp(0.0, metric.length);
+        canvas.drawPath(metric.extractPath(distance, next), paint);
+        distance += _dash + _gap;
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_DashedRRectPainter old) =>
+      old.color != color ||
+      old.radius != radius ||
+      old.strokeWidth != strokeWidth;
 }
 
 Widget _pickRow(
