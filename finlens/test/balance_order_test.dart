@@ -1,0 +1,196 @@
+import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import 'package:finlens/core/data/seed_data.dart';
+import 'package:finlens/core/models/models.dart';
+import 'package:finlens/core/store/app_store.dart';
+import 'package:finlens/features/balance/balance_order.dart';
+
+void main() {
+  late AppStore store;
+
+  setUp(() {
+    // setBalanceOrder/Sort persist through SharedPreferences; the mock lets the
+    // fire-and-forget writes succeed under test.
+    SharedPreferences.setMockInitialValues(<String, Object>{});
+    store = buildSeedStore();
+  });
+
+  group('moveWithinGroup — relative move by visible neighbour', () {
+    test('worked example: a hidden trailing item keeps its place', () {
+      // Full [Spendable, Receivables, Investments, Valuables] with Valuables
+      // hidden; drag Investments to the top.
+      final result = CustomOrder.moveWithinGroup(
+        ['sp', 're', 'in', 'va'],
+        'in',
+        0,
+        ['sp', 're', 'in'],
+      );
+      expect(result, ['in', 'sp', 're', 'va']);
+    });
+
+    test('drop in front of a visible item with a hidden one between', () {
+      // Full [A, H, B], H hidden -> visible [A, B]; move B before A.
+      final result = CustomOrder.moveWithinGroup(['A', 'H', 'B'], 'B', 0,
+          ['A', 'B']);
+      expect(result, ['B', 'A', 'H']);
+    });
+
+    test('drop at the end of a group whose last entry is hidden', () {
+      // Full [A, B, H], H hidden -> visible [A, B]; move A to the end.
+      final result = CustomOrder.moveWithinGroup(['A', 'B', 'H'], 'A', 2,
+          ['A', 'B']);
+      expect(result, ['B', 'A', 'H']);
+    });
+
+    test('a group with a single visible item is a no-op', () {
+      final result = CustomOrder.moveWithinGroup(['A', 'H'], 'A', 1, ['A']);
+      expect(result, ['A', 'H']);
+    });
+
+    test('an out-of-range target clamps to the end, nothing lost', () {
+      final result = CustomOrder.moveWithinGroup(
+          ['A', 'B', 'C'], 'A', 999, ['A', 'B', 'C']);
+      expect(result, ['B', 'C', 'A']);
+    });
+  });
+
+  group('orderedCategories', () {
+    test('empty order is the declaration order', () {
+      const o = CustomOrder();
+      expect(o.orderedCategories(assets: true), AccountGroup.assets);
+      expect(o.orderedCategories(assets: false), AccountGroup.liabilities);
+    });
+
+    test('honours the stored order and appends the rest in data order', () {
+      const o = CustomOrder(assetOrder: [AccountGroup.investments]);
+      final r = o.orderedCategories(assets: true);
+      expect(r.first, AccountGroup.investments);
+      expect(r.length, AccountGroup.assets.length);
+      expect(r.toSet(), AccountGroup.assets.toSet());
+    });
+
+    test('a group stored in the wrong section is ignored', () {
+      const o = CustomOrder(
+          assetOrder: [AccountGroup.creditCards, AccountGroup.investments]);
+      final r = o.orderedCategories(assets: true);
+      expect(r, isNot(contains(AccountGroup.creditCards)));
+      expect(r.first, AccountGroup.investments);
+    });
+  });
+
+  group('orderedAccounts', () {
+    test('empty order is data order', () {
+      const g = AccountGroup.valuables;
+      expect(
+        const CustomOrder().orderedAccounts(store, g).map((a) => a.id),
+        store.accountsIn(g).map((a) => a.id),
+      );
+    });
+
+    test('known ids first, new ones appended in data order', () {
+      const g = AccountGroup.valuables;
+      final data = store.accountsIn(g);
+      final last = data.last.id;
+      final o = CustomOrder(accountOrder: {
+        g: [last]
+      });
+      final r = o.orderedAccounts(store, g).map((a) => a.id).toList();
+      expect(r.first, last);
+      expect(r.toSet(), data.map((a) => a.id).toSet());
+    });
+
+    test('deleted / stale ids drop out', () {
+      const g = AccountGroup.valuables;
+      final o = CustomOrder(accountOrder: {
+        g: ['gone', ...store.accountsIn(g).map((a) => a.id)]
+      });
+      final r = o.orderedAccounts(store, g).map((a) => a.id).toList();
+      expect(r, isNot(contains('gone')));
+      expect(r.toSet(), store.accountsIn(g).map((a) => a.id).toSet());
+    });
+  });
+
+  group('fromStored — validation never re-parents', () {
+    test('an account id stored under a foreign group is dropped', () {
+      final spendId = store.accountsIn(AccountGroup.spendable).first.id;
+      final o = CustomOrder.fromStored(store, {
+        'assets': ['valuables'],
+        'liabilities': <String>[],
+        'accounts': {
+          'valuables': [spendId]
+        },
+      });
+      expect(o.accountOrder[AccountGroup.valuables] ?? const [],
+          isNot(contains(spendId)));
+    });
+
+    test('valid ids and section membership are kept', () {
+      final val =
+          store.accountsIn(AccountGroup.valuables).map((a) => a.id).toList();
+      final o = CustomOrder.fromStored(store, {
+        'assets': ['valuables', 'spendable'],
+        'liabilities': <String>[],
+        'accounts': {'valuables': val},
+      });
+      expect(o.assetOrder.first, AccountGroup.valuables);
+      expect(o.accountOrder[AccountGroup.valuables], val);
+    });
+
+    test('garbage decodes to an unconfigured order', () {
+      expect(CustomOrder.fromStored(store, 'nope').isConfigured, isFalse);
+    });
+  });
+
+  group('withAccountMove clamps to the group', () {
+    test('a wild target lands the item last, group intact', () {
+      const g = AccountGroup.valuables;
+      final ids = store.accountsIn(g).map((a) => a.id).toList();
+      final o = const CustomOrder().withAccountMove(
+        store,
+        group: g,
+        moved: ids.first,
+        visibleTargetIndex: 999,
+        visibleOrder: ids,
+      );
+      final r = o.accountOrder[g]!;
+      expect(r.last, ids.first);
+      expect(r.toSet(), ids.toSet());
+    });
+  });
+
+  group('sort selection + undo semantics', () {
+    test('a drag from an automatic sort flips to Custom; undo restores both',
+        () {
+      expect(store.balanceSort, AccountSort.valueDesc);
+      final beforeOrder = store.balanceOrder;
+      final beforeSort = store.balanceSort;
+
+      const g = AccountGroup.valuables;
+      final ids = store.accountsIn(g).map((a) => a.id).toList();
+      final next = const CustomOrder().withAccountMove(
+        store,
+        group: g,
+        moved: ids.last,
+        visibleTargetIndex: 0,
+        visibleOrder: ids,
+      );
+
+      // What _applyDrag does on drop:
+      store.setBalanceOrder(next, sort: AccountSort.custom);
+      expect(store.balanceSort, AccountSort.custom);
+      expect(store.balanceOrder.accountOrder[g]!.first, ids.last);
+
+      // What Undo does:
+      store.setBalanceOrder(beforeOrder, sort: beforeSort);
+      expect(store.balanceSort, AccountSort.valueDesc);
+      expect(store.balanceOrder.isConfigured, isFalse);
+    });
+
+    test('custom is distinct and excluded from the automatic list', () {
+      expect(AccountSort.custom.label, 'Custom');
+      expect(AccountSort.automatic, hasLength(4));
+      expect(AccountSort.automatic, isNot(contains(AccountSort.custom)));
+    });
+  });
+}

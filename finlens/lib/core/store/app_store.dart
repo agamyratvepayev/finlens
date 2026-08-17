@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../features/balance/balance_filter.dart';
+import '../../features/balance/balance_order.dart';
 import '../models/models.dart';
 import '../utils/fx.dart';
 
@@ -90,6 +91,44 @@ class AppStore extends ChangeNotifier {
   /// live account are pruned inside [BalanceFilter.load].
   Future<void> loadBalanceFilter() async {
     _balanceFilter = await BalanceFilter.load(this);
+    notifyListeners();
+  }
+
+  /// Which sort the Balance list is in, and the user's hand-made order. Held
+  /// here (like [balanceFilter]) so both persist and can be restored before the
+  /// first frame; the screen does the actual ordering through [CustomOrder]'s
+  /// pure resolvers, so nothing outside Balance is affected.
+  AccountSort _balanceSort = AccountSort.defaultSort;
+  AccountSort get balanceSort => _balanceSort;
+
+  CustomOrder _balanceOrder = const CustomOrder();
+  CustomOrder get balanceOrder => _balanceOrder;
+
+  /// Selecting an option in the SORT sheet. Persisted so the choice survives a
+  /// relaunch, alongside the custom order.
+  void setBalanceSort(AccountSort sort) {
+    _balanceSort = sort;
+    notifyListeners();
+    unawaited(CustomOrder.saveSortMode(sort));
+  }
+
+  /// Applies a completed drag (or an Undo): the new order, and optionally the
+  /// sort mode when the drag flipped it to (or an Undo restored it from)
+  /// [AccountSort.custom]. One notify, so the whole list settles at once.
+  void setBalanceOrder(CustomOrder order, {AccountSort? sort}) {
+    _balanceOrder = order;
+    if (sort != null) _balanceSort = sort;
+    notifyListeners();
+    unawaited(order.save());
+    if (sort != null) unawaited(CustomOrder.saveSortMode(sort));
+  }
+
+  /// Restores the persisted sort mode and custom order at startup — before the
+  /// first frame, so the list never flashes a different order. Stale/foreign
+  /// ids are pruned inside [CustomOrder.load].
+  Future<void> loadBalanceOrder() async {
+    _balanceSort = await CustomOrder.loadSortMode();
+    _balanceOrder = await CustomOrder.load(this);
     notifyListeners();
   }
 

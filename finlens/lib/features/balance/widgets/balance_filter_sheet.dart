@@ -8,6 +8,7 @@ import '../../../shared/widgets/app_card.dart';
 import '../../../theme/app_colors.dart';
 import '../../../theme/app_typography.dart';
 import '../balance_filter.dart';
+import '../balance_order.dart';
 
 /// Opens the Balance category & account filter.
 ///
@@ -46,9 +47,15 @@ class _BalanceFilterSheetState extends State<_BalanceFilterSheet> {
     final filter = store.balanceFilter;
     final maxHeight = MediaQuery.of(context).size.height * 0.86;
 
-    final groups = AccountGroup.values
-        .where((g) => store.groupCount(g) > 0)
-        .toList(growable: false);
+    // Same order the Balance list uses, so the two surfaces agree (spec §6):
+    // the user's arrangement in Custom mode, declaration order otherwise.
+    final custom = store.balanceSort == AccountSort.custom;
+    final groups = <AccountGroup>[
+      for (final assets in [true, false])
+        ...(custom
+            ? store.balanceOrder.orderedCategories(assets: assets)
+            : (assets ? AccountGroup.assets : AccountGroup.liabilities)),
+    ].where((g) => store.groupCount(g) > 0).toList(growable: false);
 
     return ConstrainedBox(
       constraints: BoxConstraints(maxHeight: maxHeight),
@@ -230,7 +237,10 @@ class _BalanceFilterSheetState extends State<_BalanceFilterSheet> {
   Widget _categoryCard(
       AppStore store, BalanceFilter filter, AccountGroup group) {
     final state = filter.toggleState(store, group);
-    final accounts = store.accountsIn(group);
+    // Accounts in the same order the Balance list shows them (spec §6).
+    final accounts = store.balanceSort == AccountSort.custom
+        ? store.balanceOrder.orderedAccounts(store, group)
+        : store.accountsIn(group);
     final visibleCount = filter.visibleAccounts(store, group).length;
     final expanded = _expanded.contains(group);
     final off = state == ToggleState.off;

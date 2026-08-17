@@ -9,6 +9,8 @@ import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/app_typography.dart';
 import 'account_detail_screen.dart';
+import 'balance_order.dart';
+import 'widgets/reorderable_group.dart';
 import '../ledger/ledger_scope.dart';
 import '../ledger/scoped_ledger_screen.dart';
 import '../quick_add/quick_add_sheet.dart';
@@ -29,21 +31,6 @@ enum BalanceSection {
   final String label;
 }
 
-/// How accounts are ordered *inside* each group. Groups themselves never
-/// reorder — their sequence is part of the screen's structure, not its data.
-enum AccountSort {
-  valueDesc('Value — high to low'),
-  valueAsc('Value — low to high'),
-  nameAsc('Name — A to Z'),
-  activity('Change — most active');
-
-  const AccountSort(this.label);
-
-  final String label;
-
-  static const defaultSort = AccountSort.valueDesc;
-}
-
 /// Spec 1.1 — Balance.
 ///
 /// The header answers "what am I worth" in 106px, including the tool cluster;
@@ -62,7 +49,6 @@ class BalanceScreen extends StatefulWidget {
 
 class _BalanceScreenState extends State<BalanceScreen> {
   BalanceSection _section = BalanceSection.all;
-  AccountSort _sort = AccountSort.defaultSort;
 
   bool _searching = false;
   String _query = '';
@@ -74,6 +60,14 @@ class _BalanceScreenState extends State<BalanceScreen> {
   /// Groups the user has explicitly toggled, layered over the section default.
   final Set<AccountGroup> _opened = {};
   final Set<AccountGroup> _closed = {};
+
+  /// Non-null only while a row is lifted. Drives the containment cue: the
+  /// regions an item can't legally reach dim to 42% while it travels.
+  _ActiveDrag? _activeDrag;
+
+  /// The single move that Undo would revert. Replaced by each new drag; only
+  /// the most recent move is ever undoable (no undo stack).
+  _PendingMove? _pendingMove;
 
   @override
   void initState() {
@@ -295,7 +289,7 @@ class _BalanceScreenState extends State<BalanceScreen> {
               Tool(
                 icon: Icons.swap_vert_rounded,
                 tooltip: 'Sort',
-                showDot: _sort != AccountSort.defaultSort,
+                showDot: store.balanceSort != AccountSort.defaultSort,
                 onTap: _pickSort,
               ),
               Tool(
@@ -467,69 +461,97 @@ class _BalanceScreenState extends State<BalanceScreen> {
   }
 
   Future<void> _pickSort() async {
+    final current = StoreScope.read(context).balanceSort;
     final picked = await showModalBottomSheet<AccountSort>(
       context: context,
       backgroundColor: AppColors.surfaceAlt,
-      builder: (sheetContext) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: Insets.sm),
-            Container(
-              width: 36,
-              height: 4,
-              decoration: BoxDecoration(
-                color: AppColors.surfaceHigh,
-                borderRadius: BorderRadius.circular(2),
+      builder: (sheetContext) {
+        Widget check(AccountSort option) => Opacity(
+              opacity: option == current ? 1 : 0,
+              child: const Icon(
+                Icons.check_rounded,
+                size: 18,
+                color: AppColors.accentSoft,
               ),
-            ),
-            const Padding(
-              padding: EdgeInsets.fromLTRB(
-                Insets.gutter,
-                Insets.lg,
-                Insets.gutter,
-                Insets.sm,
+            );
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: Insets.sm),
+              Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceHigh,
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  'SORT',
+              const Padding(
+                padding: EdgeInsets.fromLTRB(
+                  Insets.gutter,
+                  Insets.lg,
+                  Insets.gutter,
+                  Insets.sm,
+                ),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'SORT',
+                    style: TextStyle(
+                      fontSize: 13,
+                      height: 1.2,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.8,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ),
+              ),
+              // The four automatic orderings — unchanged.
+              for (final option in AccountSort.automatic)
+                ListTile(
+                  leading: check(option),
+                  title: Text(option.label, style: AppText.body),
+                  // Applies immediately and dismisses — no confirm step.
+                  onTap: () => Navigator.of(sheetContext).pop(option),
+                ),
+              // The divider splits "pick an automatic ordering" from "use the
+              // order I made myself".
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: Insets.gutter),
+                child: Divider(height: 1, thickness: 1, color: AppColors.divider),
+              ),
+              ListTile(
+                leading: check(AccountSort.custom),
+                title: Text(AccountSort.custom.label, style: AppText.body),
+                // The one and only advertisement of the press-and-hold gesture.
+                subtitle: const Text(
+                  'Press and hold a row to move it',
                   style: TextStyle(
-                    fontSize: 13,
+                    fontSize: 12,
                     height: 1.2,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.8,
                     color: AppColors.textSecondary,
                   ),
                 ),
+                // No chevron: selecting Custom pushes nothing, exactly like the
+                // rows above it.
+                onTap: () => Navigator.of(sheetContext).pop(AccountSort.custom),
               ),
-            ),
-            for (final option in AccountSort.values)
-              ListTile(
-                leading: Opacity(
-                  opacity: option == _sort ? 1 : 0,
-                  child: const Icon(
-                    Icons.check_rounded,
-                    size: 18,
-                    color: AppColors.accentSoft,
-                  ),
-                ),
-                title: Text(option.label, style: AppText.body),
-                // Applies immediately and dismisses — no confirm step.
-                onTap: () => Navigator.of(sheetContext).pop(option),
-              ),
-            const SizedBox(height: Insets.sm),
-          ],
-        ),
-      ),
+              const SizedBox(height: Insets.sm),
+            ],
+          ),
+        );
+      },
     );
-    if (picked != null) setState(() => _sort = picked);
+    if (picked != null && mounted) {
+      StoreScope.read(context).setBalanceSort(picked);
+    }
   }
 
   // ── List ──────────────────────────────────────────────────────────────────
 
   Widget _list(AppStore store) {
-    final filter = store.balanceFilter;
     final assets = _groupsFor(store, AccountGroup.assets);
     final liabilities = _groupsFor(store, AccountGroup.liabilities);
 
@@ -556,28 +578,71 @@ class _BalanceScreenState extends State<BalanceScreen> {
     final liabsHasContent =
         liabilities.isNotEmpty || sectionHasAccounts(AccountGroup.liabilities);
 
-    return ListView(
+    // A plain scroll view rather than a ListView: the reorderable groups are
+    // non-scrolling columns nested inside it, and the list is small enough that
+    // laziness buys nothing.
+    return SingleChildScrollView(
       controller: _scrollController,
       padding: const EdgeInsets.only(bottom: Insets.xxl),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (_section != BalanceSection.liabilities && assetsHasContent)
+            _sectionBlock(store,
+                assets: true, groups: assets, showHeader: showHeaders),
+          if (_section != BalanceSection.assets && liabsHasContent)
+            _sectionBlock(store,
+                assets: false, groups: liabilities, showHeader: showHeaders),
+        ],
+      ),
+    );
+  }
+
+  /// One section: its header (dimmable) plus a reorderable column of its
+  /// category blocks. Categories reorder only among themselves — a separate
+  /// [ReorderableGroup] per section is what makes crossing the ASSETS /
+  /// LIABILITIES boundary impossible.
+  Widget _sectionBlock(
+    AppStore store, {
+    required bool assets,
+    required List<AccountGroup> groups,
+    required bool showHeader,
+  }) {
+    final filter = store.balanceFilter;
+    final label = assets ? 'Assets' : 'Liabilities';
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (_section != BalanceSection.liabilities && assetsHasContent) ...[
-          if (showHeaders)
-            _ListSectionHeader(
-                'Assets', filter.sectionTotal(store, assets: true)),
-          if (assets.isEmpty)
-            _filteredAwayRow()
-          else
-            for (final group in assets) _group(store, group),
-        ],
-        if (_section != BalanceSection.assets && liabsHasContent) ...[
-          if (showHeaders)
-            _ListSectionHeader(
-                'Liabilities', filter.sectionTotal(store, assets: false)),
-          if (liabilities.isEmpty)
-            _filteredAwayRow()
-          else
-            for (final group in liabilities) _group(store, group),
-        ],
+        if (showHeader)
+          AnimatedOpacity(
+            duration: const Duration(milliseconds: 200),
+            opacity: _sectionHeaderOpacity(assets),
+            child: _ListSectionHeader(
+                label, filter.sectionTotal(store, assets: assets)),
+          ),
+        if (groups.isEmpty)
+          _filteredAwayRow()
+        else
+          ReorderableGroup<AccountGroup>(
+            key: ValueKey('categories-$label'),
+            items: groups,
+            scrollController: _scrollController,
+            semanticLabel: (g, i, n) =>
+                '${g.label}, position ${i + 1} of $n in $label',
+            onDragStart: (_) =>
+                setState(() => _activeDrag = _ActiveDrag.category(assets)),
+            onDragEnd: () => setState(() => _activeDrag = null),
+            onReorder: (moved, target) => _onCategoryReorder(
+              store,
+              assets: assets,
+              moved: moved,
+              target: target,
+              visible: groups,
+            ),
+            itemBuilder: (context, g) => _categoryBlock(store, g),
+          ),
       ],
     );
   }
@@ -650,10 +715,15 @@ class _BalanceScreenState extends State<BalanceScreen> {
       return const [];
     }
 
-    // A filter-hidden group has zero visible accounts, so it drops out here the
-    // same way a group with no accounts does — never rendered as an empty row.
+    // Custom mode reorders the section's groups; the four automatic sorts leave
+    // group order at the fixed declaration order. A filter-hidden group has
+    // zero visible accounts, so it drops out here the same way a group with no
+    // accounts does — never rendered as an empty row.
     final filter = store.balanceFilter;
-    var groups = source
+    final ordered = store.balanceSort == AccountSort.custom
+        ? store.balanceOrder.orderedCategories(assets: source.first.isAsset)
+        : source;
+    var groups = ordered
         .where((g) => store.groupCount(g) > 0 && filter.isGroupVisible(store, g))
         .toList();
 
@@ -687,23 +757,31 @@ class _BalanceScreenState extends State<BalanceScreen> {
             _query.isEmpty || groupMatches || a.name.toLowerCase().contains(q))
         .toList();
 
-    list.sort((a, b) => switch (_sort) {
-          AccountSort.valueDesc => store
-              .balanceInBase(b.id)
-              .abs()
-              .compareTo(store.balanceInBase(a.id).abs()),
-          AccountSort.valueAsc => store
-              .balanceInBase(a.id)
-              .abs()
-              .compareTo(store.balanceInBase(b.id).abs()),
-          AccountSort.nameAsc => a.name.compareTo(b.name),
-          AccountSort.activity =>
-            store.accountActivity(b.id).compareTo(store.accountActivity(a.id)),
-        });
+    if (store.balanceSort == AccountSort.custom) {
+      // Order by the user's arrangement; the visible subset keeps that relative
+      // order (filtering happens after ordering).
+      final rank = <String, int>{};
+      var i = 0;
+      for (final a in store.balanceOrder.orderedAccounts(store, group)) {
+        rank[a.id] = i++;
+      }
+      list.sort((a, b) =>
+          (rank[a.id] ?? 1 << 30).compareTo(rank[b.id] ?? 1 << 30));
+      return list;
+    }
+
+    list.sort(_accountComparator(store));
     return list;
   }
 
-  Widget _group(AppStore store, AccountGroup group) {
+  /// One category: its group header plus (when open) a reorderable column of
+  /// its accounts. The whole block is what a category drag carries; the account
+  /// rows inside are their own [ReorderableGroup] with a shorter press delay, so
+  /// pressing an account never lifts the category.
+  ///
+  /// Wrapped in an opacity that dims to 42% when another region is the active
+  /// drag's legal target — the containment cue.
+  Widget _categoryBlock(AppStore store, AccountGroup group) {
     // A group matched only through one of its accounts opens itself, so the
     // match the user typed is actually visible.
     final matchedOnChild = _query.isNotEmpty &&
@@ -719,61 +797,218 @@ class _BalanceScreenState extends State<BalanceScreen> {
     final filteredTotal = filter.filteredTotal(store, group);
     final sectionTotal =
         filter.sectionTotal(store, assets: group.isAsset).abs();
-    final share =
-        sectionTotal == 0 ? 0.0 : (filteredTotal.abs() / sectionTotal).clamp(0.0, 1.0);
+    final share = sectionTotal == 0
+        ? 0.0
+        : (filteredTotal.abs() / sectionTotal).clamp(0.0, 1.0);
 
-    return Column(
-      children: [
-        GroupRow(
-          group: group,
-          total: filteredTotal,
-          count: filter.visibleAccounts(store, group).length,
-          share: share,
-          isOpen: open,
-          onToggle: () => setState(() {
-            if (open) {
-              _closed.add(group);
-            } else {
-              _closed.remove(group);
-              _opened.add(group);
-            }
-          }),
-          onOpenLedger: () => _openGroupLedger(group),
-          onLongPress: () => showNewAccountSheet(context, group: group),
-        ),
-        // AnimatedSize rather than AnimatedCrossFade: a closed group must not
-        // build its account rows at all, only animate when it opens.
-        AnimatedSize(
-          duration: const Duration(milliseconds: 220),
-          curve: Curves.easeOutCubic,
-          alignment: Alignment.topCenter,
-          child: !open
-              ? const SizedBox(width: double.infinity)
-              : Padding(
-                  // No top padding — the first child sits directly under the
-                  // group row so indentation alone reads as parent-child.
-                  padding: const EdgeInsets.only(bottom: 6),
-                  child: Column(
-                    children: [
-                      for (final a in children)
-                        AccountRow(
-                          account: a,
-                          balance: store.balanceOf(a.id),
-                          subtitle: group.isLiability
-                              ? liabilitySubtitle(store, a).text
-                              : null,
-                          subtitleColor: group.isLiability
-                              ? liabilitySubtitle(store, a).color
-                              : null,
-                          onOpenAccount: () => _openAccountDetail(a),
-                          onOpenLedger: () => _openAccountLedger(a),
-                        ),
-                    ],
+    return AnimatedOpacity(
+      duration: const Duration(milliseconds: 200),
+      opacity: _blockOpacity(group),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          GroupRow(
+            group: group,
+            total: filteredTotal,
+            count: filter.visibleAccounts(store, group).length,
+            share: share,
+            isOpen: open,
+            onToggle: () => setState(() {
+              if (open) {
+                _closed.add(group);
+              } else {
+                _closed.remove(group);
+                _opened.add(group);
+              }
+            }),
+            onOpenLedger: () => _openGroupLedger(group),
+            // The long-press "add account" shortcut is intentionally dropped:
+            // press-and-hold now lifts the row for reordering. Accounts are
+            // still added via the header +, the empty state, and the More tab.
+          ),
+          // AnimatedSize rather than AnimatedCrossFade: a closed group must not
+          // build its account rows at all, only animate when it opens.
+          AnimatedSize(
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOutCubic,
+            alignment: Alignment.topCenter,
+            child: !open || children.isEmpty
+                ? const SizedBox(width: double.infinity)
+                : Padding(
+                    // No top padding — the first child sits directly under the
+                    // group row so indentation alone reads as parent-child.
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: ReorderableGroup<Account>(
+                      key: ValueKey('accounts-${group.name}'),
+                      items: children,
+                      // Shorter than the category delay so an account press wins
+                      // the gesture arena over its parent block.
+                      delay: const Duration(milliseconds: 350),
+                      scrollController: _scrollController,
+                      semanticLabel: (a, i, n) =>
+                          '${a.name}, position ${i + 1} of $n in ${group.label}',
+                      onDragStart: (_) => setState(
+                          () => _activeDrag = _ActiveDrag.account(group)),
+                      onDragEnd: () => setState(() => _activeDrag = null),
+                      onReorder: (moved, target) => _onAccountReorder(
+                        store,
+                        group: group,
+                        moved: moved,
+                        target: target,
+                        visible: children,
+                      ),
+                      itemBuilder: (context, a) => AccountRow(
+                        account: a,
+                        balance: store.balanceOf(a.id),
+                        subtitle: group.isLiability
+                            ? liabilitySubtitle(store, a).text
+                            : null,
+                        subtitleColor: group.isLiability
+                            ? liabilitySubtitle(store, a).color
+                            : null,
+                        onOpenAccount: () => _openAccountDetail(a),
+                        onOpenLedger: () => _openAccountLedger(a),
+                      ),
+                    ),
                   ),
-                ),
-        ),
-      ],
+          ),
+        ],
+      ),
     );
+  }
+
+  // ── Reordering ──────────────────────────────────────────────────────────
+
+  /// The order to move relative to: the live custom order when already in
+  /// Custom, otherwise a snapshot of what is on screen right now, so flipping to
+  /// Custom rearranges nothing beyond the move the user just made.
+  CustomOrder _baseOrder(AppStore store) => store.balanceSort == AccountSort.custom
+      ? store.balanceOrder
+      : _snapshotDisplayedOrder(store);
+
+  CustomOrder _snapshotDisplayedOrder(AppStore store) {
+    final accountOrder = <AccountGroup, List<String>>{};
+    for (final g in AccountGroup.values) {
+      final full = store.accountsIn(g).toList();
+      if (full.isEmpty) continue;
+      full.sort(_accountComparator(store));
+      accountOrder[g] = full.map((a) => a.id).toList();
+    }
+    return CustomOrder(
+      // The automatic sorts never reorder categories, so the displayed category
+      // order is just the declaration order.
+      assetOrder: AccountGroup.assets.toList(),
+      liabilityOrder: AccountGroup.liabilities.toList(),
+      accountOrder: accountOrder,
+    );
+  }
+
+  void _onCategoryReorder(
+    AppStore store, {
+    required bool assets,
+    required AccountGroup moved,
+    required int target,
+    required List<AccountGroup> visible,
+  }) {
+    final next = _baseOrder(store).withCategoryMove(
+      assets: assets,
+      moved: moved,
+      visibleTargetIndex: target,
+      visibleOrder: visible,
+    );
+    _applyDrag(store, next);
+  }
+
+  void _onAccountReorder(
+    AppStore store, {
+    required AccountGroup group,
+    required Account moved,
+    required int target,
+    required List<Account> visible,
+  }) {
+    final next = _baseOrder(store).withAccountMove(
+      store,
+      group: group,
+      moved: moved.id,
+      visibleTargetIndex: target,
+      visibleOrder: visible.map((a) => a.id).toList(),
+    );
+    _applyDrag(store, next);
+  }
+
+  /// Commits a completed move: the new order, and a silent flip to Custom (so
+  /// the automatic comparator can't snap the row back). Records what Undo would
+  /// restore, then offers the bar.
+  void _applyDrag(AppStore store, CustomOrder next) {
+    _pendingMove =
+        _PendingMove(order: store.balanceOrder, sort: store.balanceSort);
+    store.setBalanceOrder(next, sort: AccountSort.custom);
+    _showUndoBar(store);
+  }
+
+  void _showUndoBar(AppStore store) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          // Undo and nothing else — the bar offers a way back, it does not
+          // narrate the switch to Custom.
+          content: Semantics(
+            liveRegion: true,
+            label: 'Reordered',
+            child: const SizedBox.shrink(),
+          ),
+          duration: const Duration(seconds: 5),
+          action: SnackBarAction(
+            label: 'Undo',
+            onPressed: () => _undoLastMove(store),
+          ),
+        ),
+      );
+  }
+
+  /// Reverts the most recent move — both the row's position and, when the move
+  /// flipped the sort, the previous sort selection.
+  void _undoLastMove(AppStore store) {
+    final move = _pendingMove;
+    if (move == null) return;
+    _pendingMove = null;
+    store.setBalanceOrder(move.order, sort: move.sort);
+  }
+
+  int Function(Account, Account) _accountComparator(AppStore store) =>
+      (a, b) => switch (store.balanceSort) {
+            AccountSort.valueDesc => store
+                .balanceInBase(b.id)
+                .abs()
+                .compareTo(store.balanceInBase(a.id).abs()),
+            AccountSort.valueAsc => store
+                .balanceInBase(a.id)
+                .abs()
+                .compareTo(store.balanceInBase(b.id).abs()),
+            AccountSort.nameAsc => a.name.compareTo(b.name),
+            AccountSort.activity => store
+                .accountActivity(b.id)
+                .compareTo(store.accountActivity(a.id)),
+            AccountSort.custom => 0,
+          };
+
+  // ── Drag containment cue ──────────────────────────────────────────────────
+
+  double _sectionHeaderOpacity(bool assets) {
+    final d = _activeDrag;
+    if (d == null) return 1;
+    // Category drag lights only its own section; account drag lights only the
+    // owning category, so both section headers dim.
+    if (d.isCategory) return d.isAsset == assets ? 1 : 0.42;
+    return 0.42;
+  }
+
+  double _blockOpacity(AccountGroup group) {
+    final d = _activeDrag;
+    if (d == null) return 1;
+    if (d.isCategory) return group.isAsset == d.isAsset ? 1 : 0.42;
+    return group == d.group ? 1 : 0.42;
   }
 
   void _openAccountLedger(Account account) => _openLedger(
@@ -800,6 +1035,29 @@ class _BalanceScreenState extends State<BalanceScreen> {
       ),
     );
   }
+}
+
+/// What is currently lifted, so the screen can dim the regions it can't reach.
+class _ActiveDrag {
+  const _ActiveDrag.category(bool this.isAsset) : group = null;
+  const _ActiveDrag.account(AccountGroup this.group) : isAsset = null;
+
+  /// Set for a category drag: which section the lifted category belongs to.
+  final bool? isAsset;
+
+  /// Set for an account drag: the owning category.
+  final AccountGroup? group;
+
+  bool get isCategory => group == null;
+}
+
+/// The single move Undo would revert: the order before it, and the sort before
+/// it (restored too when the move flipped the selection to Custom).
+class _PendingMove {
+  const _PendingMove({required this.order, required this.sort});
+
+  final CustomOrder order;
+  final AccountSort sort;
 }
 
 // ── Header pieces ───────────────────────────────────────────────────────────

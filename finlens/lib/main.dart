@@ -14,6 +14,7 @@ Future<void> main() async {
   SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle.light);
   final store = buildSeedStore();
   await store.loadBalanceFilter();
+  await store.loadBalanceOrder();
   runApp(FinLensApp(store: store));
 }
 

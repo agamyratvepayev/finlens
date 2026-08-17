@@ -123,6 +123,10 @@ abstract final class AppColors {
   /// Hairline between an expanded category's account rows (white @ 7%).
   static const sheetRowDivider = Color(0x12FFFFFF);
 
+  /// Background of a row lifted for reordering (press-and-hold on Balance).
+  /// A step above [surfaceHigh] so the floating row reads as raised.
+  static const dragLifted = Color(0xFF3A3A3C);
+
   /// Tinted fill used by highlight cards and icon tiles.
   static Color tint(Color c, [double opacity = 0.16]) => c.withValues(alpha: opacity);
 }
