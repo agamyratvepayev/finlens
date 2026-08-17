@@ -15,6 +15,7 @@ Future<void> main() async {
   final store = buildSeedStore();
   await store.loadBalanceFilter();
   await store.loadBalanceOrder();
+  await store.loadSameListRange();
   runApp(FinLensApp(store: store));
 }
 

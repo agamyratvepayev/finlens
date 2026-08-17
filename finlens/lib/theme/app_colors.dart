@@ -127,6 +127,21 @@ abstract final class AppColors {
   /// A step above [surfaceHigh] so the floating row reads as raised.
   static const dragLifted = Color(0xFF3A3A3C);
 
+  // ── Same-transactions screen ──
+  /// A lighter tint of [accent] for back/•••, the range value, "See all" and
+  /// the range ✓ — brighter than the brand purple so it reads as a link.
+  static const accentLight = Color(0xFFA5A3FF);
+
+  /// Hairline between list/summary rows on the Same-transactions cards
+  /// (white @ 6%), one step lighter than [sheetRowDivider].
+  static const hairline = Color(0x0FFFFFFF);
+
+  /// The emphasised variables in the frequency line ("4", "7 days").
+  static const freqValue = Color(0xFFD4D4DA);
+
+  /// Calendar day with no transactions under the current key.
+  static const emptyDay = Color(0xFF4A4A4E);
+
   /// Tinted fill used by highlight cards and icon tiles.
   static Color tint(Color c, [double opacity = 0.16]) => c.withValues(alpha: opacity);
 }

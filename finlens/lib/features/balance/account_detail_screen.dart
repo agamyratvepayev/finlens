@@ -12,6 +12,7 @@ import '../../theme/app_typography.dart';
 import '../quick_add/quick_add_sheet.dart';
 import 'balance_screen.dart' show EmptyState;
 import 'edit_account_screen.dart';
+import 'same_transactions_screen.dart';
 
 /// Spec 1.4 — one account's summary, limit bar, history and quick actions.
 class AccountDetailScreen extends StatelessWidget {
@@ -319,9 +320,17 @@ class AccountDetailScreen extends StatelessWidget {
                     perspectiveAccountId: account.id,
                     runningBalance:
                         store.runningBalanceAt(account.id, entry.value[i]),
-                    onTap: () => showQuickAdd(
-                      context,
-                      editing: entry.value[i],
+                    // A tap opens the read-only Same-transactions screen — it
+                    // must never open the editor and risk a stray-tap edit.
+                    // Editing stays behind the swipe menu and the new screen's
+                    // ••• menu.
+                    onTap: () => Navigator.of(context, rootNavigator: true).push(
+                      MaterialPageRoute(
+                        builder: (_) => SameTransactionsScreen(
+                          originTxnId: entry.value[i].id,
+                          backLabel: account.name,
+                        ),
+                      ),
                     ),
                     onEdit: () => showQuickAdd(context, editing: entry.value[i]),
                     onCopy: () => showQuickAdd(context, copyOf: entry.value[i]),

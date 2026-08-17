@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../features/balance/balance_filter.dart';
 import '../../features/balance/balance_order.dart';
+import '../../features/balance/same_transactions.dart';
 import '../models/models.dart';
 import '../utils/fx.dart';
 
@@ -129,6 +130,87 @@ class AppStore extends ChangeNotifier {
   Future<void> loadBalanceOrder() async {
     _balanceSort = await CustomOrder.loadSortMode();
     _balanceOrder = await CustomOrder.load(this);
+    notifyListeners();
+  }
+
+  // ── Same-transactions: composite-key index + range ────────────────────────
+
+  /// Transactions bucketed by their [SameKey], each bucket newest-first. Built
+  /// once and reused; invalidated (set null) by every txn mutation. This is the
+  /// one index in the store — it turns the Same-transactions lookups into an
+  /// O(1) map hit plus a small in-bucket filter, instead of a full scan.
+  Map<SameKey, List<Txn>>? _sameIndex;
+
+  Map<SameKey, List<Txn>> get _sameKeyIndex {
+    final cached = _sameIndex;
+    if (cached != null) return cached;
+    final index = <SameKey, List<Txn>>{};
+    for (final t in _txns) {
+      (index[SameKey.of(t)] ??= <Txn>[]).add(t);
+    }
+    for (final bucket in index.values) {
+      bucket.sort((a, b) => b.date.compareTo(a.date));
+    }
+    return _sameIndex = index;
+  }
+
+  Txn? txnById(String id) {
+    for (final t in _txns) {
+      if (t.id == id) return t;
+    }
+    return null;
+  }
+
+  /// Every transaction sharing [key], optionally within [from]..[to]
+  /// (inclusive). Newest-first. A transfer is a single row, so it appears — and
+  /// is counted — exactly once.
+  List<Txn> sameTransactions(SameKey key, {DateTime? from, DateTime? to}) {
+    final bucket = _sameKeyIndex[key] ?? const <Txn>[];
+    if (from == null && to == null) return List<Txn>.of(bucket);
+    return bucket.where((t) {
+      if (from != null && t.date.isBefore(from)) return false;
+      if (to != null && t.date.isAfter(to)) return false;
+      return true;
+    }).toList(growable: false);
+  }
+
+  /// The count under [key] for each preset range, from a single bucket read —
+  /// so the range sheet can show all seven counts without seven queries.
+  Map<SameRangePreset, int> sameRangeCounts(SameKey key) {
+    final bucket = _sameKeyIndex[key] ?? const <Txn>[];
+    final counts = <SameRangePreset, int>{};
+    for (final preset in SameRangePreset.values) {
+      final range = preset.resolve(today);
+      counts[preset] = bucket
+          .where((t) => !t.date.isBefore(range.start) && !t.date.isAfter(range.end))
+          .length;
+    }
+    return counts;
+  }
+
+  /// Count under [key] within an arbitrary window — drives the live count on
+  /// the custom-range picker's Apply button.
+  int sameCountBetween(SameKey key, DateTime from, DateTime to) {
+    final bucket = _sameKeyIndex[key] ?? const <Txn>[];
+    return bucket
+        .where((t) => !t.date.isBefore(from) && !t.date.isAfter(to))
+        .length;
+  }
+
+  /// The date range the Same-transactions screens share — one preference, not
+  /// per key (spec §4). Persisted, restored before first paint.
+  SameRangeChoice _sameListRange =
+      const SameRangeChoice.preset(SameRangePreset.defaultPreset);
+  SameRangeChoice get sameListRange => _sameListRange;
+
+  void setSameListRange(SameRangeChoice choice) {
+    _sameListRange = choice;
+    notifyListeners();
+    unawaited(choice.save());
+  }
+
+  Future<void> loadSameListRange() async {
+    _sameListRange = await SameRangeChoice.load();
     notifyListeners();
   }
 
@@ -553,6 +635,7 @@ class AppStore extends ChangeNotifier {
       goalId: goalId,
     );
     _txns.add(txn);
+    _sameIndex = null;
     notifyListeners();
     return txn;
   }
@@ -582,11 +665,14 @@ class AppStore extends ChangeNotifier {
       ..toAmount = toAmount ?? txn.toAmount
       ..exchangeRate = exchangeRate ?? txn.exchangeRate
       ..editedCount += 1;
+    // An edit can change fromRef/toRef/date, so the same-key index is stale.
+    _sameIndex = null;
     notifyListeners();
   }
 
   void deleteTxn(Txn txn) {
     _txns.removeWhere((t) => t.id == txn.id);
+    _sameIndex = null;
     notifyListeners();
   }
 
