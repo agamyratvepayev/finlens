@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 
 import '../../core/models/models.dart';
@@ -157,7 +158,14 @@ class _AccountPickerBodyState extends State<_AccountPickerBody> {
       children: [
         _SearchBar(
           hint: 'Search accounts',
-          onChanged: (v) => setState(() => _query = v),
+          onChanged: (v) {
+            setState(() => _query = v);
+            // The now-unfiltered list is longer; the old offset belonged to a
+            // shorter one, so return to the top when the query empties.
+            if (v.isEmpty && widget.controller.hasClients) {
+              widget.controller.jumpTo(0);
+            }
+          },
         ),
         Expanded(
           child: ListView(
@@ -270,7 +278,14 @@ class _CategoryPickerBodyState extends State<_CategoryPickerBody> {
       children: [
         _SearchBar(
           hint: 'Search categories',
-          onChanged: (v) => setState(() => _query = v),
+          onChanged: (v) {
+            setState(() => _query = v);
+            // The now-unfiltered grid is taller; drop back to the top when the
+            // query empties so the user isn't left scrolled into the middle.
+            if (v.isEmpty && widget.controller.hasClients) {
+              widget.controller.jumpTo(0);
+            }
+          },
         ),
         Expanded(
           child: SingleChildScrollView(
@@ -589,11 +604,39 @@ class _HeaderCreateAction<T> extends StatelessWidget {
   }
 }
 
-class _SearchBar extends StatelessWidget {
+class _SearchBar extends StatefulWidget {
   const _SearchBar({required this.hint, required this.onChanged});
 
   final String hint;
   final ValueChanged<String> onChanged;
+
+  @override
+  State<_SearchBar> createState() => _SearchBarState();
+}
+
+class _SearchBarState extends State<_SearchBar> {
+  // Owned here so the clear button can empty the field programmatically; the
+  // parent still learns of every change through [widget.onChanged].
+  final _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _clear() {
+    // Clearing is a correction, not an exit: empty the query and let the
+    // results spring back, but do not close the sheet and do not touch focus —
+    // leaving it untouched keeps an open keyboard open and a closed one closed.
+    _controller.clear();
+    widget.onChanged('');
+    SemanticsService.sendAnnouncement(
+      View.of(context),
+      'Search cleared',
+      Directionality.of(context),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -616,16 +659,46 @@ class _SearchBar extends StatelessWidget {
             const SizedBox(width: Insets.sm),
             Expanded(
               child: TextField(
-                onChanged: onChanged,
+                controller: _controller,
+                onChanged: widget.onChanged,
                 style: AppText.body,
                 cursorColor: AppColors.accentSoft,
                 decoration: InputDecoration(
                   isDense: true,
                   border: InputBorder.none,
-                  hintText: hint,
+                  hintText: widget.hint,
                   hintStyle: const TextStyle(color: AppColors.textTertiary),
                 ),
               ),
+            ),
+            // Clear button — mounted only while the query is non-empty, so a
+            // screen reader never meets a present-but-hidden glyph. Whitespace
+            // counts as non-empty on purpose. As a Row sibling it reserves its
+            // own width, so a long query ellipsizes rather than sliding under.
+            ValueListenableBuilder<TextEditingValue>(
+              valueListenable: _controller,
+              builder: (context, value, _) {
+                if (value.text.isEmpty) return const SizedBox.shrink();
+                return Semantics(
+                  button: true,
+                  label: 'Clear search',
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: _clear,
+                    child: const SizedBox(
+                      width: 44,
+                      height: double.infinity,
+                      child: Center(
+                        child: Icon(
+                          Icons.cancel_rounded,
+                          size: 16,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
             ),
           ],
         ),
