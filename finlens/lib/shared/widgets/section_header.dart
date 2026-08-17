@@ -214,9 +214,11 @@ class _HorizontalSectionSwipeState extends State<HorizontalSectionSwipe> {
         final horizontal =
             _dx.abs() >= _dy * HorizontalSectionSwipe._dominance;
         if (!far || !horizontal) return;
-        // Positive dx is a rightward drag: right advances (and wraps past the
-        // last section), left goes back (and wraps past the first).
-        _dx > 0 ? widget.onNext() : widget.onPrevious();
+        // Negative dx is a leftward drag (a right-to-left swipe): it advances
+        // to the next section (and wraps past the last); a rightward drag goes
+        // back (and wraps past the first). This matches the platform carousel
+        // convention, so right-to-left steps forward through the sections.
+        _dx < 0 ? widget.onNext() : widget.onPrevious();
       },
       child: widget.child,
     );
