@@ -135,28 +135,35 @@ class TxnRow extends StatelessWidget {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              AmountText(
-                txn.amount,
-                currency: txn.currency,
-                style: AppText.amount.copyWith(color: AppColors.textSecondary),
-              ),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 3),
-                child: Icon(
-                  Icons.arrow_right_alt_rounded,
-                  size: 15,
-                  color: AppColors.textTertiary,
+          Semantics(
+            label: 'Transfer, '
+                '${money(txn.amount, currency: txn.currency, signless: true, masked: store.masked)}',
+            excludeSemantics: true,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                AmountText(
+                  txn.amount,
+                  currency: txn.currency,
+                  style:
+                      AppText.amount.copyWith(color: AppColors.textSecondary),
                 ),
-              ),
-              AmountText(
-                txn.toAmount ?? txn.amount,
-                currency: store.accountById(txn.toRef)?.currency ?? txn.currency,
-                color: AppColors.info,
-              ),
-            ],
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 3),
+                  child: Icon(
+                    Icons.arrow_right_alt_rounded,
+                    size: 15,
+                    color: AppColors.textTertiary,
+                  ),
+                ),
+                AmountText(
+                  txn.toAmount ?? txn.amount,
+                  currency:
+                      store.accountById(txn.toRef)?.currency ?? txn.currency,
+                  color: AppColors.info,
+                ),
+              ],
+            ),
           ),
           if (txn.fee != null && txn.fee! > 0) ...[
             const SizedBox(height: 2),
@@ -177,12 +184,20 @@ class TxnRow extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        AmountText(
-          signed,
-          currency: txn.currency,
-          showSign: true,
-          color: color,
-          forceDecimals: signed.abs() % 1 != 0,
+        // Unsigned — colour carries direction (spec "Yön ≠ renk"). The sign
+        // would be a second, redundant cue; for colour-blind and screen-reader
+        // users the semantics label below names the direction in words instead.
+        Semantics(
+          label: '${_directionWord(signed)}, '
+              '${money(signed, currency: txn.currency, signless: true, masked: store.masked)}',
+          excludeSemantics: true,
+          child: AmountText(
+            signed,
+            currency: txn.currency,
+            signless: true,
+            color: color,
+            forceDecimals: signed.abs() % 1 != 0,
+          ),
         ),
         if (txn.type == TxnType.rebalance) ...[
           const SizedBox(height: 2),
@@ -206,6 +221,16 @@ class TxnRow extends StatelessWidget {
       ],
     );
   }
+
+  /// Direction in words for the amount's semantics label — the only carrier of
+  /// direction left once the sign is gone. A transfer reads out/in by the side
+  /// the running-balance perspective is looking from.
+  String _directionWord(double signed) => switch (txn.type) {
+        TxnType.expense => 'Expense',
+        TxnType.income => 'Income',
+        TxnType.rebalance => 'Revaluation',
+        TxnType.transfer => signed < 0 ? 'Transfer out' : 'Transfer in',
+      };
 
   double _signedAmount(AppStore store) {
     if (perspectiveAccountId != null) {

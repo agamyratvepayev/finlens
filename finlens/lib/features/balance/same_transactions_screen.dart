@@ -566,9 +566,14 @@ class _SameRow extends StatelessWidget {
     );
 
     final semanticsLabel = [
+      // Direction in words — colour is the only other cue for an unsigned row.
+      info.directionWord,
       dayMonth(txn.date),
       title,
-      money(txn.amount, currency: info.currency, masked: StoreScope.of(context).masked),
+      money(txn.amount,
+          currency: info.currency,
+          signless: true,
+          masked: StoreScope.of(context).masked),
       if (isCurrent) 'current transaction',
     ].join(', ');
 
@@ -618,6 +623,7 @@ class _KeyInfo {
     required this.color,
     required this.currency,
     required this.amountColor,
+    required this.directionWord,
     required this.rowFallbackTitle,
     required this.categoryName,
     required this.accountName,
@@ -631,6 +637,10 @@ class _KeyInfo {
   final Color color;
   final String currency;
   final Color amountColor;
+
+  /// Direction in words for the row amount's semantics — colour is otherwise
+  /// the only cue now that amounts are unsigned.
+  final String directionWord;
   final String rowFallbackTitle;
   final String categoryName;
   final String accountName;
@@ -653,6 +663,7 @@ class _KeyInfo {
         currency: from?.currency ?? Fx.baseCurrency,
         // The app's existing transfer colour — never red/green.
         amountColor: AppColors.transfer,
+        directionWord: 'Transfer',
         rowFallbackTitle: 'Transfer',
         categoryName: title,
         accountName: fromName,
@@ -689,6 +700,7 @@ class _KeyInfo {
           : store.refColor(ledger.categoryId),
       currency: account?.currency ?? Fx.baseCurrency,
       amountColor: amountColor,
+      directionWord: directionWord,
       rowFallbackTitle: categoryName,
       categoryName: categoryName,
       accountName: accountName,

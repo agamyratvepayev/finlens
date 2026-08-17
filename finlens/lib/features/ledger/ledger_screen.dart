@@ -296,6 +296,33 @@ class _LedgerScreenState extends State<LedgerScreen> {
     if (picked != null) store.period = picked;
   }
 
+  /// The day-group total. Unsigned like the scoped ledger's day total, with the
+  /// direction named in words for assistive tech. NOTE: this figure renders in
+  /// neutral grey (textTertiary), not the red/green the scoped ledger uses — so
+  /// without a sign a negative total shows no visible negativity cue. Reported,
+  /// not changed: colouring it would be outside this task's formatting-only
+  /// scope. See §1's "neutral keeps its sign" caveat.
+  Widget _dayTotal(AppStore store, List<Txn> txns) {
+    final net = txns.fold<double>(0, (sum, t) {
+      return switch (t.type) {
+        TxnType.expense => sum - t.amount,
+        TxnType.income => sum + t.amount,
+        // Transfers and revaluations move nothing net (spec 6.2).
+        _ => sum,
+      };
+    });
+    return Semantics(
+      label: '${net < 0 ? 'Net out' : 'Net in'}, '
+          '${money(net, signless: true, masked: store.masked)}',
+      excludeSemantics: true,
+      child: AmountText(
+        net,
+        signless: true,
+        style: AppText.label.copyWith(color: AppColors.textTertiary),
+      ),
+    );
+  }
+
   List<Widget> _grouped(BuildContext context, AppStore store, List<Txn> entries) {
     final groups = <String, List<Txn>>{};
     for (final t in entries) {
@@ -314,18 +341,7 @@ class _LedgerScreenState extends State<LedgerScreen> {
           child: Row(
             children: [
               Expanded(child: Text(entry.key, style: AppText.label)),
-              AmountText(
-                entry.value.fold(0.0, (sum, t) {
-                  return switch (t.type) {
-                    TxnType.expense => sum - t.amount,
-                    TxnType.income => sum + t.amount,
-                    // Transfers and revaluations move nothing net (spec 6.2).
-                    _ => sum,
-                  };
-                }),
-                showSign: true,
-                style: AppText.label.copyWith(color: AppColors.textTertiary),
-              ),
+              _dayTotal(store, entry.value),
             ],
           ),
         ),
