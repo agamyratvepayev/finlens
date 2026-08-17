@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../features/balance/balance_filter.dart';
 import '../../features/balance/balance_order.dart';
 import '../../features/balance/same_transactions.dart';
+import '../utils/date_range.dart';
 import '../models/models.dart';
 import '../utils/fx.dart';
 
@@ -212,6 +213,67 @@ class AppStore extends ChangeNotifier {
   Future<void> loadSameListRange() async {
     _sameListRange = await SameRangeChoice.load();
     notifyListeners();
+  }
+
+  // ── Scoped-ledger period unit (per screen type) ───────────────────────────
+  // Only the *unit* persists; the cursor always resets to the period containing
+  // today on launch (spec §5). Kept separately for account vs category screens.
+
+  PeriodUnit _accountPeriodUnit = PeriodUnit.month;
+  PeriodUnit get accountPeriodUnit => _accountPeriodUnit;
+
+  PeriodUnit _categoryPeriodUnit = PeriodUnit.month;
+  PeriodUnit get categoryPeriodUnit => _categoryPeriodUnit;
+
+  void setAccountPeriodUnit(PeriodUnit unit) {
+    _accountPeriodUnit = unit;
+    unawaited(savePeriodUnit('account_period_unit', unit));
+  }
+
+  void setCategoryPeriodUnit(PeriodUnit unit) {
+    _categoryPeriodUnit = unit;
+    unawaited(savePeriodUnit('category_period_unit', unit));
+  }
+
+  Future<void> loadPeriodUnits() async {
+    _accountPeriodUnit = await loadPeriodUnit('account_period_unit');
+    _categoryPeriodUnit = await loadPeriodUnit('category_period_unit');
+  }
+
+  // ── Per-account transaction index ─────────────────────────────────────────
+  // A transaction is bucketed under every account it touches (its account-side
+  // ref(s)). The scoped ledger queries by account + date range through this,
+  // instead of scanning the whole txn list. Invalidated by every txn mutation,
+  // alongside the same-key index.
+
+  Map<String, List<Txn>>? _accountIndex;
+
+  Map<String, List<Txn>> get _accountBuckets {
+    final cached = _accountIndex;
+    if (cached != null) return cached;
+    final index = <String, List<Txn>>{};
+    for (final t in _txns) {
+      // A txn touches at most two account-side refs; categories are skipped.
+      for (final ref in {t.fromRef, t.toRef}) {
+        if (accountById(ref) != null) {
+          (index[ref] ??= <Txn>[]).add(t);
+        }
+      }
+    }
+    return _accountIndex = index;
+  }
+
+  /// Every transaction touching any account in [accountIds], each once — the
+  /// candidate set the ledger query filters by date. Index-backed: no full scan.
+  List<Txn> txnsForAccounts(Set<String> accountIds) {
+    final seen = <String>{};
+    final out = <Txn>[];
+    for (final id in accountIds) {
+      for (final t in _accountBuckets[id] ?? const <Txn>[]) {
+        if (seen.add(t.id)) out.add(t);
+      }
+    }
+    return out;
   }
 
   ComparePeriod _comparePeriod = ComparePeriod.today;
@@ -636,6 +698,7 @@ class AppStore extends ChangeNotifier {
     );
     _txns.add(txn);
     _sameIndex = null;
+    _accountIndex = null;
     notifyListeners();
     return txn;
   }
@@ -667,12 +730,14 @@ class AppStore extends ChangeNotifier {
       ..editedCount += 1;
     // An edit can change fromRef/toRef/date, so the same-key index is stale.
     _sameIndex = null;
+    _accountIndex = null;
     notifyListeners();
   }
 
   void deleteTxn(Txn txn) {
     _txns.removeWhere((t) => t.id == txn.id);
     _sameIndex = null;
+    _accountIndex = null;
     notifyListeners();
   }
 

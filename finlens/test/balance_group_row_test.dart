@@ -49,7 +49,8 @@ void main() {
     expect(groupEdge, 390 - 20);
   });
 
-  testWidgets('group and account rows each expose two zones', (tester) async {
+  testWidgets('group rows keep two zones; account rows are one whole-row target',
+      (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
@@ -58,22 +59,20 @@ void main() {
     await tester.pumpWidget(_app(buildSeedStore()));
     await tester.pumpAndSettle();
 
-    // Zone 1 carries the figures and the expanded state; zone 2 is the ledger.
+    // Group rows are unchanged — zone 1 carries the figures and the expanded
+    // state; zone 2 is the ledger.
     expect(
       find.bySemanticsLabel(RegExp(r'^Spendable, 4 accounts, .*')),
       findsOneWidget,
     );
     expect(find.bySemanticsLabel('Spendable transactions'), findsOneWidget);
-
-    // A child row splits the same way: the name opens the account's page,
-    // the amount opens its ledger.
-    expect(find.bySemanticsLabel('Main Checking'), findsOneWidget);
-    expect(
-      find.bySemanticsLabel(RegExp(r'^Main Checking transactions, .*')),
-      findsOneWidget,
-    );
-
     handle.dispose();
+
+    // Account rows were consolidated: the whole row (name included) now opens
+    // the account's ledger — the name side no longer has a separate destination.
+    await tester.tap(find.text('Main Checking'));
+    await tester.pumpAndSettle();
+    expect(find.byType(ScopedLedgerScreen), findsOneWidget);
   });
 
   testWidgets('tapping the amount side opens a route, the name side does not',

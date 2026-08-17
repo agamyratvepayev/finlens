@@ -2,13 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:finlens/core/data/seed_data.dart';
 import 'package:finlens/core/models/models.dart';
 import 'package:finlens/core/store/app_store.dart';
-import 'package:finlens/features/balance/account_detail_screen.dart';
 import 'package:finlens/features/balance/same_transactions.dart';
 import 'package:finlens/features/balance/same_transactions_screen.dart';
-import 'package:finlens/shared/widgets/txn_row.dart';
 import 'package:finlens/theme/app_theme.dart';
 
 Txn tx(String id, TxnType type, String from, String to,
@@ -44,22 +41,11 @@ Widget host(AppStore store, Widget child, {GlobalKey<NavigatorState>? navKey}) =
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues(<String, Object>{}));
 
-  testWidgets('tapping a transaction row opens the read-only screen, not the editor',
-      (tester) async {
-    final store = buildSeedStore();
-    final account = store.accounts.firstWhere((a) => a.name == 'Main Checking');
-
-    await tester
-        .pumpWidget(host(store, AccountDetailScreen(accountId: account.id)));
-    await tester.pumpAndSettle();
-
-    expect(find.byType(TxnRow), findsWidgets);
-    await tester.tap(find.byType(TxnRow).first);
-    await tester.pumpAndSettle();
-
-    // A tap reaches the read-only Same-transactions screen — never the editor.
-    expect(find.byType(SameTransactionsScreen), findsOneWidget);
-  });
+  // NOTE: the "tapping a row opens the read-only screen" test was removed with
+  // the legacy AccountDetailScreen it pumped. Same-transactions is reached only
+  // from that screen's rows, so it is currently unreachable in normal
+  // navigation (flagged in the consolidation report). The screen itself still
+  // works, exercised directly below.
 
   testWidgets('changing the range recomputes the summary (TOTAL) and list',
       (tester) async {

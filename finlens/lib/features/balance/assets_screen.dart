@@ -8,8 +8,9 @@ import '../../shared/widgets/screen_header.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/app_typography.dart';
+import '../ledger/ledger_scope.dart';
+import '../ledger/scoped_ledger_screen.dart';
 import '../quick_add/quick_add_sheet.dart';
-import 'account_detail_screen.dart';
 import 'widgets/account_rows.dart';
 
 /// Spec 1.2 — Assets detail. Unlike Balance, every group starts expanded
@@ -152,7 +153,9 @@ class GroupDetailScreen extends StatelessWidget {
       subtitle: sub.text,
       subtitleColor: sub.color,
       onTap: () => Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => AccountDetailScreen(accountId: a.id)),
+        MaterialPageRoute(
+          builder: (_) => ScopedLedgerScreen(initialScope: AccountScope(a.id)),
+        ),
       ),
     );
   }

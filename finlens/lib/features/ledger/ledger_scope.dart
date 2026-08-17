@@ -133,9 +133,14 @@ class LedgerQuery {
       !d.isBefore(start) && !d.isAfter(end);
 
   /// Every transaction touching the scope inside the period, newest first.
+  ///
+  /// Index-backed: candidates come from the store's per-account index
+  /// ([AppStore.txnsForAccounts]) rather than a scan of every transaction.
   List<ScopedTxn> rows() {
+    final candidates = store.txnsForAccounts(_ids)
+      ..sort((a, b) => b.date.compareTo(a.date));
     final out = <ScopedTxn>[];
-    for (final t in store.txns) {
+    for (final t in candidates) {
       if (!_inPeriod(t.date)) continue;
       final touchesFrom = _inScope(t.fromRef);
       final touchesTo = _inScope(t.toRef);

@@ -1,3 +1,5 @@
+import 'package:shared_preferences/shared_preferences.dart';
+
 import 'formatters.dart';
 
 /// A closed date range plus the label rules the ledger's period strip uses.
@@ -26,15 +28,20 @@ class DateRange {
           preset: preset,
         );
       case RangePreset.last3Months:
+        // A whole 3-month block: steps move the block by three months, not one
+        // (1 Jun–31 Aug → 1 Mar–31 May).
+        final ns = DateTime(start.year, start.month + 3 * steps, 1);
         return DateRange(
-          DateTime(start.year, start.month + steps, start.day),
-          DateTime(end.year, end.month + steps, end.day),
+          ns,
+          _endOfMonth(DateTime(ns.year, ns.month + 2)),
           preset: preset,
         );
       case RangePreset.thisYear:
+        // Whole years, never clamped to today.
+        final y = start.year + steps;
         return DateRange(
-          DateTime(start.year + steps, 1, 1),
-          DateTime(end.year + steps, end.month, end.day),
+          DateTime(y, 1, 1),
+          _endOfDay(DateTime(y, 12, 31)),
           preset: preset,
         );
       case RangePreset.allTime:
@@ -89,13 +96,15 @@ enum RangePreset {
     switch (this) {
       case RangePreset.thisWeek:
         final monday = day.subtract(Duration(days: day.weekday - 1));
-        return DateRange(monday, monday.add(const Duration(days: 6)),
+        return DateRange(
+            monday, _endOfDay(monday.add(const Duration(days: 6))),
             preset: this);
       case RangePreset.lastWeek:
         final monday = day
             .subtract(Duration(days: day.weekday - 1))
             .subtract(const Duration(days: 7));
-        return DateRange(monday, monday.add(const Duration(days: 6)),
+        return DateRange(
+            monday, _endOfDay(monday.add(const Duration(days: 6))),
             preset: this);
       case RangePreset.thisMonth:
         return DateRange(
@@ -113,12 +122,58 @@ enum RangePreset {
           preset: this,
         );
       case RangePreset.thisYear:
-        return DateRange(DateTime(day.year, 1, 1), day, preset: this);
+        // Whole year — 1 Jan – 31 Dec — not clamped to today.
+        return DateRange(
+          DateTime(day.year, 1, 1),
+          _endOfDay(DateTime(day.year, 12, 31)),
+          preset: this,
+        );
       case RangePreset.allTime:
         return DateRange(DateTime(2000), day, preset: this);
     }
   }
 }
 
+/// The unit `‹` / `›` steps by. A preset belongs to exactly one unit; [allTime]
+/// has none. Only the unit is persisted per screen — the cursor always resets
+/// to the period containing today on launch.
+enum PeriodUnit { week, month, quarter, year }
+
+extension RangePresetUnit on RangePreset {
+  PeriodUnit? get unit => switch (this) {
+        RangePreset.thisWeek || RangePreset.lastWeek => PeriodUnit.week,
+        RangePreset.thisMonth || RangePreset.lastMonth => PeriodUnit.month,
+        RangePreset.last3Months => PeriodUnit.quarter,
+        RangePreset.thisYear => PeriodUnit.year,
+        RangePreset.allTime => null,
+      };
+}
+
+/// The "current period" preset for a unit — the launch landing spot, cursor on
+/// the period containing today.
+RangePreset currentPresetFor(PeriodUnit unit) => switch (unit) {
+      PeriodUnit.week => RangePreset.thisWeek,
+      PeriodUnit.month => RangePreset.thisMonth,
+      PeriodUnit.quarter => RangePreset.last3Months,
+      PeriodUnit.year => RangePreset.thisYear,
+    };
+
+Future<void> savePeriodUnit(String key, PeriodUnit unit) async {
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.setString(key, unit.name);
+}
+
+Future<PeriodUnit> loadPeriodUnit(String key) async {
+  final prefs = await SharedPreferences.getInstance();
+  final raw = prefs.getString(key);
+  for (final u in PeriodUnit.values) {
+    if (u.name == raw) return u;
+  }
+  return PeriodUnit.month;
+}
+
 DateTime _endOfMonth(DateTime d) =>
     DateTime(d.year, d.month + 1, 0, 23, 59, 59, 999);
+
+DateTime _endOfDay(DateTime d) =>
+    DateTime(d.year, d.month, d.day, 23, 59, 59, 999);

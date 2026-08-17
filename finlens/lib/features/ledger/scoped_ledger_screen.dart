@@ -9,6 +9,7 @@ import '../../core/utils/formatters.dart';
 import '../../shared/widgets/section_header.dart';
 import '../../shared/widgets/swipe_actions.dart';
 import '../../theme/app_colors.dart';
+import '../balance/edit_account_screen.dart';
 import '../quick_add/quick_add_sheet.dart';
 import 'ledger_scope.dart';
 import 'widgets/ledger_txn_row.dart';
@@ -29,9 +30,12 @@ class ScopedLedgerScreen extends StatefulWidget {
 
 class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
   late LedgerScope _scope = widget.initialScope;
-  late DateRange _range = RangePreset.thisMonth.resolve(AppStore.today);
+  late DateRange _range;
 
   FlowKind? _filter;
+
+  /// True while the period sheet is open, so the chip can tint (spec §4).
+  bool _rangeSheetOpen = false;
 
   /// Rows the user has deleted but not yet committed. They stay out of the
   /// list while the undo snackbar is up, so Undo restores them in place with
@@ -49,6 +53,9 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
   @override
   void initState() {
     super.initState();
+    // Land on the period containing today, at the unit saved for this screen
+    // type (account vs category) — the cursor is never persisted (spec §5).
+    _range = _periodForScope(StoreScope.read(context), _scope);
     if (!_hintShown) {
       _hintShown = true;
       // Cancellable so leaving the screen early does not leave it pending.
@@ -63,6 +70,23 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
   void dispose() {
     _hintTimer?.cancel();
     super.dispose();
+  }
+
+  DateRange _periodForScope(AppStore store, LedgerScope scope) {
+    final unit = scope is AccountScope
+        ? store.accountPeriodUnit
+        : store.categoryPeriodUnit;
+    return currentPresetFor(unit).resolve(AppStore.today);
+  }
+
+  /// Persist the chosen unit under this screen's type — account screens share
+  /// one preference, category/all screens another.
+  void _saveUnit(AppStore store, PeriodUnit unit) {
+    if (_scope is AccountScope) {
+      store.setAccountPeriodUnit(unit);
+    } else {
+      store.setCategoryPeriodUnit(unit);
+    }
   }
 
   void _setScope(LedgerScope scope) {
@@ -105,6 +129,7 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
               totalIn: query.totalIn,
               totalOut: query.totalOut,
               filter: _filter,
+              highlighted: _rangeSheetOpen,
               onStep: (steps) =>
                   setState(() => _range = _range.copyShifted(steps)),
               onPickRange: () => _pickRange(store),
@@ -160,11 +185,30 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
             ),
           ),
           const Spacer(),
-          const Padding(
-            padding: EdgeInsets.only(right: 16),
-            child: Icon(Icons.more_horiz_rounded,
-                size: 19, color: AppColors.textSecondary),
-          ),
+          // For a single account, ••• opens Edit Account — the only path to it
+          // now that the legacy account-detail screen is gone. For group / all
+          // scopes there is no account to edit, so it stays inert.
+          if (_scope is AccountScope)
+            InkWell(
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => EditAccountScreen(
+                    accountId: (_scope as AccountScope).accountId,
+                  ),
+                ),
+              ),
+              child: const Padding(
+                padding: EdgeInsets.only(right: 16, left: 8, top: 8, bottom: 8),
+                child: Icon(Icons.more_horiz_rounded,
+                    size: 19, color: AppColors.textSecondary),
+              ),
+            )
+          else
+            const Padding(
+              padding: EdgeInsets.only(right: 16),
+              child: Icon(Icons.more_horiz_rounded,
+                  size: 19, color: AppColors.textSecondary),
+            ),
         ],
       ),
     );
@@ -447,10 +491,26 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
 
   // ── Sheets ────────────────────────────────────────────────────────────────
 
+  /// The sheet rows, in display order: the default (This month) first, the
+  /// extra "All time" kept last (spec §4). Every preset is a whole-period.
+  static const _rangeRows = <RangePreset>[
+    RangePreset.thisMonth,
+    RangePreset.lastMonth,
+    RangePreset.thisWeek,
+    RangePreset.lastWeek,
+    RangePreset.last3Months,
+    RangePreset.thisYear,
+    RangePreset.allTime,
+  ];
+
   Future<void> _pickRange(AppStore store) async {
+    setState(() => _rangeSheetOpen = true);
+    final today = AppStore.today;
     final picked = await showModalBottomSheet<RangePreset>(
       context: context,
       backgroundColor: AppColors.surfaceAlt,
+      // Scrollable so seven rows never overflow the box, even at 320×568 / 130%.
+      isScrollControlled: true,
       builder: (sheetContext) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -478,26 +538,57 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
                 ),
               ),
             ),
-            for (final p in RangePreset.values)
-              ListTile(
-                title: Text(p.label,
-                    style: const TextStyle(
-                        fontSize: 15, color: AppColors.textPrimary)),
-                trailing: Text(
-                  p.resolve(AppStore.today).label(AppStore.today),
-                  style: const TextStyle(
-                      fontSize: 13.5, color: AppColors.formDim2),
-                ),
-                onTap: () => Navigator.of(sheetContext).pop(p),
+            Flexible(
+              child: ListView(
+                shrinkWrap: true,
+                padding: EdgeInsets.zero,
+                children: [
+                  for (final p in _rangeRows)
+                    _rangeRow(sheetContext, p, today),
+                ],
               ),
+            ),
             const SizedBox(height: 8),
           ],
         ),
       ),
     );
+    if (mounted) setState(() => _rangeSheetOpen = false);
     if (picked != null) {
-      setState(() => _range = picked.resolve(AppStore.today));
+      setState(() => _range = picked.resolve(today));
+      final unit = picked.unit;
+      if (unit != null) _saveUnit(store, unit);
     }
+  }
+
+  Widget _rangeRow(BuildContext sheetContext, RangePreset p, DateTime today) {
+    final resolved = p.resolve(today);
+    final active =
+        resolved.start == _range.start && resolved.end == _range.end;
+    return ListTile(
+      // A left check slot the app uses on its other option sheets; inactive
+      // rows keep the same-width empty slot so labels stay aligned.
+      leading: SizedBox(
+        width: 22,
+        child: active
+            ? const Icon(Icons.check_rounded,
+                size: 18, color: AppColors.accentLight)
+            : null,
+      ),
+      title: Text(
+        p.label,
+        style: TextStyle(
+          fontSize: 15,
+          fontWeight: active ? FontWeight.w600 : FontWeight.w400,
+          color: AppColors.textPrimary,
+        ),
+      ),
+      trailing: Text(
+        resolved.label(today),
+        style: const TextStyle(fontSize: 12.5, color: AppColors.textTertiary),
+      ),
+      onTap: () => Navigator.of(sheetContext).pop(p),
+    );
   }
 
   Future<void> _pickScope(AppStore store) async {

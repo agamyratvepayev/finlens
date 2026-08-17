@@ -8,7 +8,6 @@ import '../../shared/widgets/section_header.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/app_typography.dart';
-import 'account_detail_screen.dart';
 import 'balance_order.dart';
 import 'widgets/reorderable_group.dart';
 import '../ledger/ledger_scope.dart';
@@ -866,8 +865,9 @@ class _BalanceScreenState extends State<BalanceScreen> {
                         subtitleColor: group.isLiability
                             ? liabilitySubtitle(store, a).color
                             : null,
-                        onOpenAccount: () => _openAccountDetail(a),
-                        onOpenLedger: () => _openAccountLedger(a),
+                        // The whole row is one tap target now: name, amount and
+                        // the space between all open the account's ledger.
+                        onTap: () => _openAccountLedger(a),
                       ),
                     ),
                   ),
@@ -1014,15 +1014,6 @@ class _BalanceScreenState extends State<BalanceScreen> {
   void _openAccountLedger(Account account) => _openLedger(
         AccountScope(account.id),
       );
-
-  /// The name side asks "what is this", so it opens the account's own page.
-  void _openAccountDetail(Account account) {
-    Navigator.of(context, rootNavigator: true).push(
-      MaterialPageRoute(
-        builder: (_) => AccountDetailScreen(accountId: account.id),
-      ),
-    );
-  }
 
   void _openGroupLedger(AccountGroup group) => _openLedger(GroupScope(group));
 
