@@ -60,6 +60,8 @@ class Tool {
     this.showDot = false,
     this.filled = false,
     this.tooltip,
+    this.iconColor,
+    this.semanticValue,
   });
 
   final IconData icon;
@@ -72,6 +74,15 @@ class Tool {
   /// Brand fill + white icon, for a toggle that is currently "on".
   final bool filled;
   final String? tooltip;
+
+  /// Overrides the icon colour *without* touching the background — the Balance
+  /// filter button signals "active" by brightening its glyph one step (muted →
+  /// high-emphasis) while its surface stays put. Null keeps the muted default.
+  final Color? iconColor;
+
+  /// Exposed as [Semantics.value]. For a button whose only visual change is a
+  /// glyph fill, this is the sole cue a screen-reader user gets.
+  final String? semanticValue;
 }
 
 /// The right-hand tool buttons. Shared by Balance and (next) Ledger.
@@ -101,9 +112,13 @@ class _ToolButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final iconColor = tool.filled
+        ? Colors.white
+        : (tool.iconColor ?? AppColors.textSecondary);
     return Semantics(
       button: true,
       label: tool.tooltip,
+      value: tool.semanticValue,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: tool.onTap,
@@ -113,14 +128,24 @@ class _ToolButton extends StatelessWidget {
             Container(
               width: 30,
               height: 28,
+              alignment: Alignment.center,
               decoration: BoxDecoration(
                 color: tool.filled ? AppColors.accent : AppColors.surfaceAlt,
                 borderRadius: BorderRadius.circular(Radii.sm),
               ),
-              child: Icon(
-                tool.icon,
-                size: 15,
-                color: tool.filled ? Colors.white : AppColors.textSecondary,
+              // The glyph cross-fades and its colour eases when a tool flips
+              // state (outline funnel → filled funnel on the filter button);
+              // an unchanged tool renders an identical idle frame.
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 160),
+                switchInCurve: Curves.easeOut,
+                switchOutCurve: Curves.easeOut,
+                child: Icon(
+                  tool.icon,
+                  key: ValueKey('${tool.icon.codePoint}-${iconColor.toARGB32()}'),
+                  size: 15,
+                  color: iconColor,
+                ),
               ),
             ),
             if (tool.showDot)

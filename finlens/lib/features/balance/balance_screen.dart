@@ -13,6 +13,7 @@ import '../ledger/ledger_scope.dart';
 import '../ledger/scoped_ledger_screen.dart';
 import '../quick_add/quick_add_sheet.dart';
 import 'widgets/account_rows.dart';
+import 'widgets/balance_filter_sheet.dart';
 import 'widgets/date_sheet.dart';
 
 /// The three views of the same list. Filtering here is *focusing*, not
@@ -166,6 +167,7 @@ class _BalanceScreenState extends State<BalanceScreen> {
   /// 106px: label + dots + controls, then the amount beside the tools, then the
   /// ratio bar. Pinned — only the list scrolls.
   Widget _header(AppStore store) {
+    final filter = store.balanceFilter;
     final showRatio = _section == BalanceSection.all && !_searching;
 
     // 34 + 4 + 34 + 8 + 4 + 4 + 14 + 4 = 106 on the All section. The height is
@@ -187,7 +189,10 @@ class _BalanceScreenState extends State<BalanceScreen> {
             _headerRow2(store),
             if (showRatio) ...[
               const SizedBox(height: 8),
-              _RatioBar(liabilityRatio: store.liabilityRatio),
+              _RatioBar(
+                assets: filter.sectionTotal(store, assets: true),
+                liabilities: filter.sectionTotal(store, assets: false).abs(),
+              ),
               const SizedBox(height: 4),
               _ratioLabels(store),
             ],
@@ -240,10 +245,17 @@ class _BalanceScreenState extends State<BalanceScreen> {
   }
 
   Widget _amountAndTools(AppStore store) {
+    final filter = store.balanceFilter;
+    // Every headline figure is the *filtered* one — hiding Valuables has to
+    // move Net Worth, not just drop a row. The store getters stay unfiltered so
+    // no other tab is affected; the filtering lives here.
     final (amount, color) = switch (_section) {
-      BalanceSection.all => (store.netWorth, null),
-      BalanceSection.assets => (store.totalAssets, null),
-      BalanceSection.liabilities => (store.totalLiabilities, AppColors.negative),
+      BalanceSection.all => (filter.netWorth(store), null),
+      BalanceSection.assets => (filter.sectionTotal(store, assets: true), null),
+      BalanceSection.liabilities => (
+          filter.sectionTotal(store, assets: false),
+          AppColors.negative,
+        ),
     };
 
     return Row(
@@ -298,6 +310,20 @@ class _BalanceScreenState extends State<BalanceScreen> {
                 icon: Icons.search_rounded,
                 tooltip: 'Search',
                 onTap: _openSearch,
+              ),
+              // Active state is icon-only by design: the funnel fills and
+              // brightens one step, the surface never changes. The live Net
+              // Worth preview inside the sheet is what tells the user the cost.
+              Tool(
+                icon: filter.isActive
+                    ? Icons.filter_alt_rounded
+                    : Icons.filter_alt_outlined,
+                iconColor: filter.isActive ? AppColors.textPrimary : null,
+                tooltip: 'Filter categories',
+                semanticValue: filter.isActive
+                    ? 'Active, ${filter.hiddenItemCount(store)} items hidden'
+                    : 'Off',
+                onTap: () => showBalanceFilterSheet(context),
               ),
             ],
           ),
@@ -373,13 +399,14 @@ class _BalanceScreenState extends State<BalanceScreen> {
   }
 
   Widget _ratioLabels(AppStore store) {
+    final filter = store.balanceFilter;
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Flexible(
           child: _RatioLabel(
             caption: 'Assets ',
-            value: store.totalAssets,
+            value: filter.sectionTotal(store, assets: true),
             color: AppColors.positive,
             alignment: Alignment.centerLeft,
           ),
@@ -387,7 +414,7 @@ class _BalanceScreenState extends State<BalanceScreen> {
         Flexible(
           child: _RatioLabel(
             caption: 'Liabilities ',
-            value: store.totalLiabilities,
+            value: filter.sectionTotal(store, assets: false),
             color: AppColors.negative,
             alignment: Alignment.centerRight,
           ),
@@ -502,33 +529,80 @@ class _BalanceScreenState extends State<BalanceScreen> {
   // ── List ──────────────────────────────────────────────────────────────────
 
   Widget _list(AppStore store) {
+    final filter = store.balanceFilter;
     final assets = _groupsFor(store, AccountGroup.assets);
     final liabilities = _groupsFor(store, AccountGroup.liabilities);
 
     if (assets.isEmpty && liabilities.isEmpty) {
-      return _query.isNotEmpty ? _noResults() : _emptyState();
+      if (_query.isNotEmpty) return _noResults();
+      // No accounts at all is the "add your first account" case; accounts that
+      // exist but are all filtered out fall through to per-section empty rows.
+      final anyAccounts =
+          AccountGroup.values.any((g) => store.groupCount(g) > 0);
+      if (!anyAccounts) return _emptyState();
     }
 
     // Section headers only show on All: on a filtered section the total already
     // sits in the header 60px above, and it must appear in exactly one place.
     final showHeaders = _section == BalanceSection.all;
 
+    // A section renders (header + rows, or the "all hidden" notice) whenever it
+    // has visible groups OR it has accounts that the filter has hidden. A truly
+    // empty section (no accounts) stays absent, as before.
+    bool sectionHasAccounts(List<AccountGroup> section) =>
+        !_searching && section.any((g) => store.groupCount(g) > 0);
+    final assetsHasContent =
+        assets.isNotEmpty || sectionHasAccounts(AccountGroup.assets);
+    final liabsHasContent =
+        liabilities.isNotEmpty || sectionHasAccounts(AccountGroup.liabilities);
+
     return ListView(
       controller: _scrollController,
       padding: const EdgeInsets.only(bottom: Insets.xxl),
       children: [
-        if (_section != BalanceSection.liabilities && assets.isNotEmpty) ...[
-          if (showHeaders) _ListSectionHeader('Assets', store.totalAssets),
-          for (final group in assets) _group(store, group),
-        ],
-        if (_section != BalanceSection.assets && liabilities.isNotEmpty) ...[
+        if (_section != BalanceSection.liabilities && assetsHasContent) ...[
           if (showHeaders)
-            _ListSectionHeader('Liabilities', store.totalLiabilities),
-          for (final group in liabilities) _group(store, group),
+            _ListSectionHeader(
+                'Assets', filter.sectionTotal(store, assets: true)),
+          if (assets.isEmpty)
+            _filteredAwayRow()
+          else
+            for (final group in assets) _group(store, group),
+        ],
+        if (_section != BalanceSection.assets && liabsHasContent) ...[
+          if (showHeaders)
+            _ListSectionHeader(
+                'Liabilities', filter.sectionTotal(store, assets: false)),
+          if (liabilities.isEmpty)
+            _filteredAwayRow()
+          else
+            for (final group in liabilities) _group(store, group),
         ],
       ],
     );
   }
+
+  /// Shown when a section's accounts are all filtered out — never a $0 group
+  /// row. Offers the one way back: reopen the filter sheet.
+  Widget _filteredAwayRow() => Padding(
+        padding: const EdgeInsets.symmetric(vertical: Insets.xl),
+        child: Column(
+          children: [
+            Text(
+              'No visible categories',
+              style: AppText.body.copyWith(color: AppColors.textTertiary),
+            ),
+            TextButton(
+              onPressed: () => showBalanceFilterSheet(context),
+              style: TextButton.styleFrom(
+                foregroundColor: AppColors.accent,
+                minimumSize: const Size(0, 36),
+              ),
+              child: const Text('Adjust filter'),
+            ),
+          ],
+        ),
+      );
 
   Widget _noResults() => const Padding(
         padding: EdgeInsets.only(top: 72),
@@ -576,7 +650,12 @@ class _BalanceScreenState extends State<BalanceScreen> {
       return const [];
     }
 
-    var groups = source.where((g) => store.groupCount(g) > 0).toList();
+    // A filter-hidden group has zero visible accounts, so it drops out here the
+    // same way a group with no accounts does — never rendered as an empty row.
+    final filter = store.balanceFilter;
+    var groups = source
+        .where((g) => store.groupCount(g) > 0 && filter.isGroupVisible(store, g))
+        .toList();
 
     if (_query.isNotEmpty) {
       groups = groups.where((g) => _matchesQuery(store, g)).toList();
@@ -588,7 +667,9 @@ class _BalanceScreenState extends State<BalanceScreen> {
   bool _matchesQuery(AppStore store, AccountGroup group) {
     final q = _query.toLowerCase();
     if (group.label.toLowerCase().contains(q)) return true;
-    return store.accountsIn(group).any(
+    // Search only sees visible accounts — one hidden inside a group must not
+    // surface a match (spec §4.4.11).
+    return store.balanceFilter.visibleAccounts(store, group).any(
           (a) => a.name.toLowerCase().contains(q),
         );
   }
@@ -600,8 +681,8 @@ class _BalanceScreenState extends State<BalanceScreen> {
     final q = _query.toLowerCase();
     final groupMatches = group.label.toLowerCase().contains(q);
 
-    final list = store
-        .accountsIn(group)
+    final list = store.balanceFilter
+        .visibleAccounts(store, group)
         .where((a) =>
             _query.isEmpty || groupMatches || a.name.toLowerCase().contains(q))
         .toList();
@@ -630,13 +711,24 @@ class _BalanceScreenState extends State<BalanceScreen> {
     final open = matchedOnChild || _isOpen(group);
     final children = _children(store, group);
 
+    // Amount, count and share are all recomputed against the filtered set: the
+    // percentage's denominator is the filtered section total, so hiding
+    // Valuables pushes Investments from 21.4% to 65.1% rather than leaving a
+    // stale figure.
+    final filter = store.balanceFilter;
+    final filteredTotal = filter.filteredTotal(store, group);
+    final sectionTotal =
+        filter.sectionTotal(store, assets: group.isAsset).abs();
+    final share =
+        sectionTotal == 0 ? 0.0 : (filteredTotal.abs() / sectionTotal).clamp(0.0, 1.0);
+
     return Column(
       children: [
         GroupRow(
           group: group,
-          total: store.groupTotal(group),
-          count: store.groupCount(group),
-          share: store.groupShare(group),
+          total: filteredTotal,
+          count: filter.visibleAccounts(store, group).length,
+          share: share,
           isOpen: open,
           onToggle: () => setState(() {
             if (open) {
@@ -735,13 +827,30 @@ class _ListSectionHeader extends StatelessWidget {
 }
 
 class _RatioBar extends StatelessWidget {
-  const _RatioBar({required this.liabilityRatio});
+  const _RatioBar({required this.assets, required this.liabilities});
 
-  final double liabilityRatio;
+  /// Both filtered magnitudes (liabilities passed as a positive number).
+  final double assets;
+  final double liabilities;
 
   @override
   Widget build(BuildContext context) {
-    final ratio = liabilityRatio.clamp(0.0, 1.0);
+    final total = assets + liabilities;
+    // Everything hidden: no ratio to draw — a flat neutral track (spec §5),
+    // and the guard that keeps the division below safe.
+    if (total <= 0) {
+      return SizedBox(height: 4, child: _seg(AppColors.sheetCard));
+    }
+    // One side fully hidden reads as a single solid bar, not a bar with a
+    // 1-flex sliver of the other colour.
+    if (liabilities <= 0) {
+      return SizedBox(height: 4, child: _seg(AppColors.positive));
+    }
+    if (assets <= 0) {
+      return SizedBox(height: 4, child: _seg(AppColors.negative));
+    }
+
+    final ratio = (liabilities / total).clamp(0.0, 1.0);
     return SizedBox(
       height: 4,
       child: Row(

@@ -112,6 +112,17 @@ abstract final class AppColors {
     Color(0xFF8E8E93),
   ];
 
+  // ── Balance filter sheet ──
+  // A denser utility surface that sits one step above [surfaceAlt] (the sheet
+  // body). These have no equivalent in the ramps above, so they earn their own
+  // semantic names rather than raw hex at the call site.
+  static const sheetCard = Color(0xFF2C2C2E);
+  static const sheetGrabber = Color(0xFF48484A);
+  static const sheetAccountName = Color(0xFFEBEBF5);
+
+  /// Hairline between an expanded category's account rows (white @ 7%).
+  static const sheetRowDivider = Color(0x12FFFFFF);
+
   /// Tinted fill used by highlight cards and icon tiles.
   static Color tint(Color c, [double opacity = 0.16]) => c.withValues(alpha: opacity);
 }

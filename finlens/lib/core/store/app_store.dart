@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
+import '../../features/balance/balance_filter.dart';
 import '../models/models.dart';
 import '../utils/fx.dart';
 
@@ -62,6 +65,31 @@ class AppStore extends ChangeNotifier {
 
   void setAsOf(DateTime? date) {
     _asOf = date == null ? null : DateTime(date.year, date.month, date.day);
+    notifyListeners();
+  }
+
+  /// Which account groups and accounts the Balance screen is hiding from its
+  /// net-worth figures. Presentational and Balance-only: the store merely holds
+  /// it so it can persist and notify — the screen does the actual filtering
+  /// through [BalanceFilter]'s pure methods, so no other tab, total or export
+  /// is affected.
+  BalanceFilter _balanceFilter = const BalanceFilter();
+  BalanceFilter get balanceFilter => _balanceFilter;
+
+  /// Applies a new filter and persists it. Persistence is fire-and-forget to
+  /// match the app's in-memory mutation style — the UI updates immediately and
+  /// the write lands whenever it lands.
+  void setBalanceFilter(BalanceFilter filter) {
+    _balanceFilter = filter;
+    notifyListeners();
+    unawaited(filter.save());
+  }
+
+  /// Restores the persisted filter at startup (call before the first frame so
+  /// the screen never flashes unfiltered values). Ids that no longer match a
+  /// live account are pruned inside [BalanceFilter.load].
+  Future<void> loadBalanceFilter() async {
+    _balanceFilter = await BalanceFilter.load(this);
     notifyListeners();
   }
 

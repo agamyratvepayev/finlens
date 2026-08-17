@@ -6,9 +6,15 @@ import 'core/store/app_store.dart';
 import 'features/shell/app_shell.dart';
 import 'theme/app_theme.dart';
 
-void main() {
+Future<void> main() async {
+  // Needed before touching SharedPreferences (the filter store) and before
+  // runApp, so the persisted Balance filter is restored *before the first
+  // frame* — the screen must never paint unfiltered values and then re-render.
+  WidgetsFlutterBinding.ensureInitialized();
   SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle.light);
-  runApp(FinLensApp(store: buildSeedStore()));
+  final store = buildSeedStore();
+  await store.loadBalanceFilter();
+  runApp(FinLensApp(store: store));
 }
 
 class FinLensApp extends StatelessWidget {
