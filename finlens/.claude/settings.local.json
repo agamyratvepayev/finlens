@@ -44,5 +44,18 @@
       "Bash(pkill -f \"flutter_tools.snapshot run\" 2>&1; sleep 1 *)",
       "Bash(flutter pub *)"
     ]
+  },
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd \"${CLAUDE_PROJECT_DIR:-.}\" && if [ -n \"$(git status --porcelain)\" ]; then git add -A && git commit -m \"Auto-commit $(date '+%Y-%m-%d %H:%M')\" && { git push || git push -u origin HEAD; }; fi",
+            "statusMessage": "Auto-commit & push changes"
+          }
+        ]
+      }
+    ]
   }
 }
