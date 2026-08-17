@@ -8,6 +8,7 @@ import '../../shared/widgets/screen_header.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/app_typography.dart';
+import '../../shared/widgets/swipe_back_route.dart';
 import '../ledger/ledger_scope.dart';
 import '../ledger/scoped_ledger_screen.dart';
 import '../quick_add/quick_add_sheet.dart';
@@ -153,7 +154,7 @@ class GroupDetailScreen extends StatelessWidget {
       subtitle: sub.text,
       subtitleColor: sub.color,
       onTap: () => Navigator.of(context).push(
-        MaterialPageRoute(
+        SwipeBackPageRoute(
           builder: (_) => ScopedLedgerScreen(initialScope: AccountScope(a.id)),
         ),
       ),

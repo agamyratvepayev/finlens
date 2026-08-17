@@ -5,6 +5,7 @@ import '../../core/store/app_store.dart';
 import '../../core/utils/formatters.dart';
 import '../../shared/widgets/amount_text.dart';
 import '../../shared/widgets/section_header.dart';
+import '../../shared/widgets/swipe_back_route.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/app_typography.dart';
@@ -1021,7 +1022,9 @@ class _BalanceScreenState extends State<BalanceScreen> {
   /// back stack stays one deep however long the user browses.
   void _openLedger(LedgerScope scope) {
     Navigator.of(context, rootNavigator: true).push(
-      MaterialPageRoute(
+      // A SwipeBackPageRoute keeps the standard push transition but adds the
+      // hold-then-drag-left back gesture on the detail screen.
+      SwipeBackPageRoute(
         builder: (_) => ScopedLedgerScreen(initialScope: scope),
       ),
     );

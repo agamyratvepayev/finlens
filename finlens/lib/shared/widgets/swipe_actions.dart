@@ -49,6 +49,10 @@ final ValueNotifier<Object?> _openRow = ValueNotifier<Object?>(null);
 /// outside the strip.
 void closeOpenSwipeRow() => _openRow.value = null;
 
+/// Whether any row's action strip is currently open. Read-only — the back
+/// gesture uses it to close an open menu instead of popping on the first drag.
+bool get anySwipeRowOpen => _openRow.value != null;
+
 /// Nudges the first row open and back, once, to advertise the gesture.
 final ValueNotifier<int> _hintTick = ValueNotifier<int>(0);
 void hintSwipeRow() => _hintTick.value++;

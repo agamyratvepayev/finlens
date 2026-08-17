@@ -1,6 +1,8 @@
 import 'dart:async';
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../core/models/models.dart';
 import '../../core/store/app_store.dart';
@@ -8,6 +10,7 @@ import '../../core/utils/date_range.dart';
 import '../../core/utils/formatters.dart';
 import '../../shared/widgets/section_header.dart';
 import '../../shared/widgets/swipe_actions.dart';
+import '../../shared/widgets/swipe_back_route.dart';
 import '../../theme/app_colors.dart';
 import '../balance/edit_account_screen.dart';
 import '../quick_add/quick_add_sheet.dart';
@@ -36,6 +39,18 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
 
   /// True while the period sheet is open, so the chip can tint (spec §4).
   bool _rangeSheetOpen = false;
+
+  // ── Swipe-back gesture ────────────────────────────────────────────────────
+  /// Non-null only while an armed hold is following the finger toward a pop.
+  SwipeBackController? _backController;
+
+  /// Set when an armed hold was spent closing an open row menu instead of
+  /// popping — the next held drag pops.
+  bool _closingMenu = false;
+
+  /// Latest leftward drag distance, so the reduce-motion path (no live follow)
+  /// can decide commit vs cancel on release.
+  double _lastDragLeft = 0;
 
   /// Rows the user has deleted but not yet committed. They stay out of the
   /// list while the undo snackbar is up, so Undo restores them in place with
@@ -118,7 +133,7 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.formBg,
-      body: SafeArea(
+      body: _swipeBack(SafeArea(
         bottom: false,
         child: Column(
           children: [
@@ -142,8 +157,99 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
             _addButton(store),
           ],
         ),
-      ),
+      )),
     );
+  }
+
+  // ── Swipe-back gesture ────────────────────────────────────────────────────
+  //
+  // Hold ~300ms, then drag left to pop. The hold is the discriminator: a
+  // [LongPressGestureRecognizer] only claims the pointer after the hold, so a
+  // quick left drag still loses to (and opens) the row's action menu, while a
+  // held drag wins the arena and the row's slidable never animates.
+
+  /// Wraps the screen body. Translucent so taps/scrolls/row-drags still reach
+  /// the children; the long-press only wins after the hold.
+  Widget _swipeBack(Widget child) {
+    return RawGestureDetector(
+      behavior: HitTestBehavior.translucent,
+      gestures: {
+        LongPressGestureRecognizer:
+            GestureRecognizerFactoryWithHandlers<LongPressGestureRecognizer>(
+          () => LongPressGestureRecognizer(
+            duration: const Duration(milliseconds: 300),
+          ),
+          (rec) => rec
+            ..onLongPressStart = _onSwipeArm
+            ..onLongPressMoveUpdate = _onSwipeMove
+            ..onLongPressEnd = _onSwipeEnd
+            ..onLongPressCancel = _onSwipeCancel,
+        ),
+      },
+      child: child,
+    );
+  }
+
+  /// Active only when this is the current, non-root [SwipeBackPageRoute] — so
+  /// it is inert under a bottom sheet or dialog (not current) and at a tab root
+  /// (nothing to pop to).
+  bool get _canSwipeBack {
+    final route = ModalRoute.of(context);
+    return route is SwipeBackPageRoute && route.isCurrent && !route.isFirst;
+  }
+
+  bool get _reduceMotion =>
+      MediaQuery.maybeOf(context)?.disableAnimations ?? false;
+
+  void _onSwipeArm(LongPressStartDetails details) {
+    _lastDragLeft = 0;
+    if (!_canSwipeBack) return;
+    // The only signal that the drag will navigate rather than open a menu.
+    HapticFeedback.lightImpact();
+    if (anySwipeRowOpen) {
+      // First held drag over an open menu just closes it — never also pops.
+      closeOpenSwipeRow();
+      _closingMenu = true;
+      return;
+    }
+    if (_reduceMotion) return; // decided on release, no follow-the-finger
+    _backController = SwipeBackController(
+      route: ModalRoute.of(context)! as SwipeBackPageRoute,
+      width: MediaQuery.of(context).size.width,
+    );
+  }
+
+  void _onSwipeMove(LongPressMoveUpdateDetails details) {
+    if (_closingMenu) return;
+    // Horizontal component only — the route never drifts vertically.
+    final dragLeft = -details.localOffsetFromOrigin.dx;
+    _lastDragLeft = dragLeft;
+    // Begin following once the finger has clearly moved left (spec ~12pt).
+    _backController?.update(dragLeft < 12 ? 0 : dragLeft);
+  }
+
+  void _onSwipeEnd(LongPressEndDetails details) {
+    if (_closingMenu) {
+      _closingMenu = false;
+      return;
+    }
+    final vx = details.velocity.pixelsPerSecond.dx;
+    if (_backController != null) {
+      _backController!.end(vx);
+      _backController = null;
+      return;
+    }
+    // Reduce motion: no live follow, so decide from the final drag distance.
+    if (_reduceMotion && _canSwipeBack) {
+      final past = _lastDragLeft > MediaQuery.of(context).size.width * 0.4;
+      if (past || vx < -700) Navigator.of(context).pop();
+    }
+  }
+
+  void _onSwipeCancel() {
+    _closingMenu = false;
+    _backController?.cancel();
+    _backController = null;
   }
 
   // ── Chrome ────────────────────────────────────────────────────────────────
