@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -8,6 +9,7 @@ import '../../core/models/models.dart';
 import '../../core/store/app_store.dart';
 import '../../core/utils/date_range.dart';
 import '../../core/utils/formatters.dart';
+import '../../core/utils/search_fold.dart';
 import '../../shared/widgets/section_header.dart';
 import '../../shared/widgets/swipe_actions.dart';
 import '../../shared/widgets/swipe_back_route.dart';
@@ -15,8 +17,10 @@ import '../../theme/app_colors.dart';
 import '../balance/edit_account_screen.dart';
 import '../quick_add/quick_add_sheet.dart';
 import 'ledger_scope.dart';
+import 'trans_filter.dart';
 import 'widgets/ledger_txn_row.dart';
 import 'widgets/period_row.dart';
+import 'widgets/trans_filter_sheet.dart';
 
 /// The transaction list, scoped to everything / a group / one account.
 ///
@@ -65,6 +69,17 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
 
   Timer? _hintTimer;
 
+  // ── Search (transient; never persisted, spec §3/§5) ───────────────────────
+  bool _searching = false;
+  final TextEditingController _searchCtrl = TextEditingController();
+  final FocusNode _searchFocus = FocusNode();
+  Timer? _searchDebounce;
+
+  /// The field's current text (for the clear glyph); filtering uses
+  /// [_debouncedQuery], which lags by ~200ms.
+  String _query = '';
+  String _debouncedQuery = '';
+
   @override
   void initState() {
     super.initState();
@@ -84,6 +99,9 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
   @override
   void dispose() {
     _hintTimer?.cancel();
+    _searchDebounce?.cancel();
+    _searchCtrl.dispose();
+    _searchFocus.dispose();
     super.dispose();
   }
 
@@ -110,7 +128,105 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
     setState(() {
       _scope = scope;
       _filter = null;
+      _exitSearch();
     });
+  }
+
+  /// The instance key this scope's filter persists under (spec §5).
+  String get _scopeKey => switch (_scope) {
+        AllAccountsScope() => 'all',
+        GroupScope(:final group) => 'group:${group.name}',
+        AccountScope(:final accountId) => 'account:$accountId',
+      };
+
+  /// Account screens group by category; the group/all bucket groups by account
+  /// (spec §1, adaptive dimension). This drives both the filter's group section
+  /// and the by-name sort axis.
+  bool get _byCategory => _scope is AccountScope;
+
+  Set<String> _scopeAccountIds(AppStore store) =>
+      {for (final a in _scope.accountsIn(store)) a.id};
+
+  /// A transaction's ids in the active grouping dimension.
+  Set<String> _groupIdsOf(ScopedTxn r, Set<String> scopeAccountIds) {
+    if (_byCategory) {
+      final id = switch (r.txn.type) {
+        TxnType.expense => r.txn.toRef,
+        TxnType.income => r.txn.fromRef,
+        _ => null, // transfers/rebalances carry no category
+      };
+      return id == null ? const {} : {id};
+    }
+    return {r.txn.fromRef, r.txn.toRef}
+        .where(scopeAccountIds.contains)
+        .toSet();
+  }
+
+  TxnFacts _factsOf(ScopedTxn r, Set<String> scopeAccountIds) => TxnFacts(
+        type: r.txn.type,
+        groupIds: _groupIdsOf(r, scopeAccountIds),
+        absAmount: r.signedAmount,
+        tags: r.txn.tags,
+      );
+
+  /// The folded haystack a search query is tested against: the category and
+  /// account names, the description, the tags and the amount digits (spec §3).
+  String _searchable(AppStore store, ScopedTxn r) {
+    final t = r.txn;
+    return foldSearch([
+      store.refName(t.fromRef),
+      store.refName(t.toRef),
+      t.note,
+      ...t.tags,
+      r.signedAmount.toStringAsFixed(2),
+      r.signedAmount.round().toString(),
+    ].join(' '));
+  }
+
+  String _sortName(AppStore store, ScopedTxn r, Set<String> scopeAccountIds) {
+    if (_byCategory) {
+      return switch (r.txn.type) {
+        TxnType.expense => store.refName(r.txn.toRef),
+        TxnType.income => store.refName(r.txn.fromRef),
+        TxnType.transfer => 'Transfer',
+        TxnType.rebalance => 'Revaluation',
+      };
+    }
+    final ids = {r.txn.fromRef, r.txn.toRef}.where(scopeAccountIds.contains);
+    return ids.isEmpty ? '' : store.refName(ids.first);
+  }
+
+  List<ScopedTxn> _sorted(
+    List<ScopedTxn> rows,
+    TransSort sort,
+    AppStore store,
+    Set<String> scopeAccountIds,
+  ) {
+    int byDateDesc(ScopedTxn a, ScopedTxn b) => b.txn.date.compareTo(a.txn.date);
+    final out = [...rows];
+    switch (sort) {
+      case TransSort.dateNewest:
+        out.sort(byDateDesc);
+      case TransSort.dateOldest:
+        out.sort((a, b) => a.txn.date.compareTo(b.txn.date));
+      case TransSort.amountHigh:
+        out.sort((a, b) {
+          final c = b.signedAmount.compareTo(a.signedAmount);
+          return c != 0 ? c : byDateDesc(a, b);
+        });
+      case TransSort.amountLow:
+        out.sort((a, b) {
+          final c = a.signedAmount.compareTo(b.signedAmount);
+          return c != 0 ? c : byDateDesc(a, b);
+        });
+      case TransSort.byName:
+        out.sort((a, b) {
+          final c = foldSearch(_sortName(store, a, scopeAccountIds))
+              .compareTo(foldSearch(_sortName(store, b, scopeAccountIds)));
+          return c != 0 ? c : byDateDesc(a, b);
+        });
+    }
+    return out;
   }
 
   @override
@@ -123,13 +239,53 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
       end: _range.end,
     );
 
-    final all = query
+    final scopeAccountIds = _scopeAccountIds(store);
+    final filter = store.transFilter(_scopeKey);
+    final sort = store.transSort(account: _scope is AccountScope);
+
+    // Compose once per rebuild: period → filter → search → sort → grouping.
+    final periodRows = query
         .rows()
         .where((r) => !_pendingDelete.contains(r.txn.id))
         .toList();
-    final visible = _filter == null
-        ? all
-        : all.where((r) => r.kind == _filter).toList();
+
+    final afterFilter = filter.isActive
+        ? periodRows
+            .where((r) => filter.matches(_factsOf(r, scopeAccountIds)))
+            .toList()
+        : periodRows;
+
+    final q = foldSearch(_debouncedQuery.trim());
+    final afterSearch = q.isEmpty
+        ? afterFilter
+        : afterFilter.where((r) => _searchable(store, r).contains(q)).toList();
+
+    // The chip's In/Out figures reflect the filtered + searched set (before the
+    // chip's own direction toggle), so they always agree with the count (§4).
+    final totalIn = afterSearch
+        .where((r) => r.kind == FlowKind.inflow)
+        .fold(0.0, (s, r) => s + r.signedAmount);
+    final totalOut = afterSearch
+        .where((r) => r.kind == FlowKind.outflow)
+        .fold(0.0, (s, r) => s + r.signedAmount);
+
+    final afterFlow = _filter == null
+        ? afterSearch
+        : afterSearch.where((r) => r.kind == _filter).toList();
+    final visible = _sorted(afterFlow, sort, store, scopeAccountIds);
+
+    final total = periodRows.length;
+    final shown = visible.length;
+
+    final _EmptyReason? emptyReason = total == 0
+        ? _EmptyReason.period
+        : shown == 0
+            ? (filter.isActive
+                ? _EmptyReason.filter
+                : (_searching && q.isNotEmpty
+                    ? _EmptyReason.search
+                    : _EmptyReason.period))
+            : null;
 
     return Scaffold(
       backgroundColor: AppColors.formBg,
@@ -141,8 +297,8 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
             _hero(store, query),
             PeriodRow(
               range: _range,
-              totalIn: query.totalIn,
-              totalOut: query.totalOut,
+              totalIn: totalIn,
+              totalOut: totalOut,
               filter: _filter,
               highlighted: _rangeSheetOpen,
               onStep: (steps) =>
@@ -152,8 +308,19 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
               onFilter: (kind) =>
                   setState(() => _filter = _filter == kind ? null : kind),
             ),
-            _toolbar(all.length, visible.length),
-            Expanded(child: _list(visible)),
+            _searching
+                ? _searchBar(shown)
+                : _toolbar(store, total, shown, filter, periodRows,
+                    scopeAccountIds),
+            Expanded(
+              child: _list(
+                visible,
+                emptyReason: emptyReason,
+                grouped: sort.groupsByDay,
+                highlight: (_searching && q.isNotEmpty) ? q : null,
+                store: store,
+              ),
+            ),
             _addButton(store),
           ],
         ),
@@ -431,39 +598,51 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
     }
   }
 
-  Widget _toolbar(int total, int shown) {
-    final filtered = shown != total;
+  Widget _toolbar(
+    AppStore store,
+    int total,
+    int shown,
+    TransFilter filter,
+    List<ScopedTxn> periodRows,
+    Set<String> scopeAccountIds,
+  ) {
+    // Narrowed whenever fewer rows show than the period holds — from the §2
+    // filter, the search, or the direction chip. The `N of M` reading is the
+    // primary signal; the filled funnel is secondary (spec §4).
+    final narrowed = shown != total;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 11, 16, 8),
       child: Row(
         children: [
-          // Doubles as filter feedback.
           Expanded(
-            child: RichText(
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              text: TextSpan(
-                style: const TextStyle(
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w600,
-                  height: 1.2,
-                  color: AppColors.textSecondary,
-                ),
-                children: [
-                  if (filtered)
-                    TextSpan(
-                      text: '$shown',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                  TextSpan(
-                    text: filtered
-                        ? ' of $total transactions'
-                        : '$total transactions',
+            child: Semantics(
+              liveRegion: true,
+              child: RichText(
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                text: TextSpan(
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                    height: 1.2,
+                    color: AppColors.textSecondary,
                   ),
-                ],
+                  children: [
+                    if (narrowed)
+                      TextSpan(
+                        text: '$shown',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                    TextSpan(
+                      text: narrowed
+                          ? ' of $total transactions'
+                          : '$total transactions',
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -471,24 +650,256 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
             tools: [
               Tool(
                 icon: Icons.swap_vert_rounded,
-                tooltip: 'Sort',
-                onTap: () {},
+                tooltip: 'Sort transactions',
+                onTap: () => _openSort(store),
               ),
+              // Active state follows the Balance filter button: the glyph fills
+              // and brightens one step; the background never changes (spec §2).
               Tool(
-                icon: Icons.tune_rounded,
-                tooltip: 'Filter',
-                showDot: _filter != null,
-                onTap: () {},
+                icon: filter.isActive
+                    ? Icons.filter_alt_rounded
+                    : Icons.filter_alt_outlined,
+                tooltip: 'Filter transactions',
+                iconColor: filter.isActive ? AppColors.textPrimary : null,
+                semanticValue: filter.isActive
+                    ? 'Active, $shown of $total shown'
+                    : 'Off',
+                onTap: () =>
+                    _openFilter(store, filter, periodRows, scopeAccountIds),
               ),
               Tool(
                 icon: Icons.search_rounded,
-                tooltip: 'Search',
-                onTap: () {},
+                tooltip: 'Search transactions',
+                onTap: () => setState(() => _searching = true),
               ),
             ],
           ),
         ],
       ),
+    );
+  }
+
+  // ── Search in place (spec §3) ─────────────────────────────────────────────
+
+  void _exitSearch() {
+    _searchDebounce?.cancel();
+    _searchCtrl.clear();
+    _searching = false;
+    _query = '';
+    _debouncedQuery = '';
+  }
+
+  Widget _searchBar(int results) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 11, 16, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceAlt,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.search_rounded,
+                          size: 16, color: AppColors.textTertiary),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: TextField(
+                          controller: _searchCtrl,
+                          focusNode: _searchFocus,
+                          autofocus: true,
+                          cursorColor: AppColors.accent,
+                          style: const TextStyle(
+                              fontSize: 14, color: AppColors.textPrimary),
+                          decoration: const InputDecoration(
+                            isDense: true,
+                            contentPadding: EdgeInsets.zero,
+                            border: InputBorder.none,
+                            hintText: 'Search',
+                            hintStyle: TextStyle(color: AppColors.textTertiary),
+                          ),
+                          onChanged: _onSearchChanged,
+                        ),
+                      ),
+                      if (_query.isNotEmpty)
+                        GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: () {
+                            _searchCtrl.clear();
+                            _onSearchChanged('');
+                          },
+                          child: const Padding(
+                            padding: EdgeInsets.only(left: 6),
+                            child: Icon(Icons.close_rounded,
+                                size: 16, color: AppColors.textTertiary),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => setState(_exitSearch),
+                child: const Text(
+                  'Cancel',
+                  style: TextStyle(fontSize: 15, color: AppColors.accent),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Semantics(
+            liveRegion: true,
+            child: Text(
+              '$results ${results == 1 ? 'result' : 'results'}',
+              style: const TextStyle(
+                  fontSize: 12.5, color: AppColors.textSecondary),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _onSearchChanged(String value) {
+    setState(() => _query = value);
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 200), () {
+      if (mounted) setState(() => _debouncedQuery = value);
+    });
+  }
+
+  // ── Sort & filter sheets ──────────────────────────────────────────────────
+
+  Future<void> _openSort(AppStore store) async {
+    final account = _scope is AccountScope;
+    final current = store.transSort(account: account);
+    final lastLabel = _byCategory ? 'Category — A to Z' : 'Account — A to Z';
+    final picked = await showModalBottomSheet<TransSort>(
+      context: context,
+      backgroundColor: AppColors.surfaceAlt,
+      isScrollControlled: true,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            Container(
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.surfaceHigh,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const Padding(
+              padding: EdgeInsets.fromLTRB(20, 16, 20, 8),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text('SORT',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.08 * 12,
+                      color: AppColors.textSecondary,
+                    )),
+              ),
+            ),
+            for (final s in TransSort.values)
+              _sortRow(sheetContext, s,
+                  s == TransSort.byName ? lastLabel : s.label, s == current),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+    if (picked != null) {
+      store.setTransSort(account: account, sort: picked);
+    }
+  }
+
+  Widget _sortRow(
+      BuildContext sheetContext, TransSort sort, String label, bool active) {
+    return Semantics(
+      button: true,
+      selected: active,
+      child: ListTile(
+        leading: SizedBox(
+          width: 22,
+          child: active
+              ? const Icon(Icons.check_rounded,
+                  size: 18, color: AppColors.accentLight)
+              : null,
+        ),
+        title: Text(
+          label,
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: active ? FontWeight.w600 : FontWeight.w400,
+            color: AppColors.textPrimary,
+          ),
+        ),
+        onTap: () => Navigator.of(sheetContext).pop(sort),
+      ),
+    );
+  }
+
+  void _openFilter(
+    AppStore store,
+    TransFilter current,
+    List<ScopedTxn> periodRows,
+    Set<String> scopeAccountIds,
+  ) {
+    final groupCounts = <String, int>{};
+    final tagCounts = <String, int>{};
+    for (final r in periodRows) {
+      for (final id in _groupIdsOf(r, scopeAccountIds)) {
+        groupCounts[id] = (groupCounts[id] ?? 0) + 1;
+      }
+      for (final tag in r.txn.tags) {
+        tagCounts[tag] = (tagCounts[tag] ?? 0) + 1;
+      }
+    }
+    final groups = groupCounts.entries
+        .map((e) => FilterChipItem(
+              id: e.key,
+              label: store.refName(e.key),
+              count: e.value,
+              color: store.refColor(e.key),
+            ))
+        .toList()
+      ..sort((a, b) => b.count.compareTo(a.count));
+    final tags = tagCounts.entries
+        .map((e) => FilterChipItem(id: e.key, label: e.key, count: e.value))
+        .toList()
+      ..sort((a, b) => b.count.compareTo(a.count));
+
+    final amounts = periodRows.map((r) => r.signedAmount).toList();
+    final rangeMin = amounts.isEmpty ? 0.0 : amounts.reduce(math.min);
+    final rangeMax = amounts.isEmpty ? 0.0 : amounts.reduce(math.max);
+    final facts =
+        periodRows.map((r) => _factsOf(r, scopeAccountIds)).toList();
+
+    showTransFilterSheet(
+      context,
+      groupSectionLabel: _byCategory ? 'CATEGORIES' : 'ACCOUNTS',
+      groups: groups,
+      tags: tags,
+      rangeMin: rangeMin,
+      rangeMax: rangeMax,
+      total: periodRows.length,
+      facts: facts,
+      initial: current,
+      // Every change applies immediately to the screen behind the sheet (§2).
+      onChanged: (f) => setState(() => store.setTransFilter(_scopeKey, f)),
     );
   }
 
@@ -525,26 +936,33 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
 
   // ── List ──────────────────────────────────────────────────────────────────
 
-  Widget _list(List<ScopedTxn> rows) {
-    if (rows.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.only(top: 64),
-        child: Text(
-          'No transactions',
-          textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 14, color: AppColors.formDim2),
-        ),
-      );
-    }
+  Widget _list(
+    List<ScopedTxn> rows, {
+    required _EmptyReason? emptyReason,
+    required bool grouped,
+    required String? highlight,
+    required AppStore store,
+  }) {
+    if (emptyReason != null) return _emptyState(store, emptyReason);
 
-    final byDay = <DateTime, List<ScopedTxn>>{};
-    for (final r in rows) {
-      final key = DateTime(r.txn.date.year, r.txn.date.month, r.txn.date.day);
-      byDay.putIfAbsent(key, () => []).add(r);
+    // Under a date sort, group by day; under amount/name sorts, one flat card
+    // with no day headers (spec §1).
+    final List<DayGroup> groups;
+    if (grouped) {
+      // `rows` is already in the chosen date order (newest- or oldest-first);
+      // group in first-appearance order so the day headers follow that order
+      // rather than being forced back to descending.
+      final byDay = <DateTime, List<ScopedTxn>>{};
+      for (final r in rows) {
+        final key = DateTime(r.txn.date.year, r.txn.date.month, r.txn.date.day);
+        byDay.putIfAbsent(key, () => []).add(r);
+      }
+      groups = byDay.entries
+          .map((e) => DayGroup(date: e.key, rows: e.value))
+          .toList();
+    } else {
+      groups = [DayGroup(date: rows.first.txn.date, rows: rows)];
     }
-    final groups = (byDay.keys.toList()..sort((a, b) => b.compareTo(a)))
-        .map((d) => DayGroup(date: d, rows: byDay[d]!))
-        .toList();
 
     return NotificationListener<ScrollStartNotification>(
       // Scrolling closes an open swipe strip.
@@ -557,6 +975,8 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
         itemCount: groups.length,
         itemBuilder: (context, i) => LedgerDayCard(
           isFirstCard: i == 0,
+          flat: !grouped,
+          highlight: highlight,
           group: groups[i],
           scope: _scope,
           onEdit: (txn) => showQuickAdd(context, editing: txn),
@@ -567,6 +987,55 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
         ),
       ),
     );
+  }
+
+  /// The list area's empty states (spec §6). Never replaces the chip, the count
+  /// row, or the tool buttons — only the list itself.
+  Widget _emptyState(AppStore store, _EmptyReason reason) {
+    switch (reason) {
+      case _EmptyReason.period:
+        return const Padding(
+          padding: EdgeInsets.only(top: 64),
+          child: Text(
+            'No transactions',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 14, color: AppColors.formDim2),
+          ),
+        );
+      case _EmptyReason.filter:
+        return Padding(
+          padding: const EdgeInsets.only(top: 60),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'No transactions match your filter',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 14, color: AppColors.textTertiary),
+              ),
+              const SizedBox(height: 8),
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => store.setTransFilter(_scopeKey, TransFilter.empty),
+                child: const Padding(
+                  padding: EdgeInsets.all(8),
+                  child: Text('Clear filter',
+                      style: TextStyle(fontSize: 14, color: AppColors.accent)),
+                ),
+              ),
+            ],
+          ),
+        );
+      case _EmptyReason.search:
+        return Padding(
+          padding: const EdgeInsets.only(top: 64),
+          child: Text(
+            'No results for "${_debouncedQuery.trim()}"',
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 14, color: AppColors.textTertiary),
+          ),
+        );
+    }
   }
 
   /// No confirm dialog: a dialog costs every user a tap to guard against a
@@ -791,3 +1260,6 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
     if (picked != null) _setScope(picked);
   }
 }
+
+/// Why the list area is empty — each renders a different message (spec §6).
+enum _EmptyReason { period, filter, search }

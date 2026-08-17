@@ -4,10 +4,47 @@ import 'package:flutter/semantics.dart';
 import '../../../core/models/models.dart';
 import '../../../core/store/app_store.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../core/utils/search_fold.dart';
 import '../../../shared/widgets/swipe_actions.dart';
 import '../../../shared/widgets/transfer_title.dart';
 import '../../../theme/app_colors.dart';
 import '../ledger_scope.dart';
+
+/// Renders [text] in [style], with every occurrence of the already-folded
+/// [query] background-highlighted (spec §3). Falls back to a plain [Text] when
+/// there is no query or no match, so a row outside search mode is unchanged.
+Widget _highlighted(
+  String text,
+  TextStyle style, {
+  required String? query,
+  int maxLines = 1,
+  TextOverflow overflow = TextOverflow.ellipsis,
+}) {
+  if (query == null || query.isEmpty) {
+    return Text(text, maxLines: maxLines, overflow: overflow, style: style);
+  }
+  final folded = foldSearch(text);
+  var at = folded.indexOf(query);
+  if (at < 0) {
+    return Text(text, maxLines: maxLines, overflow: overflow, style: style);
+  }
+  final mark = TextStyle(
+    color: Colors.white,
+    backgroundColor: AppColors.accent.withValues(alpha: 0.3),
+  );
+  final spans = <TextSpan>[];
+  var cursor = 0;
+  while (at >= 0) {
+    if (at > cursor) spans.add(TextSpan(text: text.substring(cursor, at)));
+    final end = at + query.length;
+    spans.add(TextSpan(text: text.substring(at, end), style: mark));
+    cursor = end;
+    at = folded.indexOf(query, cursor);
+  }
+  if (cursor < text.length) spans.add(TextSpan(text: text.substring(cursor)));
+  return Text.rich(TextSpan(style: style, children: spans),
+      maxLines: maxLines, overflow: overflow);
+}
 
 /// A day's transactions in one card, with the day's net in the header.
 ///
@@ -23,6 +60,8 @@ class LedgerDayCard extends StatelessWidget {
     required this.onCopy,
     required this.onDelete,
     this.isFirstCard = false,
+    this.flat = false,
+    this.highlight,
   });
 
   final bool isFirstCard;
@@ -31,6 +70,12 @@ class LedgerDayCard extends StatelessWidget {
   final ValueChanged<Txn> onEdit;
   final ValueChanged<Txn> onCopy;
   final ValueChanged<Txn> onDelete;
+
+  /// A non-date sort drops the day header and renders one flat card (spec §1).
+  final bool flat;
+
+  /// Folded search query passed to each row for highlighting.
+  final String? highlight;
 
   @override
   Widget build(BuildContext context) {
@@ -42,6 +87,10 @@ class LedgerDayCard extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Under amount/name sorts the list is not chronological, so a day header
+        // above it would misdescribe the rows — drop it and render one flat card.
+        if (flat) const SizedBox(height: 8),
+        if (!flat)
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 15, 20, 7),
           child: Row(
@@ -119,6 +168,7 @@ class LedgerDayCard extends StatelessWidget {
                   onCopy: () => onCopy(rows[i].txn),
                   onDelete: () => onDelete(rows[i].txn),
                   hint: isFirstCard && i == 0,
+                  highlight: highlight,
                 ),
               ],
             ],
@@ -144,6 +194,7 @@ class LedgerTxnRow extends StatelessWidget {
     required this.onCopy,
     required this.onDelete,
     this.hint = false,
+    this.highlight,
   });
 
   final bool hint;
@@ -152,6 +203,10 @@ class LedgerTxnRow extends StatelessWidget {
   final VoidCallback onEdit;
   final VoidCallback onCopy;
   final VoidCallback onDelete;
+
+  /// Folded search query to highlight in this row's text, or null outside
+  /// search mode (spec §3).
+  final String? highlight;
 
   @override
   Widget build(BuildContext context) {
@@ -249,12 +304,7 @@ class LedgerTxnRow extends StatelessWidget {
         : Row(
             children: [
               Flexible(
-                child: Text(
-                  category,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: titleStyle,
-                ),
+                child: _highlighted(category, titleStyle, query: highlight),
               ),
               if (!txn.movesCash) ...[
                 const SizedBox(width: 6),
@@ -362,12 +412,8 @@ class LedgerTxnRow extends StatelessWidget {
                                 Row(
                                   children: [
                                     Expanded(
-                                      child: Text(
-                                        note,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: descStyle,
-                                      ),
+                                      child: _highlighted(note, descStyle,
+                                          query: highlight),
                                     ),
                                     const SizedBox(width: 10),
                                     balanceWidget,
@@ -390,22 +436,18 @@ class LedgerTxnRow extends StatelessWidget {
                           children: [
                             if (accountName.isNotEmpty)
                               Flexible(
-                                child: Text(
-                                  accountName,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: metaStyle,
-                                ),
+                                child: _highlighted(accountName, metaStyle,
+                                    query: highlight),
                               ),
                             if (accountName.isNotEmpty && tag != null)
                               const Text('  ·  ', style: metaStyle),
                             // The tag is laid out first (fixed), so the account
                             // ellipsizes to make room rather than the tag.
                             if (tag != null)
-                              Text(
+                              _highlighted(
                                 tag,
-                                style: metaStyle.copyWith(
-                                    color: AppColors.tagDot),
+                                metaStyle.copyWith(color: AppColors.tagDot),
+                                query: highlight,
                               ),
                           ],
                         ),

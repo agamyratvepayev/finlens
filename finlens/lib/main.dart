@@ -28,6 +28,7 @@ Future<void> main() async {
   await store.loadBalanceOrder();
   await store.loadSameListRange();
   await store.loadPeriodUnits();
+  await store.loadTransPrefs();
   runApp(FinLensApp(store: store));
 }
 

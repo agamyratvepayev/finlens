@@ -1,10 +1,12 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../features/balance/balance_filter.dart';
 import '../../features/balance/balance_order.dart';
 import '../../features/balance/same_transactions.dart';
+import '../../features/ledger/trans_filter.dart';
 import '../utils/date_range.dart';
 import '../models/models.dart';
 import '../utils/fx.dart';
@@ -238,6 +240,79 @@ class AppStore extends ChangeNotifier {
   Future<void> loadPeriodUnits() async {
     _accountPeriodUnit = await loadPeriodUnit('account_period_unit');
     _categoryPeriodUnit = await loadPeriodUnit('category_period_unit');
+  }
+
+  // ── Scoped-ledger sort (per screen type) & filter (per instance) ───────────
+  // Sort persists per screen *type* — account screens share one preference, the
+  // group/all bucket another — mirroring the period-unit split. The filter
+  // persists per screen *instance*, keyed by a scope string the screen builds
+  // (`account:{id}` / `group:{name}` / `all`). Both restore before first paint.
+
+  TransSort _accountTransSort = TransSort.dateNewest;
+  TransSort _categoryTransSort = TransSort.dateNewest;
+
+  TransSort transSort({required bool account}) =>
+      account ? _accountTransSort : _categoryTransSort;
+
+  void setTransSort({required bool account, required TransSort sort}) {
+    if (account) {
+      _accountTransSort = sort;
+    } else {
+      _categoryTransSort = sort;
+    }
+    notifyListeners();
+    unawaited(_saveTransSort(account ? 'account_trans_sort' : 'category_trans_sort', sort));
+  }
+
+  static Future<void> _saveTransSort(String key, TransSort sort) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(key, sort.name);
+  }
+
+  final Map<String, TransFilter> _transFilters = {};
+
+  TransFilter transFilter(String scopeKey) =>
+      _transFilters[scopeKey] ?? TransFilter.empty;
+
+  void setTransFilter(String scopeKey, TransFilter filter) {
+    if (filter.isActive) {
+      _transFilters[scopeKey] = filter;
+    } else {
+      _transFilters.remove(scopeKey);
+    }
+    notifyListeners();
+    unawaited(filter.save('trans_filter_$scopeKey'));
+  }
+
+  /// Every scope a filter can be stored under — 'all', each group, each account.
+  List<String> _transScopeKeys() => [
+        'all',
+        for (final g in AccountGroup.values) 'group:${g.name}',
+        for (final a in _accounts) 'account:${a.id}',
+      ];
+
+  Future<void> loadTransPrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+    _accountTransSort = TransSort.byName2(prefs.getString('account_trans_sort'));
+    _categoryTransSort =
+        TransSort.byName2(prefs.getString('category_trans_sort'));
+
+    // Prune targets: an id that no longer resolves to a live category/account
+    // or tag is dropped on load (spec §5).
+    final validGroups = <String>{
+      for (final c in _categories) c.id,
+      for (final a in _accounts) a.id,
+    };
+    final validTags = <String>{
+      for (final t in _txns) ...t.tags,
+    };
+    _transFilters.clear();
+    for (final key in _transScopeKeys()) {
+      final f =
+          await TransFilter.load('trans_filter_$key', validGroups, validTags);
+      if (f.isActive) _transFilters[key] = f;
+    }
+    notifyListeners();
   }
 
   // ── Per-account transaction index ─────────────────────────────────────────
