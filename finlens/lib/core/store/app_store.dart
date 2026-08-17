@@ -854,6 +854,7 @@ class AppStore extends ChangeNotifier {
     required String currency,
     required double startingBalance,
     double? creditLimit,
+    int? paymentDue,
     bool countAsSpendable = true,
     IconData? icon,
   }) {
@@ -868,6 +869,7 @@ class AppStore extends ChangeNotifier {
       currency: currency,
       startingBalance: signed,
       creditLimit: creditLimit,
+      paymentDue: paymentDue,
       countAsSpendable: countAsSpendable,
       icon: icon,
       openedOn: today,

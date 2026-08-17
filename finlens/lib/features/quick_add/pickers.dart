@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../core/models/models.dart';
 import '../../core/store/app_store.dart';
 import '../../core/utils/formatters.dart';
+import '../../core/utils/fx.dart';
 import '../../shared/widgets/amount_text.dart';
 import '../../shared/widgets/app_card.dart';
 import '../../shared/widgets/form_fields.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/app_typography.dart';
+import 'account_icons.dart';
+import 'icon_picker_sheet.dart';
 
 /// Shell shared by every picker and create sheet: a drag handle, a title bar
 /// and a scrollable body that never exceeds 88% of the screen.
@@ -62,8 +66,9 @@ Future<T?> showAppSheet<T>(
   );
 }
 
-/// Spec 4.2 — account picker. The "＋ New account" row lives at the *end of the
-/// list*, appearing exactly when the search turns up nothing.
+/// Spec 4.2 — account picker. The "＋ New account" affordance lives in the
+/// header (right of the title), reachable the instant the sheet opens and while
+/// a search is active — no longer buried at the end of the list.
 Future<Account?> pickAccount(
   BuildContext context, {
   String title = 'Select account',
@@ -73,6 +78,13 @@ Future<Account?> pickAccount(
   return showAppSheet<Account>(
     context,
     title: title,
+    actions: [
+      _HeaderCreateAction<Account>(
+        label: 'New account',
+        // Do not prefill the name from the picker's search query (spec §3).
+        onCreate: (ctx) => showNewAccountSheet(ctx),
+      ),
+    ],
     builder: (context, controller) => _AccountPickerBody(
       controller: controller,
       filter: filter,
@@ -171,19 +183,6 @@ class _AccountPickerBodyState extends State<_AccountPickerBody> {
                   ),
                 ),
               ],
-              const SizedBox(height: Insets.md),
-              _CreateRow(
-                label: 'New account',
-                onTap: () async {
-                  final created = await showNewAccountSheet(
-                    context,
-                    initialName: _query,
-                  );
-                  if (created != null && context.mounted) {
-                    Navigator.of(context).pop(created);
-                  }
-                },
-              ),
             ],
           ),
         ),
@@ -192,7 +191,7 @@ class _AccountPickerBodyState extends State<_AccountPickerBody> {
   }
 }
 
-/// Spec 4.1 — category picker with the same contextual-create tail.
+/// Spec 4.1 — category picker; its create action also lives in the header now.
 Future<Category?> pickCategory(
   BuildContext context, {
   required CategoryType type,
@@ -204,6 +203,12 @@ Future<Category?> pickCategory(
         (type == CategoryType.expense
             ? 'Expense category'
             : 'Income category'),
+    actions: [
+      _HeaderCreateAction<Category>(
+        label: 'New category',
+        onCreate: (ctx) => showNewCategorySheet(ctx, type: type),
+      ),
+    ],
     builder: (context, controller) =>
         _CategoryPickerBody(controller: controller, type: type),
   );
@@ -276,20 +281,6 @@ class _CategoryPickerBodyState extends State<_CategoryPickerBody> {
                     ],
                   ),
                 ),
-              const SizedBox(height: Insets.md),
-              _CreateRow(
-                label: 'New category',
-                onTap: () async {
-                  final created = await showNewCategorySheet(
-                    context,
-                    type: widget.type,
-                    initialName: _query,
-                  );
-                  if (created != null && context.mounted) {
-                    Navigator.of(context).pop(created);
-                  }
-                },
-              ),
             ],
           ),
         ),
@@ -354,45 +345,51 @@ Widget _pickRow(
   );
 }
 
-/// The contextual-create tail row (spec 4 — "the last row of the picker").
-class _CreateRow extends StatelessWidget {
-  const _CreateRow({required this.label, required this.onTap});
+/// The create affordance, moved into the picker's header row (spec §1/§4).
+/// A text button — `+ New …` in accent — with a ≥44 pt hit area that extends
+/// above and below the visible text. It opens the create sheet *over* the
+/// picker and, on success, pops the picker with the created item selected.
+class _HeaderCreateAction<T> extends StatelessWidget {
+  const _HeaderCreateAction({required this.label, required this.onCreate});
 
   final String label;
-  final VoidCallback onTap;
+  final Future<T?> Function(BuildContext) onCreate;
 
   @override
   Widget build(BuildContext context) {
-    return AppCard(
-      color: AppColors.tint(AppColors.accent, 0.12),
+    return Semantics(
+      button: true,
+      label: label,
       child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(Radii.card),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: Insets.md,
-            vertical: Insets.md,
-          ),
-          child: Row(
-            children: [
-              const IconTile(
-                Icons.add_rounded,
-                color: AppColors.accentSoft,
-                size: 32,
-              ),
-              const SizedBox(width: Insets.md),
-              Expanded(
-                child: Text(
-                  label,
-                  style: AppText.rowTitle.copyWith(color: AppColors.accentSoft),
-                ),
-              ),
-              const Icon(
-                Icons.chevron_right_rounded,
-                size: 18,
-                color: AppColors.accentSoft,
-              ),
-            ],
+        onTap: () async {
+          final created = await onCreate(context);
+          if (created != null && context.mounted) {
+            Navigator.of(context).pop(created);
+          }
+        },
+        borderRadius: BorderRadius.circular(8),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 44),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('+',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.accent,
+                    )),
+                const SizedBox(width: 4),
+                Text(label,
+                    style: const TextStyle(
+                      fontSize: 14.5,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.accent,
+                    )),
+              ],
+            ),
           ),
         ),
       ),
@@ -647,60 +644,110 @@ class _NewCategoryFormState extends State<_NewCategoryForm> {
 
 Future<Account?> showNewAccountSheet(
   BuildContext context, {
-  AccountGroup? group,
-  String initialName = '',
+  AccountGroup? initialGroup,
 }) {
   return showAppSheet<Account>(
     context,
     title: 'New account',
     initialSize: 0.85,
-    builder: (context, controller) => _NewAccountForm(
-      controller: controller,
-      group: group ?? AccountGroup.spendable,
-      initialName: initialName,
-    ),
+    builder: (context, controller) =>
+        _NewAccountForm(controller: controller, initialGroup: initialGroup),
   );
 }
 
 class _NewAccountForm extends StatefulWidget {
-  const _NewAccountForm({
-    required this.controller,
-    required this.group,
-    required this.initialName,
-  });
+  const _NewAccountForm({required this.controller, this.initialGroup});
 
   final ScrollController controller;
-  final AccountGroup group;
-  final String initialName;
+
+  /// Pre-selected when opened from a group's long-press (assets screen); null
+  /// from the picker header, where nothing is selected initially (spec §5.3).
+  final AccountGroup? initialGroup;
 
   @override
   State<_NewAccountForm> createState() => _NewAccountFormState();
 }
 
 class _NewAccountFormState extends State<_NewAccountForm> {
-  late final TextEditingController _name =
-      TextEditingController(text: widget.initialName);
-  final _starting = TextEditingController();
-  final _limit = TextEditingController();
-  late AccountGroup _group = widget.group;
-  String _currency = 'USD';
-  bool _countAsSpendable = true;
+  final _name = TextEditingController();
+  // A positive magnitude: the opening balance for an asset, or what is owed for
+  // a liability. addAccount stores the liability version negative.
+  final _balance = TextEditingController();
+  final _limit = TextEditingController(); // Credit Cards
+  final _paymentDay = TextEditingController(); // Bank Loans
+
+  AccountGroup? _group; // nothing selected initially (spec §5.3)
+  String _currency = Fx.baseCurrency;
+  IconData? _icon;
+
+  @override
+  void initState() {
+    super.initState();
+    for (final c in [_name, _balance, _limit, _paymentDay]) {
+      c.addListener(_onChanged);
+    }
+    if (widget.initialGroup != null) {
+      _group = widget.initialGroup;
+      _icon = defaultIconFor(widget.initialGroup!);
+    }
+  }
+
+  void _onChanged() => setState(() {});
 
   @override
   void dispose() {
-    _name.dispose();
-    _starting.dispose();
-    _limit.dispose();
+    for (final c in [_name, _balance, _limit, _paymentDay]) {
+      c.removeListener(_onChanged);
+      c.dispose();
+    }
     super.dispose();
   }
 
-  bool get _valid =>
-      _name.text.trim().isNotEmpty && _starting.text.trim().isNotEmpty;
+  bool get _isLiability => _group?.isLiability ?? false;
+
+  bool get _limitValid {
+    final t = _limit.text.trim();
+    if (t.isEmpty) return true;
+    final v = double.tryParse(t);
+    return v != null && v > 0;
+  }
+
+  bool get _dayValid {
+    final t = _paymentDay.text.trim();
+    if (t.isEmpty) return true;
+    final v = int.tryParse(t);
+    return v != null && v >= 1 && v <= 31;
+  }
+
+  bool _duplicateName(AppStore store) {
+    final n = _name.text.trim().toLowerCase();
+    if (n.isEmpty) return false;
+    return store.accounts.any((a) => a.name.trim().toLowerCase() == n);
+  }
+
+  bool _valid(AppStore store) {
+    if (_name.text.trim().isEmpty || _group == null) return false;
+    if (_duplicateName(store)) return false;
+    if (_group == AccountGroup.creditCards && !_limitValid) return false;
+    if (_group == AccountGroup.bankLoans && !_dayValid) return false;
+    return true;
+  }
+
+  void _selectGroup(AccountGroup g) {
+    setState(() {
+      _group = g;
+      // A default glyph is chosen the instant a group is picked; a later group
+      // change keeps the chosen glyph if it still belongs, else swaps it (§5.5).
+      final set = iconSuggestionsFor(g);
+      if (_icon == null || !set.contains(_icon)) _icon = defaultIconFor(g);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
-    final starting = double.tryParse(_starting.text.trim()) ?? 0;
+    final group = _group;
+    final duplicate = _duplicateName(store);
 
     return Column(
       children: [
@@ -712,131 +759,349 @@ class _NewAccountFormState extends State<_NewAccountForm> {
               FormSection(
                 children: [
                   TextFieldRow(
-                    icon: Icons.account_balance_wallet_rounded,
+                    icon: Icons.drive_file_rename_outline_rounded,
                     label: 'Account name',
                     controller: _name,
                     hint: 'e.g. Main Checking',
-                    autofocus: widget.initialName.isEmpty,
+                    autofocus: true,
                   ),
                 ],
               ),
-              const SectionLabelSmall('Group'),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: Insets.gutter),
-                child: Wrap(
-                  spacing: Insets.sm,
-                  runSpacing: Insets.sm,
-                  children: [
-                    for (final g in AccountGroup.values)
-                      GestureDetector(
-                        onTap: () => setState(() => _group = g),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: Insets.md,
-                            vertical: Insets.sm,
-                          ),
-                          decoration: BoxDecoration(
-                            color: g == _group
-                                ? AppColors.tint(g.color, 0.22)
-                                : AppColors.surface,
-                            borderRadius: BorderRadius.circular(Radii.pill),
-                            border: Border.all(
-                              color: g == _group
-                                  ? g.color
-                                  : AppColors.divider,
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(g.icon, size: 15, color: g.color),
-                              const SizedBox(width: 6),
-                              Text(
-                                g.label,
-                                style: AppText.caption.copyWith(
-                                  fontSize: 12.5,
-                                  color: g == _group
-                                      ? AppColors.textPrimary
-                                      : AppColors.textSecondary,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: Insets.lg),
-              FormSection(
-                children: [
-                  FormRow(
-                    icon: Icons.language_rounded,
-                    label: 'Currency',
-                    value: _currency,
-                    showChevron: true,
-                    onTap: () async {
-                      final picked = await pickCurrency(context, _currency);
-                      if (picked != null) setState(() => _currency = picked);
-                    },
+              if (duplicate)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                      Insets.gutter + Insets.xs, 0, Insets.gutter, Insets.md),
+                  child: const Text(
+                    'An account with this name already exists',
+                    style: TextStyle(fontSize: 12, color: AppColors.negative),
                   ),
-                  TextFieldRow(
-                    icon: Icons.savings_rounded,
-                    label: 'Starting balance',
-                    controller: _starting,
-                    hint: '0',
-                    trailing: Text(
-                      currencySymbol(_currency),
-                      style: AppText.amount.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                  ),
-                  if (_group.hasCreditLimit)
-                    TextFieldRow(
-                      icon: Icons.speed_rounded,
-                      label: 'Credit limit',
-                      controller: _limit,
-                      hint: '0',
-                    ),
-                  // Spec 4.2 — group-specific toggle.
-                  if (_group == AccountGroup.spendable)
-                    ToggleRow(
-                      icon: Icons.bolt_rounded,
-                      label: 'Count toward money I can spend now',
-                      value: _countAsSpendable,
-                      onChanged: (v) => setState(() => _countAsSpendable = v),
-                    ),
-                ],
-              ),
-              const InfoNote(
-                'Enter this once. From now on the balance is calculated from '
-                'your transactions.',
-              ),
-              if (starting > 0)
-                InfoNote(
-                  'Adds ${money(starting, currency: _currency)} to Balance → '
-                  '${_group.label} as an opening-balance entry.',
                 ),
+              _groupList('ASSETS', AccountGroup.assets),
+              const SizedBox(height: Insets.md),
+              _groupList('LIABILITIES', AccountGroup.liabilities),
+              // The group drives everything below it; animate rows in and out
+              // so the sheet never jumps (spec §5.4).
+              AnimatedSize(
+                duration: const Duration(milliseconds: 180),
+                curve: Curves.easeOut,
+                alignment: Alignment.topCenter,
+                child: group == null
+                    ? const SizedBox(width: double.infinity)
+                    : _detailsAndIcon(group),
+              ),
             ],
           ),
         ),
         _SheetFooter(
           label: 'Create & select',
-          enabled: _valid,
+          enabled: _valid(store),
           onPressed: () {
+            final magnitude = double.tryParse(_balance.text.trim()) ?? 0;
             final created = store.addAccount(
               name: _name.text.trim(),
-              group: _group,
+              group: group!,
               currency: _currency,
-              startingBalance: starting,
-              creditLimit: double.tryParse(_limit.text.trim()),
-              countAsSpendable: _countAsSpendable,
+              // addAccount signs liabilities negative; the user types positive.
+              startingBalance: magnitude,
+              // Only the final group's fields are persisted (spec §5.4).
+              creditLimit: group == AccountGroup.creditCards
+                  ? double.tryParse(_limit.text.trim())
+                  : null,
+              paymentDue: group == AccountGroup.bankLoans
+                  ? int.tryParse(_paymentDay.text.trim())
+                  : null,
+              icon: _icon,
             );
             Navigator.of(context).pop(created);
           },
         ),
       ],
+    );
+  }
+
+  Widget _groupList(String label, List<AccountGroup> groups) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding:
+              const EdgeInsets.fromLTRB(Insets.gutter, 0, Insets.gutter, 5),
+          child: Semantics(
+            header: true,
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontSize: 10.5,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.07 * 10.5,
+                color: AppColors.textTertiary,
+              ),
+            ),
+          ),
+        ),
+        Container(
+          margin: const EdgeInsets.symmetric(horizontal: Insets.gutter),
+          decoration: BoxDecoration(
+            color: AppColors.sheetCard,
+            borderRadius: BorderRadius.circular(9),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            children: [
+              for (var i = 0; i < groups.length; i++) ...[
+                if (i > 0)
+                  Container(
+                      height: 1,
+                      color: Colors.white.withValues(alpha: 0.06)),
+                _groupRow(groups[i]),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _groupRow(AccountGroup g) {
+    final selected = _group == g;
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: '${g.label}, ${g.isAsset ? 'assets' : 'liabilities'}',
+      child: InkWell(
+        onTap: () => _selectGroup(g),
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 44),
+          color: selected ? AppColors.accent.withValues(alpha: 0.16) : null,
+          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
+          child: Row(
+            children: [
+              Container(
+                width: 7,
+                height: 7,
+                decoration:
+                    BoxDecoration(color: g.color, shape: BoxShape.circle),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  g.label,
+                  style: TextStyle(
+                    fontSize: 13.5,
+                    color:
+                        selected ? Colors.white : AppColors.sheetAccountName,
+                    fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+                  ),
+                ),
+              ),
+              if (selected)
+                const Icon(Icons.check_rounded,
+                    size: 18, color: AppColors.accentLight),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _detailsAndIcon(AccountGroup group) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: Insets.md),
+        Container(
+          margin: const EdgeInsets.symmetric(horizontal: Insets.gutter),
+          decoration: BoxDecoration(
+            color: AppColors.sheetCard,
+            borderRadius: BorderRadius.circular(11),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            children: [
+              FormRow(
+                label: 'Currency',
+                value: _currency,
+                showChevron: true,
+                onTap: () async {
+                  final picked = await pickCurrency(context, _currency);
+                  if (picked != null) setState(() => _currency = picked);
+                },
+              ),
+              _hair(),
+              _amountRow(
+                label: _isLiability ? 'Amount owed' : 'Starting balance',
+                controller: _balance,
+                valueColor:
+                    _isLiability ? AppColors.negative : AppColors.textPrimary,
+              ),
+              if (group == AccountGroup.creditCards) ...[
+                _hair(),
+                _amountRow(
+                  label: 'Credit limit',
+                  controller: _limit,
+                  valueColor: AppColors.textPrimary,
+                  error: !_limitValid,
+                ),
+              ],
+              if (group == AccountGroup.bankLoans) ...[
+                _hair(),
+                _amountRow(
+                  label: 'Payment day',
+                  controller: _paymentDay,
+                  valueColor: AppColors.textPrimary,
+                  showSymbol: false,
+                  integer: true,
+                  maxLength: 2,
+                  error: !_dayValid,
+                ),
+              ],
+            ],
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(18, 7, 18, 0),
+          child: Text(
+            _isLiability
+                ? 'Enter what you owe as a positive number — it counts '
+                    'against your net worth.'
+                : 'Enter this once. From now on the balance is calculated '
+                    'from your transactions.',
+            style: const TextStyle(
+                fontSize: 11, height: 1.45, color: AppColors.textTertiary),
+          ),
+        ),
+        if (group == AccountGroup.bankLoans)
+          const Padding(
+            padding: EdgeInsets.fromLTRB(18, 4, 18, 0),
+            child: Text(
+              'Months shorter than this use their last day.',
+              style: TextStyle(
+                  fontSize: 11, height: 1.45, color: AppColors.textTertiary),
+            ),
+          ),
+        const Padding(
+          padding: EdgeInsets.fromLTRB(16, 14, 16, 6),
+          child: Text(
+            'ICON',
+            style: TextStyle(
+              fontSize: 10.5,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.07 * 10.5,
+              color: AppColors.textTertiary,
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(
+              Insets.gutter, 0, Insets.gutter, Insets.md),
+          child: SizedBox(
+            height: 44,
+            child: Row(
+              children: [
+                for (var i = 0; i < iconSuggestionsFor(group).length; i++) ...[
+                  if (i > 0) const SizedBox(width: 7),
+                  AccountGlyphTile(
+                    icon: iconSuggestionsFor(group)[i],
+                    color: group.color,
+                    selected: _icon == iconSuggestionsFor(group)[i],
+                    onTap: () =>
+                        setState(() => _icon = iconSuggestionsFor(group)[i]),
+                  ),
+                ],
+                const Spacer(),
+                _gridButton(group),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _gridButton(AccountGroup group) {
+    return Semantics(
+      button: true,
+      label: 'More icons',
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () async {
+          final picked = await showIconPicker(context,
+              color: group.color, selected: _icon);
+          if (picked != null) setState(() => _icon = picked);
+        },
+        child: Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: AppColors.taskDim,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: const Icon(Icons.grid_view_rounded,
+              size: 18, color: AppColors.accentLight),
+        ),
+      ),
+    );
+  }
+
+  Widget _hair() =>
+      Container(height: 1, color: Colors.white.withValues(alpha: 0.07));
+
+  Widget _amountRow({
+    required String label,
+    required TextEditingController controller,
+    required Color valueColor,
+    bool showSymbol = true,
+    bool integer = false,
+    int? maxLength,
+    bool error = false,
+  }) {
+    final color = error ? AppColors.negative : valueColor;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(label,
+                style: const TextStyle(
+                    fontSize: 14.5, color: AppColors.textPrimary)),
+          ),
+          if (showSymbol)
+            Padding(
+              padding: const EdgeInsets.only(right: 1),
+              child: Text(currencySymbol(_currency),
+                  style: TextStyle(
+                      fontSize: 14.5,
+                      fontWeight: FontWeight.w600,
+                      color: color)),
+            ),
+          SizedBox(
+            width: 92,
+            child: TextField(
+              controller: controller,
+              textAlign: TextAlign.right,
+              keyboardType: integer
+                  ? TextInputType.number
+                  : const TextInputType.numberWithOptions(decimal: true),
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(
+                    integer ? RegExp(r'[0-9]') : RegExp(r'[0-9.]')),
+                if (maxLength != null)
+                  LengthLimitingTextInputFormatter(maxLength),
+              ],
+              cursorColor: AppColors.accent,
+              style: TextStyle(
+                  fontSize: 14.5, fontWeight: FontWeight.w600, color: color),
+              decoration: const InputDecoration(
+                isDense: true,
+                contentPadding: EdgeInsets.zero,
+                border: InputBorder.none,
+                hintText: '0',
+                hintStyle: TextStyle(color: AppColors.textTertiary),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

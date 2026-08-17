@@ -123,8 +123,8 @@ class GroupDetailScreen extends StatelessWidget {
                               share: store.groupShare(group),
                               // Account creation is contextual, never a
                               // permanent row in the list.
-                              onLongPress: () =>
-                                  showNewAccountSheet(context, group: group),
+                              onLongPress: () => showNewAccountSheet(context,
+                                  initialGroup: group),
                             ),
                             const RowDivider(indent: Insets.md),
                             for (final a in store.accountsIn(group))
