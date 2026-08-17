@@ -386,6 +386,23 @@ class AppStore extends ChangeNotifier {
   Color refColor(String ref) =>
       accountById(ref)?.color ?? categoryById(ref)?.color ?? Colors.grey;
 
+  /// Source and destination account names for a transfer — the single source of
+  /// truth for a transfer's "{from} → {to}" title, used by the row widgets and
+  /// the Same-transactions header alike. A deleted (unresolvable) side falls
+  /// back to 'Deleted account' so no side is ever empty.
+  ({String from, String to}) transferParties(Txn txn) => (
+        from: accountById(txn.fromRef)?.name ?? 'Deleted account',
+        to: accountById(txn.toRef)?.name ?? 'Deleted account',
+      );
+
+  /// The joined "{from} → {to}" string, for single-Text call sites (the
+  /// Same-transactions header) and semantics. Row widgets that need independent
+  /// truncation build a two-`Flexible` row from [transferParties] instead.
+  String transferTitle(Txn txn) {
+    final p = transferParties(txn);
+    return '${p.from} → ${p.to}';
+  }
+
   // ── Derived balances ──────────────────────────────────────────────────────
 
   /// Live balance = starting balance + every transaction that touches it.

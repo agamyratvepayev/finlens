@@ -10,6 +10,7 @@ import 'amount_text.dart';
 import 'app_card.dart';
 import 'destructive_sheet.dart';
 import 'swipe_actions.dart';
+import 'transfer_title.dart';
 
 /// One Ledger line. Shared by Ledger (2.1) and Account Detail (1.4), including
 /// the swipe actions (2.2).
@@ -97,12 +98,21 @@ class TxnRow extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          _title(store),
-          style: AppText.rowTitle,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
+        // A transfer's title is "{source} → {destination}" (both sides
+        // ellipsize together); every other type keeps its single-name title.
+        if (txn.type == TxnType.transfer)
+          TransferTitleText(
+            from: store.transferParties(txn).from,
+            to: store.transferParties(txn).to,
+            style: AppText.rowTitle,
+          )
+        else
+          Text(
+            _title(store),
+            style: AppText.rowTitle,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
         if (subtitleParts.isNotEmpty) ...[
           const SizedBox(height: 2),
           Text(
@@ -136,7 +146,8 @@ class TxnRow extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           Semantics(
-            label: 'Transfer, '
+            label: 'Transfer from ${store.transferParties(txn).from} '
+                'to ${store.transferParties(txn).to}, '
                 '${money(txn.amount, currency: txn.currency, signless: true, masked: store.masked)}',
             excludeSemantics: true,
             child: Row(
@@ -188,8 +199,14 @@ class TxnRow extends StatelessWidget {
         // would be a second, redundant cue; for colour-blind and screen-reader
         // users the semantics label below names the direction in words instead.
         Semantics(
-          label: '${_directionWord(signed)}, '
-              '${money(signed, currency: txn.currency, signless: true, masked: store.masked)}',
+          // A transfer names both accounts; other types name their direction.
+          // One label per row — no competing amount/row announcements.
+          label: txn.type == TxnType.transfer
+              ? 'Transfer from ${store.transferParties(txn).from} '
+                  'to ${store.transferParties(txn).to}, '
+                  '${money(signed, currency: txn.currency, signless: true, masked: store.masked)}'
+              : '${_directionWord(signed)}, '
+                  '${money(signed, currency: txn.currency, signless: true, masked: store.masked)}',
           excludeSemantics: true,
           child: AmountText(
             signed,
@@ -260,8 +277,10 @@ class TxnRow extends StatelessWidget {
     return switch (txn.type) {
       TxnType.expense => store.refName(txn.fromRef),
       TxnType.income => store.refName(txn.toRef),
-      TxnType.transfer =>
-        '${store.refName(txn.fromRef)} → ${store.refName(txn.toRef)}',
+      // The "{from} → {to}" path now lives in the title, so it is dropped here
+      // to avoid printing the same path twice on one row (the meta line keeps
+      // only the tags).
+      TxnType.transfer => '',
       TxnType.rebalance => 'Revaluation',
     };
   }

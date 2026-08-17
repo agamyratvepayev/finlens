@@ -5,6 +5,7 @@ import '../../../core/models/models.dart';
 import '../../../core/store/app_store.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../shared/widgets/swipe_actions.dart';
+import '../../../shared/widgets/transfer_title.dart';
 import '../../../theme/app_colors.dart';
 import '../ledger_scope.dart';
 
@@ -158,12 +159,26 @@ class LedgerTxnRow extends StatelessWidget {
     final txn = row.txn;
     final category = _categoryLabel(store, txn);
     final colour = _refColour(store, txn);
+    final isTransfer = txn.type == TxnType.transfer;
+    final parties = isTransfer ? store.transferParties(txn) : null;
 
     final amountColour = switch (row.kind) {
       FlowKind.internal => AppColors.textSecondary,
       FlowKind.inflow => AppColors.positive,
       FlowKind.outflow => AppColors.amountChildNeg,
     };
+
+    final money0 = money(row.signedAmount, signless: true, masked: store.masked);
+    // One label per row: a transfer names both accounts; other types name the
+    // direction (colour is the only visual cue, so words carry it).
+    final semanticsLabel = isTransfer
+        ? 'Transfer from ${parties!.from} to ${parties.to}, $money0'
+        : '$category, $money0, '
+            '${switch (row.kind) {
+                FlowKind.inflow => 'income',
+                FlowKind.outflow => 'expense',
+                FlowKind.internal => 'internal transfer',
+              }}';
 
     return Semantics(
       // Swipe actions are invisible to assistive tech unless declared, so all
@@ -173,15 +188,7 @@ class LedgerTxnRow extends StatelessWidget {
         const CustomSemanticsAction(label: 'Copy'): onCopy,
         const CustomSemanticsAction(label: 'Delete'): onDelete,
       },
-      // Colour carries direction everywhere else on this screen; this is the
-      // one place it cannot, so the label says it in words.
-      label: '$category, '
-          '${money(row.signedAmount, signless: true, masked: store.masked)}, '
-          '${switch (row.kind) {
-        FlowKind.inflow => 'income',
-        FlowKind.outflow => 'expense',
-        FlowKind.internal => 'internal transfer',
-      }}',
+      label: semanticsLabel,
       child: SwipeActions(
         actionWidth: 72,
         hintOnFirstBuild: hint,
@@ -243,22 +250,40 @@ class LedgerTxnRow extends StatelessWidget {
                             children: [
                               Row(
                                 children: [
-                                  Flexible(
-                                    child: Text(
-                                      category,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                        fontSize: 14.5,
-                                        fontWeight: FontWeight.w600,
-                                        height: 1.25,
-                                        color: AppColors.textPrimary,
+                                  if (isTransfer)
+                                    // "{source} → {destination}" — both sides
+                                    // ellipsize; the source was never shown here
+                                    // before (it was buried behind "Transfer").
+                                    Expanded(
+                                      child: TransferTitleText(
+                                        from: parties!.from,
+                                        to: parties.to,
+                                        style: const TextStyle(
+                                          fontSize: 14.5,
+                                          fontWeight: FontWeight.w600,
+                                          height: 1.25,
+                                          color: AppColors.textPrimary,
+                                        ),
+                                      ),
+                                    )
+                                  else ...[
+                                    Flexible(
+                                      child: Text(
+                                        category,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          fontSize: 14.5,
+                                          fontWeight: FontWeight.w600,
+                                          height: 1.25,
+                                          color: AppColors.textPrimary,
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                  if (!txn.movesCash) ...[
-                                    const SizedBox(width: 6),
-                                    const _NoCashPill(),
+                                    if (!txn.movesCash) ...[
+                                      const SizedBox(width: 6),
+                                      const _NoCashPill(),
+                                    ],
                                   ],
                                 ],
                               ),
@@ -329,8 +354,11 @@ class LedgerTxnRow extends StatelessWidget {
   /// Line 3 exists only where the account varies between neighbouring rows.
   /// For a transfer it is the full path; otherwise the account, then the tag.
   String _lineThree(AppStore store, Txn txn) {
-    if (txn.type == TxnType.transfer && row.counterpartyLine != null) {
-      return row.counterpartyLine!;
+    if (txn.type == TxnType.transfer) {
+      // The "{from} → {to}" path is in the title now; don't repeat it here.
+      // Keep the tag if there is one, otherwise leave the third line empty
+      // (the row's height is fixed, so nothing shifts).
+      return txn.tags.isEmpty ? '' : txn.tags.first;
     }
     final ref = txn.type == TxnType.income ? txn.toRef : txn.fromRef;
     final account = store.accountById(ref)?.name ?? '';

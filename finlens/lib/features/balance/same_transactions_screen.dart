@@ -648,10 +648,10 @@ class _KeyInfo {
   static _KeyInfo resolve(AppStore store, Txn origin, SameKey key) {
     if (key is TransferKey) {
       final from = store.accountById(key.fromAccountId);
-      final to = store.accountById(key.toAccountId);
-      final fromName = from?.name ?? store.refName(key.fromAccountId);
-      final toName = to?.name ?? store.refName(key.toAccountId);
-      final title = '$fromName → $toName';
+      // One shared helper composes "{from} → {to}" for the header, the row
+      // fallback title, and the section label — never a second implementation.
+      final parties = store.transferParties(origin);
+      final title = store.transferTitle(origin);
       return _KeyInfo(
         isTransfer: true,
         title: title,
@@ -663,10 +663,12 @@ class _KeyInfo {
         currency: from?.currency ?? Fx.baseCurrency,
         // The app's existing transfer colour — never red/green.
         amountColor: AppColors.transfer,
-        directionWord: 'Transfer',
-        rowFallbackTitle: 'Transfer',
+        // Names both accounts in the row's semantics (spec §3).
+        directionWord: 'Transfer from ${parties.from} to ${parties.to}',
+        // A note-less transfer row shows the path, not the word "Transfer".
+        rowFallbackTitle: title,
         categoryName: title,
-        accountName: fromName,
+        accountName: parties.from,
       );
     }
 
