@@ -136,6 +136,8 @@ class Txn {
     this.editedCount = 0,
     DateTime? createdAt,
     this.goalId,
+    this.splitGroupId,
+    this.recurrenceTaskId,
   }) : createdAt = createdAt ?? date;
 
   final String id;
@@ -163,6 +165,15 @@ class Txn {
   int editedCount;
   final DateTime createdAt;
   String? goalId;
+
+  /// Split: every line of one divided payment shares this id; null when the
+  /// transaction is not part of a split. Nothing else in the app treats these
+  /// rows specially — they are ordinary transactions (spec §2).
+  String? splitGroupId;
+
+  /// Repeat: the id of the Planner Task that generates this transaction's future
+  /// occurrences, or null when it does not repeat (spec §1).
+  String? recurrenceTaskId;
 
   bool get movesCash => type != TxnType.rebalance;
 }

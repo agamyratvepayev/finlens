@@ -10,6 +10,8 @@ import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/app_typography.dart';
 import 'pickers.dart';
+import 'repeat_sheet.dart';
+import 'split_sheet.dart';
 import 'widgets/amount_hero.dart';
 import 'widgets/form_kit.dart';
 import 'widgets/transaction_form_shell.dart';
@@ -73,7 +75,8 @@ class QuickAddScreen extends StatefulWidget {
 /// that still make sense and clear only the ones that do not.
 enum _Slot { none, account, expenseCategory, incomeCategory }
 
-class _QuickAddScreenState extends State<QuickAddScreen> {
+class _QuickAddScreenState extends State<QuickAddScreen>
+    with SingleTickerProviderStateMixin {
   late QuickAddType _type;
 
   /// The literal characters typed into the hero, not a double — the display
@@ -101,13 +104,24 @@ class _QuickAddScreenState extends State<QuickAddScreen> {
   IconData _goalIcon = Icons.savings_rounded;
 
   // Toggles, shared across types that use them.
-  bool _repeat = false;
-  bool _split = false;
+  RepeatFrequency _repeatFreq = RepeatFrequency.none;
+  String? _recurrenceTaskId; // the Planner Task backing an existing repeat
+  List<SplitLine>? _splitLines; // non-null once a split is applied
   bool _hasFee = false;
   bool _autoFund = false;
   bool _remind = false;
 
+  /// The field flagged as missing after an incomplete Save (§3), and the pulse
+  /// that flashes it. Cleared as soon as the field is filled.
+  String? _flag;
+  late final AnimationController _pulse = AnimationController(
+      vsync: this, duration: const Duration(milliseconds: 200));
+
+  bool _editLoaded = false;
+
   bool get _isEditing => widget.editing != null;
+  bool get _hasSplit => _splitLines != null;
+  bool get _hasRepeat => _repeatFreq != RepeatFrequency.none;
 
   @override
   void initState() {
@@ -140,7 +154,40 @@ class _QuickAddScreenState extends State<QuickAddScreen> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Editing a saved transaction loads its repeat rule and, for a split, the
+    // whole group (spec §1/§2). Done once, and here rather than initState so
+    // the store is reachable.
+    if (_editLoaded || widget.editing == null) return;
+    _editLoaded = true;
+    final store = StoreScope.read(context);
+    final src = widget.editing!;
+    _recurrenceTaskId = src.recurrenceTaskId;
+    if (_recurrenceTaskId != null) {
+      _repeatFreq = store.taskById(_recurrenceTaskId)?.repeats ??
+          RepeatFrequency.none;
+    }
+    if (src.splitGroupId != null) {
+      final group = store.txns
+          .where((t) => t.splitGroupId == src.splitGroupId)
+          .toList();
+      if (group.length >= 2) {
+        _splitLines = [
+          for (final t in group)
+            SplitLine(
+              categoryId:
+                  t.type == TxnType.income ? t.fromRef : t.toRef,
+              amount: t.amount,
+            ),
+        ];
+      }
+    }
+  }
+
+  @override
   void dispose() {
+    _pulse.dispose();
     _note.dispose();
     _title.dispose();
     _titleFocus.dispose();
@@ -197,12 +244,24 @@ class _QuickAddScreenState extends State<QuickAddScreen> {
 
   // ── Build ─────────────────────────────────────────────────────────────────
 
+  /// Whether the currently flagged field has since been filled (§3).
+  bool _flagSatisfied(String flag) => switch (flag) {
+        'amount' => _amount > 0,
+        'from' => _fromRef != null,
+        'to' => _toRef != null,
+        _ => true,
+      };
+
   @override
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
+    // Filling a flagged field clears its flag immediately (§3).
+    if (_flag != null && _flagSatisfied(_flag!)) _flag = null;
     return TransactionFormShell(
       config: _config(store),
       typeLocked: _isEditing,
+      flashTarget: _flag,
+      flashPulse: _pulse,
       onCancel: () => Navigator.of(context).pop(),
       onTypeTap: _showTypeMenu,
       onSave: () => _save(store),
@@ -288,10 +347,70 @@ class _QuickAddScreenState extends State<QuickAddScreen> {
 
   FormToggle _repeatToggle() => FormToggle(
         icon: Icons.repeat_rounded,
-        label: 'Repeat',
-        value: _repeat,
-        onTap: () => setState(() => _repeat = !_repeat),
+        label: repeatButtonLabel(_repeatFreq),
+        value: _hasRepeat,
+        semanticValue: _hasRepeat
+            ? repeatButtonLabel(_repeatFreq).toLowerCase()
+            : 'off',
+        onTap: _openRepeat,
       );
+
+  FormToggle _splitToggle(AppStore store) => FormToggle(
+        icon: Icons.call_split_rounded,
+        label: _hasSplit ? '${_splitLines!.length} categories' : 'Split',
+        value: _hasSplit,
+        enabled: _amount > 0,
+        semanticValue: _amount <= 0
+            ? 'unavailable until an amount is entered'
+            : (_hasSplit ? '${_splitLines!.length} categories' : 'off'),
+        onTap: () => _openSplit(store),
+      );
+
+  Future<void> _openRepeat() async {
+    // Planner's Task can't represent a multi-transaction (split) occurrence, so
+    // the combination is blocked with a clear message (spec §5).
+    if (_hasSplit) {
+      _toast("Can't repeat a split transaction");
+      return;
+    }
+    setState(() => _keypadOpen = false);
+    final freq =
+        await showRepeatSheet(context, current: _repeatFreq, date: _date);
+    if (freq == null || !mounted) return;
+    setState(() => _repeatFreq = freq);
+  }
+
+  Future<void> _openSplit(AppStore store) async {
+    if (_hasRepeat) {
+      _toast("Can't split a repeating transaction");
+      return;
+    }
+    if (_amount <= 0) return;
+    final catType =
+        _type == QuickAddType.income ? CategoryType.income : CategoryType.expense;
+    final account =
+        store.accountById(_type == QuickAddType.income ? _toRef : _fromRef);
+    setState(() => _keypadOpen = false);
+    final result = await showSplitSheet(
+      context,
+      total: _amount,
+      currency: _currency,
+      accountName: account?.name ?? '—',
+      categoryType: catType,
+      initial: _splitLines ?? const [],
+    );
+    if (result == null || !mounted) return;
+    setState(() => _splitLines = result.length >= 2 ? result : null);
+  }
+
+  void _toast(String message) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  bool _splitBalanced() =>
+      _splitLines != null && splitBalanced(_amount, _splitLines!);
 
   // ── Configs ───────────────────────────────────────────────────────────────
 
@@ -310,6 +429,7 @@ class _QuickAddScreenState extends State<QuickAddScreen> {
             label: 'From',
             value: from?.name,
             emptyText: 'Choose account',
+            flashId: 'from',
             onTap: widget.fixedFromAccountId != null
                 ? null
                 : () => _pickAccountInto(store, isFrom: true, title: 'Pay from'),
@@ -317,27 +437,30 @@ class _QuickAddScreenState extends State<QuickAddScreen> {
           FieldSpec(
             icon: Icons.category_rounded,
             label: 'To',
-            value: to?.name,
+            // A split replaces the single category with the line count (§2).
+            value: _hasSplit ? '${_splitLines!.length} categories' : to?.name,
             emptyText: 'Choose category',
-            onTap: () => _pickCategoryInto(CategoryType.expense, isFrom: false),
+            flashId: 'to',
+            onTap: _hasSplit
+                ? () => _openSplit(store)
+                : () => _pickCategoryInto(CategoryType.expense, isFrom: false),
           ),
         ]),
         FieldGroup('OPTIONAL', [_dateField(), _tagField(), _noteField()]),
       ],
-      toggles: [
-        _repeatToggle(),
-        FormToggle(
-          icon: Icons.call_split_rounded,
-          label: 'Split',
-          value: _split,
-          onTap: () => setState(() => _split = !_split),
-        ),
-      ],
+      toggles: [_repeatToggle(), _splitToggle(store)],
       saveLabel: 'Save expense',
       blockers: [
-        Blocker(unmet: _amount <= 0, label: 'Enter an amount'),
-        Blocker(unmet: _fromRef == null, label: 'Choose an account'),
-        Blocker(unmet: _toRef == null, label: 'Choose a category'),
+        Blocker(unmet: _amount <= 0, label: 'Enter an amount', flashId: 'amount'),
+        Blocker(unmet: _fromRef == null, label: 'Choose an account', flashId: 'from'),
+        Blocker(
+            unmet: _toRef == null && !_hasSplit,
+            label: 'Choose a category',
+            flashId: 'to'),
+        Blocker(
+            unmet: _hasSplit && !_splitBalanced(),
+            label: 'Balance the split',
+            flashId: 'to'),
       ],
       trailing: _editingExtras(),
     );
@@ -356,35 +479,39 @@ class _QuickAddScreenState extends State<QuickAddScreen> {
           FieldSpec(
             icon: Icons.category_rounded,
             label: 'From',
-            value: from?.name,
+            // Income splits the source category, so From carries the count.
+            value: _hasSplit ? '${_splitLines!.length} categories' : from?.name,
             emptyText: 'Choose source',
-            onTap: () => _pickCategoryInto(CategoryType.income, isFrom: true),
+            flashId: 'from',
+            onTap: _hasSplit
+                ? () => _openSplit(store)
+                : () => _pickCategoryInto(CategoryType.income, isFrom: true),
           ),
           FieldSpec(
             icon: Icons.account_balance_wallet_rounded,
             label: 'To',
             value: to?.name,
             emptyText: 'Choose account',
+            flashId: 'to',
             onTap: () =>
                 _pickAccountInto(store, isFrom: false, title: 'Deposit into'),
           ),
         ]),
         FieldGroup('OPTIONAL', [_dateField(), _tagField(), _noteField()]),
       ],
-      toggles: [
-        _repeatToggle(),
-        FormToggle(
-          icon: Icons.call_split_rounded,
-          label: 'Split',
-          value: _split,
-          onTap: () => setState(() => _split = !_split),
-        ),
-      ],
+      toggles: [_repeatToggle(), _splitToggle(store)],
       saveLabel: 'Save income',
       blockers: [
-        Blocker(unmet: _amount <= 0, label: 'Enter an amount'),
-        Blocker(unmet: _fromRef == null, label: 'Choose a source'),
-        Blocker(unmet: _toRef == null, label: 'Choose an account'),
+        Blocker(unmet: _amount <= 0, label: 'Enter an amount', flashId: 'amount'),
+        Blocker(
+            unmet: _fromRef == null && !_hasSplit,
+            label: 'Choose a source',
+            flashId: 'from'),
+        Blocker(unmet: _toRef == null, label: 'Choose an account', flashId: 'to'),
+        Blocker(
+            unmet: _hasSplit && !_splitBalanced(),
+            label: 'Balance the split',
+            flashId: 'from'),
       ],
       trailing: _editingExtras(),
     );
@@ -409,6 +536,7 @@ class _QuickAddScreenState extends State<QuickAddScreen> {
             label: 'From',
             value: from?.name,
             emptyText: 'Choose account',
+            flashId: 'from',
             onTap: widget.fixedFromAccountId != null
                 ? null
                 : () => _pickAccountInto(
@@ -423,6 +551,7 @@ class _QuickAddScreenState extends State<QuickAddScreen> {
             label: 'To',
             value: to?.name,
             emptyText: 'Choose account',
+            flashId: 'to',
             onTap: widget.fixedToAccountId != null
                 ? null
                 : () => _pickAccountInto(
@@ -465,9 +594,15 @@ class _QuickAddScreenState extends State<QuickAddScreen> {
       ],
       saveLabel: 'Save transfer',
       blockers: [
-        Blocker(unmet: _amount <= 0, label: 'Enter an amount'),
-        Blocker(unmet: _fromRef == null, label: 'Choose a source account'),
-        Blocker(unmet: _toRef == null, label: 'Choose a destination'),
+        Blocker(unmet: _amount <= 0, label: 'Enter an amount', flashId: 'amount'),
+        Blocker(
+            unmet: _fromRef == null,
+            label: 'Choose a source account',
+            flashId: 'from'),
+        Blocker(
+            unmet: _toRef == null,
+            label: 'Choose a destination',
+            flashId: 'to'),
       ],
       trailing: _editingExtras(),
     );
@@ -993,9 +1128,27 @@ class _QuickAddScreenState extends State<QuickAddScreen> {
             // This one does confirm: once the form closes there is no undo
             // path, unlike the ledger's swipe-to-delete.
             onTap: () async {
-              final ok = await confirmDeleteTxn(context, txn);
-              if (!ok || !mounted) return;
-              StoreScope.read(context).deleteTxn(txn);
+              final store = StoreScope.read(context);
+              final gid = txn.splitGroupId;
+              if (gid != null) {
+                // Deleting one line offers to delete the whole group (§2).
+                final count =
+                    store.txns.where((t) => t.splitGroupId == gid).length;
+                final whole = await _confirmSplitDelete(count);
+                if (whole == null || !mounted) return;
+                if (whole) {
+                  _deleteGroup(store, txn);
+                } else {
+                  _deleteTaskOf(store, txn);
+                  store.deleteTxn(txn);
+                }
+              } else {
+                final ok = await confirmDeleteTxn(context, txn);
+                if (!ok || !mounted) return;
+                // A repeat rule is deleted with its originating transaction (§5).
+                _deleteTaskOf(store, txn);
+                store.deleteTxn(txn);
+              }
               if (mounted) Navigator.of(context).pop();
             },
             child: SizedBox(
@@ -1032,19 +1185,204 @@ class _QuickAddScreenState extends State<QuickAddScreen> {
 
   // ── Save ──────────────────────────────────────────────────────────────────
 
-  void _save(AppStore store) {
-    if (_isEditing) {
-      store.updateTxn(
-        widget.editing!,
-        amount: _type == QuickAddType.rebalance
-            ? _amount - store.balanceOf(_toRef!)
-            : _amount,
-        fromRef: _fromRef,
-        toRef: _toRef,
+  DateTime _nextDate(DateTime d, RepeatFrequency f) => switch (f) {
+        RepeatFrequency.weekly => d.add(const Duration(days: 7)),
+        RepeatFrequency.monthly =>
+          DateTime(d.year, d.month + 1, d.day, d.hour, d.minute),
+        RepeatFrequency.quarterly =>
+          DateTime(d.year, d.month + 3, d.day, d.hour, d.minute),
+        RepeatFrequency.yearly =>
+          DateTime(d.year + 1, d.month, d.day, d.hour, d.minute),
+        RepeatFrequency.none => d,
+      };
+
+  /// Creates, replaces, or clears the Planner Task backing this transaction's
+  /// repeat (spec §1). The rule starts at the *next* occurrence — the entered
+  /// transaction is the first one.
+  void _applyRepeatFor(AppStore store, Txn txn,
+      {required bool income, bool transfer = false}) {
+    final oldId = txn.recurrenceTaskId;
+    if (oldId != null) {
+      final old = store.taskById(oldId);
+      if (old != null) store.deleteTaskSeries(old);
+      txn.recurrenceTaskId = null;
+    }
+    if (!_hasRepeat) return;
+    final String accountId;
+    final String? categoryId;
+    final double expected;
+    if (transfer) {
+      accountId = _fromRef!;
+      categoryId = null;
+      expected = -_amount;
+    } else if (income) {
+      accountId = _toRef!;
+      categoryId = _fromRef;
+      expected = _amount;
+    } else {
+      accountId = _fromRef!;
+      categoryId = _toRef;
+      expected = -_amount;
+    }
+    final note = _note.text.trim();
+    final task = store.addTask(
+      title: note.isNotEmpty
+          ? note
+          : (store.categoryById(categoryId)?.name ?? 'Recurring'),
+      linkedAccountId: accountId,
+      expectedAmount: expected,
+      dueDate: _nextDate(_date, _repeatFreq),
+      icon: Icons.repeat_rounded,
+      categoryId: categoryId,
+      repeats: _repeatFreq,
+    );
+    txn.recurrenceTaskId = task.id;
+  }
+
+  /// Writes an expense/income — one transaction, or one per split line sharing
+  /// a splitGroupId (spec §2). Repeat is blocked while a split is applied.
+  void _writeExpenseIncome(AppStore store, {required bool income}) {
+    final txnType = income ? TxnType.income : TxnType.expense;
+    final note = _note.text.trim();
+    if (_hasSplit) {
+      final accountId = income ? _toRef! : _fromRef!;
+      String? gid;
+      for (var i = 0; i < _splitLines!.length; i++) {
+        final line = _splitLines![i];
+        final t = store.addTxn(
+          type: txnType,
+          amount: line.amount,
+          currency: _currency,
+          fromRef: income ? line.categoryId! : accountId,
+          toRef: income ? accountId : line.categoryId!,
+          date: _date,
+          tags: _tags,
+          note: note,
+          splitGroupId: gid,
+        );
+        if (i == 0) {
+          gid = t.id;
+          t.splitGroupId = gid;
+        }
+      }
+    } else {
+      final t = store.addTxn(
+        type: txnType,
+        amount: _amount,
+        currency: _currency,
+        fromRef: _fromRef!,
+        toRef: _toRef!,
         date: _date,
         tags: _tags,
-        note: _note.text.trim(),
+        note: note,
       );
+      _applyRepeatFor(store, t, income: income);
+    }
+  }
+
+  void _deleteGroup(AppStore store, Txn editing) {
+    final gid = editing.splitGroupId;
+    final rows = gid == null
+        ? [editing]
+        : store.txns.where((t) => t.splitGroupId == gid).toList();
+    for (final t in rows) {
+      _deleteTaskOf(store, t);
+      store.deleteTxn(t);
+    }
+  }
+
+  void _deleteTaskOf(AppStore store, Txn txn) {
+    final rid = txn.recurrenceTaskId;
+    if (rid != null) {
+      final task = store.taskById(rid);
+      if (task != null) store.deleteTaskSeries(task);
+    }
+  }
+
+  /// Delete confirmation for a split line: true = whole group, false = just this
+  /// line, null = cancelled (spec §2).
+  Future<bool?> _confirmSplitDelete(int count) {
+    return showModalBottomSheet<bool>(
+      context: context,
+      backgroundColor: AppColors.surfaceAlt,
+      builder: (sheetContext) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(Insets.gutter),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text('Delete split', style: AppText.rowTitle),
+              const SizedBox(height: Insets.sm),
+              Text(
+                'This is one of $count linked split transactions.',
+                style: AppText.caption,
+              ),
+              const SizedBox(height: Insets.lg),
+              FilledButton(
+                onPressed: () => Navigator.of(sheetContext).pop(true),
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.negative,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 13),
+                ),
+                child: Text('Delete all $count'),
+              ),
+              const SizedBox(height: Insets.sm),
+              TextButton(
+                onPressed: () => Navigator.of(sheetContext).pop(false),
+                child: const Text('Delete just this line',
+                    style: TextStyle(color: AppColors.accent)),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _save(AppStore store) {
+    // §3 — validate on tap: name the first missing field, flash it, do not save.
+    final blocker = _config(store).firstUnmet;
+    if (blocker != null) {
+      _toast(blocker.label);
+      if (blocker.flashId != null) {
+        setState(() => _flag = blocker.flashId);
+        _pulse.forward(from: 0);
+      }
+      return;
+    }
+
+    final income = _type == QuickAddType.income;
+
+    if (_isEditing) {
+      final editing = widget.editing!;
+      final splitInvolved =
+          (_type == QuickAddType.expense || income) &&
+              (_hasSplit || editing.splitGroupId != null);
+      if (splitInvolved) {
+        // Replace the whole group (or single txn) with the current state.
+        _deleteGroup(store, editing);
+        _writeExpenseIncome(store, income: income);
+      } else {
+        store.updateTxn(
+          editing,
+          amount: _type == QuickAddType.rebalance
+              ? _amount - store.balanceOf(_toRef!)
+              : _amount,
+          fromRef: _fromRef,
+          toRef: _toRef,
+          date: _date,
+          tags: _tags,
+          note: _note.text.trim(),
+        );
+        if (_type == QuickAddType.expense ||
+            income ||
+            _type == QuickAddType.transfer) {
+          _applyRepeatFor(store, editing,
+              income: income, transfer: _type == QuickAddType.transfer);
+        }
+      }
       Navigator.of(context).pop();
       return;
     }
@@ -1052,24 +1390,13 @@ class _QuickAddScreenState extends State<QuickAddScreen> {
     switch (_type) {
       case QuickAddType.expense:
       case QuickAddType.income:
-        store.addTxn(
-          type: _type == QuickAddType.expense
-              ? TxnType.expense
-              : TxnType.income,
-          amount: _amount,
-          currency: _currency,
-          fromRef: _fromRef!,
-          toRef: _toRef!,
-          date: _date,
-          tags: _tags,
-          note: _note.text.trim(),
-        );
+        _writeExpenseIncome(store, income: income);
       case QuickAddType.transfer:
         final from = store.accountById(_fromRef)!;
         final to = store.accountById(_toRef)!;
         final cross = from.currency != to.currency;
         final rate = _rateOverride ?? _defaultRate(from, to);
-        store.addTxn(
+        final t = store.addTxn(
           type: TxnType.transfer,
           amount: _amount,
           currency: from.currency,
@@ -1080,6 +1407,7 @@ class _QuickAddScreenState extends State<QuickAddScreen> {
           toAmount: cross ? _amount * rate : null,
           note: _note.text.trim(),
         );
+        _applyRepeatFor(store, t, income: false, transfer: true);
       case QuickAddType.rebalance:
         final asset = store.accountById(_toRef)!;
         store.addTxn(
@@ -1118,7 +1446,7 @@ class _QuickAddScreenState extends State<QuickAddScreen> {
           dueDate: _date,
           icon: Icons.arrow_circle_up_rounded,
           categoryId: _fromRef,
-          repeats: _repeat ? RepeatFrequency.monthly : RepeatFrequency.none,
+          repeats: _repeatFreq,
           reminderDaysBefore: _remind ? 2 : null,
           reminderTime: _remind ? const TimeOfDay(hour: 9, minute: 0) : null,
         );

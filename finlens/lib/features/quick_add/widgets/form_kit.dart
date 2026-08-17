@@ -213,12 +213,22 @@ class FormToggle {
     required this.label,
     required this.value,
     required this.onTap,
+    this.enabled = true,
+    this.semanticValue,
   });
 
   final IconData icon;
   final String label;
   final bool value;
   final VoidCallback onTap;
+
+  /// A disabled toggle renders at 35% opacity and does not respond (e.g. Split
+  /// before an amount is entered, spec §2).
+  final bool enabled;
+
+  /// Announced state/reason, e.g. "every month" or "unavailable until an amount
+  /// is entered" (spec §4).
+  final String? semanticValue;
 }
 
 class FormToggleBar extends StatelessWidget {
@@ -253,14 +263,14 @@ class _ToggleButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final s = formScale(context);
     final on = toggle.value;
-    return Material(
+    final button = Material(
       color: on
           ? AppColors.accent.withValues(alpha: 0.15)
           : AppColors.fieldCard,
       borderRadius: BorderRadius.circular(12 * s),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
-        onTap: toggle.onTap,
+        onTap: toggle.enabled ? toggle.onTap : null,
         // Never scales below the 44pt minimum target.
         child: SizedBox(
           height: 44 * s < 44 ? 44 : 44 * s,
@@ -292,6 +302,14 @@ class _ToggleButton extends StatelessWidget {
           ),
         ),
       ),
+    );
+
+    return Semantics(
+      button: true,
+      enabled: toggle.enabled,
+      label: toggle.label,
+      value: toggle.semanticValue,
+      child: Opacity(opacity: toggle.enabled ? 1 : 0.35, child: button),
     );
   }
 }
@@ -360,56 +378,8 @@ class HintStrip extends StatelessWidget {
   }
 }
 
-/// Pinned Save. When disabled it names the first unmet requirement rather than
-/// reading "Save" — the user should never have to guess what is missing.
-class SaveBar extends StatelessWidget {
-  const SaveBar({
-    super.key,
-    required this.label,
-    required this.enabled,
-    required this.onPressed,
-  });
-
-  final String label;
-  final bool enabled;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final s = formScale(context);
-    return Padding(
-      padding: EdgeInsets.fromLTRB(kFormMargin, 10 * s, kFormMargin, 0),
-      child: Material(
-        // Save is purple in every type: the accent says what you are
-        // creating, purple says this is the action.
-        color: enabled ? AppColors.accent : AppColors.saveDisabledBg,
-        borderRadius: BorderRadius.circular(13 * s),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: enabled ? onPressed : null,
-          child: SizedBox(
-            height: 50 * s < 44 ? 44 : 50 * s,
-            width: double.infinity,
-            child: Center(
-              child: Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 16 * s * formTextScale(context),
-                  fontWeight: FontWeight.w600,
-                  height: 1.2,
-                  color:
-                      enabled ? Colors.white : AppColors.saveDisabledFg,
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
+// The pinned SaveBar was removed (spec §3): the nav bar's Save is the only
+// commit, and it names/flashes the missing field on an incomplete tap.
 
 /// Nav bar: Cancel / type pill / Save.
 ///

@@ -17,6 +17,7 @@ class FieldSpec {
     this.emptyText,
     this.valueColor,
     this.onTap,
+    this.flashId,
   });
 
   final IconData icon;
@@ -25,6 +26,10 @@ class FieldSpec {
   final String? emptyText;
   final Color? valueColor;
   final VoidCallback? onTap;
+
+  /// Ties this row to a [Blocker.flashId] so an incomplete Save can flash it
+  /// (spec §3). Null for rows that are never a validation target.
+  final String? flashId;
 }
 
 /// The hero card's content: a number the keypad drives, or free text.
@@ -71,10 +76,14 @@ class FieldGroup {
 
 /// One unmet requirement. The first unmet one becomes Save's label.
 class Blocker {
-  const Blocker({required this.unmet, required this.label});
+  const Blocker({required this.unmet, required this.label, this.flashId});
 
   final bool unmet;
   final String label;
+
+  /// Which field to flash when this blocker is the first unmet one on Save
+  /// (spec §3). 'amount' targets the hero; others match a [FieldSpec.flashId].
+  final String? flashId;
 }
 
 /// Everything that differs between the six types.
@@ -148,6 +157,8 @@ class TransactionFormShell extends StatelessWidget {
     required this.onBackspace,
     required this.onDismissKeypad,
     this.typeLocked = false,
+    this.flashTarget,
+    this.flashPulse,
   });
 
   final FormConfig config;
@@ -161,10 +172,14 @@ class TransactionFormShell extends StatelessWidget {
   final VoidCallback onDismissKeypad;
   final bool typeLocked;
 
+  /// The field currently flagged as missing (spec §3): 'amount' for the hero,
+  /// or a [FieldSpec.flashId]. Its value renders red and its background pulses.
+  final String? flashTarget;
+  final Animation<double>? flashPulse;
+
   @override
   Widget build(BuildContext context) {
     final s = formScale(context);
-    final blocker = config.firstUnmet;
     final bottomInset = MediaQuery.paddingOf(context).bottom;
 
     return Scaffold(
@@ -179,7 +194,9 @@ class TransactionFormShell extends StatelessWidget {
               onCancel: onCancel,
               onTypeTap: onTypeTap,
               onSave: onSave,
-              canSave: blocker == null,
+              // Save stays enabled regardless of validity; an incomplete tap
+              // names the missing field and flashes it instead (spec §3).
+              canSave: true,
               locked: typeLocked,
             ),
             Expanded(
@@ -222,11 +239,8 @@ class TransactionFormShell extends StatelessWidget {
                 ),
               ),
             ),
-            SaveBar(
-              label: blocker?.label ?? config.saveLabel,
-              enabled: blocker == null,
-              onPressed: onSave,
-            ),
+            // The pinned validation bar is gone (spec §3): Save in the nav bar
+            // is the only commit, and it names/flashes what is missing on tap.
             if (keypadOpen)
               Padding(
                 padding: EdgeInsets.only(top: 10 * s),
@@ -241,38 +255,52 @@ class TransactionFormShell extends StatelessWidget {
 
   List<Widget> _body(BuildContext context) {
     final hero = config.hero;
+    final heroWidget = switch (hero) {
+      NumericHero() => NumericHeroCard(
+          label: hero.label,
+          raw: hero.raw,
+          currency: hero.currency,
+          accent: config.accent,
+          accentDim: config.accentDim,
+          focused: keypadOpen,
+          onTap: onHeroTap,
+          onCurrencyTap: hero.onCurrencyTap,
+        ),
+      TextHero() => TextHeroCard(
+          caption: hero.caption,
+          placeholder: hero.placeholder,
+          controller: hero.controller,
+          focusNode: hero.focusNode,
+        ),
+    };
     return [
       // No section label: position alone marks the hero required.
-      switch (hero) {
-        NumericHero() => NumericHeroCard(
-            label: hero.label,
-            raw: hero.raw,
-            currency: hero.currency,
-            accent: config.accent,
-            accentDim: config.accentDim,
-            focused: keypadOpen,
-            onTap: onHeroTap,
-            onCurrencyTap: hero.onCurrencyTap,
-          ),
-        TextHero() => TextHeroCard(
-            caption: hero.caption,
-            placeholder: hero.placeholder,
-            controller: hero.controller,
-            focusNode: hero.focusNode,
-          ),
-      },
+      _FieldFlash(
+        active: flashTarget == 'amount',
+        pulse: flashPulse,
+        radius: 16,
+        child: heroWidget,
+      ),
       for (final group in config.groups) ...[
         if (group.title != null) FormSectionLabel(group.title!),
         TxnCard(
           children: [
             for (final f in group.fields)
-              TxnFieldRow(
-                icon: f.icon,
-                label: f.label,
-                value: f.value,
-                emptyText: f.emptyText,
-                valueColor: f.valueColor,
-                onTap: f.onTap,
+              _FieldFlash(
+                active: f.flashId != null && f.flashId == flashTarget,
+                pulse: flashPulse,
+                radius: 0,
+                child: TxnFieldRow(
+                  icon: f.icon,
+                  label: f.label,
+                  value: f.value,
+                  emptyText: f.emptyText,
+                  // A flagged field's value goes red until it is filled (§3).
+                  valueColor: (f.flashId != null && f.flashId == flashTarget)
+                      ? AppColors.negative
+                      : f.valueColor,
+                  onTap: f.onTap,
+                ),
               ),
           ],
         ),
@@ -282,5 +310,48 @@ class TransactionFormShell extends StatelessWidget {
       FormToggleBar(toggles: config.toggles),
       ...config.trailing,
     ];
+  }
+}
+
+/// Wraps a hero or a field row and, while [active], pulses a red background
+/// twice over the life of [pulse] (spec §3). Inert otherwise, so an unflagged
+/// field renders exactly as before.
+class _FieldFlash extends StatelessWidget {
+  const _FieldFlash({
+    required this.active,
+    required this.pulse,
+    required this.radius,
+    required this.child,
+  });
+
+  final bool active;
+  final Animation<double>? pulse;
+  final double radius;
+  final Widget child;
+
+  // Two triangular humps across t ∈ [0,1].
+  static double _hump(double t) {
+    final phase = (t * 2) % 1.0;
+    return phase < 0.5 ? phase * 2 : (1 - phase) * 2;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!active || pulse == null) return child;
+    // A decoration painted behind the child — it changes no layout, so nothing
+    // moves or resizes during the pulse (spec §3).
+    return AnimatedBuilder(
+      animation: pulse!,
+      builder: (context, _) {
+        return DecoratedBox(
+          decoration: BoxDecoration(
+            color:
+                AppColors.negative.withValues(alpha: 0.16 * _hump(pulse!.value)),
+            borderRadius: BorderRadius.circular(radius),
+          ),
+          child: child,
+        );
+      },
+    );
   }
 }

@@ -771,6 +771,8 @@ class AppStore extends ChangeNotifier {
     List<String> tags = const [],
     String note = '',
     String? goalId,
+    String? splitGroupId,
+    String? recurrenceTaskId,
   }) {
     final txn = Txn(
       id: _nextId('t'),
@@ -787,6 +789,8 @@ class AppStore extends ChangeNotifier {
       tags: tags,
       note: note,
       goalId: goalId,
+      splitGroupId: splitGroupId,
+      recurrenceTaskId: recurrenceTaskId,
     );
     _txns.add(txn);
     _sameIndex = null;
@@ -808,6 +812,8 @@ class AppStore extends ChangeNotifier {
     double? fee,
     double? toAmount,
     double? exchangeRate,
+    String? recurrenceTaskId,
+    bool clearRecurrence = false,
   }) {
     txn
       ..amount = amount ?? txn.amount
@@ -819,6 +825,8 @@ class AppStore extends ChangeNotifier {
       ..fee = fee ?? txn.fee
       ..toAmount = toAmount ?? txn.toAmount
       ..exchangeRate = exchangeRate ?? txn.exchangeRate
+      ..recurrenceTaskId =
+          clearRecurrence ? null : (recurrenceTaskId ?? txn.recurrenceTaskId)
       ..editedCount += 1;
     // An edit can change fromRef/toRef/date, so the same-key index is stale.
     _sameIndex = null;
