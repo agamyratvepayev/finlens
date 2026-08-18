@@ -39,9 +39,19 @@ class TxnRow extends StatelessWidget {
   final VoidCallback onCopy;
   final VoidCallback onDelete;
 
+  // Icon tile side and its gap to the text column. The meta line is indented by
+  // their sum (44pt) so its left edge lines up with the text column above it —
+  // it is not indented to the icon's left edge.
+  static const double _iconSize = 34;
+  static const double _iconGap = 10;
+
   @override
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
+    final hasDescription = txn.note.isNotEmpty;
+    final title = _titleWidget(store);
+    final (primary, secondary) = _amountParts(store);
+    final meta = _metaLine(store);
 
     return SwipeActions(
       actions: [
@@ -66,125 +76,156 @@ class TxnRow extends StatelessWidget {
       ],
       child: InkWell(
         onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: Insets.md,
-            vertical: 11,
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              IconTile(_icon(store), color: _color(store), size: 34),
-              const SizedBox(width: Insets.md),
-              Expanded(child: _titleBlock(store)),
-              const SizedBox(width: Insets.sm),
-              _amountBlock(store),
-            ],
+        // Both a tap and a swipe target: never smaller than 44pt. No fixed
+        // height beyond that floor — everything else is padding + intrinsic
+        // content, so the row grows at large text scales rather than clipping.
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 44),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: Insets.md,
+              vertical: 9,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // ── Top block: icon tile + the two-line text/figure column.
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    IconTile(_icon(store),
+                        color: _color(store), size: _iconSize),
+                    const SizedBox(width: _iconGap),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Line 1: title | amount. With no description the
+                          // balance moves up beside the amount here.
+                          Row(
+                            children: [
+                              Expanded(child: title),
+                              const SizedBox(width: Insets.sm),
+                              if (hasDescription || secondary == null)
+                                primary
+                              else
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    primary,
+                                    const SizedBox(width: 6),
+                                    secondary,
+                                  ],
+                                ),
+                            ],
+                          ),
+                          if (hasDescription) ...[
+                            const SizedBox(height: 2),
+                            // Line 2: description | balance.
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    txn.note,
+                                    style: AppText.rowSubtitle,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                if (secondary != null) ...[
+                                  const SizedBox(width: Insets.sm),
+                                  secondary,
+                                ],
+                              ],
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                // ── Meta line: account · tags, full width, left edge aligned
+                // with the text column above. Nothing sits to its right, so the
+                // account name stops sharing the narrow amount-column width.
+                if (meta != null) ...[
+                  const SizedBox(height: 2),
+                  Padding(
+                    padding: const EdgeInsets.only(left: _iconSize + _iconGap),
+                    child: meta,
+                  ),
+                ],
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _titleBlock(AppStore store) {
-    final subtitleParts = <String>[
-      if (txn.note.isNotEmpty) txn.note,
-    ];
-    final metaParts = <String>[
-      _contextLabel(store),
-      ...txn.tags.map((t) => '#$t'),
-    ].where((s) => s.isNotEmpty).toList();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // A transfer's title is "{source} → {destination}" (both sides
-        // ellipsize together); every other type keeps its single-name title.
-        if (txn.type == TxnType.transfer)
-          TransferTitleText(
-            from: store.transferParties(txn).from,
-            to: store.transferParties(txn).to,
-            style: AppText.rowTitle,
-          )
-        else
-          Text(
-            _title(store),
-            style: AppText.rowTitle,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        if (subtitleParts.isNotEmpty) ...[
-          const SizedBox(height: 2),
-          Text(
-            subtitleParts.join(' · '),
-            style: AppText.rowSubtitle,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
-        if (metaParts.isNotEmpty) ...[
-          const SizedBox(height: 2),
-          Text(
-            metaParts.join(' · '),
-            style: AppText.caption.copyWith(
-              fontSize: 11,
-              color: AppColors.textTertiary,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
-      ],
+  /// A transfer's title is "{source} → {destination}" (both sides ellipsize
+  /// together); every other type keeps its single-name title.
+  Widget _titleWidget(AppStore store) {
+    if (txn.type == TxnType.transfer) {
+      return TransferTitleText(
+        from: store.transferParties(txn).from,
+        to: store.transferParties(txn).to,
+        style: AppText.rowTitle,
+      );
+    }
+    return Text(
+      _title(store),
+      style: AppText.rowTitle,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
     );
   }
 
-  Widget _amountBlock(AppStore store) {
-    // Spec 2.1 — a transfer reads "FROM amount → TO amount"; a rebalance is
-    // flagged "no cash" because it moves no money.
+  /// The row's right column: (primary, secondary). Primary is the amount;
+  /// secondary is the running balance, the "no cash" flag, or a transfer fee —
+  /// null when there is nothing to show beneath the amount.
+  (Widget, Widget?) _amountParts(AppStore store) {
+    // Spec 2.1 — a transfer reads "FROM amount → TO amount"; the fee, when any,
+    // is the secondary figure.
     if (txn.type == TxnType.transfer && perspectiveAccountId == null) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          Semantics(
-            label: 'Transfer from ${store.transferParties(txn).from} '
-                'to ${store.transferParties(txn).to}, '
-                '${money(txn.amount, currency: txn.currency, signless: true, masked: store.masked)}',
-            excludeSemantics: true,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                AmountText(
-                  txn.amount,
-                  currency: txn.currency,
-                  style:
-                      AppText.amount.copyWith(color: AppColors.textSecondary),
-                ),
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 3),
-                  child: Icon(
-                    Icons.arrow_right_alt_rounded,
-                    size: 15,
-                    color: AppColors.textTertiary,
-                  ),
-                ),
-                AmountText(
-                  txn.toAmount ?? txn.amount,
-                  currency:
-                      store.accountById(txn.toRef)?.currency ?? txn.currency,
-                  color: AppColors.info,
-                ),
-              ],
+      final primary = Semantics(
+        label: 'Transfer from ${store.transferParties(txn).from} '
+            'to ${store.transferParties(txn).to}, '
+            '${money(txn.amount, currency: txn.currency, signless: true, masked: store.masked)}',
+        excludeSemantics: true,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AmountText(
+              txn.amount,
+              currency: txn.currency,
+              style: AppText.amount.copyWith(color: AppColors.textSecondary),
             ),
-          ),
-          if (txn.fee != null && txn.fee! > 0) ...[
-            const SizedBox(height: 2),
-            Text(
-              'fee ${money(txn.fee!, currency: txn.currency)}',
-              style: AppText.caption.copyWith(fontSize: 11),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 3),
+              child: Icon(
+                Icons.arrow_right_alt_rounded,
+                size: 15,
+                color: AppColors.textTertiary,
+              ),
+            ),
+            AmountText(
+              txn.toAmount ?? txn.amount,
+              currency: store.accountById(txn.toRef)?.currency ?? txn.currency,
+              color: AppColors.info,
             ),
           ],
-        ],
+        ),
       );
+      final Widget? secondary = (txn.fee != null && txn.fee! > 0)
+          ? Text(
+              'fee ${money(txn.fee!, currency: txn.currency)}',
+              style: AppText.caption.copyWith(fontSize: 11),
+            )
+          : null;
+      return (primary, secondary);
     }
 
     final signed = _signedAmount(store);
@@ -192,51 +233,91 @@ class TxnRow extends StatelessWidget {
         ? (txn.amount >= 0 ? AppColors.positive : AppColors.negative)
         : (signed >= 0 ? AppColors.positive : AppColors.negative);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        // Unsigned — colour carries direction (spec "Yön ≠ renk"). The sign
-        // would be a second, redundant cue; for colour-blind and screen-reader
-        // users the semantics label below names the direction in words instead.
-        Semantics(
-          // A transfer names both accounts; other types name their direction.
-          // One label per row — no competing amount/row announcements.
-          label: txn.type == TxnType.transfer
-              ? 'Transfer from ${store.transferParties(txn).from} '
-                  'to ${store.transferParties(txn).to}, '
-                  '${money(signed, currency: txn.currency, signless: true, masked: store.masked)}'
-              : '${_directionWord(signed)}, '
-                  '${money(signed, currency: txn.currency, signless: true, masked: store.masked)}',
-          excludeSemantics: true,
-          child: AmountText(
-            signed,
-            currency: txn.currency,
-            signless: true,
-            color: color,
-            forceDecimals: signed.abs() % 1 != 0,
-          ),
-        ),
-        if (txn.type == TxnType.rebalance) ...[
-          const SizedBox(height: 2),
-          Text(
+    // Unsigned — colour carries direction (spec "Yön ≠ renk"). The sign would
+    // be a second, redundant cue; for colour-blind and screen-reader users the
+    // semantics label names the direction in words instead. One label per row.
+    final primary = Semantics(
+      label: txn.type == TxnType.transfer
+          ? 'Transfer from ${store.transferParties(txn).from} '
+              'to ${store.transferParties(txn).to}, '
+              '${money(signed, currency: txn.currency, signless: true, masked: store.masked)}'
+          : '${_directionWord(signed)}, '
+              '${money(signed, currency: txn.currency, signless: true, masked: store.masked)}',
+      excludeSemantics: true,
+      child: AmountText(
+        signed,
+        currency: txn.currency,
+        signless: true,
+        color: color,
+        forceDecimals: signed.abs() % 1 != 0,
+      ),
+    );
+
+    final Widget? secondary = txn.type == TxnType.rebalance
+        ? Text(
             'no cash',
             style: AppText.caption.copyWith(
               fontSize: 11,
               color: AppColors.textTertiary,
             ),
-          ),
-        ] else if (runningBalance != null) ...[
-          const SizedBox(height: 2),
-          AmountText(
-            runningBalance!,
-            style: AppText.caption.copyWith(
-              fontSize: 11,
-              color: AppColors.textTertiary,
+          )
+        : (runningBalance != null
+            ? AmountText(
+                runningBalance!,
+                style: AppText.caption.copyWith(
+                  fontSize: 11,
+                  color: AppColors.textTertiary,
+                ),
+              )
+            : null);
+
+    return (primary, secondary);
+  }
+
+  /// The meta line — account name and tags — or null when the row carries
+  /// neither. The account is dropped where the screen already states it (an
+  /// account-detail perspective) and for transfers (whose title names both
+  /// accounts). The tags sit last and stay fixed, so the account ellipsizes
+  /// first when the two compete for width.
+  Widget? _metaLine(AppStore store) {
+    final account = _accountLabel(store);
+    final tags = txn.tags.map((t) => '#$t').join(' · ');
+    if (account.isEmpty && tags.isEmpty) return null;
+
+    final style = AppText.caption.copyWith(
+      fontSize: 11,
+      color: AppColors.textTertiary,
+    );
+    return Row(
+      children: [
+        if (account.isNotEmpty)
+          Flexible(
+            child: Text(
+              account,
+              style: style,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
-        ],
+        if (account.isNotEmpty && tags.isNotEmpty) Text(' · ', style: style),
+        if (tags.isNotEmpty)
+          Text(tags, style: style, maxLines: 1, overflow: TextOverflow.ellipsis),
       ],
     );
+  }
+
+  String _accountLabel(AppStore store) {
+    // An account-detail screen already states the account in its header, so
+    // repeating it on every row is noise — drop it there.
+    if (perspectiveAccountId != null) return '';
+    return switch (txn.type) {
+      TxnType.expense => store.refName(txn.fromRef),
+      TxnType.income => store.refName(txn.toRef),
+      // The "{from} → {to}" path lives in the title, so the meta line carries no
+      // account for a transfer — only its tags, if any.
+      TxnType.transfer => '',
+      TxnType.rebalance => 'Revaluation',
+    };
   }
 
   /// Direction in words for the amount's semantics label — the only carrier of
@@ -270,18 +351,6 @@ class TxnRow extends StatelessWidget {
       TxnType.income => store.refName(txn.fromRef),
       TxnType.transfer => 'Transfer',
       TxnType.rebalance => store.refName(txn.toRef),
-    };
-  }
-
-  String _contextLabel(AppStore store) {
-    return switch (txn.type) {
-      TxnType.expense => store.refName(txn.fromRef),
-      TxnType.income => store.refName(txn.toRef),
-      // The "{from} → {to}" path now lives in the title, so it is dropped here
-      // to avoid printing the same path twice on one row (the meta line keeps
-      // only the tags).
-      TxnType.transfer => '',
-      TxnType.rebalance => 'Revaluation',
     };
   }
 
