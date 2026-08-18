@@ -5,6 +5,7 @@ import 'package:finlens/core/models/models.dart';
 import 'package:finlens/core/store/app_store.dart';
 import 'package:finlens/shared/widgets/transfer_title.dart';
 import 'package:finlens/shared/widgets/txn_row.dart';
+import 'package:finlens/theme/app_colors.dart';
 import 'package:finlens/theme/app_theme.dart';
 
 Account _acc(String id, String name) => Account(
@@ -104,8 +105,11 @@ void main() {
   });
 
   group('TxnRow transfer', () {
-    testWidgets('title shows both accounts and never the word "Transfer"',
+    testWidgets('shows source then "→ destination" on two lines, no "Transfer"',
         (tester) async {
+      // Spec §2: the source names line 1, "→ {destination}" names line 2, the
+      // word "Transfer" appears nowhere, and the note is deliberately dropped
+      // to hold the row at two lines.
       await tester.pumpWidget(_host(
         _store(),
         TxnRow(
@@ -117,14 +121,15 @@ void main() {
         ),
       ));
 
-      expect(find.text('Main Checking'), findsOneWidget); // source now shown
-      expect(find.text('Main Credit Card'), findsOneWidget);
+      expect(find.text('Main Checking'), findsOneWidget); // line 1: source
+      expect(find.text('→ Main Credit Card'), findsOneWidget); // line 2: dest
       expect(find.text('Transfer'), findsNothing);
-      // Subtitle (description) unchanged.
-      expect(find.text('Partial payment before statement'), findsOneWidget);
+      // The note is not shown on the Ledger transfer row.
+      expect(find.text('Partial payment before statement'), findsNothing);
     });
 
-    testWidgets('an empty description renders no subtitle', (tester) async {
+    testWidgets('the amount is the neutral transfer colour — never red/green',
+        (tester) async {
       await tester.pumpWidget(_host(
         _store(),
         TxnRow(
@@ -136,10 +141,11 @@ void main() {
         ),
       ));
 
-      expect(find.byType(TransferTitleText), findsOneWidget);
-      // No placeholder / description line, and the path is not repeated in the
-      // meta line (the whole "→" path lives only in the title now).
-      expect(find.textContaining('Main Checking →'), findsNothing);
+      // No one-line "{from} → {to}" title widget any more; the two account
+      // lines carry the path, and the amount is neutral.
+      expect(find.byType(TransferTitleText), findsNothing);
+      final amount = tester.widget<Text>(find.text(r'$500'));
+      expect(amount.style?.color, AppColors.transferAmount);
     });
 
     testWidgets('the row semantics name the type and both accounts',

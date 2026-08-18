@@ -14,6 +14,7 @@ import '../../theme/app_typography.dart';
 import '../balance/balance_screen.dart' show EmptyState;
 import '../quick_add/pickers.dart';
 import '../quick_add/quick_add_sheet.dart';
+import 'transfer_detail_screen.dart';
 
 /// Spec 2.1 — every entry in chronological order, under a monthly
 /// In / Out / Left over summary.
@@ -355,7 +356,19 @@ class _LedgerScreenState extends State<LedgerScreen> {
                   if (i > 0) const RowDivider(indent: Insets.md),
                   TxnRow(
                     txn: entry.value[i],
-                    onTap: () => showQuickAdd(context, editing: entry.value[i]),
+                    // A transfer has no category key and must never open the
+                    // editor on a tap (spec §5): it opens its own read-only
+                    // detail. Other row types keep their existing tap-to-edit.
+                    onTap: () => entry.value[i].type == TxnType.transfer
+                        ? Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => TransferDetailScreen(
+                                txnId: entry.value[i].id,
+                                backLabel: 'Ledger',
+                              ),
+                            ),
+                          )
+                        : showQuickAdd(context, editing: entry.value[i]),
                     onEdit: () => showQuickAdd(context, editing: entry.value[i]),
                     onCopy: () => showQuickAdd(context, copyOf: entry.value[i]),
                     onDelete: () async {

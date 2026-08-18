@@ -101,15 +101,18 @@ void main() {
       expect(find.text('−\$300'), findsOneWidget);
     });
 
-    testWidgets('a transfer row renders unsigned and red from the source side',
+    testWidgets('a transfer row renders unsigned and neutral — never red/green',
         (tester) async {
+      // Spec §2/§3: a transfer moves the user's own money; it is neither a gain
+      // nor a loss, so its amount is the neutral transfer colour on every side —
+      // not the red an outflow would otherwise wear.
       final other = store.accounts.firstWhere((a) => a.id != account.id);
       final txn = Txn(
         id: 't1',
         type: TxnType.transfer,
         amount: 500,
         currency: 'EUR',
-        fromRef: account.id, // source perspective → outflow → red
+        fromRef: account.id, // source perspective
         toRef: other.id,
         date: DateTime(2026, 8, 4),
       );
@@ -120,7 +123,7 @@ void main() {
       expect(find.text('€500'), findsOneWidget);
       expect(find.text('−€500'), findsNothing);
       expect(tester.widget<Text>(find.text('€500')).style?.color,
-          AppColors.negative);
+          AppColors.transferAmount);
     });
 
     testWidgets('each amount carries a direction semantics label',

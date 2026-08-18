@@ -38,6 +38,14 @@ abstract final class AppColors {
   static const incomeDim = Color(0xFF1C4A29);
   static const transfer = Color(0xFF0A84FF);
   static const transferDim = Color(0xFF0E3459);
+
+  /// A transfer moves the user's own money between accounts — it is neither a
+  /// gain nor a loss, so its row never borrows a category colour. The tile is
+  /// the neutral elevated surface, the exchange glyph a muted foreground, and
+  /// the amount sits in near-white rather than red or green.
+  static const transferTileBg = Color(0xFF3A3A3C);
+  static const transferGlyph = Color(0xFFAEAEB2);
+  static const transferAmount = Color(0xFFEBEBF5);
   static const rebalance = Color(0xFFFF9F0A);
   static const rebalanceDim = Color(0xFF4D3208);
   static const goal = Color(0xFFBF5AF2);

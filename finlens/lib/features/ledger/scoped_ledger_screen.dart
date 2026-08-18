@@ -19,6 +19,7 @@ import '../balance/same_transactions_screen.dart';
 import '../quick_add/quick_add_sheet.dart';
 import 'ledger_scope.dart';
 import 'trans_filter.dart';
+import 'transfer_detail_screen.dart';
 import 'widgets/ledger_txn_row.dart';
 import 'widgets/period_row.dart';
 import 'widgets/trans_filter_sheet.dart';
@@ -1039,14 +1040,21 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
           highlight: highlight,
           group: groups[i],
           scope: _scope,
-          // A row tap opens the read-only Same-transactions screen (spec §1),
-          // never the editor — the back label names the screen we came from.
+          // A row tap opens a read-only screen, never the editor — the back
+          // label names the screen we came from. A transfer has no category
+          // key, so it opens its own transfer detail (spec §5) rather than the
+          // category/description Same-transactions screen.
           onOpen: (txn) => Navigator.of(context).push(
             MaterialPageRoute(
-              builder: (_) => SameTransactionsScreen(
-                originTxnId: txn.id,
-                backLabel: _scope.title(store),
-              ),
+              builder: (_) => txn.type == TxnType.transfer
+                  ? TransferDetailScreen(
+                      txnId: txn.id,
+                      backLabel: _scope.title(store),
+                    )
+                  : SameTransactionsScreen(
+                      originTxnId: txn.id,
+                      backLabel: _scope.title(store),
+                    ),
             ),
           ),
           onEdit: (txn) => showQuickAdd(context, editing: txn),

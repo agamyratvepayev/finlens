@@ -48,6 +48,10 @@ class TxnRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
+    // A transfer is neither a gain nor a loss: it renders on its own two-line,
+    // neutral-coloured layout (spec §2/§3), never as a category row. Every other
+    // type keeps the standard rendering below, byte-for-byte unchanged.
+    if (txn.type == TxnType.transfer) return _buildTransfer(context, store);
     final hasDescription = txn.note.isNotEmpty;
     final title = _titleWidget(store);
     final (primary, secondary) = _amountParts(store);
@@ -370,6 +374,181 @@ class TxnRow extends StatelessWidget {
       TxnType.transfer => AppColors.transfer,
       TxnType.rebalance => AppColors.rebalance,
     };
+  }
+
+  /// Spec §2/§3 — a transfer's own two-line, neutral-coloured row. In an
+  /// all/group ledger both account lines show (source, then `→ destination`);
+  /// on an account-detail perspective it collapses to the counterpart alone
+  /// with a directional glyph and keeps the note. The tile and amount stay
+  /// neutral throughout: colour carries good/bad, and a transfer is neither.
+  Widget _buildTransfer(BuildContext context, AppStore store) {
+    final parties = store.transferParties(txn);
+    final onDetail = perspectiveAccountId != null;
+    final outgoing = !onDetail || txn.fromRef == perspectiveAccountId;
+
+    final fromCur = store.accountById(txn.fromRef)?.currency ?? txn.currency;
+    final toCur = store.accountById(txn.toRef)?.currency ?? txn.currency;
+    final crossCurrency = fromCur != toCur;
+
+    // Line 1: the counterpart on an account detail, else the source account.
+    final IconData glyph;
+    final Widget line1Title;
+    if (onDetail) {
+      glyph = outgoing
+          ? Icons.north_east_rounded
+          : Icons.south_west_rounded;
+      final other = outgoing ? '→ ${parties.to}' : '← ${parties.from}';
+      line1Title = Text(other,
+          style: AppText.rowTitle,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis);
+    } else {
+      glyph = Icons.swap_horiz_rounded;
+      line1Title = Text(parties.from,
+          style: AppText.rowTitle,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis);
+    }
+
+    // Line-1 amount. On an account detail it is this account's own leg; in a
+    // full ledger it is the sent amount in the source currency.
+    final double topValue = onDetail
+        ? (outgoing ? txn.amount : (txn.toAmount ?? txn.amount))
+        : txn.amount;
+    final String topCurrency = onDetail ? (outgoing ? fromCur : toCur) : fromCur;
+    final amountTop = Text(
+      money(topValue,
+          currency: topCurrency, signless: true, masked: store.masked),
+      style: AppText.amount.copyWith(color: AppColors.transferAmount),
+    );
+
+    // Line 2.
+    Widget? line2Left;
+    Widget? line2Right;
+    if (onDetail) {
+      // §3 — the note (when any) on the left, this account's running balance on
+      // the right. The other side's figure belongs on the detail screen.
+      final note = txn.note.trim();
+      if (note.isNotEmpty) {
+        line2Left = Text(note,
+            style: AppText.rowSubtitle,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis);
+      }
+      line2Right = runningBalance == null
+          ? null
+          : AmountText(runningBalance!,
+              style: AppText.caption
+                  .copyWith(fontSize: 11, color: AppColors.textTertiary));
+    } else {
+      // §2 — the destination on the left; the note is deliberately dropped to
+      // hold the row at two lines and protect list density.
+      line2Left = Text('→ ${parties.to}',
+          style: AppText.rowTitle.copyWith(color: AppColors.textSecondary),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis);
+      line2Right = crossCurrency
+          // Cross-currency: the received amount, its own currency, matching the
+          // top line's size and neutral colour. No running balance to show.
+          ? Text(
+              money(txn.toAmount ?? txn.amount,
+                  currency: toCur, signless: true, masked: store.masked),
+              style: AppText.amount.copyWith(color: AppColors.transferAmount),
+            )
+          : (runningBalance == null
+              ? null
+              : AmountText(runningBalance!,
+                  style: AppText.caption.copyWith(
+                      fontSize: 11, color: AppColors.textTertiary)));
+    }
+
+    final hasLine2 = line2Left != null || line2Right != null;
+
+    final body = Semantics(
+      label: 'Transfer from ${parties.from} to ${parties.to}, '
+          '${money(txn.amount, currency: txn.currency, signless: true, masked: store.masked)}',
+      excludeSemantics: true,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Container(
+            width: _iconSize,
+            height: _iconSize,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: AppColors.transferTileBg,
+              borderRadius: BorderRadius.circular(_iconSize * 0.3),
+            ),
+            child: Icon(glyph, size: _iconSize * 0.5,
+                color: AppColors.transferGlyph),
+          ),
+          const SizedBox(width: _iconGap),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    Expanded(child: line1Title),
+                    const SizedBox(width: Insets.sm),
+                    amountTop,
+                  ],
+                ),
+                if (hasLine2) ...[
+                  const SizedBox(height: 2),
+                  Row(
+                    children: [
+                      Expanded(child: line2Left ?? const SizedBox.shrink()),
+                      if (line2Right != null) ...[
+                        const SizedBox(width: Insets.sm),
+                        line2Right,
+                      ],
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+
+    return SwipeActions(
+      actions: [
+        SwipeActionItem(
+          icon: Icons.edit_rounded,
+          label: 'Edit',
+          color: AppColors.surfaceHigh,
+          onTap: onEdit,
+        ),
+        SwipeActionItem(
+          icon: Icons.copy_rounded,
+          label: 'Copy',
+          color: AppColors.info,
+          onTap: onCopy,
+        ),
+        SwipeActionItem(
+          icon: Icons.delete_rounded,
+          label: 'Delete',
+          color: AppColors.negative,
+          onTap: onDelete,
+        ),
+      ],
+      child: InkWell(
+        onTap: onTap,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 44),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: Insets.md,
+              vertical: 9,
+            ),
+            child: body,
+          ),
+        ),
+      ),
+    );
   }
 }
 

@@ -229,6 +229,10 @@ class LedgerTxnRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
     final txn = row.txn;
+    // A transfer renders on its own two-line, neutral layout (spec §2/§3): the
+    // source and `→ destination` in a group/all ledger, collapsed to just the
+    // counterpart on a single account's screen. Never a category colour.
+    if (txn.type == TxnType.transfer) return _buildTransfer(context, store);
     final category = _categoryLabel(store, txn);
     final colour = _refColour(store, txn);
     final isTransfer = txn.type == TxnType.transfer;
@@ -498,6 +502,222 @@ class LedgerTxnRow extends StatelessWidget {
                           ),
                         ),
                       ],
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Spec §2/§3 — a transfer's two-line, neutral-coloured row, replacing the
+  /// category layout. In a group/all ledger it names the source then
+  /// `→ destination`; on an account screen it collapses to the counterpart
+  /// alone with a directional glyph and keeps the note. The tile and amount are
+  /// neutral throughout — a transfer is neither a gain nor a loss.
+  Widget _buildTransfer(BuildContext context, AppStore store) {
+    final txn = row.txn;
+    final parties = store.transferParties(txn);
+    final onAccount = scope is AccountScope;
+    final outgoing = onAccount
+        ? txn.fromRef == (scope as AccountScope).accountId
+        : true;
+
+    final fromCur = store.accountById(txn.fromRef)?.currency ?? txn.currency;
+    final toCur = store.accountById(txn.toRef)?.currency ?? txn.currency;
+    final crossCurrency = fromCur != toCur;
+
+    const titleStyle = TextStyle(
+      fontSize: 14.5,
+      fontWeight: FontWeight.w600,
+      height: 1.22,
+      color: AppColors.textPrimary,
+    );
+    const descStyle = TextStyle(
+      fontSize: 12.5,
+      fontWeight: FontWeight.w400,
+      height: 1.2,
+      color: AppColors.textSecondary,
+    );
+    final amountStyle = const TextStyle(
+      fontSize: 15,
+      fontWeight: FontWeight.w600,
+      height: 1.2,
+      color: AppColors.transferAmount,
+      fontFeatures: [FontFeature.tabularFigures()],
+    );
+    const balanceStyle = TextStyle(
+      fontSize: 11,
+      height: 1.2,
+      color: AppColors.runningBalance,
+      fontFeatures: [FontFeature.tabularFigures()],
+    );
+
+    // Line 1: counterpart on an account screen, else the source account.
+    final IconData glyph;
+    final String line1Text;
+    final TextStyle line1Style;
+    if (onAccount) {
+      glyph = outgoing
+          ? Icons.north_east_rounded
+          : Icons.south_west_rounded;
+      line1Text = outgoing ? '→ ${parties.to}' : '← ${parties.from}';
+      line1Style = titleStyle;
+    } else {
+      glyph = Icons.swap_horiz_rounded;
+      line1Text = parties.from;
+      line1Style = titleStyle;
+    }
+
+    // Line-1 amount. Same-currency uses the ledger's base-converted figure, so
+    // it stays consistent with the sibling rows around it; cross-currency shows
+    // the real per-leg amounts, each in its own currency.
+    final Widget amountTop;
+    if (crossCurrency) {
+      final v = onAccount
+          ? (outgoing ? txn.amount : (txn.toAmount ?? txn.amount))
+          : txn.amount;
+      final c = onAccount ? (outgoing ? fromCur : toCur) : fromCur;
+      amountTop = Text(
+        money(v, currency: c, signless: true, masked: store.masked),
+        style: amountStyle,
+      );
+    } else {
+      amountTop = Text(
+        money(row.signedAmount, signless: true, masked: store.masked),
+        style: amountStyle,
+      );
+    }
+
+    final balanceText = money(_runningBalance(store, txn), masked: store.masked);
+
+    // Line 2 — always present on this screen: a balance (or the received leg
+    // on a cross-currency transfer) sits on its right regardless.
+    String? line2Left;
+    TextStyle line2LeftStyle = descStyle;
+    final Widget line2Right;
+    if (onAccount) {
+      final note = txn.note.trim();
+      if (note.isNotEmpty) line2Left = note;
+      line2Right = Text(balanceText, style: balanceStyle);
+    } else {
+      line2Left = '→ ${parties.to}';
+      line2LeftStyle = titleStyle.copyWith(color: AppColors.textSecondary);
+      line2Right = crossCurrency
+          ? Text(
+              money(txn.toAmount ?? txn.amount,
+                  currency: toCur, signless: true, masked: store.masked),
+              style: amountStyle,
+            )
+          : Text(balanceText, style: balanceStyle);
+    }
+
+    final semanticsLabel = [
+      'Transfer from ${parties.from} to ${parties.to}',
+      money(txn.amount, currency: txn.currency, signless: true, masked: store.masked),
+      if (txn.note.trim().isNotEmpty) txn.note.trim(),
+      'balance $balanceText',
+    ].join(', ');
+
+    return Semantics(
+      customSemanticsActions: {
+        const CustomSemanticsAction(label: 'Edit'): onEdit,
+        const CustomSemanticsAction(label: 'Copy'): onCopy,
+        const CustomSemanticsAction(label: 'Delete'): onDelete,
+      },
+      label: semanticsLabel,
+      child: SwipeActions(
+        actionWidth: 72,
+        hintOnFirstBuild: hint,
+        actions: [
+          SwipeActionItem(
+            icon: Icons.edit_rounded,
+            label: 'Edit',
+            color: const Color(0xFF2C2C2E),
+            onTap: onEdit,
+          ),
+          SwipeActionItem(
+            icon: Icons.copy_rounded,
+            label: 'Copy',
+            color: const Color(0xFF0A84FF),
+            onTap: onCopy,
+          ),
+          SwipeActionItem(
+            icon: Icons.delete_outline_rounded,
+            label: 'Delete',
+            color: const Color(0xFFFF453A),
+            onTap: onDelete,
+          ),
+        ],
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () {
+            if (anySwipeRowOpen) {
+              closeOpenSwipeRow();
+              return;
+            }
+            onOpen();
+          },
+          child: ColoredBox(
+            color: AppColors.fieldCard,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 44),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                child: ExcludeSemantics(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Container(
+                        width: 30,
+                        height: 30,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: AppColors.transferTileBg,
+                          borderRadius: BorderRadius.circular(9),
+                        ),
+                        child: Icon(glyph,
+                            size: 15, color: AppColors.transferGlyph),
+                      ),
+                      const SizedBox(width: 11),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(line1Text,
+                                      style: line1Style,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis),
+                                ),
+                                const SizedBox(width: 10),
+                                amountTop,
+                              ],
+                            ),
+                            const SizedBox(height: 2),
+                            Row(
+                                children: [
+                                  Expanded(
+                                    child: line2Left == null
+                                        ? const SizedBox.shrink()
+                                        : Text(line2Left,
+                                            style: line2LeftStyle,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  line2Right,
+                                ],
+                              ),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
                 ),
