@@ -1,5 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import '../../core/data/dev_seed_data.dart';
+import '../../core/data/seed_data.dart';
 import '../../core/models/models.dart';
 import '../../core/store/app_store.dart';
 import '../../shared/widgets/form_fields.dart';
@@ -102,6 +105,40 @@ class MoreScreen extends StatelessWidget {
                     ),
                   ],
                 ),
+                if (kDebugMode) ...[
+                  const SectionLabel('Developer'),
+                  FormSection(
+                    children: [
+                      FormRow(
+                        icon: Icons.science_rounded,
+                        label: 'Seed dev data',
+                        subtitle: 'Load the varied test history',
+                        onTap: () {
+                          StoreScope.read(context)
+                              .loadFrom(buildDevSeedStore());
+                          ScaffoldMessenger.of(context)
+                            ..clearSnackBars()
+                            ..showSnackBar(const SnackBar(
+                              content: Text('Loaded development data'),
+                            ));
+                        },
+                      ),
+                      FormRow(
+                        icon: Icons.restart_alt_rounded,
+                        label: 'Reset to default',
+                        subtitle: 'Restore the standard fixture',
+                        onTap: () {
+                          StoreScope.read(context).loadFrom(buildSeedStore());
+                          ScaffoldMessenger.of(context)
+                            ..clearSnackBars()
+                            ..showSnackBar(const SnackBar(
+                              content: Text('Reset to default data'),
+                            ));
+                        },
+                      ),
+                    ],
+                  ),
+                ],
                 const Padding(
                   padding: EdgeInsets.only(top: Insets.lg),
                   child: Center(

@@ -244,6 +244,45 @@ void main() {
     });
   });
 
+  group('runtime seed/reset menu (loadFrom)', () {
+    test('seeding an existing store swaps in the dev history', () {
+      final store = buildSeedStore();
+      final prod = buildSeedStore();
+      store.loadFrom(buildDevSeedStore());
+      expect(store.txns.length, buildDevSeedStore().txns.length);
+      expect(store.txns.every(isDevSeededTxn), isTrue);
+      // Balances still reconcile to the documented targets after the swap.
+      for (final a in prod.accounts) {
+        expect(store.balanceOf(a.id), closeTo(prod.balanceOf(a.id), 0.01),
+            reason: 'account ${a.id} drifted after loadFrom');
+      }
+    });
+
+    test('seeding twice yields the same record count (idempotent)', () {
+      final store = buildSeedStore();
+      store.loadFrom(buildDevSeedStore());
+      final once = store.txns.length;
+      store.loadFrom(buildDevSeedStore());
+      expect(store.txns.length, once);
+    });
+
+    test('reset removes every seeded record', () {
+      final store = buildSeedStore();
+      store.loadFrom(buildDevSeedStore());
+      store.loadFrom(buildSeedStore());
+      expect(store.txns.any(isDevSeededTxn), isFalse);
+      expect(store.txns.length, buildSeedStore().txns.length);
+    });
+
+    test('loaded preferences survive the swap', () {
+      final store = buildSeedStore();
+      store.toggleMasked();
+      expect(store.masked, isTrue);
+      store.loadFrom(buildDevSeedStore());
+      expect(store.masked, isTrue, reason: 'in-place swap must preserve prefs');
+    });
+  });
+
   test('report: counts and opening balances', () {
     final prod = buildSeedStore();
     final dev = buildDevSeedStore();

@@ -841,6 +841,33 @@ class AppStore extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Debug-only: replace the entire in-memory dataset with [source]'s, in place.
+  /// Backs the developer Seed/Reset menu (see [MoreScreen]) — never part of a
+  /// user flow. Because this mutates the existing store rather than swapping the
+  /// instance, loaded preferences (privacy, balance filter/order, ranges) survive
+  /// the swap. Copies [source]'s full goal list so archived goals come across too
+  /// (the public [goals] getter filters them out).
+  void loadFrom(AppStore source) {
+    _accounts
+      ..clear()
+      ..addAll(source._accounts);
+    _categories
+      ..clear()
+      ..addAll(source._categories);
+    _txns
+      ..clear()
+      ..addAll(source._txns);
+    _goals
+      ..clear()
+      ..addAll(source._goals);
+    _tasks
+      ..clear()
+      ..addAll(source._tasks);
+    _sameIndex = null;
+    _accountIndex = null;
+    notifyListeners();
+  }
+
   /// Balance an account would return to if [txn] were deleted — the concrete
   /// figure the Destructive Confirmation shows (spec 2.4).
   double balanceWithout(String accountId, Txn txn) =>
