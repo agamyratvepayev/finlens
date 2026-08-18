@@ -41,11 +41,10 @@ Widget host(AppStore store, Widget child, {GlobalKey<NavigatorState>? navKey}) =
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues(<String, Object>{}));
 
-  // NOTE: the "tapping a row opens the read-only screen" test was removed with
-  // the legacy AccountDetailScreen it pumped. Same-transactions is reached only
-  // from that screen's rows, so it is currently unreachable in normal
-  // navigation (flagged in the consolidation report). The screen itself still
-  // works, exercised directly below.
+  // The row-tap wiring (a tap opens this read-only screen, never the editor —
+  // spec §1) now lives on the Balance drill-down's LedgerTxnRow and is covered
+  // by same_transactions_tap_test.dart. The screen's own behaviour is exercised
+  // directly below.
 
   testWidgets('changing the range recomputes the summary (TOTAL) and list',
       (tester) async {

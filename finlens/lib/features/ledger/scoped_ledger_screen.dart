@@ -15,6 +15,7 @@ import '../../shared/widgets/swipe_actions.dart';
 import '../../shared/widgets/swipe_back_route.dart';
 import '../../theme/app_colors.dart';
 import '../balance/edit_account_screen.dart';
+import '../balance/same_transactions_screen.dart';
 import '../quick_add/quick_add_sheet.dart';
 import 'ledger_scope.dart';
 import 'trans_filter.dart';
@@ -134,18 +135,19 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
 
   /// The instance key this scope's filter persists under (spec §5).
   String get _scopeKey => switch (_scope) {
-        AllAccountsScope() => 'all',
-        GroupScope(:final group) => 'group:${group.name}',
-        AccountScope(:final accountId) => 'account:$accountId',
-      };
+    AllAccountsScope() => 'all',
+    GroupScope(:final group) => 'group:${group.name}',
+    AccountScope(:final accountId) => 'account:$accountId',
+  };
 
   /// Account screens group by category; the group/all bucket groups by account
   /// (spec §1, adaptive dimension). This drives both the filter's group section
   /// and the by-name sort axis.
   bool get _byCategory => _scope is AccountScope;
 
-  Set<String> _scopeAccountIds(AppStore store) =>
-      {for (final a in _scope.accountsIn(store)) a.id};
+  Set<String> _scopeAccountIds(AppStore store) => {
+    for (final a in _scope.accountsIn(store)) a.id,
+  };
 
   /// A transaction's ids in the active grouping dimension.
   Set<String> _groupIdsOf(ScopedTxn r, Set<String> scopeAccountIds) {
@@ -157,30 +159,30 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
       };
       return id == null ? const {} : {id};
     }
-    return {r.txn.fromRef, r.txn.toRef}
-        .where(scopeAccountIds.contains)
-        .toSet();
+    return {r.txn.fromRef, r.txn.toRef}.where(scopeAccountIds.contains).toSet();
   }
 
   TxnFacts _factsOf(ScopedTxn r, Set<String> scopeAccountIds) => TxnFacts(
-        type: r.txn.type,
-        groupIds: _groupIdsOf(r, scopeAccountIds),
-        absAmount: r.signedAmount,
-        tags: r.txn.tags,
-      );
+    type: r.txn.type,
+    groupIds: _groupIdsOf(r, scopeAccountIds),
+    absAmount: r.signedAmount,
+    tags: r.txn.tags,
+  );
 
   /// The folded haystack a search query is tested against: the category and
   /// account names, the description, the tags and the amount digits (spec §3).
   String _searchable(AppStore store, ScopedTxn r) {
     final t = r.txn;
-    return foldSearch([
-      store.refName(t.fromRef),
-      store.refName(t.toRef),
-      t.note,
-      ...t.tags,
-      r.signedAmount.toStringAsFixed(2),
-      r.signedAmount.round().toString(),
-    ].join(' '));
+    return foldSearch(
+      [
+        store.refName(t.fromRef),
+        store.refName(t.toRef),
+        t.note,
+        ...t.tags,
+        r.signedAmount.toStringAsFixed(2),
+        r.signedAmount.round().toString(),
+      ].join(' '),
+    );
   }
 
   String _sortName(AppStore store, ScopedTxn r, Set<String> scopeAccountIds) {
@@ -202,7 +204,8 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
     AppStore store,
     Set<String> scopeAccountIds,
   ) {
-    int byDateDesc(ScopedTxn a, ScopedTxn b) => b.txn.date.compareTo(a.txn.date);
+    int byDateDesc(ScopedTxn a, ScopedTxn b) =>
+        b.txn.date.compareTo(a.txn.date);
     final out = [...rows];
     switch (sort) {
       case TransSort.dateNewest:
@@ -221,8 +224,9 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
         });
       case TransSort.byName:
         out.sort((a, b) {
-          final c = foldSearch(_sortName(store, a, scopeAccountIds))
-              .compareTo(foldSearch(_sortName(store, b, scopeAccountIds)));
+          final c = foldSearch(
+            _sortName(store, a, scopeAccountIds),
+          ).compareTo(foldSearch(_sortName(store, b, scopeAccountIds)));
           return c != 0 ? c : byDateDesc(a, b);
         });
     }
@@ -251,8 +255,8 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
 
     final afterFilter = filter.isActive
         ? periodRows
-            .where((r) => filter.matches(_factsOf(r, scopeAccountIds)))
-            .toList()
+              .where((r) => filter.matches(_factsOf(r, scopeAccountIds)))
+              .toList()
         : periodRows;
 
     final q = foldSearch(_debouncedQuery.trim());
@@ -280,51 +284,59 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
     final _EmptyReason? emptyReason = total == 0
         ? _EmptyReason.period
         : shown == 0
-            ? (filter.isActive
-                ? _EmptyReason.filter
-                : (_searching && q.isNotEmpty
+        ? (filter.isActive
+              ? _EmptyReason.filter
+              : (_searching && q.isNotEmpty
                     ? _EmptyReason.search
                     : _EmptyReason.period))
-            : null;
+        : null;
 
     return Scaffold(
       backgroundColor: AppColors.formBg,
-      body: _swipeBack(SafeArea(
-        bottom: false,
-        child: Column(
-          children: [
-            _navBar(store),
-            _hero(store, query),
-            PeriodRow(
-              range: _range,
-              totalIn: totalIn,
-              totalOut: totalOut,
-              filter: _filter,
-              highlighted: _rangeSheetOpen,
-              onStep: (steps) =>
-                  setState(() => _range = _range.copyShifted(steps)),
-              onPickRange: () => _pickRange(store),
-              // Tapping the active figure again clears it.
-              onFilter: (kind) =>
-                  setState(() => _filter = _filter == kind ? null : kind),
-            ),
-            _searching
-                ? _searchBar(shown)
-                : _toolbar(store, total, shown, filter, periodRows,
-                    scopeAccountIds),
-            Expanded(
-              child: _list(
-                visible,
-                emptyReason: emptyReason,
-                grouped: sort.groupsByDay,
-                highlight: (_searching && q.isNotEmpty) ? q : null,
-                store: store,
+      body: _swipeBack(
+        SafeArea(
+          bottom: false,
+          child: Column(
+            children: [
+              _navBar(store),
+              _hero(store, query),
+              PeriodRow(
+                range: _range,
+                totalIn: totalIn,
+                totalOut: totalOut,
+                filter: _filter,
+                highlighted: _rangeSheetOpen,
+                onStep: (steps) =>
+                    setState(() => _range = _range.copyShifted(steps)),
+                onPickRange: () => _pickRange(store),
+                // Tapping the active figure again clears it.
+                onFilter: (kind) =>
+                    setState(() => _filter = _filter == kind ? null : kind),
               ),
-            ),
-            _addButton(store),
-          ],
+              _searching
+                  ? _searchBar(shown)
+                  : _toolbar(
+                      store,
+                      total,
+                      shown,
+                      filter,
+                      periodRows,
+                      scopeAccountIds,
+                    ),
+              Expanded(
+                child: _list(
+                  visible,
+                  emptyReason: emptyReason,
+                  grouped: sort.groupsByDay,
+                  highlight: (_searching && q.isNotEmpty) ? q : null,
+                  store: store,
+                ),
+              ),
+              _addButton(store),
+            ],
+          ),
         ),
-      )),
+      ),
     );
   }
 
@@ -343,15 +355,15 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
       gestures: {
         LongPressGestureRecognizer:
             GestureRecognizerFactoryWithHandlers<LongPressGestureRecognizer>(
-          () => LongPressGestureRecognizer(
-            duration: const Duration(milliseconds: 300),
-          ),
-          (rec) => rec
-            ..onLongPressStart = _onSwipeArm
-            ..onLongPressMoveUpdate = _onSwipeMove
-            ..onLongPressEnd = _onSwipeEnd
-            ..onLongPressCancel = _onSwipeCancel,
-        ),
+              () => LongPressGestureRecognizer(
+                duration: const Duration(milliseconds: 300),
+              ),
+              (rec) => rec
+                ..onLongPressStart = _onSwipeArm
+                ..onLongPressMoveUpdate = _onSwipeMove
+                ..onLongPressEnd = _onSwipeEnd
+                ..onLongPressCancel = _onSwipeCancel,
+            ),
       },
       child: child,
     );
@@ -438,8 +450,11 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
               child: const Row(
                 children: [
                   SizedBox(width: 8),
-                  Icon(Icons.chevron_left_rounded,
-                      size: 17, color: AppColors.accent),
+                  Icon(
+                    Icons.chevron_left_rounded,
+                    size: 17,
+                    color: AppColors.accent,
+                  ),
                   Flexible(
                     child: Text(
                       'Balance',
@@ -472,15 +487,21 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
               ),
               child: const Padding(
                 padding: EdgeInsets.only(right: 16, left: 8, top: 8, bottom: 8),
-                child: Icon(Icons.more_horiz_rounded,
-                    size: 19, color: AppColors.textSecondary),
+                child: Icon(
+                  Icons.more_horiz_rounded,
+                  size: 19,
+                  color: AppColors.textSecondary,
+                ),
               ),
             )
           else
             const Padding(
               padding: EdgeInsets.only(right: 16),
-              child: Icon(Icons.more_horiz_rounded,
-                  size: 19, color: AppColors.textSecondary),
+              child: Icon(
+                Icons.more_horiz_rounded,
+                size: 19,
+                color: AppColors.textSecondary,
+              ),
             ),
         ],
       ),
@@ -503,8 +524,11 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
               color: colour,
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(_scopeIcon(store), size: 20,
-                color: Color.lerp(colour, Colors.black, 0.72)),
+            child: Icon(
+              _scopeIcon(store),
+              size: 20,
+              color: Color.lerp(colour, Colors.black, 0.72),
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -534,10 +558,11 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
                           ),
                         ),
                         const SizedBox(width: 4),
-                        Icon(Icons.keyboard_arrow_down_rounded,
-                            size: 10,
-                            color: AppColors.textPrimary
-                                .withValues(alpha: 0.55)),
+                        Icon(
+                          Icons.keyboard_arrow_down_rounded,
+                          size: 10,
+                          color: AppColors.textPrimary.withValues(alpha: 0.55),
+                        ),
                       ],
                     ),
                   ),
@@ -547,7 +572,10 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                      fontSize: 12, height: 1.25, color: AppColors.formDim2),
+                    fontSize: 12,
+                    height: 1.25,
+                    color: AppColors.formDim2,
+                  ),
                 ),
               ],
             ),
@@ -570,18 +598,18 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
   }
 
   Color _scopeColour(AppStore store) => switch (_scope) {
-        AllAccountsScope() => AppColors.accent,
-        GroupScope(:final group) => group.color,
-        AccountScope(:final accountId) =>
-          store.accountById(accountId)?.group.color ?? AppColors.accent,
-      };
+    AllAccountsScope() => AppColors.accent,
+    GroupScope(:final group) => group.color,
+    AccountScope(:final accountId) =>
+      store.accountById(accountId)?.group.color ?? AppColors.accent,
+  };
 
   IconData _scopeIcon(AppStore store) => switch (_scope) {
-        AllAccountsScope() => Icons.grid_view_rounded,
-        GroupScope(:final group) => group.icon,
-        AccountScope(:final accountId) =>
-          store.accountById(accountId)?.group.icon ?? Icons.wallet_rounded,
-      };
+    AllAccountsScope() => Icons.grid_view_rounded,
+    GroupScope(:final group) => group.icon,
+    AccountScope(:final accountId) =>
+      store.accountById(accountId)?.group.icon ?? Icons.wallet_rounded,
+  };
 
   String _metaPrefix(AppStore store) {
     switch (_scope) {
@@ -699,15 +727,21 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
             children: [
               Expanded(
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.surfaceAlt,
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.search_rounded,
-                          size: 16, color: AppColors.textTertiary),
+                      const Icon(
+                        Icons.search_rounded,
+                        size: 16,
+                        color: AppColors.textTertiary,
+                      ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: TextField(
@@ -716,7 +750,9 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
                           autofocus: true,
                           cursorColor: AppColors.accent,
                           style: const TextStyle(
-                              fontSize: 14, color: AppColors.textPrimary),
+                            fontSize: 14,
+                            color: AppColors.textPrimary,
+                          ),
                           decoration: const InputDecoration(
                             isDense: true,
                             contentPadding: EdgeInsets.zero,
@@ -736,8 +772,11 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
                           },
                           child: const Padding(
                             padding: EdgeInsets.only(left: 6),
-                            child: Icon(Icons.close_rounded,
-                                size: 16, color: AppColors.textTertiary),
+                            child: Icon(
+                              Icons.close_rounded,
+                              size: 16,
+                              color: AppColors.textTertiary,
+                            ),
                           ),
                         ),
                     ],
@@ -761,7 +800,9 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
             child: Text(
               '$results ${results == 1 ? 'result' : 'results'}',
               style: const TextStyle(
-                  fontSize: 12.5, color: AppColors.textSecondary),
+                fontSize: 12.5,
+                color: AppColors.textSecondary,
+              ),
             ),
           ),
         ],
@@ -804,18 +845,24 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
               padding: EdgeInsets.fromLTRB(20, 16, 20, 8),
               child: Align(
                 alignment: Alignment.centerLeft,
-                child: Text('SORT',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.08 * 12,
-                      color: AppColors.textSecondary,
-                    )),
+                child: Text(
+                  'SORT',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.08 * 12,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
               ),
             ),
             for (final s in TransSort.values)
-              _sortRow(sheetContext, s,
-                  s == TransSort.byName ? lastLabel : s.label, s == current),
+              _sortRow(
+                sheetContext,
+                s,
+                s == TransSort.byName ? lastLabel : s.label,
+                s == current,
+              ),
             const SizedBox(height: 8),
           ],
         ),
@@ -827,7 +874,11 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
   }
 
   Widget _sortRow(
-      BuildContext sheetContext, TransSort sort, String label, bool active) {
+    BuildContext sheetContext,
+    TransSort sort,
+    String label,
+    bool active,
+  ) {
     return Semantics(
       button: true,
       selected: active,
@@ -835,8 +886,11 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
         leading: SizedBox(
           width: 22,
           child: active
-              ? const Icon(Icons.check_rounded,
-                  size: 18, color: AppColors.accentLight)
+              ? const Icon(
+                  Icons.check_rounded,
+                  size: 18,
+                  color: AppColors.accentLight,
+                )
               : null,
         ),
         title: Text(
@@ -868,25 +922,28 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
         tagCounts[tag] = (tagCounts[tag] ?? 0) + 1;
       }
     }
-    final groups = groupCounts.entries
-        .map((e) => FilterChipItem(
-              id: e.key,
-              label: store.refName(e.key),
-              count: e.value,
-              color: store.refColor(e.key),
-            ))
-        .toList()
-      ..sort((a, b) => b.count.compareTo(a.count));
-    final tags = tagCounts.entries
-        .map((e) => FilterChipItem(id: e.key, label: e.key, count: e.value))
-        .toList()
-      ..sort((a, b) => b.count.compareTo(a.count));
+    final groups =
+        groupCounts.entries
+            .map(
+              (e) => FilterChipItem(
+                id: e.key,
+                label: store.refName(e.key),
+                count: e.value,
+                color: store.refColor(e.key),
+              ),
+            )
+            .toList()
+          ..sort((a, b) => b.count.compareTo(a.count));
+    final tags =
+        tagCounts.entries
+            .map((e) => FilterChipItem(id: e.key, label: e.key, count: e.value))
+            .toList()
+          ..sort((a, b) => b.count.compareTo(a.count));
 
     final amounts = periodRows.map((r) => r.signedAmount).toList();
     final rangeMin = amounts.isEmpty ? 0.0 : amounts.reduce(math.min);
     final rangeMax = amounts.isEmpty ? 0.0 : amounts.reduce(math.max);
-    final facts =
-        periodRows.map((r) => _factsOf(r, scopeAccountIds)).toList();
+    final facts = periodRows.map((r) => _factsOf(r, scopeAccountIds)).toList();
 
     showTransFilterSheet(
       context,
@@ -908,15 +965,18 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
     final accounts = _scope.accountsIn(store);
     return Padding(
       padding: EdgeInsets.fromLTRB(
-          16, 8, 16, MediaQuery.paddingOf(context).bottom + 8),
+        16,
+        8,
+        16,
+        MediaQuery.paddingOf(context).bottom + 8,
+      ),
       child: SizedBox(
         height: 50,
         width: double.infinity,
         child: FilledButton(
           onPressed: () => showQuickAdd(
             context,
-            fixedFromAccountId:
-                accounts.length == 1 ? accounts.first.id : null,
+            fixedFromAccountId: accounts.length == 1 ? accounts.first.id : null,
           ),
           style: FilledButton.styleFrom(
             backgroundColor: AppColors.accent,
@@ -979,6 +1039,16 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
           highlight: highlight,
           group: groups[i],
           scope: _scope,
+          // A row tap opens the read-only Same-transactions screen (spec §1),
+          // never the editor — the back label names the screen we came from.
+          onOpen: (txn) => Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => SameTransactionsScreen(
+                originTxnId: txn.id,
+                backLabel: _scope.title(store),
+              ),
+            ),
+          ),
           onEdit: (txn) => showQuickAdd(context, editing: txn),
           // Opens the form on a copy dated today rather than saving silently —
           // a duplicate appearing unannounced reads as a bug.
@@ -1019,8 +1089,10 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
                 onTap: () => store.setTransFilter(_scopeKey, TransFilter.empty),
                 child: const Padding(
                   padding: EdgeInsets.all(8),
-                  child: Text('Clear filter',
-                      style: TextStyle(fontSize: 14, color: AppColors.accent)),
+                  child: Text(
+                    'Clear filter',
+                    style: TextStyle(fontSize: 14, color: AppColors.accent),
+                  ),
                 ),
               ),
             ],
@@ -1118,8 +1190,7 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
                 shrinkWrap: true,
                 padding: EdgeInsets.zero,
                 children: [
-                  for (final p in _rangeRows)
-                    _rangeRow(sheetContext, p, today),
+                  for (final p in _rangeRows) _rangeRow(sheetContext, p, today),
                 ],
               ),
             ),
@@ -1138,16 +1209,18 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
 
   Widget _rangeRow(BuildContext sheetContext, RangePreset p, DateTime today) {
     final resolved = p.resolve(today);
-    final active =
-        resolved.start == _range.start && resolved.end == _range.end;
+    final active = resolved.start == _range.start && resolved.end == _range.end;
     return ListTile(
       // A left check slot the app uses on its other option sheets; inactive
       // rows keep the same-width empty slot so labels stay aligned.
       leading: SizedBox(
         width: 22,
         child: active
-            ? const Icon(Icons.check_rounded,
-                size: 18, color: AppColors.accentLight)
+            ? const Icon(
+                Icons.check_rounded,
+                size: 18,
+                color: AppColors.accentLight,
+              )
             : null,
       ),
       title: Text(
@@ -1206,31 +1279,47 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
                 shrinkWrap: true,
                 children: [
                   ListTile(
-                    leading: const Icon(Icons.grid_view_rounded,
-                        size: 20, color: AppColors.textSecondary),
-                    title: const Text('All accounts',
-                        style: TextStyle(
-                            fontSize: 15, color: AppColors.textPrimary)),
+                    leading: const Icon(
+                      Icons.grid_view_rounded,
+                      size: 20,
+                      color: AppColors.textSecondary,
+                    ),
+                    title: const Text(
+                      'All accounts',
+                      style: TextStyle(
+                        fontSize: 15,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
                     subtitle: Text(
                       '${store.accounts.length} accounts · '
                       '${AccountGroup.values.length} groups',
                       style: const TextStyle(
-                          fontSize: 11.5, color: AppColors.formDim2),
+                        fontSize: 11.5,
+                        color: AppColors.formDim2,
+                      ),
                     ),
-                    onTap: () => Navigator.of(sheetContext)
-                        .pop(const AllAccountsScope()),
+                    onTap: () => Navigator.of(
+                      sheetContext,
+                    ).pop(const AllAccountsScope()),
                   ),
                   for (final g in AccountGroup.values)
                     if (store.groupCount(g) > 0) ...[
                       ListTile(
                         leading: Icon(g.icon, size: 20, color: g.color),
-                        title: Text(g.label,
-                            style: const TextStyle(
-                                fontSize: 15, color: AppColors.textPrimary)),
+                        title: Text(
+                          g.label,
+                          style: const TextStyle(
+                            fontSize: 15,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
                         subtitle: Text(
                           '${store.groupCount(g)} accounts',
                           style: const TextStyle(
-                              fontSize: 11.5, color: AppColors.formDim2),
+                            fontSize: 11.5,
+                            color: AppColors.formDim2,
+                          ),
                         ),
                         onTap: () =>
                             Navigator.of(sheetContext).pop(GroupScope(g)),
@@ -1243,10 +1332,13 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
                             title: Text(
                               a.name,
                               style: const TextStyle(
-                                  fontSize: 14, color: Color(0xFFD4D4D9)),
+                                fontSize: 14,
+                                color: Color(0xFFD4D4D9),
+                              ),
                             ),
-                            onTap: () => Navigator.of(sheetContext)
-                                .pop(AccountScope(a.id)),
+                            onTap: () => Navigator.of(
+                              sheetContext,
+                            ).pop(AccountScope(a.id)),
                           ),
                         ),
                     ],

@@ -42,8 +42,11 @@ Widget _highlighted(
     at = folded.indexOf(query, cursor);
   }
   if (cursor < text.length) spans.add(TextSpan(text: text.substring(cursor)));
-  return Text.rich(TextSpan(style: style, children: spans),
-      maxLines: maxLines, overflow: overflow);
+  return Text.rich(
+    TextSpan(style: style, children: spans),
+    maxLines: maxLines,
+    overflow: overflow,
+  );
 }
 
 /// A day's transactions in one card, with the day's net in the header.
@@ -56,6 +59,7 @@ class LedgerDayCard extends StatelessWidget {
     super.key,
     required this.group,
     required this.scope,
+    required this.onOpen,
     required this.onEdit,
     required this.onCopy,
     required this.onDelete,
@@ -67,6 +71,10 @@ class LedgerDayCard extends StatelessWidget {
   final bool isFirstCard;
   final DayGroup group;
   final LedgerScope scope;
+
+  /// Row tap — opens the read-only Same-transactions screen. A tap never opens
+  /// the editor (spec §1); editing stays behind the swipe menu.
+  final ValueChanged<Txn> onOpen;
   final ValueChanged<Txn> onEdit;
   final ValueChanged<Txn> onCopy;
   final ValueChanged<Txn> onDelete;
@@ -91,57 +99,61 @@ class LedgerDayCard extends StatelessWidget {
         // above it would misdescribe the rows — drop it and render one flat card.
         if (flat) const SizedBox(height: 8),
         if (!flat)
-        Padding(
-          padding: const EdgeInsets.fromLTRB(20, 15, 20, 7),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  dateGroupLabel(group.date).toUpperCase(),
-                  style: const TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.09 * 11,
-                    height: 1.2,
-                    color: AppColors.textSecondary,
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 15, 20, 7),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    dateGroupLabel(group.date).toUpperCase(),
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.09 * 11,
+                      height: 1.2,
+                      color: AppColors.textSecondary,
+                    ),
                   ),
                 ),
-              ),
-              // Unsigned, like the rows beneath it: colour carries direction
-              // on both, so a sign here and none there would be an
-              // inconsistency the eye notices without being able to name it.
-              // Kept in the tree and faded rather than removed: the header's
-              // box must be identical whether or not the total shows, so a
-              // date lands on the same pixel row either way and a day flipping
-              // between one and two rows cannot reflow the list.
-              ExcludeSemantics(
-                excluding: !group.showsDayTotal,
-                child: AnimatedOpacity(
-                  opacity: group.showsDayTotal ? 1 : 0,
-                  duration: const Duration(milliseconds: 180),
-                  child: Semantics(
-                label: '${net < 0 ? 'Net out' : 'Net in'}, '
-                    '${money(net, signless: true, masked: StoreScope.of(context).masked)}',
-                excludeSemantics: true,
-                child: Text(
-                money(net, signless: true,
-                    masked: StoreScope.of(context).masked),
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  height: 1.2,
-                  color: net < 0
-                      ? AppColors.amountChildNeg
-                      : AppColors.positive,
-                  fontFeatures: const [FontFeature.tabularFigures()],
+                // Unsigned, like the rows beneath it: colour carries direction
+                // on both, so a sign here and none there would be an
+                // inconsistency the eye notices without being able to name it.
+                // Kept in the tree and faded rather than removed: the header's
+                // box must be identical whether or not the total shows, so a
+                // date lands on the same pixel row either way and a day flipping
+                // between one and two rows cannot reflow the list.
+                ExcludeSemantics(
+                  excluding: !group.showsDayTotal,
+                  child: AnimatedOpacity(
+                    opacity: group.showsDayTotal ? 1 : 0,
+                    duration: const Duration(milliseconds: 180),
+                    child: Semantics(
+                      label:
+                          '${net < 0 ? 'Net out' : 'Net in'}, '
+                          '${money(net, signless: true, masked: StoreScope.of(context).masked)}',
+                      excludeSemantics: true,
+                      child: Text(
+                        money(
+                          net,
+                          signless: true,
+                          masked: StoreScope.of(context).masked,
+                        ),
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          height: 1.2,
+                          color: net < 0
+                              ? AppColors.amountChildNeg
+                              : AppColors.positive,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
-              ),
-              ),
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
         Container(
           margin: const EdgeInsets.symmetric(horizontal: 16),
           decoration: BoxDecoration(
@@ -164,6 +176,7 @@ class LedgerDayCard extends StatelessWidget {
                 LedgerTxnRow(
                   row: rows[i],
                   scope: scope,
+                  onOpen: () => onOpen(rows[i].txn),
                   onEdit: () => onEdit(rows[i].txn),
                   onCopy: () => onCopy(rows[i].txn),
                   onDelete: () => onDelete(rows[i].txn),
@@ -181,15 +194,16 @@ class LedgerDayCard extends StatelessWidget {
 
 /// A 52px transaction row. Edit, Copy and Delete live behind a left swipe.
 ///
-/// Tapping does nothing: the row already shows everything the old expansion
-/// disclosed, so there is nothing left to reveal — and a row that lights up
-/// under a finger but does nothing is worse than one that never responds,
-/// which is why there is no press highlight either.
+/// Tapping opens the read-only Same-transactions screen (spec §1) — never the
+/// editor, so a stray tap while scrolling can no longer silently change
+/// financial data. Editing stays behind the swipe menu and the ••• on that
+/// screen. A tap while another row's swipe strip is open just closes it.
 class LedgerTxnRow extends StatelessWidget {
   const LedgerTxnRow({
     super.key,
     required this.row,
     required this.scope,
+    required this.onOpen,
     required this.onEdit,
     required this.onCopy,
     required this.onDelete,
@@ -200,6 +214,9 @@ class LedgerTxnRow extends StatelessWidget {
   final bool hint;
   final ScopedTxn row;
   final LedgerScope scope;
+
+  /// Opens the read-only Same-transactions screen for this row's key (spec §1).
+  final VoidCallback onOpen;
   final VoidCallback onEdit;
   final VoidCallback onCopy;
   final VoidCallback onDelete;
@@ -230,14 +247,20 @@ class LedgerTxnRow extends StatelessWidget {
     final hasNote = note.isNotEmpty;
     final accountName = (scope is! AccountScope && !isTransfer)
         ? (store
-                .accountById(txn.type == TxnType.income ? txn.toRef : txn.fromRef)
-                ?.name ??
-            '')
+                  .accountById(
+                    txn.type == TxnType.income ? txn.toRef : txn.fromRef,
+                  )
+                  ?.name ??
+              '')
         : '';
     final tag = txn.tags.isEmpty ? null : txn.tags.first;
     final hasMeta = accountName.isNotEmpty || tag != null;
 
-    final money0 = money(row.signedAmount, signless: true, masked: store.masked);
+    final money0 = money(
+      row.signedAmount,
+      signless: true,
+      masked: store.masked,
+    );
     final balance0 = money(_runningBalance(store, txn), masked: store.masked);
     // Parts in reading order — title, amount, direction, description, balance,
     // account, tag — not one merged string (spec §5).
@@ -345,115 +368,138 @@ class LedgerTxnRow extends StatelessWidget {
             onTap: onDelete,
           ),
         ],
-        child: ColoredBox(
-          color: AppColors.fieldCard,
-          // No fixed height: a 44pt floor (tap + swipe target), everything else
-          // intrinsic from padding + content, so rows grow at large text scale.
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: 44),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-              child: ExcludeSemantics(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    // ── Top block: icon tile + the two-line text/figure column
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          width: 30,
-                          height: 30,
-                          decoration: BoxDecoration(
-                            color: colour.withValues(alpha: 0.17),
-                            borderRadius: BorderRadius.circular(9),
-                          ),
-                          child: Icon(
-                            store.refIcon(
-                              txn.type == TxnType.expense
-                                  ? txn.toRef
-                                  : txn.fromRef,
+        child: GestureDetector(
+          // A tap opens the read-only Same-transactions screen (spec §1). When
+          // another row's swipe strip is open, the first tap just dismisses it
+          // — matching the list's tap-outside-to-close behaviour — rather than
+          // navigating out from under the user.
+          behavior: HitTestBehavior.opaque,
+          onTap: () {
+            if (anySwipeRowOpen) {
+              closeOpenSwipeRow();
+              return;
+            }
+            onOpen();
+          },
+          child: ColoredBox(
+            color: AppColors.fieldCard,
+            // No fixed height: a 44pt floor (tap + swipe target), everything else
+            // intrinsic from padding + content, so rows grow at large text scale.
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 44),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 9,
+                ),
+                child: ExcludeSemantics(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      // ── Top block: icon tile + the two-line text/figure column
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            width: 30,
+                            height: 30,
+                            decoration: BoxDecoration(
+                              color: colour.withValues(alpha: 0.17),
+                              borderRadius: BorderRadius.circular(9),
                             ),
-                            size: 15,
-                            color: colour,
-                          ),
-                        ),
-                        const SizedBox(width: 11),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              // Line 1: title | amount. With no description the
-                              // balance sits beside the amount here instead of
-                              // on its own second line.
-                              Row(
-                                children: [
-                                  Expanded(child: titleWidget),
-                                  const SizedBox(width: 10),
-                                  if (hasNote)
-                                    amountWidget
-                                  else
-                                    Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        amountWidget,
-                                        const SizedBox(width: 6),
-                                        balanceWidget,
-                                      ],
-                                    ),
-                                ],
+                            child: Icon(
+                              store.refIcon(
+                                txn.type == TxnType.expense
+                                    ? txn.toRef
+                                    : txn.fromRef,
                               ),
-                              if (hasNote) ...[
-                                const SizedBox(height: 2),
-                                // Line 2: description | balance.
+                              size: 15,
+                              color: colour,
+                            ),
+                          ),
+                          const SizedBox(width: 11),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                // Line 1: title | amount. With no description the
+                                // balance sits beside the amount here instead of
+                                // on its own second line.
                                 Row(
                                   children: [
-                                    Expanded(
-                                      child: _highlighted(note, descStyle,
-                                          query: highlight),
-                                    ),
+                                    Expanded(child: titleWidget),
                                     const SizedBox(width: 10),
-                                    balanceWidget,
+                                    if (hasNote)
+                                      amountWidget
+                                    else
+                                      Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          amountWidget,
+                                          const SizedBox(width: 6),
+                                          balanceWidget,
+                                        ],
+                                      ),
                                   ],
                                 ),
+                                if (hasNote) ...[
+                                  const SizedBox(height: 2),
+                                  // Line 2: description | balance.
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: _highlighted(
+                                          note,
+                                          descStyle,
+                                          query: highlight,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      balanceWidget,
+                                    ],
+                                  ),
+                                ],
                               ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      // ── Meta line: account · tag, full width, left edge aligned
+                      // with the text column (icon 30 + gap 11 = 41pt). Nothing is
+                      // to its right, so the account stops sharing that width.
+                      if (hasMeta) ...[
+                        const SizedBox(height: 2),
+                        Padding(
+                          padding: const EdgeInsets.only(left: 41),
+                          child: Row(
+                            children: [
+                              if (accountName.isNotEmpty)
+                                Flexible(
+                                  child: _highlighted(
+                                    accountName,
+                                    metaStyle,
+                                    query: highlight,
+                                  ),
+                                ),
+                              if (accountName.isNotEmpty && tag != null)
+                                const Text('  ·  ', style: metaStyle),
+                              // The tag is laid out first (fixed), so the account
+                              // ellipsizes to make room rather than the tag.
+                              if (tag != null)
+                                _highlighted(
+                                  tag,
+                                  metaStyle.copyWith(color: AppColors.tagDot),
+                                  query: highlight,
+                                ),
                             ],
                           ),
                         ),
                       ],
-                    ),
-                    // ── Meta line: account · tag, full width, left edge aligned
-                    // with the text column (icon 30 + gap 11 = 41pt). Nothing is
-                    // to its right, so the account stops sharing that width.
-                    if (hasMeta) ...[
-                      const SizedBox(height: 2),
-                      Padding(
-                        padding: const EdgeInsets.only(left: 41),
-                        child: Row(
-                          children: [
-                            if (accountName.isNotEmpty)
-                              Flexible(
-                                child: _highlighted(accountName, metaStyle,
-                                    query: highlight),
-                              ),
-                            if (accountName.isNotEmpty && tag != null)
-                              const Text('  ·  ', style: metaStyle),
-                            // The tag is laid out first (fixed), so the account
-                            // ellipsizes to make room rather than the tag.
-                            if (tag != null)
-                              _highlighted(
-                                tag,
-                                metaStyle.copyWith(color: AppColors.tagDot),
-                                query: highlight,
-                              ),
-                          ],
-                        ),
-                      ),
                     ],
-                  ],
+                  ),
                 ),
               ),
             ),
@@ -475,20 +521,21 @@ class LedgerTxnRow extends StatelessWidget {
   }
 
   String _categoryLabel(AppStore store, Txn txn) => switch (txn.type) {
-        TxnType.expense => store.refName(txn.toRef),
-        TxnType.income => store.refName(txn.fromRef),
-        TxnType.transfer => scope is AccountScope
-            ? 'Transfer ${row.counterpartyLine ?? ''}'.trim()
-            : 'Transfer',
-        TxnType.rebalance => 'Revaluation',
-      };
+    TxnType.expense => store.refName(txn.toRef),
+    TxnType.income => store.refName(txn.fromRef),
+    TxnType.transfer =>
+      scope is AccountScope
+          ? 'Transfer ${row.counterpartyLine ?? ''}'.trim()
+          : 'Transfer',
+    TxnType.rebalance => 'Revaluation',
+  };
 
   Color _refColour(AppStore store, Txn txn) => switch (txn.type) {
-        TxnType.expense => store.refColor(txn.toRef),
-        TxnType.income => store.refColor(txn.fromRef),
-        TxnType.transfer => AppColors.transfer,
-        TxnType.rebalance => AppColors.rebalance,
-      };
+    TxnType.expense => store.refColor(txn.toRef),
+    TxnType.income => store.refColor(txn.fromRef),
+    TxnType.transfer => AppColors.transfer,
+    TxnType.rebalance => AppColors.rebalance,
+  };
 }
 
 /// Tells the user not to go looking for a matching bank entry. The amount
@@ -498,20 +545,20 @@ class _NoCashPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-        decoration: BoxDecoration(
-          color: AppColors.chipBg,
-          borderRadius: BorderRadius.circular(4),
-        ),
-        child: const Text(
-          'NO CASH',
-          style: TextStyle(
-            fontSize: 9.5,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 0.05 * 9.5,
-            height: 1.2,
-            color: AppColors.formDim2,
-          ),
-        ),
-      );
+    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+    decoration: BoxDecoration(
+      color: AppColors.chipBg,
+      borderRadius: BorderRadius.circular(4),
+    ),
+    child: const Text(
+      'NO CASH',
+      style: TextStyle(
+        fontSize: 9.5,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 0.05 * 9.5,
+        height: 1.2,
+        color: AppColors.formDim2,
+      ),
+    ),
+  );
 }

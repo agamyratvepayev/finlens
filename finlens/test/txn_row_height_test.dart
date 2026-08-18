@@ -89,6 +89,7 @@ void main() {
                 child: LedgerTxnRow(
                   row: row,
                   scope: scope,
+                  onOpen: () {},
                   onEdit: () {},
                   onCopy: () {},
                   onDelete: () {},
