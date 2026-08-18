@@ -85,4 +85,107 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Split by category'), findsNothing);
   });
+
+  testWidgets('setting a repeat creates one transaction and one Planner rule',
+      (tester) async {
+    final store = _store();
+    // Both refs pre-filled (from=account, to=category) so the flow needs no
+    // pickers; the keypad supplies the amount.
+    await tester.pumpWidget(StoreScope(
+      store: store,
+      child: MaterialApp(
+        theme: AppTheme.dark,
+        home: const QuickAddScreen(
+          initialType: QuickAddType.expense,
+          fixedFromAccountId: 'a1',
+          fixedToAccountId: 'g',
+        ),
+      ),
+    ));
+    await tester.pump();
+    await tester.tap(find.text('5'));
+    await tester.pump();
+    // Open Repeat, choose a monthly cadence, confirm.
+    await tester.tap(find.text('Repeat'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Every month'));
+    await tester.pump();
+    await tester.tap(find.text('Done'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Save'));
+    await tester.pump();
+    // One transaction now, one Planner Task, linked to each other. No future
+    // occurrences are written up front (§1).
+    expect(store.txns.length, 1);
+    expect(store.tasks.length, 1);
+    expect(store.txns.single.recurrenceTaskId, store.tasks.single.id);
+  });
+
+  testWidgets('clearing a repeat removes the rule and leaves the transaction',
+      (tester) async {
+    final task = Task(
+      id: 'k1',
+      title: 'Rent',
+      linkedAccountId: 'a1',
+      expectedAmount: -5,
+      dueDate: DateTime(2026, 9, 15),
+      icon: Icons.repeat_rounded,
+      repeats: RepeatFrequency.monthly,
+    );
+    final txn = Txn(
+      id: 't1',
+      type: TxnType.expense,
+      amount: 5,
+      currency: 'USD',
+      fromRef: 'a1',
+      toRef: 'g',
+      date: DateTime(2026, 8, 15),
+      recurrenceTaskId: 'k1',
+    );
+    final store = AppStore(
+      accounts: [
+        Account(
+            id: 'a1',
+            name: 'Cash',
+            group: AccountGroup.spendable,
+            currency: 'USD',
+            startingBalance: 100),
+      ],
+      categories: [
+        Category(
+            id: 'g',
+            name: 'Groceries',
+            type: CategoryType.expense,
+            icon: Icons.circle,
+            color: const Color(0xFF34C759)),
+      ],
+      txns: [txn],
+      goals: const [],
+      tasks: [task],
+    );
+    await tester.pumpWidget(StoreScope(
+      store: store,
+      child: MaterialApp(
+        theme: AppTheme.dark,
+        home: QuickAddScreen(
+          initialType: QuickAddType.expense,
+          editing: txn,
+        ),
+      ),
+    ));
+    await tester.pump();
+    // Editing loads the existing rule: the toggle shows its cadence.
+    await tester.tap(find.text('Every month'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Never'));
+    await tester.pump();
+    await tester.tap(find.text('Done'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Save'));
+    await tester.pump();
+    // The rule is gone; the transaction survives, no longer linked (§1).
+    expect(store.tasks, isEmpty);
+    expect(store.txns.length, 1);
+    expect(store.txns.single.recurrenceTaskId, isNull);
+  });
 }
