@@ -194,6 +194,28 @@ void main() {
         }
       }
     });
+
+    test('every applicable receivable cell holds the ≥2 floor', () {
+      // Receivables: expense (write-downs) and transfer-out (repayments) both
+      // apply and must clear the floor; transfer-in is intentionally NA (a
+      // receivable is never funded, it only pays back).
+      for (final id in ['a-loan-john', 'a-invoice', 'a-refund', 'a-dinner']) {
+        final exp =
+            txns.where((t) => t.type == TxnType.expense && t.fromRef == id).length;
+        final out = txns
+            .where((t) => t.type == TxnType.transfer && t.fromRef == id)
+            .length;
+        expect(exp, greaterThanOrEqualTo(2), reason: '$id expense=$exp');
+        expect(out, greaterThanOrEqualTo(2), reason: '$id transfer-out=$out');
+      }
+    });
+
+    test('cash-USD transfer-out clears the ≥2 floor', () {
+      final out = txns
+          .where((t) => t.type == TxnType.transfer && t.fromRef == 'a-cash-usd')
+          .length;
+      expect(out, greaterThanOrEqualTo(2));
+    });
   });
 
   group('negative running balance (§5)', () {

@@ -404,8 +404,19 @@ class _Gen {
             _amt(50, 400),
             note: _pick(['Repayment', 'Instalment', 'Owed amount']));
       }
+      // Two write-down adjustments (expense) keep the receivable's expense cell
+      // ≥2 (§2 floor) — a small correction to what is owed.
       _expense(acc, _cPersonal, _at(3, 6 + j, 12), _amt(10, 50),
           note: 'Adjustment');
+      _expense(acc, _cPersonal, _at(6, 6 + j, 12), _amt(10, 50),
+          note: 'Write-down');
+      // Two repayments settled by bank transfer (transfer-out). A receivable is
+      // never funded by a transfer-in — it only pays back — so that cell stays
+      // intentionally empty (NA); the out cell is covered ≥2.
+      _transfer(acc, _checking, _at(2, 7 + j, 11), _amt(50, 250),
+          note: 'Repayment received');
+      _transfer(acc, _checking, _at(5, 7 + j, 11), _amt(50, 250),
+          note: 'Repayment received');
     }
     // Payables: a monthly bill (expense grows what is owed) plus a settlement
     // transfer that pays it down.
@@ -486,6 +497,13 @@ class _Gen {
     for (var m = 1; m <= 7; m++) {
       _transfer(_checking, _cashUsd, _at(m, 8, 10), _amt(100, 400),
           note: 'ATM withdrawal');
+    }
+    // Cash (USD) deposited back into checking (transfer-out) — keeps the
+    // cash-usd transfer-out cell ≥2 (§2 floor); its only other out-transfer is
+    // the cross-currency EUR top-up.
+    for (final m in [4, 8]) {
+      _transfer(_cashUsd, _checking, _at(m, 6, 15), _amt(100, 300),
+          note: 'Cash deposit to checking');
     }
     for (var m = 1; m <= 5; m++) {
       _income(_cInterest, _cashUsd, _at(m, 15, 12), _amt(5, 30),
