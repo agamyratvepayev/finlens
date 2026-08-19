@@ -300,11 +300,6 @@ class _BalanceScreenState extends State<BalanceScreen> {
                 filled: !_anyOpen,
                 onTap: _toggleAll,
               ),
-              Tool(
-                icon: Icons.search_rounded,
-                tooltip: 'Search',
-                onTap: _openSearch,
-              ),
               // Active state is icon-only by design: the funnel fills and
               // brightens one step, the surface never changes. The live Net
               // Worth preview inside the sheet is what tells the user the cost.
@@ -318,6 +313,11 @@ class _BalanceScreenState extends State<BalanceScreen> {
                     ? 'Active, ${filter.hiddenItemCount(store)} items hidden'
                     : 'Off',
                 onTap: () => showBalanceFilterSheet(context),
+              ),
+              Tool(
+                icon: Icons.search_rounded,
+                tooltip: 'Search',
+                onTap: _openSearch,
               ),
             ],
           ),
