@@ -987,7 +987,9 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
             ),
           ),
           child: const Text(
-            '+  Add expense',
+            // §8 — the pinned entry point must not be labelled "expense": it now
+            // reaches Transfer entry too. Colour/size/position are unchanged.
+            '+  Add',
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
           ),
         ),
