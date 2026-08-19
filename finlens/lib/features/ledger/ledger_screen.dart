@@ -1,12 +1,15 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../core/models/models.dart';
 import '../../core/store/app_store.dart';
 import '../../core/utils/formatters.dart';
+import '../../core/utils/search_fold.dart';
 import '../../shared/widgets/amount_text.dart';
 import '../../shared/widgets/app_card.dart';
-import '../../shared/widgets/form_fields.dart';
 import '../../shared/widgets/screen_header.dart';
+import '../../shared/widgets/section_header.dart';
 import '../../shared/widgets/txn_row.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
@@ -14,10 +17,12 @@ import '../../theme/app_typography.dart';
 import '../balance/balance_screen.dart' show EmptyState;
 import '../quick_add/pickers.dart';
 import '../quick_add/quick_add_sheet.dart';
+import 'ledger_day.dart';
 import 'transfer_detail_screen.dart';
 
 /// Spec 2.1 — every entry in chronological order, under a monthly
-/// In / Out / Left over summary.
+/// In / Out / Left summary. The list groups by calendar day; a day's net is
+/// printed in the group's header band only when it is worth reading (§4).
 class LedgerScreen extends StatefulWidget {
   const LedgerScreen({super.key});
 
@@ -26,54 +31,160 @@ class LedgerScreen extends StatefulWidget {
 }
 
 class _LedgerScreenState extends State<LedgerScreen> {
-  TxnType? _filter;
-  String? _accountFilter;
-  String? _categoryFilter;
+  // ── Session filter (spec §2.2) ─────────────────────────────────────────────
+  // A lens on the current view, not a stored preference: it never persists and
+  // never survives a month change (reset in [build] when the period moves).
+  TxnType? _direction; // null == All
+  final Set<String> _categoryIds = {};
+  final Set<String> _accountIds = {};
+
+  /// The period the filter/search were last evaluated against, so a month
+  /// change can clear them (spec §2.2 — the filter is a lens, not a setting).
+  DateTime? _lastPeriod;
+
+  bool get _filterActive =>
+      _direction != null || _categoryIds.isNotEmpty || _accountIds.isNotEmpty;
+
+  // ── Search (spec §2.1; transient, never persisted) ─────────────────────────
+  bool _searching = false;
+  final TextEditingController _searchCtrl = TextEditingController();
+  final FocusNode _searchFocus = FocusNode();
+  Timer? _searchDebounce;
+
+  /// The field's live text (drives the clear glyph); filtering uses
+  /// [_debouncedQuery], which lags ~200ms so the list does not thrash per key.
+  String _query = '';
+  String _debouncedQuery = '';
+
+  @override
+  void dispose() {
+    _searchDebounce?.cancel();
+    _searchCtrl.dispose();
+    _searchFocus.dispose();
+    super.dispose();
+  }
+
+  // ── Filter / search predicates ─────────────────────────────────────────────
+
+  bool _matchesFilter(Txn t) {
+    if (_direction != null && t.type != _direction) return false;
+    if (_categoryIds.isNotEmpty) {
+      // A transfer/revaluation carries no category, so it drops out whenever a
+      // category is selected.
+      final categoryRef = switch (t.type) {
+        TxnType.expense => t.toRef,
+        TxnType.income => t.fromRef,
+        _ => null,
+      };
+      if (categoryRef == null || !_categoryIds.contains(categoryRef)) {
+        return false;
+      }
+    }
+    if (_accountIds.isNotEmpty &&
+        !_accountIds.contains(t.fromRef) &&
+        !_accountIds.contains(t.toRef)) {
+      return false;
+    }
+    return true;
+  }
+
+  bool _matchesSearch(AppStore store, Txn t, String folded) {
+    if (folded.isEmpty) return true;
+    final hay = foldSearch(
+      [
+        store.refName(t.fromRef),
+        store.refName(t.toRef),
+        t.note,
+        ...t.tags,
+      ].join(' '),
+    );
+    return hay.contains(folded);
+  }
+
+  void _enterSearch() => setState(() => _searching = true);
+
+  void _exitSearch() => setState(_clearSearch);
+
+  /// Clears the search state without a [setState] — for use inside [build] when
+  /// a month change tears the search down (spec §2.2).
+  void _clearSearch() {
+    _searchDebounce?.cancel();
+    _searchCtrl.clear();
+    _searching = false;
+    _query = '';
+    _debouncedQuery = '';
+  }
+
+  void _onSearchChanged(String value) {
+    setState(() => _query = value);
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 200), () {
+      if (mounted) setState(() => _debouncedQuery = value);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
-    final entries = _entries(store);
+
+    // Filter and search are a lens on the current month: a month change resets
+    // both, so the funnel never silently narrows a period the user just moved to.
+    if (_lastPeriod != null &&
+        (_lastPeriod!.year != store.period.year ||
+            _lastPeriod!.month != store.period.month)) {
+      _direction = null;
+      _categoryIds.clear();
+      _accountIds.clear();
+      // Reset search without touching the controller synchronously: clearing it
+      // here would notify a still-mounted field and setState during build. The
+      // field is gone this frame (searching = false); tidy its text next frame.
+      _searchDebounce?.cancel();
+      _searching = false;
+      _query = '';
+      _debouncedQuery = '';
+      if (_searchCtrl.text.isNotEmpty) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _searchCtrl.clear();
+        });
+      }
+    }
+    _lastPeriod = store.period;
+
+    // period → filter → search → grouping.
+    final all = store.txnsInMonth(store.period); // newest first
+    final total = all.length;
+    final filtered = all.where(_matchesFilter).toList();
+
+    final folded = foldSearch(_debouncedQuery.trim());
+    final searching = _searching && folded.isNotEmpty;
+    final visible = searching
+        ? filtered.where((t) => _matchesSearch(store, t, folded)).toList()
+        : filtered;
+    final shown = visible.length;
+
+    final days = _groupByDay(visible);
 
     return SafeArea(
       bottom: false,
       child: Column(
         children: [
-          ScreenHeader(
-            title: 'Ledger',
-            onAdd: () => showQuickAdd(context),
-          ),
+          ScreenHeader(title: 'Ledger', onAdd: () => showQuickAdd(context)),
           Expanded(
             child: ListView(
               padding: const EdgeInsets.only(bottom: Insets.xxl),
               children: [
-                _MonthSummary(store: store),
+                _MonthSummary(store: store, onPickMonth: () => _pickMonth(store)),
                 const SizedBox(height: Insets.md),
-                _filterChips(store),
-                if (_accountFilter != null || _categoryFilter != null)
-                  _activeFilterBanner(store),
-                if (entries.isEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 64),
-                    child: EmptyState(
-                      icon: Icons.receipt_long_rounded,
-                      title: 'Nothing here yet',
-                      message: _filter == null
-                          ? 'Entries you add will appear in this list.'
-                          : 'No ${_filter!.label.toLowerCase()} entries this month.',
-                      action: FilledButton.icon(
-                        onPressed: () => showQuickAdd(context),
-                        icon: const Icon(Icons.add_rounded, size: 18),
-                        label: const Text('Add an entry'),
-                        style: FilledButton.styleFrom(
-                          backgroundColor: AppColors.accent,
-                          foregroundColor: Colors.white,
-                        ),
-                      ),
-                    ),
-                  )
+                _toolRow(store, total: total, shown: shown, searching: searching),
+                if (_searching) _searchField(),
+                const SizedBox(height: Insets.sm),
+                if (days.isEmpty)
+                  _empty(store, searching: searching)
                 else
-                  ..._grouped(context, store, entries),
+                  for (final day in days) ...[
+                    const SizedBox(height: 8),
+                    _dayCard(context, store, day),
+                  ],
               ],
             ),
           ),
@@ -82,323 +193,592 @@ class _LedgerScreenState extends State<LedgerScreen> {
     );
   }
 
-  List<Txn> _entries(AppStore store) {
-    return store.txnsInMonth(store.period).where((t) {
-      if (_filter != null && t.type != _filter) return false;
-      if (_accountFilter != null &&
-          t.fromRef != _accountFilter &&
-          t.toRef != _accountFilter) {
-        return false;
-      }
-      if (_categoryFilter != null &&
-          t.fromRef != _categoryFilter &&
-          t.toRef != _categoryFilter) {
-        return false;
-      }
-      return true;
-    }).toList();
+  List<LedgerDay> _groupByDay(List<Txn> txns) {
+    final groups = <DateTime, LedgerDay>{};
+    for (final t in txns) {
+      final key = DateTime(t.date.year, t.date.month, t.date.day);
+      groups.putIfAbsent(key, () => LedgerDay(key)).txns.add(t);
+    }
+    return groups.values.toList();
   }
 
-  /// Spec 2.1 — type chips narrow the list; the icon on the right opens the
-  /// advanced filters (date range / account / category).
-  Widget _filterChips(AppStore store) {
-    final options = <(String, TxnType?)>[
-      ('All', null),
-      for (final t in TxnType.values) (t.label, t),
-    ];
+  // ── Tool row (spec §2) ──────────────────────────────────────────────────────
 
-    return SizedBox(
-      height: 34,
-      child: Row(
-        children: [
-          Expanded(
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: Insets.gutter),
-              itemCount: options.length,
-              separatorBuilder: (_, _) => const SizedBox(width: Insets.sm),
-              itemBuilder: (context, i) {
-                final (label, type) = options[i];
-                final selected = _filter == type;
-                final color = type?.color ?? AppColors.accentSoft;
-                return GestureDetector(
-                  onTap: () => setState(() => _filter = type),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14),
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: selected
-                          ? AppColors.tint(color, 0.18)
-                          : AppColors.surface,
-                      borderRadius: BorderRadius.circular(Radii.pill),
-                      border: Border.all(
-                        color: selected ? color : AppColors.divider,
-                      ),
-                    ),
-                    child: Text(
-                      label,
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight:
-                            selected ? FontWeight.w600 : FontWeight.w500,
-                        color: selected
-                            ? AppColors.textPrimary
-                            : AppColors.textSecondary,
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.tune_rounded, size: 19),
-            color: (_accountFilter ?? _categoryFilter) != null
-                ? AppColors.accentSoft
-                : AppColors.textSecondary,
-            onPressed: () => _showAdvancedFilters(store),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _activeFilterBanner(AppStore store) {
-    final label = _accountFilter != null
-        ? store.refName(_accountFilter!)
-        : store.refName(_categoryFilter!);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        Insets.gutter,
-        Insets.md,
-        Insets.gutter,
-        0,
-      ),
-      child: Row(
-        children: [
-          Chip(
-            label: Text('Filtered: $label'),
-            labelStyle: AppText.caption.copyWith(
-              color: AppColors.textPrimary,
-              fontSize: 12,
-            ),
-            backgroundColor: AppColors.tint(AppColors.accent, 0.18),
-            side: BorderSide.none,
-            visualDensity: VisualDensity.compact,
-            onDeleted: () => setState(() {
-              _accountFilter = null;
-              _categoryFilter = null;
-            }),
-            deleteIconColor: AppColors.textSecondary,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _showAdvancedFilters(AppStore store) async {
-    await showAppSheet<void>(
-      context,
-      title: 'Filters',
-      initialSize: 0.5,
-      builder: (sheetContext, controller) => ListView(
-        controller: controller,
-        padding: const EdgeInsets.fromLTRB(
-          Insets.gutter,
-          0,
-          Insets.gutter,
-          Insets.xxl,
-        ),
-        children: [
-          AppCard(
-            child: Column(
-              children: [
-                FormRow(
-                  icon: Icons.event_rounded,
-                  label: 'Month',
-                  value: monthYearLong(store.period),
-                  showChevron: true,
-                  onTap: () {
-                    Navigator.of(sheetContext).pop();
-                    _pickMonth(store);
-                  },
-                ),
-                const RowDivider(indent: Insets.md),
-                FormRow(
-                  icon: Icons.account_balance_wallet_rounded,
-                  label: 'Account',
-                  value: _accountFilter == null
-                      ? 'Any'
-                      : store.refName(_accountFilter!),
-                  showChevron: true,
-                  onTap: () async {
-                    final a = await pickAccount(sheetContext);
-                    if (a == null) return;
-                    setState(() {
-                      _accountFilter = a.id;
-                      _categoryFilter = null;
-                    });
-                    if (sheetContext.mounted) {
-                      Navigator.of(sheetContext).pop();
-                    }
-                  },
-                ),
-                const RowDivider(indent: Insets.md),
-                FormRow(
-                  icon: Icons.category_rounded,
-                  label: 'Category',
-                  value: _categoryFilter == null
-                      ? 'Any'
-                      : store.refName(_categoryFilter!),
-                  showChevron: true,
-                  onTap: () async {
-                    final c = await pickCategory(
-                      sheetContext,
-                      type: CategoryType.expense,
-                    );
-                    if (c == null) return;
-                    setState(() {
-                      _categoryFilter = c.id;
-                      _accountFilter = null;
-                    });
-                    if (sheetContext.mounted) {
-                      Navigator.of(sheetContext).pop();
-                    }
-                  },
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: Insets.md),
-          TextButton(
-            onPressed: () {
-              setState(() {
-                _accountFilter = null;
-                _categoryFilter = null;
-                _filter = null;
-              });
-              Navigator.of(sheetContext).pop();
-            },
-            child: const Text('Clear all filters'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _pickMonth(AppStore store) async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: store.period,
-      firstDate: DateTime(2024),
-      lastDate: DateTime(2030),
-      initialDatePickerMode: DatePickerMode.year,
-    );
-    if (picked != null) store.period = picked;
-  }
-
-  /// The day-group total. Unsigned like the scoped ledger's day total, with the
-  /// direction named in words for assistive tech. NOTE: this figure renders in
-  /// neutral grey (textTertiary), not the red/green the scoped ledger uses — so
-  /// without a sign a negative total shows no visible negativity cue. Reported,
-  /// not changed: colouring it would be outside this task's formatting-only
-  /// scope. See §1's "neutral keeps its sign" caveat.
-  Widget _dayTotal(AppStore store, List<Txn> txns) {
-    final net = txns.fold<double>(0, (sum, t) {
-      return switch (t.type) {
-        TxnType.expense => sum - t.amount,
-        TxnType.income => sum + t.amount,
-        // Transfers and revaluations move nothing net (spec 6.2).
-        _ => sum,
-      };
-    });
-    return Semantics(
-      label: '${net < 0 ? 'Net out' : 'Net in'}, '
-          '${money(net, signless: true, masked: store.masked)}',
-      excludeSemantics: true,
-      child: AmountText(
-        net,
-        signless: true,
-        style: AppText.label.copyWith(color: AppColors.textTertiary),
-      ),
-    );
-  }
-
-  List<Widget> _grouped(BuildContext context, AppStore store, List<Txn> entries) {
-    final groups = <String, List<Txn>>{};
-    for (final t in entries) {
-      groups.putIfAbsent(dateGroupLabel(t.date).toUpperCase(), () => []).add(t);
+  Widget _toolRow(
+    AppStore store, {
+    required int total,
+    required int shown,
+    required bool searching,
+  }) {
+    // Never "87 of 87" (§2): the "of" form appears only when the view is
+    // actually narrower than the month, not merely because a filter is set.
+    final String label;
+    if (searching) {
+      label = '$shown matching "${_debouncedQuery.trim()}"';
+    } else if (shown != total) {
+      label = '$shown of $total transactions';
+    } else {
+      label = '$total transactions';
     }
 
-    return [
-      for (final entry in groups.entries) ...[
-        Padding(
-          padding: const EdgeInsets.fromLTRB(
-            Insets.gutter,
-            Insets.lg,
-            Insets.gutter,
-            Insets.sm,
-          ),
-          child: Row(
-            children: [
-              Expanded(child: Text(entry.key, style: AppText.label)),
-              _dayTotal(store, entry.value),
-            ],
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: Insets.gutter),
-          child: AppCard(
-            clipBehavior: Clip.antiAlias,
-            child: Column(
-              children: [
-                for (var i = 0; i < entry.value.length; i++) ...[
-                  if (i > 0) const RowDivider(indent: Insets.md),
-                  TxnRow(
-                    txn: entry.value[i],
-                    // A transfer has no category key and must never open the
-                    // editor on a tap (spec §5): it opens its own read-only
-                    // detail. Other row types keep their existing tap-to-edit.
-                    onTap: () => entry.value[i].type == TxnType.transfer
-                        ? Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => TransferDetailScreen(
-                                txnId: entry.value[i].id,
-                                backLabel: 'Ledger',
-                              ),
-                            ),
-                          )
-                        : showQuickAdd(context, editing: entry.value[i]),
-                    onEdit: () => showQuickAdd(context, editing: entry.value[i]),
-                    onCopy: () => showQuickAdd(context, copyOf: entry.value[i]),
-                    onDelete: () async {
-                      final ok = await confirmDeleteTxn(context, entry.value[i]);
-                      if (ok && context.mounted) {
-                        store.deleteTxn(entry.value[i]);
-                      }
-                    },
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(Insets.gutter, 0, Insets.gutter, 0),
+      child: SizedBox(
+        height: 34,
+        child: Row(
+          children: [
+            Expanded(
+              child: Semantics(
+                liveRegion: true,
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: AppColors.textSecondary,
                   ),
-                ],
+                ),
+              ),
+            ),
+            // Filter then search, search rightmost — the Balance tool cluster,
+            // reused exactly; no sort button (§2, the list is date-ordered by
+            // definition).
+            ToolCluster(
+              tools: [
+                Tool(
+                  icon: _filterActive
+                      ? Icons.filter_alt_rounded
+                      : Icons.filter_alt_outlined,
+                  tooltip: 'Filter transactions',
+                  iconColor: _filterActive ? AppColors.textPrimary : null,
+                  semanticValue: _filterActive
+                      ? 'Active, $shown of $total shown'
+                      : 'Off',
+                  onTap: () => _openFilter(store),
+                ),
+                Tool(
+                  icon: _searching ? Icons.close_rounded : Icons.search_rounded,
+                  tooltip: 'Search transactions',
+                  onTap: () => _searching ? _exitSearch() : _enterSearch(),
+                ),
               ],
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _searchField() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(Insets.gutter, Insets.sm, Insets.gutter, 0),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceAlt,
+          borderRadius: BorderRadius.circular(Radii.sm),
+        ),
+        child: Row(
+          children: [
+            const Icon(
+              Icons.search_rounded,
+              size: 16,
+              color: AppColors.textTertiary,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: TextField(
+                controller: _searchCtrl,
+                focusNode: _searchFocus,
+                autofocus: true,
+                cursorColor: AppColors.accent,
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: AppColors.textPrimary,
+                ),
+                decoration: const InputDecoration(
+                  isDense: true,
+                  contentPadding: EdgeInsets.zero,
+                  border: InputBorder.none,
+                  hintText: 'Search',
+                  hintStyle: TextStyle(color: AppColors.textTertiary),
+                ),
+                onChanged: _onSearchChanged,
+              ),
+            ),
+            if (_query.isNotEmpty)
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () {
+                  _searchCtrl.clear();
+                  _onSearchChanged('');
+                },
+                child: const Padding(
+                  padding: EdgeInsets.only(left: 6),
+                  child: Icon(
+                    Icons.close_rounded,
+                    size: 16,
+                    color: AppColors.textTertiary,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _empty(AppStore store, {required bool searching}) {
+    if (searching) {
+      return Padding(
+        padding: const EdgeInsets.only(top: 64),
+        child: Text(
+          'No results for "${_debouncedQuery.trim()}"',
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontSize: 14, color: AppColors.textTertiary),
+        ),
+      );
+    }
+    if (_filterActive) {
+      return Padding(
+        padding: const EdgeInsets.only(top: 60),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'No transactions match your filter',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 14, color: AppColors.textTertiary),
+            ),
+            const SizedBox(height: 8),
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => setState(() {
+                _direction = null;
+                _categoryIds.clear();
+                _accountIds.clear();
+              }),
+              child: const Padding(
+                padding: EdgeInsets.all(8),
+                child: Text(
+                  'Clear filter',
+                  style: TextStyle(fontSize: 14, color: AppColors.accent),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+    return Padding(
+      padding: const EdgeInsets.only(top: 64),
+      child: EmptyState(
+        icon: Icons.receipt_long_rounded,
+        title: 'Nothing here yet',
+        message: 'Entries you add will appear in this list.',
+        action: FilledButton.icon(
+          onPressed: () => showQuickAdd(context),
+          icon: const Icon(Icons.add_rounded, size: 18),
+          label: const Text('Add an entry'),
+          style: FilledButton.styleFrom(
+            backgroundColor: AppColors.accent,
+            foregroundColor: Colors.white,
           ),
         ),
-      ],
-    ];
+      ),
+    );
+  }
+
+  // ── Day card (spec §3) ──────────────────────────────────────────────────────
+
+  /// The whole day is one block: the header band is the card's first child,
+  /// clipped by the card's own radius and divided from the first row by the same
+  /// hairline that divides the rows (spec §3.1).
+  Widget _dayCard(BuildContext context, AppStore store, LedgerDay day) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: Insets.gutter),
+      child: AppCard(
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          children: [
+            _dayBand(store, day),
+            const RowDivider(),
+            for (var i = 0; i < day.txns.length; i++) ...[
+              if (i > 0) const RowDivider(indent: Insets.md),
+              TxnRow(
+                txn: day.txns[i],
+                onTap: () => day.txns[i].type == TxnType.transfer
+                    ? Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => TransferDetailScreen(
+                            txnId: day.txns[i].id,
+                            backLabel: 'Ledger',
+                          ),
+                        ),
+                      )
+                    : showQuickAdd(context, editing: day.txns[i]),
+                onEdit: () => showQuickAdd(context, editing: day.txns[i]),
+                onCopy: () => showQuickAdd(context, copyOf: day.txns[i]),
+                onDelete: () async {
+                  final ok = await confirmDeleteTxn(context, day.txns[i]);
+                  if (ok && context.mounted) store.deleteTxn(day.txns[i]);
+                },
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// The header band: the date on the left, the day net on the right — the net
+  /// present only when [_LedgerDay.showsDayTotal] (§4). The net is kept in the
+  /// tree and faded rather than removed, so the band's height and the date's
+  /// baseline are identical whether or not the total shows (§7), and a day
+  /// flipping across the threshold cross-fades instead of reflowing.
+  Widget _dayBand(AppStore store, LedgerDay day) {
+    final shows = day.showsDayTotal;
+    final net = day.total;
+    final dateLabel = dateGroupLabel(day.date).toUpperCase();
+    final totalLabel = money(net, signless: true, masked: store.masked);
+
+    final Color netColor = net > 0
+        ? AppColors.positive
+        : net < 0
+            ? AppColors.amountChildNeg
+            : AppColors.textSecondary; // a busy day netting to zero (§9)
+
+    return Semantics(
+      header: true,
+      label: shows ? '$dateLabel, net $totalLabel' : dateLabel,
+      excludeSemantics: true,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 7, 12, 6),
+        child: Row(
+          children: [
+            Expanded(child: Text(dateLabel, style: AppText.label)),
+            AnimatedOpacity(
+              opacity: shows ? 1 : 0,
+              duration: const Duration(milliseconds: 180),
+              child: ExcludeSemantics(
+                excluding: !shows,
+                child: Text(
+                  totalLabel,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    height: 1.2,
+                    color: netColor,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Filter sheet (spec §2.2) ────────────────────────────────────────────────
+
+  Future<void> _openFilter(AppStore store) async {
+    await showAppSheet<void>(
+      context,
+      title: 'Filter',
+      initialSize: 0.7,
+      builder: (sheetContext, controller) {
+        return StatefulBuilder(
+          builder: (sheetContext, setSheet) {
+            // Every change applies immediately to the list behind (§2.2); the
+            // sheet redraws its own checks through [setSheet].
+            void apply(VoidCallback change) {
+              setState(change);
+              setSheet(() {});
+            }
+
+            final categories = store.categories;
+            final accounts = store.accounts;
+
+            return ListView(
+              controller: controller,
+              padding: const EdgeInsets.fromLTRB(
+                Insets.gutter,
+                0,
+                Insets.gutter,
+                Insets.xxl,
+              ),
+              children: [
+                _sheetLabel('DIRECTION'),
+                Wrap(
+                  spacing: Insets.sm,
+                  runSpacing: Insets.sm,
+                  children: [
+                    _dirChip('All', null, apply),
+                    _dirChip('Income', TxnType.income, apply),
+                    _dirChip('Expenses', TxnType.expense, apply),
+                    _dirChip('Transfers', TxnType.transfer, apply),
+                  ],
+                ),
+                const SizedBox(height: Insets.lg),
+                _sheetLabel('CATEGORIES'),
+                AppCard(
+                  child: Column(
+                    children: [
+                      for (var i = 0; i < categories.length; i++) ...[
+                        if (i > 0) const RowDivider(indent: Insets.md),
+                        _pickRow(
+                          icon: categories[i].icon,
+                          color: categories[i].color,
+                          name: categories[i].name,
+                          selected: _categoryIds.contains(categories[i].id),
+                          onTap: () => apply(() => _toggle(
+                                _categoryIds,
+                                categories[i].id,
+                              )),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(height: Insets.lg),
+                _sheetLabel('ACCOUNTS'),
+                AppCard(
+                  child: Column(
+                    children: [
+                      for (var i = 0; i < accounts.length; i++) ...[
+                        if (i > 0) const RowDivider(indent: Insets.md),
+                        _pickRow(
+                          icon: accounts[i].displayIcon,
+                          color: accounts[i].color,
+                          name: accounts[i].name,
+                          selected: _accountIds.contains(accounts[i].id),
+                          onTap: () => apply(() => _toggle(
+                                _accountIds,
+                                accounts[i].id,
+                              )),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(height: Insets.lg),
+                Row(
+                  children: [
+                    TextButton(
+                      onPressed: _filterActive
+                          ? () => apply(() {
+                                _direction = null;
+                                _categoryIds.clear();
+                                _accountIds.clear();
+                              })
+                          : null,
+                      child: const Text('Reset'),
+                    ),
+                    const Spacer(),
+                    FilledButton(
+                      onPressed: () => Navigator.of(sheetContext).pop(),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: AppColors.accent,
+                        foregroundColor: Colors.white,
+                      ),
+                      child: const Text('Done'),
+                    ),
+                  ],
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  static void _toggle(Set<String> set, String id) {
+    set.contains(id) ? set.remove(id) : set.add(id);
+  }
+
+  Widget _sheetLabel(String text) => Padding(
+        padding: const EdgeInsets.fromLTRB(4, Insets.sm, 4, Insets.sm),
+        child: Text(text, style: AppText.label),
+      );
+
+  Widget _dirChip(String label, TxnType? type, void Function(VoidCallback) apply) {
+    final selected = _direction == type;
+    final color = type?.color ?? AppColors.accentSoft;
+    return GestureDetector(
+      onTap: () => apply(() => _direction = type),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: selected ? AppColors.tint(color, 0.18) : AppColors.surface,
+          borderRadius: BorderRadius.circular(Radii.pill),
+          border: Border.all(color: selected ? color : AppColors.divider),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+            color: selected ? AppColors.textPrimary : AppColors.textSecondary,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _pickRow({
+    required IconData icon,
+    required Color color,
+    required String name,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: Insets.md,
+          vertical: Insets.sm,
+        ),
+        child: Row(
+          children: [
+            IconTile(icon, color: color, size: 30, iconSize: 15),
+            const SizedBox(width: Insets.sm),
+            Expanded(
+              child: Text(
+                name,
+                style: AppText.rowTitle,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            Icon(
+              selected
+                  ? Icons.check_circle_rounded
+                  : Icons.circle_outlined,
+              size: 20,
+              color: selected ? AppColors.accent : AppColors.textTertiary,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Month picker (spec §8) ──────────────────────────────────────────────────
+
+  /// A bottom-sheet month list, reverse-chronological back to the earliest
+  /// transaction, the current month checked, a year header separating each year.
+  /// Built rather than reused: the app has no month picker (the scoped ledger's
+  /// is a whole-period preset picker, a different granularity), and §8 says not
+  /// to open a day-granularity calendar here.
+  Future<void> _pickMonth(AppStore store) async {
+    final txns = store.txns;
+    final earliest = txns.isEmpty
+        ? store.period
+        : txns.map((t) => t.date).reduce((a, b) => a.isBefore(b) ? a : b);
+    final latest = txns.isEmpty
+        ? store.period
+        : txns.map((t) => t.date).reduce((a, b) => a.isAfter(b) ? a : b);
+    final newest =
+        store.period.isAfter(latest) ? store.period : latest;
+
+    final months = <DateTime>[];
+    var m = DateTime(newest.year, newest.month);
+    final stop = DateTime(earliest.year, earliest.month);
+    while (!m.isBefore(stop)) {
+      months.add(m);
+      m = DateTime(m.year, m.month - 1);
+    }
+
+    await showAppSheet<void>(
+      context,
+      title: 'Month',
+      initialSize: 0.6,
+      builder: (sheetContext, controller) {
+        return ListView(
+          controller: controller,
+          padding: const EdgeInsets.fromLTRB(
+            Insets.gutter,
+            0,
+            Insets.gutter,
+            Insets.xxl,
+          ),
+          children: [
+            for (var i = 0; i < months.length; i++) ...[
+              if (i == 0 || months[i].year != months[i - 1].year)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(4, Insets.md, 4, Insets.xs),
+                  child: Text('${months[i].year}', style: AppText.label),
+                ),
+              _monthRow(store, sheetContext, months[i]),
+            ],
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _monthRow(AppStore store, BuildContext sheetContext, DateTime month) {
+    final current = store.period.year == month.year &&
+        store.period.month == month.month;
+    return InkWell(
+      onTap: () {
+        store.period = month;
+        Navigator.of(sheetContext).pop();
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: Insets.sm, horizontal: 4),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 24,
+              child: current
+                  ? const Icon(
+                      Icons.check_rounded,
+                      size: 18,
+                      color: AppColors.accentLight,
+                    )
+                  : null,
+            ),
+            Text(
+              monthShort(month.month),
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: current ? FontWeight.w600 : FontWeight.w400,
+                color: AppColors.textPrimary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
-/// Spec 2.1 — In / Out / Left over, where Left over = (In − Out) / In.
+/// Spec §1 — the month summary: In / Out / Left, over a proportion bar.
 class _MonthSummary extends StatelessWidget {
-  const _MonthSummary({required this.store});
+  const _MonthSummary({required this.store, required this.onPickMonth});
 
   final AppStore store;
+  final VoidCallback onPickMonth;
 
   @override
   Widget build(BuildContext context) {
+    // Transfers and revaluations are already excluded: monthIncome/monthExpense
+    // sum only income/expense rows.
     final income = store.monthIncome(store.period);
     final expense = store.monthExpense(store.period);
-    final leftOver = store.monthLeftOverFraction(store.period);
+    final left = income - expense;
+    final overspent = left < 0;
+
+    // The bar fills red to Out / In on a neutral track (§1.1). Guards: In == 0
+    // with Out > 0 fills fully; both zero leaves an empty track.
+    final ratio = income > 0
+        ? (expense / income).clamp(0.0, 1.0)
+        : (expense > 0 ? 1.0 : 0.0);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: Insets.gutter),
@@ -410,12 +790,17 @@ class _MonthSummary extends StatelessWidget {
               children: [
                 Expanded(
                   child: GestureDetector(
-                    onTap: () => _pickMonth(context),
+                    onTap: onPickMonth,
+                    behavior: HitTestBehavior.opaque,
                     child: Row(
                       children: [
-                        Text(
-                          monthYearLong(store.period),
-                          style: AppText.rowTitle.copyWith(fontSize: 16),
+                        Flexible(
+                          child: Text(
+                            monthYearLong(store.period),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppText.rowTitle.copyWith(fontSize: 16),
+                          ),
                         ),
                         const Icon(
                           Icons.keyboard_arrow_down_rounded,
@@ -437,28 +822,30 @@ class _MonthSummary extends StatelessWidget {
                 ),
               ],
             ),
+            const SizedBox(height: Insets.md),
+            // Same visual language as the Balance ratio bar — a red proportion
+            // on a neutral track. Uses ProgressBar rather than SplitBar because
+            // SplitBar is two-tone (green + red); here the unfilled portion is a
+            // neutral track and an empty month must show no fill (§1.1).
+            ProgressBar(
+              value: ratio,
+              color: AppColors.negative,
+              height: 5,
+              background: AppColors.surfaceHigh,
+            ),
             const SizedBox(height: Insets.lg),
             Row(
               children: [
-                _Metric(label: 'In', value: income, color: AppColors.positive),
-                _Metric(label: 'Out', value: expense, color: AppColors.negative),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Left over', style: AppText.label),
-                      const SizedBox(height: 4),
-                      Text(
-                        income <= 0 ? '—' : percent(leftOver, decimals: 0),
-                        style: AppText.amountLarge.copyWith(
-                          fontSize: 18,
-                          color: leftOver < 0
-                              ? AppColors.negative
-                              : AppColors.textPrimary,
-                        ),
-                      ),
-                    ],
-                  ),
+                _Metric(label: 'IN', value: income, color: AppColors.positive),
+                _Metric(label: 'OUT', value: expense, color: AppColors.negative),
+                _Metric(
+                  label: 'LEFT',
+                  value: left,
+                  // Left is a balance-like figure: negative means "below zero",
+                  // so it keeps its minus sign and turns red when overspent
+                  // (§1.2), the same exception running balances make.
+                  color: overspent ? AppColors.negative : AppColors.textPrimary,
+                  keepSign: true,
                 ),
               ],
             ),
@@ -467,29 +854,24 @@ class _MonthSummary extends StatelessWidget {
       ),
     );
   }
-
-  Future<void> _pickMonth(BuildContext context) async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: store.period,
-      firstDate: DateTime(2024),
-      lastDate: DateTime(2030),
-      initialDatePickerMode: DatePickerMode.year,
-    );
-    if (picked != null) store.period = picked;
-  }
 }
 
+/// One of the three summary columns. Caps key (10.5pt) over a 17pt value.
 class _Metric extends StatelessWidget {
   const _Metric({
     required this.label,
     required this.value,
     required this.color,
+    this.keepSign = false,
   });
 
   final String label;
   final double value;
   final Color color;
+
+  /// In and Out are magnitudes (never signed); Left is balance-like and keeps a
+  /// minus when negative.
+  final bool keepSign;
 
   @override
   Widget build(BuildContext context) {
@@ -497,14 +879,23 @@ class _Metric extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label.toUpperCase(), style: AppText.label),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 10.5,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.8,
+              color: AppColors.textSecondary,
+            ),
+          ),
           const SizedBox(height: 4),
           FittedBox(
             fit: BoxFit.scaleDown,
             alignment: Alignment.centerLeft,
             child: AmountText(
               value,
-              style: AppText.amountLarge.copyWith(fontSize: 18),
+              signless: !keepSign,
+              style: AppText.amountLarge,
               color: color,
             ),
           ),

@@ -42,7 +42,10 @@ class TxnRow extends StatelessWidget {
   // Icon tile side and its gap to the text column. The meta line is indented by
   // their sum (44pt) so its left edge lines up with the text column above it —
   // it is not indented to the icon's left edge.
-  static const double _iconSize = 34;
+  // Spec §6 — denser rows: a 30pt tile (was 34) and an 8pt vertical padding
+  // (below). The gap to the text column stays 10. No font size, weight or
+  // colour changes anywhere in this widget — only the air around the text.
+  static const double _iconSize = 30;
   static const double _iconGap = 10;
 
   @override
@@ -88,7 +91,7 @@ class TxnRow extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.symmetric(
               horizontal: Insets.md,
-              vertical: 9,
+              vertical: 8,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -100,7 +103,7 @@ class TxnRow extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     IconTile(_icon(store),
-                        color: _color(store), size: _iconSize),
+                        color: _color(store), size: _iconSize, iconSize: 15),
                     const SizedBox(width: _iconGap),
                     Expanded(
                       child: Column(
@@ -127,14 +130,14 @@ class TxnRow extends StatelessWidget {
                             ],
                           ),
                           if (hasDescription) ...[
-                            const SizedBox(height: 2),
+                            const SizedBox(height: 1),
                             // Line 2: description | balance.
                             Row(
                               children: [
                                 Expanded(
                                   child: Text(
                                     txn.note,
-                                    style: AppText.rowSubtitle,
+                                    style: AppText.rowSubtitle.copyWith(height: 1.15),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                   ),
@@ -181,7 +184,7 @@ class TxnRow extends StatelessWidget {
     }
     return Text(
       _title(store),
-      style: AppText.rowTitle,
+      style: AppText.rowTitle.copyWith(height: 1.2),
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
     );
@@ -399,13 +402,13 @@ class TxnRow extends StatelessWidget {
           : Icons.south_west_rounded;
       final other = outgoing ? '→ ${parties.to}' : '← ${parties.from}';
       line1Title = Text(other,
-          style: AppText.rowTitle,
+          style: AppText.rowTitle.copyWith(height: 1.2),
           maxLines: 1,
           overflow: TextOverflow.ellipsis);
     } else {
       glyph = Icons.swap_horiz_rounded;
       line1Title = Text(parties.from,
-          style: AppText.rowTitle,
+          style: AppText.rowTitle.copyWith(height: 1.2),
           maxLines: 1,
           overflow: TextOverflow.ellipsis);
     }
@@ -431,7 +434,7 @@ class TxnRow extends StatelessWidget {
       final note = txn.note.trim();
       if (note.isNotEmpty) {
         line2Left = Text(note,
-            style: AppText.rowSubtitle,
+            style: AppText.rowSubtitle.copyWith(height: 1.15),
             maxLines: 1,
             overflow: TextOverflow.ellipsis);
       }
@@ -444,7 +447,8 @@ class TxnRow extends StatelessWidget {
       // §2 — the destination on the left; the note is deliberately dropped to
       // hold the row at two lines and protect list density.
       line2Left = Text('→ ${parties.to}',
-          style: AppText.rowTitle.copyWith(color: AppColors.textSecondary),
+          style: AppText.rowTitle
+              .copyWith(color: AppColors.textSecondary, height: 1.2),
           maxLines: 1,
           overflow: TextOverflow.ellipsis);
       line2Right = crossCurrency
@@ -496,7 +500,7 @@ class TxnRow extends StatelessWidget {
                   ],
                 ),
                 if (hasLine2) ...[
-                  const SizedBox(height: 2),
+                  const SizedBox(height: 1),
                   Row(
                     children: [
                       Expanded(child: line2Left ?? const SizedBox.shrink()),
@@ -542,7 +546,7 @@ class TxnRow extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.symmetric(
               horizontal: Insets.md,
-              vertical: 9,
+              vertical: 8,
             ),
             child: body,
           ),
