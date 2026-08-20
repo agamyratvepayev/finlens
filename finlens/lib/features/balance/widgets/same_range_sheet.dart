@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/store/app_store.dart';
-import '../../../core/utils/formatters.dart';
+import '../../../shared/widgets/range_calendar.dart';
 import '../../../theme/app_colors.dart';
 import '../../../theme/app_theme.dart';
-import '../../../theme/app_typography.dart';
 import '../same_transactions.dart';
 
 /// The date-range sheet for the Same-transactions screen: seven presets — each
@@ -202,27 +201,7 @@ class _CustomRange extends StatefulWidget {
 }
 
 class _CustomRangeState extends State<_CustomRange> {
-  late DateTime _month =
-      DateTime(AppStore.today.year, AppStore.today.month);
-  DateTime? _from;
-  DateTime? _to;
-
   DateTime _dayOnly(DateTime d) => DateTime(d.year, d.month, d.day);
-
-  void _tap(DateTime day) {
-    setState(() {
-      if (_from == null || (_from != null && _to != null)) {
-        _from = day;
-        _to = null;
-      } else if (day.isBefore(_from!)) {
-        // Tapping earlier than FROM restarts the selection there.
-        _from = day;
-        _to = null;
-      } else {
-        _to = day;
-      }
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -230,253 +209,24 @@ class _CustomRangeState extends State<_CustomRange> {
     final bucket = store.sameTransactions(widget.sameKey);
     final daysWithTxn = {for (final t in bucket) _dayOnly(t.date)};
 
-    final complete = _from != null && _to != null;
-    final count = complete
-        ? store.sameCountBetween(
-            widget.sameKey,
-            _from!,
-            DateTime(_to!.year, _to!.month, _to!.day, 23, 59, 59, 999),
-          )
-        : 0;
-    final editingTo = _from != null && _to == null;
-
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         const _SheetTitle('CUSTOM RANGE'),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: Insets.gutter),
-          child: Row(
-            children: [
-              Expanded(
-                  child: _field('FROM', _from, active: !editingTo)),
-              const SizedBox(width: Insets.md),
-              Expanded(child: _field('TO', _to, active: editingTo)),
-            ],
+        // The Same-transactions calendar keeps its original behaviour: empty
+        // start, future days tappable, and Apply disabled at n = 0.
+        RangeCalendar(
+          today: AppStore.today,
+          hasData: daysWithTxn.contains,
+          countBetween: (from, to) => store.sameCountBetween(
+            widget.sameKey,
+            from,
+            DateTime(to.year, to.month, to.day, 23, 59, 59, 999),
           ),
-        ),
-        const SizedBox(height: Insets.lg),
-        _monthHeader(),
-        const SizedBox(height: Insets.md),
-        const _WeekdayRow(),
-        const SizedBox(height: Insets.sm),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: Insets.gutter),
-          child: _grid(daysWithTxn),
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(Insets.lg, 14, Insets.lg, 0),
-          child: SizedBox(
-            width: double.infinity,
-            child: FilledButton(
-              onPressed: (complete && count > 0)
-                  ? () => widget.onApply(SameRangeChoice.custom(
-                      _dayOnly(_from!), _dayOnly(_to!)))
-                  : null,
-              style: FilledButton.styleFrom(
-                backgroundColor: AppColors.accent,
-                foregroundColor: Colors.white,
-                disabledBackgroundColor: AppColors.tint(AppColors.accent, 0.3),
-                disabledForegroundColor: Colors.white70,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                textStyle:
-                    const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
-              ),
-              child: Text(
-                complete
-                    ? 'Apply · $count ${count == 1 ? 'transaction' : 'transactions'}'
-                    : 'Apply',
-              ),
-            ),
-          ),
+          onApply: (from, to) =>
+              widget.onApply(SameRangeChoice.custom(from, to)),
         ),
       ],
-    );
-  }
-
-  Widget _field(String caps, DateTime? value, {required bool active}) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(11, 8, 11, 8),
-      decoration: BoxDecoration(
-        color: AppColors.sheetCard,
-        borderRadius: BorderRadius.circular(10),
-        border: active
-            ? Border.all(color: AppColors.accent, width: 1.5)
-            : Border.all(color: Colors.transparent, width: 1.5),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            caps,
-            style: const TextStyle(
-              fontSize: 10,
-              height: 1.2,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textSecondary,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            value == null ? '—' : dayMonth(value),
-            style: const TextStyle(
-              fontSize: 14.5,
-              height: 1.2,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _monthHeader() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: Insets.gutter),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              monthYearLong(_month),
-              style: AppText.rowTitle.copyWith(fontWeight: FontWeight.w600),
-            ),
-          ),
-          _MonthArrow(
-            icon: Icons.chevron_left_rounded,
-            onTap: () => setState(
-                () => _month = DateTime(_month.year, _month.month - 1)),
-          ),
-          const SizedBox(width: Insets.sm),
-          _MonthArrow(
-            icon: Icons.chevron_right_rounded,
-            onTap: () => setState(
-                () => _month = DateTime(_month.year, _month.month + 1)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _grid(Set<DateTime> daysWithTxn) {
-    final first = DateTime(_month.year, _month.month, 1);
-    // Sunday-first (matching the S M T W T F S header): Sunday(7)→0 … Sat(6)→6.
-    final leading = first.weekday % 7;
-    final days = DateTime(_month.year, _month.month + 1, 0).day;
-    return GridView.count(
-      crossAxisCount: 7,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      mainAxisSpacing: 4,
-      crossAxisSpacing: 0,
-      children: [
-        for (var i = 0; i < leading; i++) const SizedBox.shrink(),
-        for (var d = 1; d <= days; d++)
-          _day(DateTime(_month.year, _month.month, d), daysWithTxn),
-      ],
-    );
-  }
-
-  Widget _day(DateTime date, Set<DateTime> daysWithTxn) {
-    final from = _from, to = _to;
-    final isFrom = from != null && date == from;
-    final isTo = to != null && date == to;
-    final inRange = from != null &&
-        to != null &&
-        date.isAfter(from) &&
-        date.isBefore(to);
-    final isEndpoint = isFrom || isTo;
-    final hasTxn = daysWithTxn.contains(date);
-
-    // Band fill: endpoints solid, in-between tinted, with the outer corner of
-    // each endpoint rounded so the run reads as one continuous band.
-    BorderRadius? radius;
-    if (isFrom && isTo) {
-      radius = BorderRadius.circular(8);
-    } else if (isFrom) {
-      radius = const BorderRadius.horizontal(left: Radius.circular(8));
-    } else if (isTo) {
-      radius = const BorderRadius.horizontal(right: Radius.circular(8));
-    }
-
-    final Color? fill = isEndpoint
-        ? AppColors.accent
-        : (inRange ? AppColors.tint(AppColors.accent, 0.18) : null);
-
-    final Color textColor = isEndpoint
-        ? Colors.white
-        : (hasTxn ? AppColors.textPrimary : AppColors.emptyDay);
-
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: () => _tap(date),
-      child: Container(
-        height: 38,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: fill,
-          borderRadius: isEndpoint ? radius : (inRange ? null : null),
-        ),
-        child: Text(
-          '${date.day}',
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: isEndpoint ? FontWeight.w700 : FontWeight.w500,
-            color: textColor,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _WeekdayRow extends StatelessWidget {
-  const _WeekdayRow();
-
-  static const _labels = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
-
-  @override
-  Widget build(BuildContext context) {
-    // Spec §4 shows a Sunday-first header row.
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: Insets.gutter),
-      child: Row(
-        children: [
-          for (final l in _labels)
-            Expanded(
-              child: Center(
-                child: Text(
-                  l,
-                  style: const TextStyle(
-                    fontSize: 10.5,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textTertiary,
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-class _MonthArrow extends StatelessWidget {
-  const _MonthArrow({required this.icon, required this.onTap});
-
-  final IconData icon;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: Icon(icon, size: 22, color: AppColors.accentLight),
     );
   }
 }

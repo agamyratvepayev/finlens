@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 
 import '../../core/models/models.dart';
 import '../../core/store/app_store.dart';
+import '../../core/utils/date_range.dart';
 import '../../core/utils/formatters.dart';
 import '../../core/utils/search_fold.dart';
 import '../../shared/widgets/amount_text.dart';
@@ -19,6 +20,7 @@ import '../quick_add/pickers.dart';
 import '../quick_add/quick_add_sheet.dart';
 import 'ledger_day.dart';
 import 'transfer_detail_screen.dart';
+import 'widgets/ledger_period_sheet.dart';
 
 /// Spec 2.1 — every entry in chronological order, under a monthly
 /// In / Out / Left summary. The list groups by calendar day; a day's net is
@@ -78,9 +80,11 @@ class _LedgerScreenState extends State<LedgerScreen> {
   final Set<String> _categoryIds = {};
   final Set<String> _accountIds = {};
 
-  /// The period the filter/search were last evaluated against, so a month
-  /// change can clear them (spec §2.2 — the filter is a lens, not a setting).
-  DateTime? _lastPeriod;
+  /// The window the filter/search were last evaluated against, so any period
+  /// change — month pick, range apply, swipe-exit — clears them (spec §2.2 —
+  /// the filter is a lens, not a setting). Keyed by the effective window's
+  /// bounds, not just year/month, so a range change fires the reset too.
+  DateRange? _lastWindow;
 
   bool get _filterActive =>
       _direction != null || _categoryIds.isNotEmpty || _accountIds.isNotEmpty;
@@ -168,12 +172,15 @@ class _LedgerScreenState extends State<LedgerScreen> {
   @override
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
+    final window = store.ledgerWindow;
 
-    // Filter and search are a lens on the current month: a month change resets
-    // both, so the funnel never silently narrows a period the user just moved to.
-    if (_lastPeriod != null &&
-        (_lastPeriod!.year != store.period.year ||
-            _lastPeriod!.month != store.period.month)) {
+    // Filter and search are a lens on the current window: any period change —
+    // month pick, range apply, or swipe-exit — resets both, so the funnel never
+    // silently narrows a period the user just moved to. Keyed by window bounds
+    // so a month↔range switch counts as a change even at equal month numbers.
+    if (_lastWindow != null &&
+        (_lastWindow!.start != window.start ||
+            _lastWindow!.end != window.end)) {
       _direction = null;
       _categoryIds.clear();
       _accountIds.clear();
@@ -190,10 +197,10 @@ class _LedgerScreenState extends State<LedgerScreen> {
         });
       }
     }
-    _lastPeriod = store.period;
+    _lastWindow = window;
 
-    // period → filter → search → grouping.
-    final all = store.txnsInMonth(store.period); // newest first
+    // window → filter → search → grouping.
+    final all = store.txnsInWindow(window); // newest first
     final total = all.length;
     final filtered = all.where(_matchesFilter).toList();
 
@@ -204,10 +211,10 @@ class _LedgerScreenState extends State<LedgerScreen> {
         : filtered;
     final shown = visible.length;
 
-    // Transfers and revaluations are already excluded from these — monthIncome/
-    // monthExpense sum only income/expense rows.
-    final income = store.monthIncome(store.period);
-    final expense = store.monthExpense(store.period);
+    // Transfers and revaluations are already excluded from these — the window
+    // income/expense sums cover only income/expense rows.
+    final income = store.incomeInWindow(window);
+    final expense = store.expenseInWindow(window);
     final left = income - expense;
     // Red fills to Out / In on a neutral track (§1). Guards: In == 0 with
     // Out > 0 fills fully; both zero leaves an empty track.
@@ -242,7 +249,13 @@ class _LedgerScreenState extends State<LedgerScreen> {
               expense: expense,
               left: left,
               ratio: ratio,
-              onPickMonth: () => _pickMonth(store),
+              onPickMonth: () => showLedgerPeriodSheet(
+                context,
+                store,
+                // Reopening during a lens lands on the calendar page, pre-filled
+                // with the active range.
+                openOnCalendar: store.isRangeLensActive,
+              ),
               onAdd: () => showQuickAdd(context),
             ),
           ),
@@ -788,95 +801,6 @@ class _LedgerScreenState extends State<LedgerScreen> {
     );
   }
 
-  // ── Month picker (spec §8) ──────────────────────────────────────────────────
-
-  /// A bottom-sheet month list, reverse-chronological back to the earliest
-  /// transaction, the current month checked, a year header separating each year.
-  /// Built rather than reused: the app has no month picker (the scoped ledger's
-  /// is a whole-period preset picker, a different granularity), and §8 says not
-  /// to open a day-granularity calendar here.
-  Future<void> _pickMonth(AppStore store) async {
-    final txns = store.txns;
-    final earliest = txns.isEmpty
-        ? store.period
-        : txns.map((t) => t.date).reduce((a, b) => a.isBefore(b) ? a : b);
-    final latest = txns.isEmpty
-        ? store.period
-        : txns.map((t) => t.date).reduce((a, b) => a.isAfter(b) ? a : b);
-    final newest =
-        store.period.isAfter(latest) ? store.period : latest;
-
-    final months = <DateTime>[];
-    var m = DateTime(newest.year, newest.month);
-    final stop = DateTime(earliest.year, earliest.month);
-    while (!m.isBefore(stop)) {
-      months.add(m);
-      m = DateTime(m.year, m.month - 1);
-    }
-
-    await showAppSheet<void>(
-      context,
-      title: 'Month',
-      initialSize: 0.6,
-      builder: (sheetContext, controller) {
-        return ListView(
-          controller: controller,
-          padding: const EdgeInsets.fromLTRB(
-            Insets.gutter,
-            0,
-            Insets.gutter,
-            Insets.xxl,
-          ),
-          children: [
-            for (var i = 0; i < months.length; i++) ...[
-              if (i == 0 || months[i].year != months[i - 1].year)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(4, Insets.md, 4, Insets.xs),
-                  child: Text('${months[i].year}', style: AppText.label),
-                ),
-              _monthRow(store, sheetContext, months[i]),
-            ],
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _monthRow(AppStore store, BuildContext sheetContext, DateTime month) {
-    final current = store.period.year == month.year &&
-        store.period.month == month.month;
-    return InkWell(
-      onTap: () {
-        store.period = month;
-        Navigator.of(sheetContext).pop();
-      },
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: Insets.sm, horizontal: 4),
-        child: Row(
-          children: [
-            SizedBox(
-              width: 24,
-              child: current
-                  ? const Icon(
-                      Icons.check_rounded,
-                      size: 18,
-                      color: AppColors.accentLight,
-                    )
-                  : null,
-            ),
-            Text(
-              monthShort(month.month),
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: current ? FontWeight.w600 : FontWeight.w400,
-                color: AppColors.textPrimary,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }
 
 /// The Ledger's pinned header (spec §1): the month as the screen title (with the
@@ -916,41 +840,7 @@ class _HeaderZone extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
             child: Row(
               children: [
-                Expanded(
-                  child: Semantics(
-                    button: true,
-                    label: monthYearLong(store.period),
-                    hint: 'Change month',
-                    excludeSemantics: true,
-                    child: GestureDetector(
-                      onTap: onPickMonth,
-                      behavior: HitTestBehavior.opaque,
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Flexible(
-                            child: Text(
-                              monthYearLong(store.period),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 22,
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.textPrimary,
-                                letterSpacing: -0.4,
-                              ),
-                            ),
-                          ),
-                          const Icon(
-                            Icons.keyboard_arrow_down_rounded,
-                            size: 15,
-                            color: AppColors.textSecondary,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
+                Expanded(child: _PeriodTitle(store: store, onTap: onPickMonth)),
                 const SizedBox(width: Insets.sm),
                 // Eye + `+`, cloned from ScreenHeader (same size/colour/behaviour).
                 _CircleButton(
@@ -1022,6 +912,85 @@ class _HeaderZone extends StatelessWidget {
           ),
           const SizedBox(height: Insets.md),
         ],
+      ),
+    );
+  }
+}
+
+/// The period title: the month in white, or — while a range lens is active —
+/// the range in accent purple (the app's temporary-lens language) with a
+/// `{n} days` subtitle. The ⌄ chevron and the tap-to-open behaviour are
+/// unchanged in both states; the range form shrinks/ellipsizes before it can
+/// reach the eye/`+` buttons.
+class _PeriodTitle extends StatelessWidget {
+  const _PeriodTitle({required this.store, required this.onTap});
+
+  final AppStore store;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final lens = store.rangeLens;
+    final isLens = lens != null;
+    final titleText =
+        isLens ? lens.label(AppStore.today) : monthYearLong(store.period);
+    final days = isLens ? lens.days : 0;
+    final semanticLabel = isLens
+        ? '$titleText, $days ${days == 1 ? 'day' : 'days'}'
+        : monthYearLong(store.period);
+
+    return Semantics(
+      button: true,
+      label: semanticLabel,
+      hint: 'Change period',
+      excludeSemantics: true,
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Flexible(
+                  child: Text(
+                    titleText,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w700,
+                      color: isLens
+                          ? AppColors.accentLight
+                          : AppColors.textPrimary,
+                      letterSpacing: -0.4,
+                    ),
+                  ),
+                ),
+                const Icon(
+                  Icons.keyboard_arrow_down_rounded,
+                  size: 15,
+                  color: AppColors.textSecondary,
+                ),
+              ],
+            ),
+            // The lens's only new vertical cost (~13pt); absent in month mode.
+            if (isLens)
+              Padding(
+                padding: const EdgeInsets.only(top: 1),
+                child: Text(
+                  '$days ${days == 1 ? 'day' : 'days'}',
+                  style: const TextStyle(
+                    fontSize: 10.5,
+                    height: 1.2,
+                    color: AppColors.textTertiary,
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }

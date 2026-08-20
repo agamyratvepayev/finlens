@@ -419,14 +419,57 @@ class AppStore extends ChangeNotifier {
   DateTime _period = DateTime(2026, 8);
   DateTime get period => _period;
   void shiftPeriod(int months) {
+    // Ledger range lens: a header swipe exits the lens to the current month —
+    // one swipe = home — rather than stepping from the lens window. Subsequent
+    // swipes (lens now null) step months normally. Only the Ledger tab ever
+    // sets a lens, so Planner/Insight (lens always null) keep the old path.
+    if (_rangeLens != null) {
+      _rangeLens = null;
+      _period = DateTime(today.year, today.month);
+      notifyListeners();
+      return;
+    }
     _period = DateTime(_period.year, _period.month + months);
     notifyListeners();
   }
 
   set period(DateTime p) {
+    // Picking a month exits any active range lens through the same path, so the
+    // Ledger's filter/search reset fires identically to a plain month change.
     _period = DateTime(p.year, p.month);
+    _rangeLens = null;
     notifyListeners();
   }
+
+  // ── Ledger range lens (spec: Period picker) ───────────────────────────────
+  // A temporary, never-persisted window that replaces the month on the Ledger
+  // tab only. Held parallel to `_period` (rather than widening `period`'s type)
+  // because `period` is shared with Planner + Insight, which must stay
+  // month-only. The summary, list and header all read the effective window
+  // through [ledgerWindow]; nothing outside the Ledger tab consults the lens.
+  DateRange? _rangeLens;
+  DateRange? get rangeLens => _rangeLens;
+  bool get isRangeLensActive => _rangeLens != null;
+
+  /// The window the Ledger tab summarises, lists and labels over: the lens when
+  /// active, otherwise the calendar month of [period].
+  DateRange get ledgerWindow =>
+      _rangeLens ?? DateRange(_monthStart(_period), _monthEnd(_period));
+
+  void applyRangeLens(DateRange range) {
+    _rangeLens = range;
+    notifyListeners();
+  }
+
+  void clearRangeLens() {
+    if (_rangeLens == null) return;
+    _rangeLens = null;
+    notifyListeners();
+  }
+
+  static DateTime _monthStart(DateTime m) => DateTime(m.year, m.month, 1);
+  static DateTime _monthEnd(DateTime m) =>
+      DateTime(m.year, m.month + 1, 0, 23, 59, 59, 999);
 
   // ── Collections ───────────────────────────────────────────────────────────
   List<Account> get accounts => _accounts
@@ -759,6 +802,15 @@ class AppStore extends ChangeNotifier {
       .where((t) => t.date.year == month.year && t.date.month == month.month)
       .toList(growable: false);
 
+  /// Every transaction whose date falls inside [window] (inclusive both ends),
+  /// newest first. The Ledger tab's range-lens twin of [txnsInMonth]: identical
+  /// downstream math (grouping, day nets, after-balances), only the window
+  /// bounds differ. A calendar month is just the window `[1st … last 23:59:59]`.
+  List<Txn> txnsInWindow(DateRange window) => txns
+      .where((t) =>
+          !t.date.isBefore(window.start) && !t.date.isAfter(window.end))
+      .toList(growable: false);
+
   /// Money in for the month — rebalances excluded (spec 6.2 isolation rule).
   double monthIncome(DateTime month) => txnsInMonth(month)
       .where((t) => t.type == TxnType.income)
@@ -767,6 +819,50 @@ class AppStore extends ChangeNotifier {
   double monthExpense(DateTime month) => txnsInMonth(month)
       .where((t) => t.type == TxnType.expense)
       .fold(0.0, (sum, t) => sum + t.amount);
+
+  /// Range-lens twins of [monthIncome]/[monthExpense] — same fold, windowed.
+  double incomeInWindow(DateRange window) => txnsInWindow(window)
+      .where((t) => t.type == TxnType.income)
+      .fold(0.0, (sum, t) => sum + t.amount);
+
+  double expenseInWindow(DateRange window) => txnsInWindow(window)
+      .where((t) => t.type == TxnType.expense)
+      .fold(0.0, (sum, t) => sum + t.amount);
+
+  /// The set of months (1–12) in [year] that hold at least one transaction —
+  /// the Period sheet's has-data dots. One grouped pass per displayed year per
+  /// sheet-open (the sheet caches the result per year while it is open), never
+  /// a per-chip scan.
+  Set<int> ledgerMonthsWithData(int year) {
+    final months = <int>{};
+    for (final t in _txns) {
+      if (t.date.year == year) months.add(t.date.month);
+    }
+    return months;
+  }
+
+  /// The set of day-only dates in [month] that hold at least one transaction —
+  /// the custom-range calendar's dimmed/undimmed cells (one pass per open).
+  Set<DateTime> ledgerDaysWithData(DateTime month) {
+    final days = <DateTime>{};
+    for (final t in _txns) {
+      if (t.date.year == month.year && t.date.month == month.month) {
+        days.add(DateTime(t.date.year, t.date.month, t.date.day));
+      }
+    }
+    return days;
+  }
+
+  /// The year of the earliest transaction — the Period sheet's `‹` floor. Falls
+  /// back to the current period's year when there are no transactions.
+  int get earliestTxnYear {
+    if (_txns.isEmpty) return _period.year;
+    var earliest = _txns.first.date.year;
+    for (final t in _txns) {
+      if (t.date.year < earliest) earliest = t.date.year;
+    }
+    return earliest;
+  }
 
   /// Left over = (In − Out) / In (spec 2.1).
   double monthLeftOverFraction(DateTime month) {

@@ -150,6 +150,10 @@ abstract final class AppColors {
   /// Calendar day with no transactions under the current key.
   static const emptyDay = Color(0xFF4A4A4E);
 
+  /// A future calendar day/month — inert and dimmed one step below [emptyDay];
+  /// the ledger has no future to select into.
+  static const futureDay = Color(0xFF3A3A3C);
+
   /// Tinted fill used by highlight cards and icon tiles.
   static Color tint(Color c, [double opacity = 0.16]) => c.withValues(alpha: opacity);
 }
