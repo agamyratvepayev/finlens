@@ -125,13 +125,16 @@ void main() {
     test('unfiltered baseline', () {
       const f = BalanceFilter();
       expect(f.sectionTotal(store, assets: true), closeTo(223305, 1));
-      expect(f.netWorth(store), closeTo(193635, 1));
+      // Net worth is $82 below the pre-history figure (193635): the 8–9 Aug
+      // "Zone D" credit-card spend is real recent activity, deliberately
+      // uncompensated. Assets are unchanged (Zone D touches only liabilities).
+      expect(f.netWorth(store), closeTo(193553, 1));
     });
 
     test('hiding Valuables', () {
       final f = const BalanceFilter().toggleGroup(store, AccountGroup.valuables);
       expect(f.sectionTotal(store, assets: true), closeTo(73305, 1));
-      expect(f.netWorth(store), closeTo(43635, 1));
+      expect(f.netWorth(store), closeTo(43553, 1)); // 43635 − 82 Zone D
       expect(f.isGroupVisible(store, AccountGroup.valuables), isFalse);
 
       // Percentages recompute against the new denominator.
@@ -146,7 +149,7 @@ void main() {
       final f =
           const BalanceFilter().toggleAccount(store, accountNamed('Family Wallet'));
       expect(f.sectionTotal(store, assets: true), closeTo(221605, 1));
-      expect(f.netWorth(store), closeTo(191935, 1));
+      expect(f.netWorth(store), closeTo(191853, 1)); // 191935 − 82 Zone D
       expect(f.filteredTotal(store, AccountGroup.spendable), closeTo(20705, 1));
       expect(f.visibleAccounts(store, AccountGroup.spendable).length, 3);
     });

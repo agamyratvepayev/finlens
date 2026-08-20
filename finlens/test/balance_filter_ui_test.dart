@@ -22,8 +22,9 @@ void main() {
     await tester.pumpWidget(FinLensApp(store: store));
     await tester.pumpAndSettle();
 
-    // Net Worth drops from $193,635 to $43,635.
-    expect(find.text('\$43,635'), findsWidgets);
+    // Net Worth drops from $193,553 to $43,553 (both $82 below the pre-history
+    // figures: the uncompensated 8–9 Aug Zone D credit-card spend).
+    expect(find.text('\$43,553'), findsWidgets);
 
     // The hidden group is absent from the tree, not merely collapsed.
     expect(find.text('Valuables'), findsNothing);
@@ -60,7 +61,7 @@ void main() {
     await tester.pumpWidget(FinLensApp(store: store));
     await tester.pumpAndSettle();
 
-    expect(find.text('\$193,635'), findsWidgets);
+    expect(find.text('\$193,553'), findsWidgets); // 193635 − 82 Zone D
     expect(find.text('Valuables'), findsWidgets);
   });
 }

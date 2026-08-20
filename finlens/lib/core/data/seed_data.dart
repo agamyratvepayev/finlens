@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/models.dart';
 import '../store/app_store.dart';
+import 'seed_history.dart';
 
 /// Mock data layer. Every figure here is lifted from the mockups in Tech Spec
 /// v1.1 so the running app reproduces the documented screens.
@@ -21,7 +22,7 @@ AppStore buildSeedStore() {
       name: 'Cash (USD Wallet)',
       group: AccountGroup.spendable,
       currency: 'USD',
-      startingBalance: 5210,
+      startingBalance: 5199.35, // 5210 → 5199.35: −10.65 history offset
       icon: Icons.payments_rounded,
     ),
     Account(
@@ -29,7 +30,7 @@ AppStore buildSeedStore() {
       name: 'Cash (EUR Wallet)',
       group: AccountGroup.spendable,
       currency: 'EUR',
-      startingBalance: 3300,
+      startingBalance: 3134.30, // 3300 → 3134.30: −165.70 history offset (EUR)
       icon: Icons.euro_rounded,
     ),
     Account(
@@ -37,7 +38,7 @@ AppStore buildSeedStore() {
       name: 'Main Checking',
       group: AccountGroup.spendable,
       currency: 'USD',
-      startingBalance: 4000,
+      startingBalance: 26506, // 4000 → 26506: +22506 history offset (net hub outflows)
       icon: Icons.account_balance_rounded,
     ),
     Account(
@@ -45,7 +46,7 @@ AppStore buildSeedStore() {
       name: 'Family Wallet',
       group: AccountGroup.spendable,
       currency: 'USD',
-      startingBalance: 1700,
+      startingBalance: 1288.70, // 1700 → 1288.70: −411.30 history offset
       icon: Icons.people_rounded,
     ),
     // Receivables
@@ -54,7 +55,7 @@ AppStore buildSeedStore() {
       name: 'Personal Loan (John Doe)',
       group: AccountGroup.receivables,
       currency: 'USD',
-      startingBalance: 1500,
+      startingBalance: 1635, // 1500 → 1635: +135 history offset
       icon: Icons.handshake_rounded,
     ),
     Account(
@@ -62,7 +63,7 @@ AppStore buildSeedStore() {
       name: 'Client Invoice (#104)',
       group: AccountGroup.receivables,
       currency: 'USD',
-      startingBalance: 1200,
+      startingBalance: 2340, // 1200 → 2340: +1140 history offset
       icon: Icons.receipt_rounded,
     ),
     Account(
@@ -70,7 +71,7 @@ AppStore buildSeedStore() {
       name: 'Pending Refund (Amazon)',
       group: AccountGroup.receivables,
       currency: 'USD',
-      startingBalance: 300,
+      startingBalance: 312, // 300 → 312: +12 history offset
       icon: Icons.assignment_return_rounded,
     ),
     Account(
@@ -78,7 +79,7 @@ AppStore buildSeedStore() {
       name: 'Dinner Split (Friends)',
       group: AccountGroup.receivables,
       currency: 'USD',
-      startingBalance: 200,
+      startingBalance: 200, // unchanged: history nets to 0
       icon: Icons.restaurant_rounded,
     ),
     // Investments
@@ -87,7 +88,7 @@ AppStore buildSeedStore() {
       name: 'US Stocks (S&P 500)',
       group: AccountGroup.investments,
       currency: 'USD',
-      startingBalance: 19500,
+      startingBalance: 17425, // 19500 → 17425: −2075 history offset
       icon: Icons.show_chart_rounded,
     ),
     Account(
@@ -95,7 +96,7 @@ AppStore buildSeedStore() {
       name: 'Gold Portfolio',
       group: AccountGroup.investments,
       currency: 'USD',
-      startingBalance: 14200,
+      startingBalance: 12150, // 14200 → 12150: −2050 history offset
       icon: Icons.workspace_premium_rounded,
     ),
     Account(
@@ -103,7 +104,7 @@ AppStore buildSeedStore() {
       name: 'Crypto Wallet (BTC/ETH)',
       group: AccountGroup.investments,
       currency: 'USD',
-      startingBalance: 7700,
+      startingBalance: 6400, // 7700 → 6400: −1300 history offset
       icon: Icons.currency_bitcoin_rounded,
     ),
     Account(
@@ -111,7 +112,7 @@ AppStore buildSeedStore() {
       name: 'Tech ETFs (QQQ)',
       group: AccountGroup.investments,
       currency: 'USD',
-      startingBalance: 3000,
+      startingBalance: 1816, // 3000 → 1816: −1184 history offset
       icon: Icons.candlestick_chart_rounded,
     ),
     Account(
@@ -119,7 +120,7 @@ AppStore buildSeedStore() {
       name: 'Private Pension (BES)',
       group: AccountGroup.investments,
       currency: 'USD',
-      startingBalance: 2000,
+      startingBalance: 819, // 2000 → 819: −1181 history offset
       icon: Icons.savings_rounded,
     ),
     // Valuables
@@ -128,7 +129,7 @@ AppStore buildSeedStore() {
       name: 'Primary Residence (Apartment)',
       group: AccountGroup.valuables,
       currency: 'USD',
-      startingBalance: 120000,
+      startingBalance: 114300, // 120000 → 114300: −5700 history offset (revaluations)
       icon: Icons.home_rounded,
     ),
     Account(
@@ -136,7 +137,7 @@ AppStore buildSeedStore() {
       name: 'Personal Car',
       group: AccountGroup.valuables,
       currency: 'USD',
-      startingBalance: 25000,
+      startingBalance: 27480, // 25000 → 27480: +2480 history offset (depreciation)
       icon: Icons.directions_car_rounded,
     ),
     Account(
@@ -144,7 +145,7 @@ AppStore buildSeedStore() {
       name: 'Luxury Watches',
       group: AccountGroup.valuables,
       currency: 'USD',
-      startingBalance: 3000,
+      startingBalance: 1870, // 3000 → 1870: −1130 history offset
       icon: Icons.watch_rounded,
     ),
     Account(
@@ -152,7 +153,7 @@ AppStore buildSeedStore() {
       name: 'Tech Hardware',
       group: AccountGroup.valuables,
       currency: 'USD',
-      startingBalance: 2000,
+      startingBalance: 1280, // 2000 → 1280: −720 history offset
       icon: Icons.laptop_mac_rounded,
     ),
     // Credit Cards — liabilities are held negative throughout.
@@ -161,7 +162,7 @@ AppStore buildSeedStore() {
       name: 'Main Credit Card (Amex)',
       group: AccountGroup.creditCards,
       currency: 'USD',
-      startingBalance: -2732,
+      startingBalance: -3340.50, // -2732 → -3340.50: −608.50 history offset (Zone D excluded)
       creditLimit: 10000,
       statementDay: 1,
       paymentDue: 12,
@@ -172,7 +173,7 @@ AppStore buildSeedStore() {
       name: 'Shopping Card (Bonus)',
       group: AccountGroup.creditCards,
       currency: 'USD',
-      startingBalance: -2500,
+      startingBalance: -2724, // -2500 → -2724: −224 history offset (Zone D excluded)
       creditLimit: 6500,
       statementDay: 5,
       paymentDue: 20,
@@ -184,7 +185,7 @@ AppStore buildSeedStore() {
       name: 'Rent Payable (Landlord)',
       group: AccountGroup.payables,
       currency: 'USD',
-      startingBalance: -2000,
+      startingBalance: -2000, // unchanged: history nets to 0 (bill = settlement)
       paymentDue: 21,
       icon: Icons.home_work_rounded,
     ),
@@ -193,7 +194,7 @@ AppStore buildSeedStore() {
       name: 'Electricity / Utilities',
       group: AccountGroup.payables,
       currency: 'USD',
-      startingBalance: -800,
+      startingBalance: -800, // unchanged: history nets to 0 (bill = settlement)
       paymentDue: 14,
       icon: Icons.bolt_rounded,
     ),
@@ -202,7 +203,7 @@ AppStore buildSeedStore() {
       name: 'Internet / Phone',
       group: AccountGroup.payables,
       currency: 'USD',
-      startingBalance: -400,
+      startingBalance: -400, // unchanged: history nets to 0 (bill = settlement)
       paymentDue: 17,
       icon: Icons.wifi_rounded,
     ),
@@ -212,7 +213,7 @@ AppStore buildSeedStore() {
       name: 'Auto Loan (Car)',
       group: AccountGroup.bankLoans,
       currency: 'USD',
-      startingBalance: -5000,
+      startingBalance: -6941, // -5000 → -6941: −1941 history offset (repayments net down)
       creditLimit: 12000,
       paymentDue: 15,
       icon: Icons.directions_car_filled_rounded,
@@ -222,7 +223,7 @@ AppStore buildSeedStore() {
       name: 'Mortgage (Apartment)',
       group: AccountGroup.bankLoans,
       currency: 'USD',
-      startingBalance: -15000,
+      startingBalance: -18047, // -15000 → -18047: −3047 history offset (repayments net down)
       creditLimit: 60000,
       paymentDue: 1,
       icon: Icons.apartment_rounded,
@@ -607,6 +608,11 @@ AppStore buildSeedStore() {
       date: DateTime(2026, 7, 1, 9, 0),
       note: 'Monthly salary',
     ),
+    // Authored history that lifts every account to ≥10 transactions. Kept in a
+    // separate file so this fixture stays readable; each account's Zone A/B
+    // additions are offset by the adjusted startingBalance values above, so
+    // every 1 Aug 2026 balance is unchanged (see seed_history.dart).
+    ...buildHistoryTxns(),
   ];
 
   // ── Goals (spec 5.2 mockup) ───────────────────────────────────────────────
