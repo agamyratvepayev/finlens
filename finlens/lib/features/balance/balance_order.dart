@@ -8,10 +8,10 @@ import '../../core/store/app_store.dart';
 
 /// How accounts are ordered *inside* each group.
 ///
-/// The four automatic orderings never touch group order — groups sit in their
-/// fixed [AccountGroup] declaration order. [custom] is the only mode that
-/// reorders groups (within their section) and accounts by hand, and it is only
-/// ever produced by a press-and-hold drag on the Balance list.
+/// Groups always sit in their fixed [AccountGroup] declaration order — no sort
+/// mode, including [custom], ever reorders them. [custom] is a hand-made
+/// **account** order only, produced by a press-and-hold drag on the Balance
+/// list.
 enum AccountSort {
   valueDesc('Value — high to low'),
   valueAsc('Value — low to high'),
@@ -30,62 +30,38 @@ enum AccountSort {
   static const automatic = <AccountSort>[valueDesc, valueAsc, nameAsc, activity];
 }
 
-/// The user's hand-made display order for the Balance list.
+/// The user's hand-made account order for the Balance list.
 ///
-/// Holds **every** category and account, including ones the filter is currently
-/// hiding, so ordering and filtering stay independent: order the full data
-/// first, remove the hidden items second. This is purely presentational — no
-/// account's group membership and no domain data is ever changed. Categories on
-/// the Balance screen are [AccountGroup]s (an enum, no id), matching how
-/// `BalanceFilter` keys them.
+/// Holds **every** account, including ones the filter is currently hiding, so
+/// ordering and filtering stay independent: order the full data first, remove
+/// the hidden items second. Groups (categories) are never reordered — they are
+/// fixed [AccountGroup] declaration order — so this holds accounts only. Purely
+/// presentational: no account's group membership and no domain data is ever
+/// changed.
 @immutable
 class CustomOrder {
-  const CustomOrder({
-    this.assetOrder = const [],
-    this.liabilityOrder = const [],
-    this.accountOrder = const {},
-  });
-
-  /// Asset / liability group order, each a permutation of its own section.
-  final List<AccountGroup> assetOrder;
-  final List<AccountGroup> liabilityOrder;
+  const CustomOrder({this.accountOrder = const {}});
 
   /// Account ids in user order, keyed by the owning group. An id here always
   /// belongs to its key group — foreign ids are dropped on load.
   final Map<AccountGroup, List<String>> accountOrder;
 
-  bool get isConfigured =>
-      assetOrder.isNotEmpty ||
-      liabilityOrder.isNotEmpty ||
-      accountOrder.isNotEmpty;
+  bool get isConfigured => accountOrder.isNotEmpty;
 
-  CustomOrder copyWith({
-    List<AccountGroup>? assetOrder,
-    List<AccountGroup>? liabilityOrder,
-    Map<AccountGroup, List<String>>? accountOrder,
-  }) =>
-      CustomOrder(
-        assetOrder: assetOrder ?? this.assetOrder,
-        liabilityOrder: liabilityOrder ?? this.liabilityOrder,
-        accountOrder: accountOrder ?? this.accountOrder,
-      );
+  CustomOrder copyWith({Map<AccountGroup, List<String>>? accountOrder}) =>
+      CustomOrder(accountOrder: accountOrder ?? this.accountOrder);
 
   // ── Resolving the stored order against live data ──────────────────────────
-  // Both resolvers use the "known, then unknown appended in data order" shape,
-  // which gives the required maintenance behaviour for free: a new category or
-  // account appears last in its section/category, a deleted one drops out, and
-  // a stale id is ignored.
+  // The resolver uses the "known, then unknown appended in data order" shape,
+  // which gives the required maintenance behaviour for free: a new account
+  // appears last in its category, a deleted one drops out, a stale id is
+  // ignored.
 
-  /// Groups of a section in user order. Only groups that belong to the section
-  /// are honoured (a stored group that somehow lands in the wrong section is
-  /// ignored); anything missing is appended in declaration order.
-  List<AccountGroup> orderedCategories({required bool assets}) {
-    final all = assets ? AccountGroup.assets : AccountGroup.liabilities;
-    final stored = assets ? assetOrder : liabilityOrder;
-    final known = stored.where(all.contains).toList();
-    final unknown = all.where((g) => !known.contains(g)).toList();
-    return [...known, ...unknown];
-  }
+  /// Groups of a section, always in fixed declaration order — no custom order
+  /// reorders categories any more. Kept as a method so the Balance filter sheet
+  /// (which asks for "the same order the list uses") needs no change.
+  List<AccountGroup> orderedCategories({required bool assets}) =>
+      assets ? AccountGroup.assets : AccountGroup.liabilities;
 
   /// Accounts of [group] in user order, unknown ones appended in data order.
   /// Operates on the full (unfiltered) account set — filtering happens after.
@@ -148,18 +124,6 @@ class CustomOrder {
     return full;
   }
 
-  /// Returns a new order with [moved] repositioned among its section's groups.
-  CustomOrder withCategoryMove({
-    required bool assets,
-    required AccountGroup moved,
-    required int visibleTargetIndex,
-    required List<AccountGroup> visibleOrder,
-  }) {
-    final full = orderedCategories(assets: assets);
-    final next = moveWithinGroup(full, moved, visibleTargetIndex, visibleOrder);
-    return assets ? copyWith(assetOrder: next) : copyWith(liabilityOrder: next);
-  }
-
   /// Returns a new order with account [moved] repositioned within [group].
   CustomOrder withAccountMove(
     AppStore store, {
@@ -182,33 +146,24 @@ class CustomOrder {
   static const _orderKey = 'balance_custom_order';
   static const _sortKey = 'balance_sort_mode';
 
+  // No 'assets' / 'liabilities' keys any more: categories are fixed order, so
+  // only the account order is persisted. A prior version's stored category keys
+  // are simply not read (see [fromStored]) and are dropped on the next save.
   Map<String, dynamic> toJson() => {
-        'assets': assetOrder.map((g) => g.name).toList(),
-        'liabilities': liabilityOrder.map((g) => g.name).toList(),
         'accounts': {
           for (final e in accountOrder.entries) e.key.name: e.value,
         },
       };
 
-  /// Rebuilds from decoded JSON against live data. Group names that no longer
-  /// map, ids that no longer exist, and — critically — any account id whose
-  /// account does not actually belong to its key group are dropped, so a stored
-  /// order can never re-parent an account.
+  /// Rebuilds from decoded JSON against live data. Ids that no longer exist and
+  /// — critically — any account id whose account does not actually belong to
+  /// its key group are dropped, so a stored order can never re-parent an
+  /// account. Legacy top-level 'assets' / 'liabilities' category keys from an
+  /// older build are ignored silently (never read), so one load-save cycle
+  /// cleans them out of the stored JSON.
   static CustomOrder fromStored(AppStore store, Object? decoded) {
     if (decoded is! Map) return const CustomOrder();
     final byName = {for (final g in AccountGroup.values) g.name: g};
-
-    List<AccountGroup> section(String key, bool assets) {
-      final all = assets ? AccountGroup.assets : AccountGroup.liabilities;
-      final raw = decoded[key];
-      if (raw is! List) return const [];
-      return raw
-          .whereType<String>()
-          .map((n) => byName[n])
-          .whereType<AccountGroup>()
-          .where(all.contains)
-          .toList();
-    }
 
     final accountOrder = <AccountGroup, List<String>>{};
     final rawAccounts = decoded['accounts'];
@@ -226,11 +181,7 @@ class CustomOrder {
       }
     }
 
-    return CustomOrder(
-      assetOrder: section('assets', true),
-      liabilityOrder: section('liabilities', false),
-      accountOrder: accountOrder,
-    );
+    return CustomOrder(accountOrder: accountOrder);
   }
 
   Future<void> save() async {

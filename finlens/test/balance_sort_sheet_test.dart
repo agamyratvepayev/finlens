@@ -24,7 +24,7 @@ void main() {
     expect(find.text('Value — high to low'), findsOneWidget);
     expect(find.text('Custom'), findsOneWidget);
 
-    // The subtitle is the only advertisement of the gesture.
-    expect(find.text('Press and hold a row to move it'), findsOneWidget);
+    // The subtitle is the permanent advertisement of the gesture.
+    expect(find.text('Press and hold an account to move it'), findsOneWidget);
   });
 }

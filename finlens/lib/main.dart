@@ -26,6 +26,7 @@ Future<void> main() async {
   final store = _useDevSeed ? buildDevSeedStore() : buildSeedStore();
   await store.loadBalanceFilter();
   await store.loadBalanceOrder();
+  await store.loadBalanceReorderHint();
   await store.loadSameListRange();
   await store.loadPeriodUnits();
   await store.loadTransPrefs();

@@ -165,6 +165,34 @@ class AppStore extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// One-shot discoverability flag for the Balance reorder hint ("Hold an
+  /// account to arrange" on the section headers). Set the first time a drag
+  /// actually changes the order; once true it never returns.
+  static const _reorderHintKey = 'balance_reorder_hint_done';
+  bool _balanceReorderHintDone = false;
+  bool get balanceReorderHintDone => _balanceReorderHintDone;
+
+  /// Marks the hint dismissed. Notifies so the headers drop it immediately, and
+  /// persists so it stays gone across relaunches. Idempotent.
+  void markBalanceReorderHintDone() {
+    if (_balanceReorderHintDone) return;
+    _balanceReorderHintDone = true;
+    notifyListeners();
+    unawaited(_saveReorderHintDone());
+  }
+
+  static Future<void> _saveReorderHintDone() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_reorderHintKey, true);
+  }
+
+  /// Restores the hint flag before the first frame (called from `main`), so the
+  /// header never flashes a hint the user already dismissed.
+  Future<void> loadBalanceReorderHint() async {
+    final prefs = await SharedPreferences.getInstance();
+    _balanceReorderHintDone = prefs.getBool(_reorderHintKey) ?? false;
+  }
+
   // ── Same-transactions: composite-key index + range ────────────────────────
 
   /// Transactions bucketed by their [SameKey], each bucket newest-first. Built

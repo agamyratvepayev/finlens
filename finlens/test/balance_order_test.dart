@@ -55,27 +55,14 @@ void main() {
     });
   });
 
-  group('orderedCategories', () {
-    test('empty order is the declaration order', () {
-      const o = CustomOrder();
+  group('orderedCategories — always fixed declaration order', () {
+    test('is the declaration order regardless of stored account order', () {
+      final g = AccountGroup.valuables;
+      final o = CustomOrder(accountOrder: {
+        g: store.accountsIn(g).map((a) => a.id).toList()
+      });
       expect(o.orderedCategories(assets: true), AccountGroup.assets);
       expect(o.orderedCategories(assets: false), AccountGroup.liabilities);
-    });
-
-    test('honours the stored order and appends the rest in data order', () {
-      const o = CustomOrder(assetOrder: [AccountGroup.investments]);
-      final r = o.orderedCategories(assets: true);
-      expect(r.first, AccountGroup.investments);
-      expect(r.length, AccountGroup.assets.length);
-      expect(r.toSet(), AccountGroup.assets.toSet());
-    });
-
-    test('a group stored in the wrong section is ignored', () {
-      const o = CustomOrder(
-          assetOrder: [AccountGroup.creditCards, AccountGroup.investments]);
-      final r = o.orderedCategories(assets: true);
-      expect(r, isNot(contains(AccountGroup.creditCards)));
-      expect(r.first, AccountGroup.investments);
     });
   });
 
@@ -125,20 +112,49 @@ void main() {
           isNot(contains(spendId)));
     });
 
-    test('valid ids and section membership are kept', () {
+    test('valid account ids are kept', () {
       final val =
           store.accountsIn(AccountGroup.valuables).map((a) => a.id).toList();
       final o = CustomOrder.fromStored(store, {
-        'assets': ['valuables', 'spendable'],
-        'liabilities': <String>[],
         'accounts': {'valuables': val},
       });
-      expect(o.assetOrder.first, AccountGroup.valuables);
       expect(o.accountOrder[AccountGroup.valuables], val);
     });
 
     test('garbage decodes to an unconfigured order', () {
       expect(CustomOrder.fromStored(store, 'nope').isConfigured, isFalse);
+    });
+  });
+
+  group('category order migration — legacy keys ignored', () {
+    test('legacy assets/liabilities keys are ignored on load', () {
+      final val =
+          store.accountsIn(AccountGroup.valuables).map((a) => a.id).toList();
+      // A payload written by an older build that still stored category order.
+      final o = CustomOrder.fromStored(store, {
+        'assets': ['valuables', 'spendable'],
+        'liabilities': ['creditCards'],
+        'accounts': {'valuables': val},
+      });
+      // The category keys vanish; the account order survives intact.
+      expect(o.accountOrder[AccountGroup.valuables], val);
+      expect(o.isConfigured, isTrue);
+    });
+
+    test('save (toJson) omits category keys entirely', () {
+      final val =
+          store.accountsIn(AccountGroup.valuables).map((a) => a.id).toList();
+      final json = CustomOrder(accountOrder: {AccountGroup.valuables: val})
+          .toJson();
+      expect(json.containsKey('assets'), isFalse);
+      expect(json.containsKey('liabilities'), isFalse);
+      expect(json.keys, ['accounts']);
+      // One load→save cycle therefore cleans legacy keys out of stored JSON.
+      final reloaded = CustomOrder.fromStored(store, {
+        'assets': ['valuables'],
+        'accounts': {'valuables': val},
+      }).toJson();
+      expect(reloaded.containsKey('assets'), isFalse);
     });
   });
 

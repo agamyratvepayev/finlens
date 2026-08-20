@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
@@ -37,9 +39,16 @@ class ReorderableGroup<T> extends StatefulWidget {
     this.onDragEnd,
     this.scrollController,
     this.delay = const Duration(milliseconds: 500),
+    this.enabled = true,
   });
 
   final List<T> items;
+
+  /// When false, a long press does nothing — no lift, no haptic — and the rotor
+  /// `Move up/down` actions are absent. Used to disable dragging while a search
+  /// query narrows the list. Toggling this never remounts the rows, so search
+  /// open/close does not disturb them.
+  final bool enabled;
 
   /// Builds a row's visible content, including its own tap handlers.
   final Widget Function(BuildContext context, T item) itemBuilder;
@@ -85,6 +94,11 @@ class _ReorderableGroupState<T> extends State<ReorderableGroup<T>> {
   /// One key per row, used to measure the lifted row.
   List<GlobalKey> _keys = const [];
 
+  /// Drives continuous edge autoscroll: a repeating timer while the finger
+  /// rests in the edge margin, and the per-tick delta (0 = outside the margin).
+  Timer? _autoscrollTimer;
+  double _autoscrollDelta = 0;
+
   @override
   void initState() {
     super.initState();
@@ -94,7 +108,30 @@ class _ReorderableGroupState<T> extends State<ReorderableGroup<T>> {
   @override
   void didUpdateWidget(covariant ReorderableGroup<T> oldWidget) {
     super.didUpdateWidget(oldWidget);
+    // A drag computes its move against the list it started on. If the data
+    // changes underneath a live drag — a background refresh, an Undo firing, a
+    // store mutation — cancel it and commit nothing: any move now would be
+    // against a stale list. Element identity (not deep equality) is the right
+    // test: a plain rebuild hands back the same instances in the same order, so
+    // it does not trip; a reorder, insert or delete does.
+    if (_dragIndex != null && !_sameItems(oldWidget.items, widget.items)) {
+      _cancelDrag();
+    }
     if (widget.items.length != _keys.length) _syncKeys();
+  }
+
+  bool _sameItems(List<T> a, List<T> b) {
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (!identical(a[i], b[i])) return false;
+    }
+    return true;
+  }
+
+  @override
+  void dispose() {
+    _autoscrollTimer?.cancel();
+    super.dispose();
   }
 
   void _syncKeys() {
@@ -125,28 +162,55 @@ class _ReorderableGroupState<T> extends State<ReorderableGroup<T>> {
   void _endDrag() {
     final from = _dragIndex;
     final to = _insertIndex;
+    _stopAutoscroll();
     setState(() {
       _dragIndex = null;
       _dragSize = Size.zero;
     });
     widget.onDragEnd?.call();
     if (from == null) return;
+    // The list may have shrunk since the lift (guard against a stale index).
+    if (from >= _count) return;
     // Dropping just above or just below the origin is a no-op.
     if (to == from || to == from + 1) return;
+    // A completed move that actually changes the order gets a firmer landing
+    // haptic; no-ops above stay silent.
+    HapticFeedback.mediumImpact();
     widget.onReorder(widget.items[from], to);
   }
 
-  // ── Autoscroll ────────────────────────────────────────────────────────────
-  // Kept simple: nudge the parent scrollable when the finger nears a viewport
-  // edge, clamped to the scroll extent. The group is a single contiguous block
-  // in the list, so scrolling stays near it.
+  /// Abandons an in-flight drag without committing: clears the lift so the
+  /// natural `onDragEnd` from the gesture becomes a no-op, stops autoscroll and
+  /// resets the parent's dimming. `onDragEnd` is deferred a frame because this
+  /// runs inside `didUpdateWidget` (mid-build) and it drives parent setState.
+  void _cancelDrag() {
+    _dragIndex = null;
+    _dragSize = Size.zero;
+    _stopAutoscroll();
+    final cb = widget.onDragEnd;
+    if (cb != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => cb());
+    }
+  }
 
-  void _maybeAutoscroll(Offset globalPointer) {
+  // ── Autoscroll ────────────────────────────────────────────────────────────
+  // A timer, not a per-move nudge: while the finger rests inside the edge
+  // margin — even held perfectly still — the parent keeps scrolling, clamped to
+  // the scroll extent. The group is one contiguous block, so scrolling past it
+  // is harmless; the drop target still clamps to the group.
+
+  void _updateAutoscroll(Offset globalPointer) {
     final controller = widget.scrollController;
-    if (controller == null || !controller.hasClients) return;
+    if (controller == null || !controller.hasClients) {
+      _stopAutoscroll();
+      return;
+    }
     final scrollBox =
         controller.position.context.storageContext.findRenderObject();
-    if (scrollBox is! RenderBox) return;
+    if (scrollBox is! RenderBox) {
+      _stopAutoscroll();
+      return;
+    }
     final top = scrollBox.localToGlobal(Offset.zero).dy;
     final bottom = top + scrollBox.size.height;
     const margin = 64.0;
@@ -158,10 +222,35 @@ class _ReorderableGroupState<T> extends State<ReorderableGroup<T>> {
     } else if (globalPointer.dy > bottom - margin) {
       delta = step;
     }
-    if (delta == 0) return;
-    final next = (controller.offset + delta)
+    _autoscrollDelta = delta;
+    if (delta == 0) {
+      _stopAutoscroll();
+      return;
+    }
+    _autoscrollTimer ??= Timer.periodic(
+      const Duration(milliseconds: 16),
+      (_) => _tickAutoscroll(),
+    );
+  }
+
+  void _tickAutoscroll() {
+    final controller = widget.scrollController;
+    if (_dragIndex == null ||
+        _autoscrollDelta == 0 ||
+        controller == null ||
+        !controller.hasClients) {
+      _stopAutoscroll();
+      return;
+    }
+    final next = (controller.offset + _autoscrollDelta)
         .clamp(0.0, controller.position.maxScrollExtent);
-    controller.jumpTo(next);
+    if (next != controller.offset) controller.jumpTo(next);
+  }
+
+  void _stopAutoscroll() {
+    _autoscrollTimer?.cancel();
+    _autoscrollTimer = null;
+    _autoscrollDelta = 0;
   }
 
   // ── Rotor (non-gesture) moves ─────────────────────────────────────────────
@@ -199,12 +288,14 @@ class _ReorderableGroupState<T> extends State<ReorderableGroup<T>> {
   Widget _row(int index) {
     final item = widget.items[index];
 
+    // No rotor moves when dragging is disabled (an active search): the gesture
+    // affordance and its accessible equivalent go together.
     final actions = <CustomSemanticsAction, VoidCallback>{};
-    if (index > 0) {
+    if (widget.enabled && index > 0) {
       actions[const CustomSemanticsAction(label: 'Move up')] =
           () => _rotorMove(index, -1);
     }
-    if (index < _count - 1) {
+    if (widget.enabled && index < _count - 1) {
       actions[const CustomSemanticsAction(label: 'Move down')] =
           () => _rotorMove(index, 1);
     }
@@ -221,7 +312,7 @@ class _ReorderableGroupState<T> extends State<ReorderableGroup<T>> {
         // Only react to this group's own drags, never a nested/sibling group's.
         onWillAcceptWithDetails: (d) => d.data.tag == _tag,
         onMove: (details) {
-          _maybeAutoscroll(details.offset);
+          _updateAutoscroll(details.offset);
           final box = _keys[index].currentContext?.findRenderObject();
           if (box is! RenderBox) return;
           final localY = box.globalToLocal(details.offset).dy;
@@ -231,12 +322,15 @@ class _ReorderableGroupState<T> extends State<ReorderableGroup<T>> {
           data: _ReorderToken(_tag, index),
           axis: Axis.vertical,
           delay: widget.delay,
+          // 0 disables the lift entirely (search active) without rebuilding the
+          // subtree, so the row's own tap/scroll gestures win untouched.
+          maxSimultaneousDrags: widget.enabled ? null : 0,
           // The delay is what lets a fast vertical flick scroll instead of lift.
           feedback: _proxy(context, item),
           // The origin collapses; the dashed placeholder carries the position.
           childWhenDragging: const SizedBox.shrink(),
           onDragStarted: () => _startDrag(index),
-          onDragUpdate: (d) => _maybeAutoscroll(d.globalPosition),
+          onDragUpdate: (d) => _updateAutoscroll(d.globalPosition),
           onDragEnd: (_) => _endDrag(),
           child: widget.itemBuilder(context, item),
         ),
