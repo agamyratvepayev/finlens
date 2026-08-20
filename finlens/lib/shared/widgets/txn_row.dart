@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/models/models.dart';
 import '../../core/store/app_store.dart';
 import '../../core/utils/formatters.dart';
+import '../../core/utils/search_fold.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/app_typography.dart';
@@ -10,16 +11,26 @@ import 'amount_text.dart';
 import 'app_card.dart';
 import 'destructive_sheet.dart';
 import 'swipe_actions.dart';
-import 'transfer_title.dart';
 
-/// One Ledger line. Shared by Ledger (2.1) and Account Detail (1.4), including
-/// the swipe actions (2.2).
+/// One Ledger line. The main Ledger tab (2.1) drives it with the description
+/// toggle and per-row after-balances; the account-detail *perspective*
+/// (`perspectiveAccountId` + `runningBalance`) is preserved unchanged for the
+/// screens/tests that still use it.
+///
+/// Layout (spec §4): two compact lines by default —
+///   line 1  `title ————— amount`
+///   line 2  `account #tags ——— balance` (one secondary figure, intrinsic width)
+/// and, when [showDescription] is on (or a search matched the note), a third
+/// description line that grows in with an `AnimatedSize`.
 class TxnRow extends StatelessWidget {
   const TxnRow({
     super.key,
     required this.txn,
     this.runningBalance,
     this.perspectiveAccountId,
+    this.afterBalance,
+    this.showDescription = false,
+    this.searchQuery,
     required this.onTap,
     required this.onEdit,
     required this.onCopy,
@@ -28,38 +39,517 @@ class TxnRow extends StatelessWidget {
 
   final Txn txn;
 
-  /// Account Detail shows the balance after each entry under the amount.
+  /// Account Detail shows the balance after each entry. When supplied (the
+  /// perspective callers) it wins over [afterBalance] — the row never computes
+  /// a second balance (spec §4.5).
   final double? runningBalance;
 
-  /// Which side of the entry we are looking from — decides the sign shown.
+  /// Which side of the entry we are looking from — decides the sign shown and
+  /// drops the (already-stated) account from line 2.
   final String? perspectiveAccountId;
+
+  /// The displayed account's balance immediately after this transaction, as
+  /// assembled once for the whole month by `AppStore.ledgerAfterBalances`
+  /// (spec §4.5). Used by the main Ledger; ignored when [runningBalance] is set.
+  final double? afterBalance;
+
+  /// Whether the global descriptions toggle is on (spec §4.4). A noted row gains
+  /// its third line; noteless rows are unaffected.
+  final bool showDescription;
+
+  /// The active search query, already folded (spec §4.4). A row whose note
+  /// matched reveals its description even with the toggle off, and matched text
+  /// is highlighted on every line.
+  final String? searchQuery;
 
   final VoidCallback onTap;
   final VoidCallback onEdit;
   final VoidCallback onCopy;
   final VoidCallback onDelete;
 
-  // Icon tile side and its gap to the text column. The meta line is indented by
-  // their sum (44pt) so its left edge lines up with the text column above it —
-  // it is not indented to the icon's left edge.
-  // Spec §6 — denser rows: a 30pt tile (was 34) and an 8pt vertical padding
-  // (below). The gap to the text column stays 10. No font size, weight or
-  // colour changes anywhere in this widget — only the air around the text.
-  static const double _iconSize = 30;
-  static const double _iconGap = 10;
+  // Denser geometry (spec §4.1): a 26pt tile (was 30), a 9pt gap to the text
+  // column, 5pt vertical padding. The text column's left edge — and any line
+  // indented to it — sits at _iconSize + _iconGap.
+  static const double _iconSize = 26;
+  static const double _iconRadius = 7;
+  static const double _iconGlyph = 13;
+  static const double _iconGap = 9;
+  static const double _vPad = 5;
+
+  static const _titleStyle = TextStyle(
+    fontSize: 14,
+    fontWeight: FontWeight.w600,
+    height: 1.15,
+    color: AppColors.textPrimary,
+  );
+  static const _accountStyle = TextStyle(
+    fontSize: 10.5,
+    height: 1.15,
+    color: AppColors.textTertiary,
+  );
+  static const _tagStyle = TextStyle(
+    fontSize: 10.5,
+    height: 1.15,
+    color: AppColors.accentLight,
+  );
+  static const _balanceStyle = TextStyle(
+    fontSize: 10.5,
+    height: 1.15,
+    fontFeatures: [FontFeature.tabularFigures()],
+  );
+  static const _descStyle = TextStyle(
+    fontSize: 10.5,
+    height: 1.15,
+    color: AppColors.textSecondary,
+  );
 
   @override
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
-    // A transfer is neither a gain nor a loss: it renders on its own two-line,
-    // neutral-coloured layout (spec §2/§3), never as a category row. Every other
-    // type keeps the standard rendering below, byte-for-byte unchanged.
-    if (txn.type == TxnType.transfer) return _buildTransfer(context, store);
-    final hasDescription = txn.note.isNotEmpty;
-    final title = _titleWidget(store);
-    final (primary, secondary) = _amountParts(store);
-    final meta = _metaLine(store);
+    if (txn.type == TxnType.transfer) {
+      return perspectiveAccountId != null
+          ? _swipeWrap(_buildTransferDetail(store))
+          : _swipeWrap(_buildTransferLedger(store));
+    }
+    return _swipeWrap(_buildStandard(store));
+  }
 
+  /// The affected account's after-balance for this row — the caller's
+  /// [runningBalance] (perspective) wins, else the month-assembled
+  /// [afterBalance]. Null when neither is available.
+  double? get _balance => runningBalance ?? afterBalance;
+
+  // ── Standard rows: expense / income / rebalance ────────────────────────────
+
+  Widget _buildStandard(AppStore store) {
+    final signed = _signedAmount(store);
+    final amountColor = txn.type == TxnType.rebalance
+        ? (txn.amount >= 0 ? AppColors.positive : AppColors.negative)
+        : (signed >= 0 ? AppColors.positive : AppColors.negative);
+
+    final amount = AmountText(
+      signed,
+      currency: txn.currency,
+      signless: true,
+      color: amountColor,
+      forceDecimals: signed.abs() % 1 != 0,
+    );
+
+    final account = _accountLabel(store);
+    final balance = _balance;
+
+    // One secondary figure on line 2 (spec §4.3): a rebalance's "no cash · value"
+    // caption, otherwise the remaining balance.
+    final Widget? secondary = txn.type == TxnType.rebalance
+        ? _noCashValue(store, balance)
+        : (balance != null ? _balanceWidget(store, balance) : null);
+
+    final hasLine2 =
+        account.isNotEmpty || txn.tags.isNotEmpty || secondary != null;
+
+    return Semantics(
+      label: _standardSemantics(store, signed, account, balance),
+      excludeSemantics: true,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              IconTile(_icon(store),
+                  color: _color(store),
+                  size: _iconSize,
+                  iconSize: _iconGlyph),
+              const SizedBox(width: _iconGap),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(child: _highlighted(_title(store), _titleStyle)),
+                        const SizedBox(width: Insets.sm),
+                        amount,
+                      ],
+                    ),
+                    if (hasLine2) ...[
+                      const SizedBox(height: 1),
+                      _MetaLine(
+                        account: account,
+                        tags: txn.tags,
+                        secondary: secondary,
+                        query: searchQuery,
+                        accountStyle: _accountStyle,
+                        tagStyle: _tagStyle,
+                      ),
+                    ],
+                    _descriptionLine(),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Transfers: main Ledger (spec §4.6) ─────────────────────────────────────
+
+  Widget _buildTransferLedger(AppStore store) {
+    final parties = store.transferParties(txn);
+    final fromCur = store.accountById(txn.fromRef)?.currency ?? txn.currency;
+    final toCur = store.accountById(txn.toRef)?.currency ?? txn.currency;
+    final crossCurrency =
+        fromCur != toCur || (txn.toAmount != null && txn.toAmount != txn.amount);
+    final balance = _balance;
+
+    // Line 1: the source account name + the sent amount, both neutral. The
+    // sent amount is denominated in the transaction's own currency.
+    final amount = Text(
+      money(txn.amount,
+          currency: txn.currency, signless: true, masked: store.masked),
+      style: AppText.amount.copyWith(color: AppColors.transferAmount),
+    );
+
+    // Line-2 secondary, by priority (spec §4.3): a differing destination amount,
+    // then a fee, then the destination's after-balance.
+    final Widget? secondary;
+    if (crossCurrency) {
+      secondary = Text(
+        money(txn.toAmount ?? txn.amount,
+            currency: toCur, signless: true, masked: store.masked),
+        style: _balanceStyle.copyWith(color: AppColors.transfer),
+      );
+    } else if (txn.fee != null && txn.fee! > 0) {
+      secondary = Text(
+        'fee ${money(txn.fee!, currency: fromCur, masked: store.masked)}',
+        style: _balanceStyle.copyWith(color: AppColors.textTertiary),
+      );
+    } else if (balance != null) {
+      secondary = _balanceWidget(store, balance);
+    } else {
+      secondary = null;
+    }
+
+    return Semantics(
+      label: _transferSemantics(store, parties, balance),
+      excludeSemantics: true,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _transferTile(Icons.swap_horiz_rounded),
+          const SizedBox(width: _iconGap),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(parties.from,
+                          style: _titleStyle
+                              .copyWith(color: AppColors.transferAmount),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis),
+                    ),
+                    const SizedBox(width: Insets.sm),
+                    amount,
+                  ],
+                ),
+                const SizedBox(height: 1),
+                // ↘ destination + tags + secondary. The destination takes the
+                // account's protected role in the overflow order (spec §4.6).
+                Row(
+                  children: [
+                    const Padding(
+                      padding: EdgeInsets.only(top: 1),
+                      child: Icon(Icons.south_east_rounded,
+                          size: 10, color: AppColors.transfer),
+                    ),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: _MetaLine(
+                        account: parties.to,
+                        tags: txn.tags,
+                        secondary: secondary,
+                        query: searchQuery,
+                        accountStyle:
+                            _accountStyle.copyWith(color: AppColors.transfer),
+                        tagStyle: _tagStyle,
+                      ),
+                    ),
+                  ],
+                ),
+                // The description aligns under the destination name, not the ↘.
+                _descriptionLine(indent: 14),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Transfers: account-detail perspective (preserved) ──────────────────────
+
+  Widget _buildTransferDetail(AppStore store) {
+    final parties = store.transferParties(txn);
+    final outgoing = txn.fromRef == perspectiveAccountId;
+    final toCur = store.accountById(txn.toRef)?.currency ?? txn.currency;
+
+    final glyph =
+        outgoing ? Icons.north_east_rounded : Icons.south_west_rounded;
+    final other = outgoing ? '→ ${parties.to}' : '← ${parties.from}';
+
+    final double topValue =
+        outgoing ? txn.amount : (txn.toAmount ?? txn.amount);
+    // The sent leg is in the transaction's currency; the received leg is in the
+    // destination account's currency.
+    final String topCurrency = outgoing ? txn.currency : toCur;
+    final amountTop = Text(
+      money(topValue, currency: topCurrency, signless: true, masked: store.masked),
+      style: AppText.amount.copyWith(color: AppColors.transferAmount),
+    );
+
+    final note = txn.note.trim();
+    final balance = _balance;
+    final Widget? line2Left = note.isEmpty
+        ? null
+        : Text(note,
+            style: _descStyle, maxLines: 1, overflow: TextOverflow.ellipsis);
+    final Widget? line2Right =
+        balance == null ? null : _balanceWidget(store, balance);
+    final hasLine2 = line2Left != null || line2Right != null;
+
+    return Semantics(
+      label: _transferSemantics(store, parties, balance),
+      excludeSemantics: true,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          _transferTile(glyph),
+          const SizedBox(width: _iconGap),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(other,
+                          style: _titleStyle,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis),
+                    ),
+                    const SizedBox(width: Insets.sm),
+                    amountTop,
+                  ],
+                ),
+                if (hasLine2) ...[
+                  const SizedBox(height: 1),
+                  Row(
+                    children: [
+                      Expanded(child: line2Left ?? const SizedBox.shrink()),
+                      if (line2Right != null) ...[
+                        const SizedBox(width: Insets.sm),
+                        line2Right,
+                      ],
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _transferTile(IconData glyph) => Container(
+        width: _iconSize,
+        height: _iconSize,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: AppColors.transferTileBg,
+          borderRadius: BorderRadius.circular(_iconRadius),
+        ),
+        child: Icon(glyph, size: _iconGlyph, color: AppColors.transferGlyph),
+      );
+
+  // ── The third line (description) ───────────────────────────────────────────
+
+  /// The description line, behind the toggle. Grows/shrinks with an
+  /// `AnimatedSize` so the list never jumps (spec §4.4). Absent entirely for a
+  /// noteless row; forced open (with the match highlighted) when a search hit
+  /// the note even with the toggle off.
+  Widget _descriptionLine({double indent = 0}) {
+    final note = txn.note.trim();
+    final q = searchQuery;
+    final noteMatched =
+        q != null && q.isNotEmpty && foldSearch(note).contains(q);
+    final open = note.isNotEmpty && (showDescription || noteMatched);
+
+    return AnimatedSize(
+      duration: const Duration(milliseconds: 180),
+      curve: Curves.easeOut,
+      alignment: Alignment.topLeft,
+      child: open
+          ? Padding(
+              padding: EdgeInsets.only(top: 1, left: indent),
+              child: AnimatedOpacity(
+                opacity: 1,
+                duration: const Duration(milliseconds: 180),
+                child: _highlighted(note, _descStyle),
+              ),
+            )
+          : const SizedBox(width: double.infinity),
+    );
+  }
+
+  // ── Secondary figures ──────────────────────────────────────────────────────
+
+  /// The remaining balance (spec §4.5): tertiary when non-negative, and — the
+  /// balance-like exception — red with its minus sign when below zero.
+  Widget _balanceWidget(AppStore store, double value) => AmountText(
+        value,
+        style: _balanceStyle,
+        color: value < 0 ? AppColors.negative : AppColors.textTertiary,
+      );
+
+  /// A rebalance carries no cash; its secondary is the caption plus the asset's
+  /// new value as one muted run (spec §4.3).
+  Widget _noCashValue(AppStore store, double? value) {
+    final tail = value == null ? '' : ' · ${money(value, masked: store.masked)}';
+    return Text('no cash$tail',
+        style: _balanceStyle.copyWith(color: AppColors.textTertiary));
+  }
+
+  // ── Semantics ──────────────────────────────────────────────────────────────
+
+  String _standardSemantics(
+      AppStore store, double signed, String account, double? balance) {
+    final parts = <String>[
+      _directionWord(signed),
+      money(signed, currency: txn.currency, signless: true, masked: store.masked),
+    ];
+    if (balance != null) {
+      final where = account.isNotEmpty ? '$account ' : '';
+      parts.add(
+          '${where}balance ${money(balance, currency: txn.currency, masked: store.masked)}');
+    }
+    return parts.join(', ');
+  }
+
+  String _transferSemantics(
+      AppStore store, ({String from, String to}) parties, double? balance) {
+    final base = 'Transfer from ${parties.from} to ${parties.to}, '
+        '${money(txn.amount, currency: txn.currency, signless: true, masked: store.masked)}';
+    if (balance == null) return base;
+    return '$base, ${parties.to} balance '
+        '${money(balance, currency: txn.currency, masked: store.masked)}';
+  }
+
+  // ── Resolvers (unchanged semantics) ────────────────────────────────────────
+
+  String _accountLabel(AppStore store) {
+    if (perspectiveAccountId != null) return '';
+    return switch (txn.type) {
+      TxnType.expense => store.refName(txn.fromRef),
+      TxnType.income => store.refName(txn.toRef),
+      TxnType.transfer => '',
+      TxnType.rebalance => 'Revaluation',
+    };
+  }
+
+  String _directionWord(double signed) => switch (txn.type) {
+        TxnType.expense => 'Expense',
+        TxnType.income => 'Income',
+        TxnType.rebalance => 'Revaluation',
+        TxnType.transfer => signed < 0 ? 'Transfer out' : 'Transfer in',
+      };
+
+  double _signedAmount(AppStore store) {
+    if (perspectiveAccountId != null) {
+      if (txn.toRef == perspectiveAccountId && txn.type != TxnType.expense) {
+        return txn.toAmount ?? txn.amount;
+      }
+      return -txn.amount;
+    }
+    return switch (txn.type) {
+      TxnType.expense => -txn.amount,
+      TxnType.income => txn.amount,
+      TxnType.rebalance => txn.amount,
+      TxnType.transfer => txn.amount,
+    };
+  }
+
+  String _title(AppStore store) => switch (txn.type) {
+        TxnType.expense => store.refName(txn.toRef),
+        TxnType.income => store.refName(txn.fromRef),
+        TxnType.transfer => 'Transfer',
+        TxnType.rebalance => store.refName(txn.toRef),
+      };
+
+  IconData _icon(AppStore store) => switch (txn.type) {
+        TxnType.expense => store.refIcon(txn.toRef),
+        TxnType.income => store.refIcon(txn.fromRef),
+        TxnType.transfer => Icons.swap_horiz_rounded,
+        TxnType.rebalance => Icons.donut_large_rounded,
+      };
+
+  Color _color(AppStore store) => switch (txn.type) {
+        TxnType.expense => store.refColor(txn.toRef),
+        TxnType.income => store.refColor(txn.fromRef),
+        TxnType.transfer => AppColors.transfer,
+        TxnType.rebalance => AppColors.rebalance,
+      };
+
+  // ── Search highlight (replicated for the main Ledger's rows) ───────────────
+
+  /// [text] in [style], with each occurrence of the folded [searchQuery]
+  /// background-highlighted. Falls back to a plain ellipsizing [Text] when there
+  /// is no query or no match, so a row outside search mode is unchanged.
+  Widget _highlighted(String text, TextStyle style) {
+    final query = searchQuery;
+    if (query == null || query.isEmpty) {
+      return Text(text,
+          style: style, maxLines: 1, overflow: TextOverflow.ellipsis);
+    }
+    final folded = foldSearch(text);
+    var at = folded.indexOf(query);
+    if (at < 0) {
+      return Text(text,
+          style: style, maxLines: 1, overflow: TextOverflow.ellipsis);
+    }
+    final mark = TextStyle(
+      color: Colors.white,
+      backgroundColor: AppColors.accent.withValues(alpha: 0.3),
+    );
+    final spans = <TextSpan>[];
+    var cursor = 0;
+    while (at >= 0) {
+      if (at > cursor) spans.add(TextSpan(text: text.substring(cursor, at)));
+      final end = at + query.length;
+      spans.add(TextSpan(text: text.substring(at, end), style: mark));
+      cursor = end;
+      at = folded.indexOf(query, cursor);
+    }
+    if (cursor < text.length) spans.add(TextSpan(text: text.substring(cursor)));
+    return Text.rich(
+      TextSpan(style: style, children: spans),
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+    );
+  }
+
+  // ── Chrome: swipe actions + tap target ─────────────────────────────────────
+
+  Widget _swipeWrap(Widget body) {
     return SwipeActions(
       actions: [
         SwipeActionItem(
@@ -85,473 +575,169 @@ class TxnRow extends StatelessWidget {
         onTap: onTap,
         // Both a tap and a swipe target: never smaller than 44pt. No fixed
         // height beyond that floor — everything else is padding + intrinsic
-        // content, so the row grows at large text scales rather than clipping.
+        // content, so rows grow at large text scales rather than clipping.
         child: ConstrainedBox(
           constraints: const BoxConstraints(minHeight: 44),
           child: Padding(
             padding: const EdgeInsets.symmetric(
               horizontal: Insets.md,
-              vertical: 8,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // ── Top block: icon tile + the two-line text/figure column.
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    IconTile(_icon(store),
-                        color: _color(store), size: _iconSize, iconSize: 15),
-                    const SizedBox(width: _iconGap),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          // Line 1: title | amount. With no description the
-                          // balance moves up beside the amount here.
-                          Row(
-                            children: [
-                              Expanded(child: title),
-                              const SizedBox(width: Insets.sm),
-                              if (hasDescription || secondary == null)
-                                primary
-                              else
-                                Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    primary,
-                                    const SizedBox(width: 6),
-                                    secondary,
-                                  ],
-                                ),
-                            ],
-                          ),
-                          if (hasDescription) ...[
-                            const SizedBox(height: 1),
-                            // Line 2: description | balance.
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    txn.note,
-                                    style: AppText.rowSubtitle.copyWith(height: 1.15),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                                if (secondary != null) ...[
-                                  const SizedBox(width: Insets.sm),
-                                  secondary,
-                                ],
-                              ],
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                // ── Meta line: account · tags, full width, left edge aligned
-                // with the text column above. Nothing sits to its right, so the
-                // account name stops sharing the narrow amount-column width.
-                if (meta != null) ...[
-                  const SizedBox(height: 2),
-                  Padding(
-                    padding: const EdgeInsets.only(left: _iconSize + _iconGap),
-                    child: meta,
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  /// A transfer's title is "{source} → {destination}" (both sides ellipsize
-  /// together); every other type keeps its single-name title.
-  Widget _titleWidget(AppStore store) {
-    if (txn.type == TxnType.transfer) {
-      return TransferTitleText(
-        from: store.transferParties(txn).from,
-        to: store.transferParties(txn).to,
-        style: AppText.rowTitle,
-      );
-    }
-    return Text(
-      _title(store),
-      style: AppText.rowTitle.copyWith(height: 1.2),
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
-    );
-  }
-
-  /// The row's right column: (primary, secondary). Primary is the amount;
-  /// secondary is the running balance, the "no cash" flag, or a transfer fee —
-  /// null when there is nothing to show beneath the amount.
-  (Widget, Widget?) _amountParts(AppStore store) {
-    // Spec 2.1 — a transfer reads "FROM amount → TO amount"; the fee, when any,
-    // is the secondary figure.
-    if (txn.type == TxnType.transfer && perspectiveAccountId == null) {
-      final primary = Semantics(
-        label: 'Transfer from ${store.transferParties(txn).from} '
-            'to ${store.transferParties(txn).to}, '
-            '${money(txn.amount, currency: txn.currency, signless: true, masked: store.masked)}',
-        excludeSemantics: true,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            AmountText(
-              txn.amount,
-              currency: txn.currency,
-              style: AppText.amount.copyWith(color: AppColors.textSecondary),
-            ),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 3),
-              child: Icon(
-                Icons.arrow_right_alt_rounded,
-                size: 15,
-                color: AppColors.textTertiary,
-              ),
-            ),
-            AmountText(
-              txn.toAmount ?? txn.amount,
-              currency: store.accountById(txn.toRef)?.currency ?? txn.currency,
-              color: AppColors.info,
-            ),
-          ],
-        ),
-      );
-      final Widget? secondary = (txn.fee != null && txn.fee! > 0)
-          ? Text(
-              'fee ${money(txn.fee!, currency: txn.currency)}',
-              style: AppText.caption.copyWith(fontSize: 11),
-            )
-          : null;
-      return (primary, secondary);
-    }
-
-    final signed = _signedAmount(store);
-    final color = txn.type == TxnType.rebalance
-        ? (txn.amount >= 0 ? AppColors.positive : AppColors.negative)
-        : (signed >= 0 ? AppColors.positive : AppColors.negative);
-
-    // Unsigned — colour carries direction (spec "Yön ≠ renk"). The sign would
-    // be a second, redundant cue; for colour-blind and screen-reader users the
-    // semantics label names the direction in words instead. One label per row.
-    final primary = Semantics(
-      label: txn.type == TxnType.transfer
-          ? 'Transfer from ${store.transferParties(txn).from} '
-              'to ${store.transferParties(txn).to}, '
-              '${money(signed, currency: txn.currency, signless: true, masked: store.masked)}'
-          : '${_directionWord(signed)}, '
-              '${money(signed, currency: txn.currency, signless: true, masked: store.masked)}',
-      excludeSemantics: true,
-      child: AmountText(
-        signed,
-        currency: txn.currency,
-        signless: true,
-        color: color,
-        forceDecimals: signed.abs() % 1 != 0,
-      ),
-    );
-
-    final Widget? secondary = txn.type == TxnType.rebalance
-        ? Text(
-            'no cash',
-            style: AppText.caption.copyWith(
-              fontSize: 11,
-              color: AppColors.textTertiary,
-            ),
-          )
-        : (runningBalance != null
-            ? AmountText(
-                runningBalance!,
-                style: AppText.caption.copyWith(
-                  fontSize: 11,
-                  color: AppColors.textTertiary,
-                ),
-              )
-            : null);
-
-    return (primary, secondary);
-  }
-
-  /// The meta line — account name and tags — or null when the row carries
-  /// neither. The account is dropped where the screen already states it (an
-  /// account-detail perspective) and for transfers (whose title names both
-  /// accounts). The tags sit last and stay fixed, so the account ellipsizes
-  /// first when the two compete for width.
-  Widget? _metaLine(AppStore store) {
-    final account = _accountLabel(store);
-    final tags = txn.tags.map((t) => '#$t').join(' · ');
-    if (account.isEmpty && tags.isEmpty) return null;
-
-    final style = AppText.caption.copyWith(
-      fontSize: 11,
-      color: AppColors.textTertiary,
-    );
-    return Row(
-      children: [
-        if (account.isNotEmpty)
-          Flexible(
-            child: Text(
-              account,
-              style: style,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        if (account.isNotEmpty && tags.isNotEmpty) Text(' · ', style: style),
-        if (tags.isNotEmpty)
-          Text(tags, style: style, maxLines: 1, overflow: TextOverflow.ellipsis),
-      ],
-    );
-  }
-
-  String _accountLabel(AppStore store) {
-    // An account-detail screen already states the account in its header, so
-    // repeating it on every row is noise — drop it there.
-    if (perspectiveAccountId != null) return '';
-    return switch (txn.type) {
-      TxnType.expense => store.refName(txn.fromRef),
-      TxnType.income => store.refName(txn.toRef),
-      // The "{from} → {to}" path lives in the title, so the meta line carries no
-      // account for a transfer — only its tags, if any.
-      TxnType.transfer => '',
-      TxnType.rebalance => 'Revaluation',
-    };
-  }
-
-  /// Direction in words for the amount's semantics label — the only carrier of
-  /// direction left once the sign is gone. A transfer reads out/in by the side
-  /// the running-balance perspective is looking from.
-  String _directionWord(double signed) => switch (txn.type) {
-        TxnType.expense => 'Expense',
-        TxnType.income => 'Income',
-        TxnType.rebalance => 'Revaluation',
-        TxnType.transfer => signed < 0 ? 'Transfer out' : 'Transfer in',
-      };
-
-  double _signedAmount(AppStore store) {
-    if (perspectiveAccountId != null) {
-      if (txn.toRef == perspectiveAccountId && txn.type != TxnType.expense) {
-        return txn.toAmount ?? txn.amount;
-      }
-      return -txn.amount;
-    }
-    return switch (txn.type) {
-      TxnType.expense => -txn.amount,
-      TxnType.income => txn.amount,
-      TxnType.rebalance => txn.amount,
-      TxnType.transfer => txn.amount,
-    };
-  }
-
-  String _title(AppStore store) {
-    return switch (txn.type) {
-      TxnType.expense => store.refName(txn.toRef),
-      TxnType.income => store.refName(txn.fromRef),
-      TxnType.transfer => 'Transfer',
-      TxnType.rebalance => store.refName(txn.toRef),
-    };
-  }
-
-  IconData _icon(AppStore store) {
-    return switch (txn.type) {
-      TxnType.expense => store.refIcon(txn.toRef),
-      TxnType.income => store.refIcon(txn.fromRef),
-      TxnType.transfer => Icons.swap_horiz_rounded,
-      TxnType.rebalance => Icons.donut_large_rounded,
-    };
-  }
-
-  Color _color(AppStore store) {
-    return switch (txn.type) {
-      TxnType.expense => store.refColor(txn.toRef),
-      TxnType.income => store.refColor(txn.fromRef),
-      TxnType.transfer => AppColors.transfer,
-      TxnType.rebalance => AppColors.rebalance,
-    };
-  }
-
-  /// Spec §2/§3 — a transfer's own two-line, neutral-coloured row. In an
-  /// all/group ledger both account lines show (source, then `→ destination`);
-  /// on an account-detail perspective it collapses to the counterpart alone
-  /// with a directional glyph and keeps the note. The tile and amount stay
-  /// neutral throughout: colour carries good/bad, and a transfer is neither.
-  Widget _buildTransfer(BuildContext context, AppStore store) {
-    final parties = store.transferParties(txn);
-    final onDetail = perspectiveAccountId != null;
-    final outgoing = !onDetail || txn.fromRef == perspectiveAccountId;
-
-    final fromCur = store.accountById(txn.fromRef)?.currency ?? txn.currency;
-    final toCur = store.accountById(txn.toRef)?.currency ?? txn.currency;
-    final crossCurrency = fromCur != toCur;
-
-    // Line 1: the counterpart on an account detail, else the source account.
-    final IconData glyph;
-    final Widget line1Title;
-    if (onDetail) {
-      glyph = outgoing
-          ? Icons.north_east_rounded
-          : Icons.south_west_rounded;
-      final other = outgoing ? '→ ${parties.to}' : '← ${parties.from}';
-      line1Title = Text(other,
-          style: AppText.rowTitle.copyWith(height: 1.2),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis);
-    } else {
-      glyph = Icons.swap_horiz_rounded;
-      line1Title = Text(parties.from,
-          style: AppText.rowTitle.copyWith(height: 1.2),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis);
-    }
-
-    // Line-1 amount. On an account detail it is this account's own leg; in a
-    // full ledger it is the sent amount in the source currency.
-    final double topValue = onDetail
-        ? (outgoing ? txn.amount : (txn.toAmount ?? txn.amount))
-        : txn.amount;
-    final String topCurrency = onDetail ? (outgoing ? fromCur : toCur) : fromCur;
-    final amountTop = Text(
-      money(topValue,
-          currency: topCurrency, signless: true, masked: store.masked),
-      style: AppText.amount.copyWith(color: AppColors.transferAmount),
-    );
-
-    // Line 2.
-    Widget? line2Left;
-    Widget? line2Right;
-    if (onDetail) {
-      // §3 — the note (when any) on the left, this account's running balance on
-      // the right. The other side's figure belongs on the detail screen.
-      final note = txn.note.trim();
-      if (note.isNotEmpty) {
-        line2Left = Text(note,
-            style: AppText.rowSubtitle.copyWith(height: 1.15),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis);
-      }
-      line2Right = runningBalance == null
-          ? null
-          : AmountText(runningBalance!,
-              style: AppText.caption
-                  .copyWith(fontSize: 11, color: AppColors.textTertiary));
-    } else {
-      // §2 — the destination on the left; the note is deliberately dropped to
-      // hold the row at two lines and protect list density.
-      line2Left = Text('→ ${parties.to}',
-          style: AppText.rowTitle
-              .copyWith(color: AppColors.textSecondary, height: 1.2),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis);
-      line2Right = crossCurrency
-          // Cross-currency: the received amount, its own currency, matching the
-          // top line's size and neutral colour. No running balance to show.
-          ? Text(
-              money(txn.toAmount ?? txn.amount,
-                  currency: toCur, signless: true, masked: store.masked),
-              style: AppText.amount.copyWith(color: AppColors.transferAmount),
-            )
-          : (runningBalance == null
-              ? null
-              : AmountText(runningBalance!,
-                  style: AppText.caption.copyWith(
-                      fontSize: 11, color: AppColors.textTertiary)));
-    }
-
-    final hasLine2 = line2Left != null || line2Right != null;
-
-    final body = Semantics(
-      label: 'Transfer from ${parties.from} to ${parties.to}, '
-          '${money(txn.amount, currency: txn.currency, signless: true, masked: store.masked)}',
-      excludeSemantics: true,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Container(
-            width: _iconSize,
-            height: _iconSize,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: AppColors.transferTileBg,
-              borderRadius: BorderRadius.circular(_iconSize * 0.3),
-            ),
-            child: Icon(glyph, size: _iconSize * 0.5,
-                color: AppColors.transferGlyph),
-          ),
-          const SizedBox(width: _iconGap),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  children: [
-                    Expanded(child: line1Title),
-                    const SizedBox(width: Insets.sm),
-                    amountTop,
-                  ],
-                ),
-                if (hasLine2) ...[
-                  const SizedBox(height: 1),
-                  Row(
-                    children: [
-                      Expanded(child: line2Left ?? const SizedBox.shrink()),
-                      if (line2Right != null) ...[
-                        const SizedBox(width: Insets.sm),
-                        line2Right,
-                      ],
-                    ],
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-
-    return SwipeActions(
-      actions: [
-        SwipeActionItem(
-          icon: Icons.edit_rounded,
-          label: 'Edit',
-          color: AppColors.surfaceHigh,
-          onTap: onEdit,
-        ),
-        SwipeActionItem(
-          icon: Icons.copy_rounded,
-          label: 'Copy',
-          color: AppColors.info,
-          onTap: onCopy,
-        ),
-        SwipeActionItem(
-          icon: Icons.delete_rounded,
-          label: 'Delete',
-          color: AppColors.negative,
-          onTap: onDelete,
-        ),
-      ],
-      child: InkWell(
-        onTap: onTap,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 44),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: Insets.md,
-              vertical: 8,
+              vertical: _vPad,
             ),
             child: body,
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Line 2 — `account #tags ——— secondary`. The secondary figure is laid out at
+/// intrinsic width on the right and never moves; the account+tags share the
+/// rest, where the tag run collapses to `#first +n` before the account
+/// ellipsizes, and the account keeps ≥40% of the text column (spec §4.3).
+class _MetaLine extends StatelessWidget {
+  const _MetaLine({
+    required this.account,
+    required this.tags,
+    required this.secondary,
+    required this.query,
+    required this.accountStyle,
+    required this.tagStyle,
+  });
+
+  final String account;
+  final List<String> tags;
+  final Widget? secondary;
+  final String? query;
+  final TextStyle accountStyle;
+  final TextStyle tagStyle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: _AccountTags(
+            account: account,
+            tags: tags,
+            query: query,
+            accountStyle: accountStyle,
+            tagStyle: tagStyle,
+          ),
+        ),
+        if (secondary != null) ...[
+          const SizedBox(width: Insets.sm),
+          secondary!,
+        ],
+      ],
+    );
+  }
+}
+
+class _AccountTags extends StatelessWidget {
+  const _AccountTags({
+    required this.account,
+    required this.tags,
+    required this.query,
+    required this.accountStyle,
+    required this.tagStyle,
+  });
+
+  final String account;
+  final List<String> tags;
+  final String? query;
+  final TextStyle accountStyle;
+  final TextStyle tagStyle;
+
+  static double _measure(String s, TextStyle style, TextScaler scaler) {
+    final tp = TextPainter(
+      text: TextSpan(text: s, style: style),
+      textDirection: TextDirection.ltr,
+      maxLines: 1,
+      textScaler: scaler,
+    )..layout();
+    return tp.size.width;
+  }
+
+  Widget _text(String text, TextStyle style, {bool ellipsize = false}) {
+    final q = query;
+    if (q == null || q.isEmpty || !foldSearch(text).contains(q)) {
+      return Text(text,
+          style: style,
+          maxLines: 1,
+          overflow: ellipsize ? TextOverflow.ellipsis : TextOverflow.clip);
+    }
+    final folded = foldSearch(text);
+    final mark = TextStyle(
+      color: Colors.white,
+      backgroundColor: AppColors.accent.withValues(alpha: 0.3),
+    );
+    final spans = <TextSpan>[];
+    var cursor = 0;
+    var at = folded.indexOf(q);
+    while (at >= 0) {
+      if (at > cursor) spans.add(TextSpan(text: text.substring(cursor, at)));
+      final end = at + q.length;
+      spans.add(TextSpan(text: text.substring(at, end), style: mark));
+      cursor = end;
+      at = folded.indexOf(q, cursor);
+    }
+    if (cursor < text.length) spans.add(TextSpan(text: text.substring(cursor)));
+    return Text.rich(TextSpan(style: style, children: spans),
+        maxLines: 1,
+        overflow: ellipsize ? TextOverflow.ellipsis : TextOverflow.clip);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (account.isEmpty && tags.isEmpty) return const SizedBox.shrink();
+    final scaler = MediaQuery.textScalerOf(context);
+    const gap = 6.0;
+
+    if (tags.isEmpty) {
+      return _text(account, accountStyle, ellipsize: true);
+    }
+
+    final full = tags.map((t) => '#$t').join(' ');
+    final collapsed =
+        '#${tags.first}${tags.length > 1 ? ' +${tags.length - 1}' : ''}';
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final avail = constraints.maxWidth;
+        final accW =
+            account.isEmpty ? 0.0 : _measure(account, accountStyle, scaler);
+        final fullW = _measure(full, tagStyle, scaler);
+        final accGap = account.isEmpty ? 0.0 : gap;
+
+        // Everything fits at full length: account whole, all tags shown.
+        if (accW + accGap + fullW <= avail) {
+          return Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (account.isNotEmpty)
+                Flexible(child: _text(account, accountStyle, ellipsize: true)),
+              if (account.isNotEmpty) const SizedBox(width: gap),
+              _text(full, tagStyle),
+            ],
+          );
+        }
+
+        // Crowded: collapse the tag run first, cap it to ~60% so the account
+        // keeps ≥40% and ellipsizes only as a last resort.
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (account.isNotEmpty)
+              Flexible(child: _text(account, accountStyle, ellipsize: true)),
+            if (account.isNotEmpty) const SizedBox(width: gap),
+            ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: avail * 0.6),
+              child: _text(collapsed, tagStyle, ellipsize: true),
+            ),
+          ],
+        );
+      },
     );
   }
 }

@@ -105,11 +105,10 @@ void main() {
   });
 
   group('TxnRow transfer', () {
-    testWidgets('shows source then "→ destination" on two lines, no "Transfer"',
+    testWidgets('shows source on line 1 and "↘ destination" on line 2',
         (tester) async {
-      // Spec §2: the source names line 1, "→ {destination}" names line 2, the
-      // word "Transfer" appears nowhere, and the note is deliberately dropped
-      // to hold the row at two lines.
+      // Spec §4.6: the source names line 1, a ↘ glyph + destination name is
+      // line 2, "Transfer" appears nowhere, and (toggle off) the note is hidden.
       await tester.pumpWidget(_host(
         _store(),
         TxnRow(
@@ -122,10 +121,34 @@ void main() {
       ));
 
       expect(find.text('Main Checking'), findsOneWidget); // line 1: source
-      expect(find.text('→ Main Credit Card'), findsOneWidget); // line 2: dest
+      expect(find.text('Main Credit Card'), findsOneWidget); // line 2: dest
+      expect(find.text('→ Main Credit Card'), findsNothing); // no arrow prefix
       expect(find.text('Transfer'), findsNothing);
-      // The note is not shown on the Ledger transfer row.
+      expect(find.byIcon(Icons.south_east_rounded), findsOneWidget); // ↘
+      // The note is behind the toggle: absent when it is off.
       expect(find.text('Partial payment before statement'), findsNothing);
+    });
+
+    testWidgets('the destination balance shows on line 2; the note is line 3 '
+        'only when the toggle is on', (tester) async {
+      Widget row({required bool show}) => TxnRow(
+            txn: _transfer('a1', 'a2', note: 'Card debt payment'),
+            afterBalance: 11430, // destination balance after the transfer
+            showDescription: show,
+            onTap: () {},
+            onEdit: () {},
+            onCopy: () {},
+            onDelete: () {},
+          );
+
+      await tester.pumpWidget(_host(_store(), row(show: false)));
+      expect(find.text(r'$11,430'), findsOneWidget); // dest balance, both states
+      expect(find.text('Card debt payment'), findsNothing); // toggle off
+
+      await tester.pumpWidget(_host(_store(), row(show: true)));
+      await tester.pumpAndSettle();
+      expect(find.text(r'$11,430'), findsOneWidget);
+      expect(find.text('Card debt payment'), findsOneWidget); // line 3 open
     });
 
     testWidgets('the amount is the neutral transfer colour — never red/green',

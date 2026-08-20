@@ -37,7 +37,7 @@ class _AppShellState extends State<AppShell> {
         index: _tab.index,
         children: [
           BalanceScreen(scrollToTopSignal: _scrollToTopSignal),
-          const LedgerScreen(),
+          LedgerScreen(scrollToTopSignal: _scrollToTopSignal),
           const PlannerScreen(),
           const InsightScreen(),
           const MoreScreen(),

@@ -53,6 +53,35 @@ class AppStore extends ChangeNotifier {
     notifyListeners();
   }
 
+  // ── Ledger view preferences ───────────────────────────────────────────────
+  // Whether the Ledger tab reveals each noted row's description line. Unlike the
+  // filter/search lens, this is a lasting view preference: it persists and never
+  // resets on a month change. The Ledger reaches it through a screen-owned
+  // ValueNotifier (seeded from here at initState) and passes the flag to each
+  // row, so a toggle rebuilds only the list — never the header zone — which is
+  // why [setLedgerShowDescriptions] persists WITHOUT notifying: no store-derived
+  // figure changes, only a presentational flag consumed as a widget parameter.
+  static const _showDescriptionsKey = 'ledger_show_descriptions';
+  bool _ledgerShowDescriptions = false;
+  bool get ledgerShowDescriptions => _ledgerShowDescriptions;
+
+  void setLedgerShowDescriptions(bool value) {
+    _ledgerShowDescriptions = value;
+    unawaited(_saveShowDescriptions(value));
+  }
+
+  static Future<void> _saveShowDescriptions(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_showDescriptionsKey, value);
+  }
+
+  /// Restores the descriptions toggle before the first frame (called from
+  /// `main`), so the list never flashes the other state.
+  Future<void> loadLedgerPrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+    _ledgerShowDescriptions = prefs.getBool(_showDescriptionsKey) ?? false;
+  }
+
   /// The date the whole page is reported as of. null == live.
   ///
   /// Because every balance is derived rather than stored, pointing this at a
@@ -531,6 +560,56 @@ class AppStore extends ChangeNotifier {
     return balance;
   }
 
+  /// After-balances for every transaction's *displayed* account — the figure
+  /// the Ledger tab prints on each row's second line (spec §4.5). Keyed by txn
+  /// id → the balance of the account that row shows, immediately after that
+  /// transaction.
+  ///
+  /// One chronological pass over all transactions (O(n log n) to order, O(n) to
+  /// accumulate) builds the whole month's column at once — never an
+  /// O(all-transactions) scan per row. Cached and invalidated by any txn
+  /// mutation, alongside the same-key/account indexes, so a description toggle
+  /// (which mutates nothing) never recomputes it. Ordering and the `asOf`-blind
+  /// behaviour match [runningBalanceAt].
+  Map<String, double>? _afterBalanceCache;
+
+  Map<String, double> ledgerAfterBalances() {
+    final cached = _afterBalanceCache;
+    if (cached != null) return cached;
+
+    final bal = <String, double>{
+      for (final a in _accounts) a.id: a.startingBalance,
+    };
+    final ordered = List<Txn>.of(_txns)
+      ..sort((a, b) {
+        final byDate = a.date.compareTo(b.date);
+        return byDate != 0 ? byDate : a.id.compareTo(b.id);
+      });
+
+    final out = <String, double>{};
+    for (final t in ordered) {
+      // Apply the txn to every account it touches, then read off the one the
+      // row displays — so the recorded figure is the balance *after* this row.
+      for (final ref in {t.fromRef, t.toRef}) {
+        final current = bal[ref];
+        if (current != null) bal[ref] = current + _effectOn(t, ref);
+      }
+      final shown = _ledgerRowAccount(t);
+      if (shown != null && bal.containsKey(shown)) out[t.id] = bal[shown]!;
+    }
+    return _afterBalanceCache = out;
+  }
+
+  /// The account whose balance a Ledger row shows for [t]: the paying account
+  /// for an expense, the receiving account for income, the destination for a
+  /// transfer, the revalued asset for a rebalance (spec §4.5/§4.6).
+  String? _ledgerRowAccount(Txn t) => switch (t.type) {
+        TxnType.expense => t.fromRef,
+        TxnType.income => t.toRef,
+        TxnType.transfer => t.toRef,
+        TxnType.rebalance => t.toRef,
+      };
+
   /// Balance converted to the base currency — the only form safe to add up
   /// across accounts (spec 3.4 FX rule).
   double balanceInBase(String accountId) => Fx.toBase(
@@ -795,6 +874,7 @@ class AppStore extends ChangeNotifier {
     _txns.add(txn);
     _sameIndex = null;
     _accountIndex = null;
+    _afterBalanceCache = null;
     notifyListeners();
     return txn;
   }
@@ -831,6 +911,7 @@ class AppStore extends ChangeNotifier {
     // An edit can change fromRef/toRef/date, so the same-key index is stale.
     _sameIndex = null;
     _accountIndex = null;
+    _afterBalanceCache = null;
     notifyListeners();
   }
 
@@ -838,6 +919,7 @@ class AppStore extends ChangeNotifier {
     _txns.removeWhere((t) => t.id == txn.id);
     _sameIndex = null;
     _accountIndex = null;
+    _afterBalanceCache = null;
     notifyListeners();
   }
 
@@ -865,6 +947,7 @@ class AppStore extends ChangeNotifier {
       ..addAll(source._tasks);
     _sameIndex = null;
     _accountIndex = null;
+    _afterBalanceCache = null;
     notifyListeners();
   }
 

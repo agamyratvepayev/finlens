@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../core/models/models.dart';
 import '../../core/store/app_store.dart';
@@ -8,7 +9,6 @@ import '../../core/utils/formatters.dart';
 import '../../core/utils/search_fold.dart';
 import '../../shared/widgets/amount_text.dart';
 import '../../shared/widgets/app_card.dart';
-import '../../shared/widgets/screen_header.dart';
 import '../../shared/widgets/section_header.dart';
 import '../../shared/widgets/txn_row.dart';
 import '../../theme/app_colors.dart';
@@ -24,13 +24,53 @@ import 'transfer_detail_screen.dart';
 /// In / Out / Left summary. The list groups by calendar day; a day's net is
 /// printed in the group's header band only when it is worth reading (§4).
 class LedgerScreen extends StatefulWidget {
-  const LedgerScreen({super.key});
+  const LedgerScreen({super.key, this.scrollToTopSignal = 0});
+
+  /// Bumped by the shell when the already-active Ledger tab is re-tapped, to
+  /// scroll this list back to the top (spec §1).
+  final int scrollToTopSignal;
 
   @override
   State<LedgerScreen> createState() => _LedgerScreenState();
 }
 
 class _LedgerScreenState extends State<LedgerScreen> {
+  /// Scrolls the transaction list; also the target of the tab-reselect signal.
+  final ScrollController _scrollCtrl = ScrollController();
+
+  /// The descriptions toggle (spec §3/§4.4). Screen-owned so a toggle rebuilds
+  /// only the list+tool-row subtree (a ValueListenableBuilder), never the header
+  /// zone. Seeded from the persisted store value and written back on change.
+  late final ValueNotifier<bool> _showDescriptions;
+
+  @override
+  void initState() {
+    super.initState();
+    // read (not of): initState must not register an inherited dependency.
+    _showDescriptions =
+        ValueNotifier(StoreScope.read(context).ledgerShowDescriptions);
+  }
+
+  @override
+  void didUpdateWidget(covariant LedgerScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.scrollToTopSignal != oldWidget.scrollToTopSignal) {
+      if (_scrollCtrl.hasClients) {
+        _scrollCtrl.animateTo(
+          0,
+          duration: const Duration(milliseconds: 280),
+          curve: Curves.easeOutCubic,
+        );
+      }
+    }
+  }
+
+  void _toggleDescriptions() {
+    final next = !_showDescriptions.value;
+    _showDescriptions.value = next;
+    StoreScope.read(context).setLedgerShowDescriptions(next);
+  }
+
   // ── Session filter (spec §2.2) ─────────────────────────────────────────────
   // A lens on the current view, not a stored preference: it never persists and
   // never survives a month change (reset in [build] when the period moves).
@@ -61,6 +101,8 @@ class _LedgerScreenState extends State<LedgerScreen> {
     _searchDebounce?.cancel();
     _searchCtrl.dispose();
     _searchFocus.dispose();
+    _scrollCtrl.dispose();
+    _showDescriptions.dispose();
     super.dispose();
   }
 
@@ -162,30 +204,89 @@ class _LedgerScreenState extends State<LedgerScreen> {
         : filtered;
     final shown = visible.length;
 
+    // Transfers and revaluations are already excluded from these — monthIncome/
+    // monthExpense sum only income/expense rows.
+    final income = store.monthIncome(store.period);
+    final expense = store.monthExpense(store.period);
+    final left = income - expense;
+    // Red fills to Out / In on a neutral track (§1). Guards: In == 0 with
+    // Out > 0 fills fully; both zero leaves an empty track.
+    final ratio = income > 0
+        ? (expense / income).clamp(0.0, 1.0)
+        : (expense > 0 ? 1.0 : 0.0);
+
+    // The month's per-row after-balances, assembled once (cached in the store).
+    final afterBalances = store.ledgerAfterBalances();
+    final rowQuery = searching ? folded : null;
     final days = _groupByDay(visible);
 
     return SafeArea(
       bottom: false,
       child: Column(
         children: [
-          ScreenHeader(title: 'Ledger', onAdd: () => showQuickAdd(context)),
+          // Header zone (pinned): title + ratio bar + metrics strip form one
+          // horizontal-swipe region that steps the month (§2). The list below
+          // keeps its own vertical scroll and row swipe actions.
+          HorizontalSectionSwipe(
+            onNext: () {
+              HapticFeedback.lightImpact();
+              store.shiftPeriod(1);
+            },
+            onPrevious: () {
+              HapticFeedback.lightImpact();
+              store.shiftPeriod(-1);
+            },
+            child: _HeaderZone(
+              store: store,
+              income: income,
+              expense: expense,
+              left: left,
+              ratio: ratio,
+              onPickMonth: () => _pickMonth(store),
+              onAdd: () => showQuickAdd(context),
+            ),
+          ),
           Expanded(
-            child: ListView(
-              padding: const EdgeInsets.only(bottom: Insets.xxl),
-              children: [
-                _MonthSummary(store: store, onPickMonth: () => _pickMonth(store)),
-                const SizedBox(height: Insets.md),
-                _toolRow(store, total: total, shown: shown, searching: searching),
-                if (_searching) _searchField(),
-                const SizedBox(height: Insets.sm),
-                if (days.isEmpty)
-                  _empty(store, searching: searching)
-                else
-                  for (final day in days) ...[
-                    const SizedBox(height: 8),
-                    _dayCard(context, store, day),
+            // A description toggle rebuilds only this subtree, not the header.
+            child: ValueListenableBuilder<bool>(
+              valueListenable: _showDescriptions,
+              builder: (context, showDesc, _) {
+                return Column(
+                  children: [
+                    _toolRow(
+                      store,
+                      total: total,
+                      shown: shown,
+                      searching: searching,
+                      showDesc: showDesc,
+                    ),
+                    if (_searching) _searchField(),
+                    const SizedBox(height: Insets.sm),
+                    Expanded(
+                      child: ListView(
+                        controller: _scrollCtrl,
+                        padding: const EdgeInsets.only(bottom: Insets.xxl),
+                        children: [
+                          if (days.isEmpty)
+                            _empty(store, searching: searching)
+                          else
+                            for (final day in days) ...[
+                              const SizedBox(height: 8),
+                              _dayCard(
+                                context,
+                                store,
+                                day,
+                                showDesc: showDesc,
+                                query: rowQuery,
+                                afterBalances: afterBalances,
+                              ),
+                            ],
+                        ],
+                      ),
+                    ),
                   ],
-              ],
+                );
+              },
             ),
           ),
         ],
@@ -209,6 +310,7 @@ class _LedgerScreenState extends State<LedgerScreen> {
     required int total,
     required int shown,
     required bool searching,
+    required bool showDesc,
   }) {
     // Never "87 of 87" (§2): the "of" form appears only when the view is
     // actually narrower than the month, not merely because a filter is set.
@@ -241,11 +343,20 @@ class _LedgerScreenState extends State<LedgerScreen> {
                 ),
               ),
             ),
-            // Filter then search, search rightmost — the Balance tool cluster,
-            // reused exactly; no sort button (§2, the list is date-ordered by
-            // definition).
+            // Descriptions toggle · filter · search — three identical siblings
+            // (§3). The toggle follows the filter's active-state language: an
+            // icon swap plus a brighter glyph, no background change.
             ToolCluster(
               tools: [
+                Tool(
+                  icon: showDesc
+                      ? Icons.keyboard_double_arrow_up_rounded
+                      : Icons.keyboard_double_arrow_down_rounded,
+                  tooltip: 'Show descriptions',
+                  iconColor: showDesc ? AppColors.accentLight : null,
+                  semanticValue: showDesc ? 'On' : 'Off',
+                  onTap: _toggleDescriptions,
+                ),
                 Tool(
                   icon: _filterActive
                       ? Icons.filter_alt_rounded
@@ -395,7 +506,14 @@ class _LedgerScreenState extends State<LedgerScreen> {
   /// The whole day is one block: the header band is the card's first child,
   /// clipped by the card's own radius and divided from the first row by the same
   /// hairline that divides the rows (spec §3.1).
-  Widget _dayCard(BuildContext context, AppStore store, LedgerDay day) {
+  Widget _dayCard(
+    BuildContext context,
+    AppStore store,
+    LedgerDay day, {
+    required bool showDesc,
+    required String? query,
+    required Map<String, double> afterBalances,
+  }) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: Insets.gutter),
       child: AppCard(
@@ -408,6 +526,9 @@ class _LedgerScreenState extends State<LedgerScreen> {
               if (i > 0) const RowDivider(indent: Insets.md),
               TxnRow(
                 txn: day.txns[i],
+                afterBalance: afterBalances[day.txns[i].id],
+                showDescription: showDesc,
+                searchQuery: query,
                 onTap: () => day.txns[i].type == TxnType.transfer
                     ? Navigator.of(context).push(
                         MaterialPageRoute(
@@ -758,171 +879,231 @@ class _LedgerScreenState extends State<LedgerScreen> {
   }
 }
 
-/// Spec §1 — the month summary: In / Out / Left, over a proportion bar.
-class _MonthSummary extends StatelessWidget {
-  const _MonthSummary({required this.store, required this.onPickMonth});
+/// The Ledger's pinned header (spec §1): the month as the screen title (with the
+/// eye and `+` cloned from ScreenHeader), a thin passive ratio bar, and the
+/// IN / OUT / LEFT metrics strip. The word "Ledger" appears nowhere — it lives
+/// only in the tab bar.
+class _HeaderZone extends StatelessWidget {
+  const _HeaderZone({
+    required this.store,
+    required this.income,
+    required this.expense,
+    required this.left,
+    required this.ratio,
+    required this.onPickMonth,
+    required this.onAdd,
+  });
 
   final AppStore store;
+  final double income;
+  final double expense;
+  final double left;
+  final double ratio;
   final VoidCallback onPickMonth;
+  final VoidCallback onAdd;
 
   @override
   Widget build(BuildContext context) {
-    // Transfers and revaluations are already excluded: monthIncome/monthExpense
-    // sum only income/expense rows.
-    final income = store.monthIncome(store.period);
-    final expense = store.monthExpense(store.period);
-    final left = income - expense;
-    final overspent = left < 0;
-
-    // The bar fills red to Out / In on a neutral track (§1.1). Guards: In == 0
-    // with Out > 0 fills fully; both zero leaves an empty track.
-    final ratio = income > 0
-        ? (expense / income).clamp(0.0, 1.0)
-        : (expense > 0 ? 1.0 : 0.0);
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: Insets.gutter),
-      child: AppCard(
-        padding: const EdgeInsets.all(Insets.lg),
-        child: Column(
-          children: [
-            Row(
+    // Opaque so the swipe region above receives drags across the whole zone,
+    // including the gaps between the rows.
+    return Container(
+      color: AppColors.bg,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Title row — the month is the title.
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+            child: Row(
               children: [
                 Expanded(
-                  child: GestureDetector(
-                    onTap: onPickMonth,
-                    behavior: HitTestBehavior.opaque,
-                    child: Row(
-                      children: [
-                        Flexible(
-                          child: Text(
-                            monthYearLong(store.period),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: AppText.rowTitle.copyWith(fontSize: 16),
+                  child: Semantics(
+                    button: true,
+                    label: monthYearLong(store.period),
+                    hint: 'Change month',
+                    excludeSemantics: true,
+                    child: GestureDetector(
+                      onTap: onPickMonth,
+                      behavior: HitTestBehavior.opaque,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Flexible(
+                            child: Text(
+                              monthYearLong(store.period),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.textPrimary,
+                                letterSpacing: -0.4,
+                              ),
+                            ),
                           ),
-                        ),
-                        const Icon(
-                          Icons.keyboard_arrow_down_rounded,
-                          size: 20,
-                          color: AppColors.textSecondary,
-                        ),
-                      ],
+                          const Icon(
+                            Icons.keyboard_arrow_down_rounded,
+                            size: 15,
+                            color: AppColors.textSecondary,
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
-                _StepButton(
-                  icon: Icons.chevron_left_rounded,
-                  onTap: () => store.shiftPeriod(-1),
+                const SizedBox(width: Insets.sm),
+                // Eye + `+`, cloned from ScreenHeader (same size/colour/behaviour).
+                _CircleButton(
+                  icon: store.masked
+                      ? Icons.visibility_off_rounded
+                      : Icons.visibility_rounded,
+                  onTap: store.toggleMasked,
                 ),
-                const SizedBox(width: Insets.xs),
-                _StepButton(
-                  icon: Icons.chevron_right_rounded,
-                  onTap: () => store.shiftPeriod(1),
-                ),
-              ],
-            ),
-            const SizedBox(height: Insets.md),
-            // Same visual language as the Balance ratio bar — a red proportion
-            // on a neutral track. Uses ProgressBar rather than SplitBar because
-            // SplitBar is two-tone (green + red); here the unfilled portion is a
-            // neutral track and an empty month must show no fill (§1.1).
-            ProgressBar(
-              value: ratio,
-              color: AppColors.negative,
-              height: 5,
-              background: AppColors.surfaceHigh,
-            ),
-            const SizedBox(height: Insets.lg),
-            Row(
-              children: [
-                _Metric(label: 'IN', value: income, color: AppColors.positive),
-                _Metric(label: 'OUT', value: expense, color: AppColors.negative),
-                _Metric(
-                  label: 'LEFT',
-                  value: left,
-                  // Left is a balance-like figure: negative means "below zero",
-                  // so it keeps its minus sign and turns red when overspent
-                  // (§1.2), the same exception running balances make.
-                  color: overspent ? AppColors.negative : AppColors.textPrimary,
-                  keepSign: true,
+                const SizedBox(width: Insets.sm),
+                _CircleButton(
+                  icon: Icons.add_rounded,
+                  accent: true,
+                  onTap: onAdd,
                 ),
               ],
             ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// One of the three summary columns. Caps key (10.5pt) over a 17pt value.
-class _Metric extends StatelessWidget {
-  const _Metric({
-    required this.label,
-    required this.value,
-    required this.color,
-    this.keepSign = false,
-  });
-
-  final String label;
-  final double value;
-  final Color color;
-
-  /// In and Out are magnitudes (never signed); Left is balance-like and keeps a
-  /// minus when negative.
-  final bool keepSign;
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 10.5,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 0.8,
-              color: AppColors.textSecondary,
+          ),
+          // Ratio bar — passive, 3pt, full width (§1).
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+            child: Semantics(
+              label: income > 0 || expense > 0
+                  ? 'Spent ${money(expense, masked: store.masked)} of '
+                      '${money(income, masked: store.masked)}'
+                  : null,
+              child: ProgressBar(
+                value: ratio,
+                color: AppColors.negative,
+                height: 3,
+                background: AppColors.surfaceHigh,
+              ),
             ),
           ),
-          const SizedBox(height: 4),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerLeft,
-            child: AmountText(
-              value,
-              signless: !keepSign,
-              style: AppText.amountLarge,
-              color: color,
+          // Metrics strip.
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(11),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
+                children: [
+                  _Metric(label: 'IN', value: income, color: AppColors.positive),
+                  const SizedBox(width: 13),
+                  _Metric(
+                      label: 'OUT',
+                      value: expense,
+                      color: AppColors.negative),
+                  const Spacer(),
+                  // LEFT — one step larger; it is the figure the screen answers.
+                  // Balance-like: it keeps its minus sign and turns red when the
+                  // month is overspent (§1.2).
+                  _Metric(
+                    label: 'LEFT',
+                    value: left,
+                    color: left < 0
+                        ? AppColors.negative
+                        : AppColors.textPrimary,
+                    valueSize: 15,
+                    keepSign: true,
+                  ),
+                ],
+              ),
             ),
           ),
+          const SizedBox(height: Insets.md),
         ],
       ),
     );
   }
 }
 
-class _StepButton extends StatelessWidget {
-  const _StepButton({required this.icon, required this.onTap});
+/// One IN / OUT / LEFT column of the metrics strip: a caps key beside its value,
+/// aligned on the baseline.
+class _Metric extends StatelessWidget {
+  const _Metric({
+    required this.label,
+    required this.value,
+    required this.color,
+    this.valueSize = 13.5,
+    this.keepSign = false,
+  });
+
+  final String label;
+  final double value;
+  final Color color;
+  final double valueSize;
+
+  /// IN and OUT are magnitudes (never signed); LEFT is balance-like and keeps a
+  /// minus when negative.
+  final bool keepSign;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.baseline,
+      textBaseline: TextBaseline.alphabetic,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 10.5,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.6,
+            color: AppColors.textSecondary,
+          ),
+        ),
+        const SizedBox(width: 5),
+        AmountText(
+          value,
+          signless: !keepSign,
+          color: color,
+          style: TextStyle(
+            fontSize: valueSize,
+            fontWeight: FontWeight.w700,
+            fontFeatures: const [FontFeature.tabularFigures()],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// The eye / `+` circle button, cloned from `ScreenHeader`'s private one so the
+/// Ledger keeps its exact previous size, colour, icon and behaviour (§1).
+class _CircleButton extends StatelessWidget {
+  const _CircleButton({required this.icon, this.onTap, this.accent = false});
 
   final IconData icon;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
+  final bool accent;
 
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: AppColors.surfaceAlt,
+      color: accent ? AppColors.accent : AppColors.surfaceAlt,
       shape: const CircleBorder(),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
         child: SizedBox(
-          width: 30,
-          height: 30,
-          child: Icon(icon, size: 18, color: AppColors.textSecondary),
+          width: 36,
+          height: 36,
+          child: Icon(
+            icon,
+            size: accent ? 22 : 19,
+            color: AppColors.textPrimary,
+          ),
         ),
       ),
     );

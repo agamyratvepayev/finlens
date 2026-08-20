@@ -3,19 +3,14 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:finlens/core/models/models.dart';
 import 'package:finlens/core/store/app_store.dart';
+import 'package:finlens/core/utils/search_fold.dart';
 import 'package:finlens/shared/widgets/txn_row.dart';
 import 'package:finlens/theme/app_theme.dart';
 
-// Layout/geometry tests for the stacked TxnRow (Ledger tab + account-detail
-// perspective). Fonts and colours are unchanged from before — only the row's
-// structure and heights are exercised here.
-//
-// NOTE: measured heights are intrinsic (padding + content) and vary a point or
-// two with font metrics, so assertions use tolerances. Because the icon tile
-// (34pt) plus vertical padding (2×9pt) already sums to 52pt, a title-only row
-// is icon-dominated at ~52pt: the 44pt floor is a non-binding safety minimum,
-// never the actual height. Turkish descender clearance still needs a visual
-// check on-device.
+// Layout/geometry tests for the redesigned TxnRow (Ledger tab). Two compact
+// lines by default (title/amount over account/tags/balance); the description is
+// a third line behind the global toggle (spec §4). Heights are intrinsic
+// (padding + content) with a 44pt floor, so assertions use tolerances.
 
 Category _cat(String id, String name) => Category(
       id: id,
@@ -42,10 +37,11 @@ AppStore _store({List<Account>? accounts}) => AppStore(
       tasks: const <Task>[],
     );
 
-Txn _expense(
-        {String note = '',
-        List<String> tags = const [],
-        String id = 'e1'}) =>
+Txn _expense({
+  String note = '',
+  List<String> tags = const [],
+  String id = 'e1',
+}) =>
     Txn(
       id: id,
       type: TxnType.expense,
@@ -58,24 +54,15 @@ Txn _expense(
       tags: tags,
     );
 
-Txn _transfer({String note = '', List<String> tags = const []}) => Txn(
-      id: 't1',
-      type: TxnType.transfer,
-      amount: 500,
-      currency: 'USD',
-      fromRef: 'a1',
-      toRef: 'a2',
-      date: DateTime(2026, 8, 5),
-      note: note,
-      tags: tags,
-    );
-
 Future<double> _pump(
   WidgetTester tester,
   AppStore store,
   Txn txn, {
   String? perspective,
   double? runningBalance,
+  double? afterBalance,
+  bool showDescription = false,
+  String? searchQuery,
   double width = 360,
   double textScale = 1.0,
 }) async {
@@ -94,6 +81,9 @@ Future<double> _pump(
                 txn: txn,
                 perspectiveAccountId: perspective,
                 runningBalance: runningBalance,
+                afterBalance: afterBalance,
+                showDescription: showDescription,
+                searchQuery: searchQuery,
                 onTap: () {},
                 onEdit: () {},
                 onCopy: () {},
@@ -110,91 +100,108 @@ Future<double> _pump(
 }
 
 void main() {
-  group('heights', () {
-    testWidgets('description + meta line ≈ 66; without meta ≈ 52; meta adds height',
+  group('toggle & description line', () {
+    testWidgets('a noteless row keeps its height across toggle states',
         (tester) async {
-      // Ledger tab (no perspective): the account name shows -> meta line present.
-      final withMeta = await _pump(
-          tester, _store(), _expense(note: 'Bakery & fruit'));
-      expect(withMeta, closeTo(66, 7));
+      final off = await _pump(tester, _store(), _expense(), afterBalance: 880);
+      final on = await _pump(tester, _store(), _expense(),
+          afterBalance: 880, showDescription: true);
+      expect(on, closeTo(off, 0.5)); // no note -> no third line either way
+    });
 
-      // Account-detail perspective: account implied, no tag -> no meta line.
-      final noMeta = await _pump(tester, _store(),
+    testWidgets('a noted row grows by one line when the toggle is on',
+        (tester) async {
+      final off = await _pump(tester, _store(),
+          _expense(note: 'Bakery & fruit'), afterBalance: 880);
+      final on = await _pump(tester, _store(),
           _expense(note: 'Bakery & fruit'),
-          perspective: 'a1');
-      expect(noMeta, closeTo(52, 7));
-
-      // The meta line is what makes the taller row taller.
-      expect(withMeta, greaterThan(noMeta + 8));
+          afterBalance: 880, showDescription: true);
+      expect(off, closeTo(44, 6)); // two lines, floor binds
+      expect(on, greaterThan(off + 6)); // description adds a line
     });
 
-    testWidgets('title only (no description, no meta) is never under 44',
+    testWidgets('toggle on but empty note renders no third line',
         (tester) async {
-      final h = await _pump(tester, _store(), _expense(), perspective: 'a1');
-      expect(h, greaterThanOrEqualTo(44));
-      // Icon-dominated: lands ~52, not clamped to 44.
-      expect(h, closeTo(52, 7));
+      final noted = await _pump(tester, _store(),
+          _expense(note: 'Bakery & fruit'),
+          afterBalance: 880, showDescription: true);
+      final noteless = await _pump(tester, _store(), _expense(),
+          afterBalance: 880, showDescription: true);
+      expect(noteless, lessThan(noted - 6));
     });
   });
 
-  testWidgets('account name shows on the Ledger, absent on account detail',
-      (tester) async {
-    // Ledger tab: account varies row to row, so it is printed.
-    await _pump(tester, _store(), _expense());
-    expect(find.text('Main Checking'), findsOneWidget);
+  group('remaining balance (line 2)', () {
+    testWidgets('the amount is unsigned/red while a negative balance keeps its '
+        'minus', (tester) async {
+      await _pump(tester, _store(), _expense(), afterBalance: -300);
+      expect(find.text(r'$120'), findsOneWidget); // amount unsigned
+      expect(find.text('−\$120'), findsNothing);
+      expect(find.text('−\$300'), findsOneWidget); // balance signed
+    });
 
-    // Account detail: the header already states the account -> row omits it.
-    await _pump(tester, _store(), _expense(), perspective: 'a1');
-    expect(find.text('Main Checking'), findsNothing);
+    testWidgets('a non-negative balance shows unsigned on line 2',
+        (tester) async {
+      await _pump(tester, _store(), _expense(), afterBalance: 5430);
+      expect(find.text(r'$5,430'), findsOneWidget);
+    });
   });
 
-  testWidgets('with no description the balance sits on the amount line',
-      (tester) async {
-    await _pump(tester, _store(), _expense(),
-        perspective: 'a1', runningBalance: 5430);
+  group('line-2 overflow order', () {
+    testWidgets('tags collapse to "#first +n" before the account truncates',
+        (tester) async {
+      final store = _store(accounts: [
+        _acc('a1', 'An extremely long account name that will not fit here'),
+        _acc('a2', 'Cash Wallet'),
+      ]);
+      await _pump(tester, store,
+          _expense(tags: const ['commute', 'side']),
+          afterBalance: 5430, width: 320);
 
-    final amountDy = tester.getCenter(find.text(r'$120')).dy;
-    final balanceDy = tester.getCenter(find.text(r'$5,430')).dy;
-    expect((amountDy - balanceDy).abs(), lessThan(2.0));
+      // The tag run collapsed; the full run is gone; the balance still shows.
+      expect(find.text('#commute +1'), findsOneWidget);
+      expect(find.text('#commute #side'), findsNothing);
+      expect(find.text(r'$5,430'), findsOneWidget);
+
+      final acct = tester.widget<Text>(find
+          .text('An extremely long account name that will not fit here'));
+      expect(acct.overflow, TextOverflow.ellipsis);
+    });
   });
 
-  testWidgets('a transfer without a tag renders no meta line', (tester) async {
-    final h = await _pump(
-        tester, _store(), _transfer(note: 'Partial payment before statement'));
-    // Title + description, no meta -> the shorter band, not the ~66 three-line.
-    expect(h, lessThan(60));
-    // The account path is only in the title; it is not repeated in a meta line.
-    expect(find.textContaining('Main Checking →'), findsNothing);
+  group('search reveals a hidden note', () {
+    testWidgets('a matched note opens even with the toggle off, and closes '
+        'when the search clears', (tester) async {
+      final off = await _pump(tester, _store(),
+          _expense(note: 'Bakery & fruit'), afterBalance: 880);
+      final matched = await _pump(tester, _store(),
+          _expense(note: 'Bakery & fruit'),
+          afterBalance: 880, searchQuery: foldSearch('bakery'));
+      final unmatched = await _pump(tester, _store(),
+          _expense(note: 'Bakery & fruit'),
+          afterBalance: 880, searchQuery: foldSearch('zzz'));
+
+      expect(matched, greaterThan(off + 6)); // note revealed
+      expect(unmatched, closeTo(off, 1)); // non-match stays closed
+    });
   });
 
-  testWidgets('the meta line aligns with the text column (44pt indent)',
-      (tester) async {
-    await _pump(tester, _store(), _expense(note: 'Bakery & fruit'));
-    // The category title and the account meta both start at the text column's
-    // left edge (icon 34 + gap 10 = 44pt from the row content's left edge).
-    final titleLeft = tester.getTopLeft(find.text('Groceries')).dx;
-    final metaLeft = tester.getTopLeft(find.text('Main Checking')).dx;
-    expect((titleLeft - metaLeft).abs(), lessThan(0.5));
-  });
+  group('account label', () {
+    testWidgets('shows on the Ledger, absent on an account-detail perspective',
+        (tester) async {
+      await _pump(tester, _store(), _expense(), afterBalance: 880);
+      expect(find.text('Main Checking'), findsOneWidget);
 
-  testWidgets('a long account name ellipsizes while the tag stays visible',
-      (tester) async {
-    final store = _store(accounts: [
-      _acc('a1', 'An extremely long account name that will not fit'),
-      _acc('a2', 'Cash Wallet'),
-    ]);
-    await _pump(tester, store, _expense(tags: const ['side']), width: 220);
-
-    expect(find.text('#side'), findsOneWidget); // tag stays whole
-    final acct = tester.widget<Text>(
-        find.text('An extremely long account name that will not fit'));
-    expect(acct.overflow, TextOverflow.ellipsis);
+      await _pump(tester, _store(), _expense(),
+          perspective: 'a1', runningBalance: 880);
+      expect(find.text('Main Checking'), findsNothing);
+    });
   });
 
   testWidgets('no overflow at 130% text scale', (tester) async {
     await _pump(tester, _store(),
         _expense(note: 'Bakery & fruit', tags: const ['side']),
-        textScale: 1.3);
+        afterBalance: 5430, showDescription: true, textScale: 1.3);
     expect(tester.takeException(), isNull);
   });
 }
