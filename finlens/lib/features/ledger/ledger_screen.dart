@@ -878,6 +878,23 @@ class _HeaderZone extends StatelessWidget {
             child: Row(
               children: [
                 Expanded(child: _PeriodTitle(store: store, onTap: onPickMonth)),
+                // The way out of the range lens sits beside the state it undoes
+                // (§1): a third circle, purple like the title it clears, present
+                // only while a lens is active — so in month mode this row is
+                // byte-identical to before.
+                if (store.isRangeLensActive) ...[
+                  const SizedBox(width: Insets.sm),
+                  Semantics(
+                    button: true,
+                    label: 'Clear custom range',
+                    hint: 'Back to ${monthYearLong(store.period)}',
+                    child: _CircleButton(
+                      icon: Icons.close_rounded,
+                      tint: AppColors.accentLight,
+                      onTap: store.clearRangeLens,
+                    ),
+                  ),
+                ],
                 const SizedBox(width: Insets.sm),
                 // Eye + `+`, cloned from ScreenHeader (same size/colour/behaviour).
                 _CircleButton(
@@ -1088,11 +1105,17 @@ class _Metric extends StatelessWidget {
 /// The eye / `+` circle button, cloned from `ScreenHeader`'s private one so the
 /// Ledger keeps its exact previous size, colour, icon and behaviour (§1).
 class _CircleButton extends StatelessWidget {
-  const _CircleButton({required this.icon, this.onTap, this.accent = false});
+  const _CircleButton(
+      {required this.icon, this.onTap, this.accent = false, this.tint});
 
   final IconData icon;
   final VoidCallback? onTap;
   final bool accent;
+
+  /// Overrides the glyph colour (size/background/behaviour are unchanged). The
+  /// lens's × uses it to echo the accent title it clears (§1); eye and `+`
+  /// leave it null and keep the default textPrimary glyph.
+  final Color? tint;
 
   @override
   Widget build(BuildContext context) {
@@ -1108,7 +1131,7 @@ class _CircleButton extends StatelessWidget {
           child: Icon(
             icon,
             size: accent ? 22 : 19,
-            color: AppColors.textPrimary,
+            color: tint ?? AppColors.textPrimary,
           ),
         ),
       ),

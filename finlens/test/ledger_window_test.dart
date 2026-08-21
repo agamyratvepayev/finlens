@@ -70,19 +70,20 @@ void main() {
       expect(store.ledgerWindow.start, DateTime(2026, 3, 1));
     });
 
-    test('a swipe during a lens exits to the current month (one swipe = home)',
-        () {
+    test('a swipe during a lens clears it and leaves period untouched', () {
       final store = _store(const [])..period = DateTime(2026, 3);
       store.applyRangeLens(
           DateRange(DateTime(2026, 8, 6), DateTime(2026, 8, 9, 23, 59, 59)));
       store.shiftPeriod(-1); // swipe while lens active
       expect(store.isRangeLensActive, isFalse);
-      // Home = the month containing today (2026-08), regardless of direction.
-      expect(store.period, DateTime(AppStore.today.year, AppStore.today.month));
+      // Exit lands on the month the lens was set from — direction is ignored —
+      // matching the header's × clear, not jumping to today.
+      expect(store.period, DateTime(2026, 3));
+      expect(store.ledgerWindow.start, DateTime(2026, 3, 1));
 
-      // A subsequent swipe now steps months normally.
+      // A subsequent swipe now steps months normally from that month.
       store.shiftPeriod(-1);
-      expect(store.period, DateTime(2026, 7));
+      expect(store.period, DateTime(2026, 2));
     });
   });
 

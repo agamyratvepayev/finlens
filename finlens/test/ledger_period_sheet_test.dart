@@ -177,19 +177,121 @@ void main() {
     expect(find.byIcon(Icons.filter_alt_rounded), findsNothing);
   });
 
-  testWidgets('a swipe during a lens returns to the current month', (t) async {
+  testWidgets('a swipe during a lens clears it, leaving period at August 2026',
+      (t) async {
     final store = buildSeedStore();
     store.applyRangeLens(
         DateRange(DateTime(2026, 8, 6), DateTime(2026, 8, 9, 23, 59, 59, 999)));
     await pumpLedger(t, store);
     expect(find.text('6–9 Aug'), findsOneWidget);
 
-    // The header swipe funnels through shiftPeriod; a lens exit lands home.
+    // The header swipe funnels through shiftPeriod; a lens exit leaves `period`
+    // untouched (here already August 2026) rather than jumping to today.
     store.shiftPeriod(-1);
     await t.pumpAndSettle();
 
     expect(store.isRangeLensActive, isFalse);
     expect(store.period, DateTime(2026, 8));
     expect(find.text('August 2026'), findsOneWidget);
+  });
+
+  testWidgets('the × renders only while a lens is active and clears it (§1)',
+      (t) async {
+    final store = buildSeedStore();
+    await pumpLedger(t, store);
+
+    // Month mode: no clear affordance, white month title.
+    expect(find.bySemanticsLabel('Clear custom range'), findsNothing);
+    expect(find.byIcon(Icons.close_rounded), findsNothing);
+    expect(find.text('August 2026'), findsOneWidget);
+
+    store.applyRangeLens(
+        DateRange(DateTime(2026, 8, 2), DateTime(2026, 8, 6, 23, 59, 59, 999)));
+    await t.pumpAndSettle();
+
+    // Lens mode: the range title + subtitle, and a × beside the eye.
+    expect(find.text('2–6 Aug'), findsOneWidget);
+    expect(find.text('5 days'), findsOneWidget);
+    expect(find.byIcon(Icons.close_rounded), findsOneWidget);
+
+    await t.tap(find.bySemanticsLabel('Clear custom range'));
+    await t.pumpAndSettle();
+
+    // Back to August 2026: title white, subtitle and × gone.
+    expect(store.isRangeLensActive, isFalse);
+    expect(store.period, DateTime(2026, 8));
+    expect(find.text('August 2026'), findsOneWidget);
+    expect(find.text('5 days'), findsNothing);
+    expect(find.byIcon(Icons.close_rounded), findsNothing);
+  });
+
+  testWidgets('the Period sheet custom row reflects the applied lens (§2)',
+      (t) async {
+    final store = buildSeedStore();
+    store.applyRangeLens(
+        DateRange(DateTime(2026, 8, 2), DateTime(2026, 8, 6, 23, 59, 59, 999)));
+    await pumpLedger(t, store);
+
+    // Tapping the purple title opens on the calendar; step back to the period
+    // page and the custom row states what is applied, with a checkmark.
+    await t.tap(find.text('2–6 Aug').first);
+    await t.pumpAndSettle();
+    await t.tap(find.text('Period')); // ‹ Period
+    await t.pumpAndSettle();
+
+    expect(find.text('Custom range…'), findsNothing);
+    // Scope to the custom row (the one Row holding the calendar-today glyph):
+    // the header title behind the sheet also reads '2–6 Aug'.
+    final customRow = find.ancestor(
+      of: find.byIcon(Icons.calendar_today_rounded),
+      matching: find.byType(Row),
+    );
+    expect(find.descendant(of: customRow, matching: find.text('2–6 Aug')),
+        findsOneWidget);
+    expect(
+        find.descendant(
+            of: customRow, matching: find.byIcon(Icons.check_rounded)),
+        findsOneWidget);
+  });
+
+  testWidgets('with no lens the custom row reads "Custom range…" (§2)',
+      (t) async {
+    final store = buildSeedStore();
+    await pumpLedger(t, store);
+    await t.tap(find.text('August 2026'));
+    await t.pumpAndSettle();
+
+    expect(find.text('Custom range…'), findsOneWidget);
+    expect(find.byIcon(Icons.check_rounded), findsNothing);
+  });
+
+  testWidgets('lens header (3 buttons + long label) fits 320pt at 130% (§6)',
+      (t) async {
+    final store = buildSeedStore();
+    // The longest realistic lens label — a multi-month, prior-year span.
+    store.applyRangeLens(
+        DateRange(DateTime(2025, 6, 1), DateTime(2025, 8, 15, 23, 59, 59, 999)));
+    t.view.physicalSize = const Size(320, 568);
+    t.view.devicePixelRatio = 1.0;
+    addTearDown(t.view.reset);
+
+    await t.pumpWidget(StoreScope(
+      store: store,
+      child: MaterialApp(
+        theme: AppTheme.dark,
+        home: Builder(
+          builder: (ctx) => MediaQuery(
+            data: MediaQuery.of(ctx)
+                .copyWith(textScaler: const TextScaler.linear(1.3)),
+            child: const Scaffold(body: LedgerScreen()),
+          ),
+        ),
+      ),
+    ));
+    await t.pumpAndSettle();
+
+    // Three circle buttons plus an ellipsised title, no RenderFlex overflow.
+    expect(t.takeException(), isNull);
+    expect(find.byIcon(Icons.close_rounded), findsOneWidget);
   });
 }

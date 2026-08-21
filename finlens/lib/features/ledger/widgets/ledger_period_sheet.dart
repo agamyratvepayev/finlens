@@ -177,28 +177,40 @@ class _PeriodPageState extends State<_PeriodPage> {
 
   @override
   Widget build(BuildContext context) {
+    final lens = widget.store.rangeLens;
     return Column(
       key: const ValueKey('period'),
       mainAxisSize: MainAxisSize.min,
       children: [
         const _SheetTitle('PERIOD'),
-        // Custom range… — an accent row that opens the calendar page.
+        // Custom range… — an accent row that opens the calendar page. While a
+        // lens is active it states what is applied: the lens's own label plus a
+        // checkmark (the app's selection mark). It still opens the calendar to
+        // change the range — clearing lives on the header (§1), not here.
         InkWell(
           onTap: widget.onCustom,
-          child: const Padding(
-            padding:
-                EdgeInsets.symmetric(horizontal: Insets.gutter, vertical: 11),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+                horizontal: Insets.gutter, vertical: 11),
             child: Row(
               children: [
-                Icon(Icons.calendar_today_rounded,
+                const Icon(Icons.calendar_today_rounded,
                     size: 16, color: AppColors.accentLight),
-                SizedBox(width: 10),
+                const SizedBox(width: 10),
                 Expanded(
-                  child: Text('Custom range…',
-                      style: TextStyle(
+                  child: Text(
+                      lens != null
+                          ? lens.label(AppStore.today)
+                          : 'Custom range…',
+                      style: const TextStyle(
                           fontSize: 15, color: AppColors.accentLight)),
                 ),
-                Icon(Icons.chevron_right_rounded,
+                if (lens != null) ...[
+                  const Icon(Icons.check_rounded,
+                      size: 16, color: AppColors.accentLight),
+                  const SizedBox(width: Insets.sm),
+                ],
+                const Icon(Icons.chevron_right_rounded,
                     size: 18, color: AppColors.accentLight),
               ],
             ),

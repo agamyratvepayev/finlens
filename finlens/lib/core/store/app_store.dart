@@ -419,13 +419,17 @@ class AppStore extends ChangeNotifier {
   DateTime _period = DateTime(2026, 8);
   DateTime get period => _period;
   void shiftPeriod(int months) {
-    // Ledger range lens: a header swipe exits the lens to the current month —
-    // one swipe = home — rather than stepping from the lens window. Subsequent
-    // swipes (lens now null) step months normally. Only the Ledger tab ever
-    // sets a lens, so Planner/Insight (lens always null) keep the old path.
+    // Ledger range lens: a header swipe exits the lens onto the month it was set
+    // from (`_period` is left untouched); the swipe direction is ignored. This
+    // agrees with the header's × clear button, which also returns to `_period` —
+    // two exits that both land in the same place. (An earlier design sent the
+    // swipe to today's month, but a second exit with a different destination is
+    // the kind of inconsistency a user notices without being able to name.)
+    // Subsequent swipes (lens now null) step months normally. Only the Ledger
+    // tab ever sets a lens, so Planner/Insight (lens always null) keep the old
+    // path.
     if (_rangeLens != null) {
       _rangeLens = null;
-      _period = DateTime(today.year, today.month);
       notifyListeners();
       return;
     }
