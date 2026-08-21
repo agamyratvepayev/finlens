@@ -6,24 +6,14 @@ import 'package:flutter/services.dart';
 
 import '../../../theme/app_colors.dart';
 
-/// A drag payload tagged with its owning group, so nested reorder groups (a
-/// section's categories vs a category's accounts) never accept one another's
-/// drags even though both carry an `int` index.
-@immutable
-class _ReorderToken {
-  const _ReorderToken(this.tag, this.index);
-  final Object tag;
-  final int index;
-}
-
 /// One independent reorder group: a non-scrolling column of rows the user can
 /// press-and-hold to drag *within this group only*.
 ///
-/// Containment is structural, not policed — because a group's drop targets exist
-/// only inside itself, a lifted row simply has nowhere illegal to land. When the
-/// finger wanders outside, the insertion point clamps to the group's nearest
-/// end and stays there; releasing drops it at that clamped slot. There is no
-/// rejected drop.
+/// Containment is structural, not policed — the insert slot is computed only
+/// from this group's own rows, so a lifted row simply has nowhere illegal to
+/// land. When the finger wanders outside, the insertion point clamps to the
+/// group's nearest end and stays there; releasing drops it at that clamped slot.
+/// There is no rejected drop.
 ///
 /// The whole row is the drag target (no handle). A quick tap falls through to
 /// the row's own gesture (navigation); only a press-and-hold lifts it, so a fast
@@ -77,15 +67,17 @@ class ReorderableGroup<T> extends StatefulWidget {
 }
 
 class _ReorderableGroupState<T> extends State<ReorderableGroup<T>> {
-  /// Identifies this group's drags, so its drop targets ignore foreign ones.
-  final Object _tag = Object();
-
   /// Index of the row currently lifted, or null when idle.
   int? _dragIndex;
 
   /// Where the dashed placeholder sits: "before item [_insertIndex]", with
   /// `items.length` meaning "after the last item".
   int _insertIndex = 0;
+
+  /// The pointer's latest global position, fed by `onDragUpdate`. Kept so an
+  /// autoscroll tick can re-evaluate the insert slot against a still finger
+  /// after scrolling has slid the rows underneath it.
+  Offset _pointer = Offset.zero;
 
   /// The lifted row's measured size, so the placeholder and the floating proxy
   /// match it exactly.
@@ -157,6 +149,57 @@ class _ReorderableGroupState<T> extends State<ReorderableGroup<T>> {
     setState(() => _insertIndex = clamped);
     // Each reorder step ticks, matching the app's light-impact convention.
     HapticFeedback.lightImpact();
+  }
+
+  /// The single source of truth for where the placeholder goes: the true
+  /// pointer, not a feedback-widget corner. Called from `onDragUpdate` and from
+  /// each autoscroll tick (scrolling moves rows under a still finger).
+  void _onPointerMove(Offset globalPointer) {
+    _pointer = globalPointer;
+    _updateAutoscroll(globalPointer);
+    if (_dragIndex == null) return;
+    _updateInsert(_insertIndexForPointer(globalPointer.dy));
+  }
+
+  /// Maps the pointer's global `dy` to a raw insert index into `items`
+  /// (`before items[result]`, `_count` = at the end).
+  ///
+  /// It measures every row's real bounds from its [GlobalKey] except the
+  /// collapsed origin (which renders as a zero-height `SizedBox.shrink`), then
+  /// inserts *before the first visible row whose vertical midpoint sits below
+  /// the pointer* — or at the end when the pointer is past them all. Midpoints
+  /// increase monotonically down the column, so the first such row is the slot.
+  ///
+  /// Two consequences fall out of only ever measuring *this* group's rows:
+  ///   * The origin gap maps to `from + 1` (the row just past the collapsed
+  ///     slot), which `_endDrag` treats as a no-op — so its whole upper half is
+  ///     the origin. Moving one slot down needs the *next* row's lower half.
+  ///   * When the finger wanders over a neighbouring category, none of its rows
+  ///     are counted, so the result clamps to this group's near end and holds
+  ///     there — the owner is never starved of updates.
+  int _insertIndexForPointer(double globalY) {
+    final dragIndex = _dragIndex;
+    if (dragIndex == null) return _insertIndex;
+    var raw = _count; // default: past every visible midpoint → the end
+    var measuredAny = false;
+    for (var i = 0; i < _count; i++) {
+      if (i == dragIndex) continue; // the collapsed origin has no real slot
+      final box = _keys[i].currentContext?.findRenderObject();
+      if (box is! RenderBox || !box.hasSize) continue;
+      measuredAny = true;
+      final midpoint = box.localToGlobal(Offset.zero).dy + box.size.height / 2;
+      if (globalY < midpoint) {
+        raw = i; // insert before this row
+        break;
+      }
+    }
+    if (!measuredAny) return _insertIndex; // nothing to measure — hold still
+    // `dragIndex` and `dragIndex + 1` both sit against the collapsed origin and
+    // render identically, so pin the origin gap to one value: the placeholder
+    // can't flicker between them and no phantom step-haptic fires at origin.
+    // This is the only "hysteresis" the widget needs — a stable threshold, not
+    // a damped one.
+    return raw == dragIndex + 1 ? dragIndex : raw;
   }
 
   void _endDrag() {
@@ -244,7 +287,12 @@ class _ReorderableGroupState<T> extends State<ReorderableGroup<T>> {
     }
     final next = (controller.offset + _autoscrollDelta)
         .clamp(0.0, controller.position.maxScrollExtent);
-    if (next != controller.offset) controller.jumpTo(next);
+    if (next != controller.offset) {
+      controller.jumpTo(next);
+      // The rows just slid under a still finger — recompute the insert slot
+      // from the same pointer so the placeholder keeps tracking during scroll.
+      _updateInsert(_insertIndexForPointer(_pointer.dy));
+    }
   }
 
   void _stopAutoscroll() {
@@ -302,38 +350,31 @@ class _ReorderableGroupState<T> extends State<ReorderableGroup<T>> {
 
     // The GlobalKey sits on the whole row so its element (and the live
     // LongPressDraggable inside it) stays mounted as the placeholder is inserted
-    // and moved around it — a rebuild here must never cancel the drag.
+    // and moved around it — a rebuild here must never cancel the drag. It is
+    // also what `_insertIndexForPointer` measures to place the placeholder.
+    //
+    // There are no DragTargets: tracking is pointer-driven (`onDragUpdate`),
+    // not hit-test-driven, so a Draggable with no payload semantics suffices.
     return Semantics(
       key: _keys[index],
       container: true,
       label: widget.semanticLabel(item, index, _count),
       customSemanticsActions: actions.isEmpty ? null : actions,
-      child: DragTarget<_ReorderToken>(
-        // Only react to this group's own drags, never a nested/sibling group's.
-        onWillAcceptWithDetails: (d) => d.data.tag == _tag,
-        onMove: (details) {
-          _updateAutoscroll(details.offset);
-          final box = _keys[index].currentContext?.findRenderObject();
-          if (box is! RenderBox) return;
-          final localY = box.globalToLocal(details.offset).dy;
-          _updateInsert(localY < box.size.height / 2 ? index : index + 1);
-        },
-        builder: (context, _, _) => LongPressDraggable<_ReorderToken>(
-          data: _ReorderToken(_tag, index),
-          axis: Axis.vertical,
-          delay: widget.delay,
-          // 0 disables the lift entirely (search active) without rebuilding the
-          // subtree, so the row's own tap/scroll gestures win untouched.
-          maxSimultaneousDrags: widget.enabled ? null : 0,
-          // The delay is what lets a fast vertical flick scroll instead of lift.
-          feedback: _proxy(context, item),
-          // The origin collapses; the dashed placeholder carries the position.
-          childWhenDragging: const SizedBox.shrink(),
-          onDragStarted: () => _startDrag(index),
-          onDragUpdate: (d) => _updateAutoscroll(d.globalPosition),
-          onDragEnd: (_) => _endDrag(),
-          child: widget.itemBuilder(context, item),
-        ),
+      child: LongPressDraggable<int>(
+        data: index,
+        axis: Axis.vertical,
+        delay: widget.delay,
+        // 0 disables the lift entirely (search active) without rebuilding the
+        // subtree, so the row's own tap/scroll gestures win untouched.
+        maxSimultaneousDrags: widget.enabled ? null : 0,
+        // The delay is what lets a fast vertical flick scroll instead of lift.
+        feedback: _proxy(context, item),
+        // The origin collapses; the dashed placeholder carries the position.
+        childWhenDragging: const SizedBox.shrink(),
+        onDragStarted: () => _startDrag(index),
+        onDragUpdate: (d) => _onPointerMove(d.globalPosition),
+        onDragEnd: (_) => _endDrag(),
+        child: widget.itemBuilder(context, item),
       ),
     );
   }
