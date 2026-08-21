@@ -7,6 +7,7 @@ import '../../core/models/models.dart';
 import '../../core/store/app_store.dart';
 import '../../core/utils/date_range.dart';
 import '../../core/utils/formatters.dart';
+import '../../core/utils/fx.dart';
 import '../../core/utils/search_fold.dart';
 import '../../shared/widgets/amount_text.dart';
 import '../../shared/widgets/app_card.dart';
@@ -16,11 +17,11 @@ import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/app_typography.dart';
 import '../balance/balance_screen.dart' show EmptyState;
-import '../quick_add/pickers.dart';
 import '../quick_add/quick_add_sheet.dart';
 import 'ledger_day.dart';
 import 'transfer_detail_screen.dart';
 import 'widgets/ledger_period_sheet.dart';
+import 'widgets/trans_filter_sheet.dart';
 
 /// Spec 2.1 — every entry in chronological order, under a monthly
 /// In / Out / Left summary. The list groups by calendar day; a day's net is
@@ -79,6 +80,9 @@ class _LedgerScreenState extends State<LedgerScreen> {
   TxnType? _direction; // null == All
   final Set<String> _categoryIds = {};
   final Set<String> _accountIds = {};
+  final Set<String> _tagIds = {};
+  double? _min; // absolute base-currency bounds; null == unbounded
+  double? _max;
 
   /// The window the filter/search were last evaluated against, so any period
   /// change — month pick, range apply, swipe-exit — clears them (spec §2.2 —
@@ -87,7 +91,12 @@ class _LedgerScreenState extends State<LedgerScreen> {
   DateRange? _lastWindow;
 
   bool get _filterActive =>
-      _direction != null || _categoryIds.isNotEmpty || _accountIds.isNotEmpty;
+      _direction != null ||
+      _categoryIds.isNotEmpty ||
+      _accountIds.isNotEmpty ||
+      _tagIds.isNotEmpty ||
+      _min != null ||
+      _max != null;
 
   // ── Search (spec §2.1; transient, never persisted) ─────────────────────────
   bool _searching = false;
@@ -130,6 +139,14 @@ class _LedgerScreenState extends State<LedgerScreen> {
         !_accountIds.contains(t.fromRef) &&
         !_accountIds.contains(t.toRef)) {
       return false;
+    }
+    if (_tagIds.isNotEmpty && !t.tags.any(_tagIds.contains)) return false;
+    if (_min != null || _max != null) {
+      // Bounds are on absolute base-currency magnitude, matching the sheet's
+      // per-item counts and range hint.
+      final amt = Fx.toBase(t.amount, t.currency).abs();
+      if (_min != null && amt < _min!) return false;
+      if (_max != null && amt > _max!) return false;
     }
     return true;
   }
@@ -184,6 +201,9 @@ class _LedgerScreenState extends State<LedgerScreen> {
       _direction = null;
       _categoryIds.clear();
       _accountIds.clear();
+      _tagIds.clear();
+      _min = null;
+      _max = null;
       // Reset search without touching the controller synchronously: clearing it
       // here would notify a still-mounted field and setState during build. The
       // field is gone this frame (searching = false); tidy its text next frame.
@@ -482,6 +502,9 @@ class _LedgerScreenState extends State<LedgerScreen> {
                 _direction = null;
                 _categoryIds.clear();
                 _accountIds.clear();
+                _tagIds.clear();
+                _min = null;
+                _max = null;
               }),
               child: const Padding(
                 padding: EdgeInsets.all(8),
@@ -617,187 +640,201 @@ class _LedgerScreenState extends State<LedgerScreen> {
 
   // ── Filter sheet (spec §2.2) ────────────────────────────────────────────────
 
+  /// The unified filter sheet (spec §2.2). All per-item counts and the range
+  /// are computed once here from the current period's transactions and handed to
+  /// the shared sheet; the sheet's snapshot is mapped back onto this screen's
+  /// filter state on every change so the list behind updates immediately.
+  ///
+  /// Note: there is deliberately no free-text/notes field here — description
+  /// search belongs to the list search, which already matches notes and tags
+  /// and combines multiplicatively with this filter (spec §7).
   Future<void> _openFilter(AppStore store) async {
-    await showAppSheet<void>(
+    final all = store.txnsInWindow(store.ledgerWindow);
+    final accountIds = {for (final a in store.accounts) a.id};
+
+    // One O(n) pass over the period for the per-item counts (spec §4, §7 —
+    // never per-row queries).
+    final catCount = <String, int>{};
+    final accCount = <String, int>{};
+    final tagCount = <String, int>{};
+    var rangeMin = double.infinity;
+    var rangeMax = 0.0;
+    for (final t in all) {
+      final cref = switch (t.type) {
+        TxnType.expense => t.toRef,
+        TxnType.income => t.fromRef,
+        _ => null,
+      };
+      if (cref != null) catCount[cref] = (catCount[cref] ?? 0) + 1;
+      for (final id in {t.fromRef, t.toRef}) {
+        if (accountIds.contains(id)) accCount[id] = (accCount[id] ?? 0) + 1;
+      }
+      for (final tag in t.tags) {
+        tagCount[tag] = (tagCount[tag] ?? 0) + 1;
+      }
+      final amt = Fx.toBase(t.amount, t.currency).abs();
+      if (amt < rangeMin) rangeMin = amt;
+      if (amt > rangeMax) rangeMax = amt;
+    }
+    if (rangeMin == double.infinity) rangeMin = 0;
+
+    // Order fixed once from the period counts (non-zero desc, then zeros
+    // alphabetically) so a direction toggle re-dims without reflowing (§4).
+    int order(String aId, String aName, String bId, String bName,
+        Map<String, int> counts) {
+      final ca = counts[aId] ?? 0, cb = counts[bId] ?? 0;
+      if ((ca == 0) != (cb == 0)) return ca == 0 ? 1 : -1;
+      if (ca != cb && ca != 0) return cb.compareTo(ca);
+      return aName.toLowerCase().compareTo(bName.toLowerCase());
+    }
+
+    final cats = [...store.categories]
+      ..sort((a, b) => order(a.id, a.name, b.id, b.name, catCount));
+    final accs = [...store.accounts]
+      ..sort((a, b) => order(a.id, a.name, b.id, b.name, accCount));
+    final tags = tagCount.keys.toList()
+      ..sort((a, b) {
+        final c = (tagCount[b]!).compareTo(tagCount[a]!);
+        return c != 0 ? c : a.toLowerCase().compareTo(b.toLowerCase());
+      });
+
+    // A category's count is contextual to the DIRECTION: a category of the
+    // opposite kind (or any category under Transfers) contributes 0 in that
+    // context and so dims to 40% by the sheet's single count==0 rule (§4).
+    int catCtx(Category c, TxnType? dir) {
+      final base = catCount[c.id] ?? 0;
+      return switch (dir) {
+        null => base,
+        TxnType.income => c.type == CategoryType.income ? base : 0,
+        TxnType.expense => c.type == CategoryType.expense ? base : 0,
+        _ => 0,
+      };
+    }
+
+    List<FilterChipItem> catItems(TxnType? dir) => [
+          for (final c in cats)
+            FilterChipItem(
+              id: c.id,
+              label: c.name,
+              icon: c.icon,
+              color: c.color,
+              count: catCtx(c, dir),
+            ),
+        ];
+    List<FilterChipItem> accItems(TxnType? _) => [
+          for (final a in accs)
+            FilterChipItem(
+              id: a.id,
+              label: a.name,
+              icon: a.displayIcon,
+              color: a.color,
+              count: accCount[a.id] ?? 0,
+            ),
+        ];
+    List<FilterChipItem> tagItems(TxnType? _) => [
+          for (final tg in tags)
+            FilterChipItem(id: tg, label: '#$tg', count: tagCount[tg]!),
+        ];
+
+    int countMatches(FilterSnapshot s) {
+      final cat = s.sel('categories');
+      final acc = s.sel('accounts');
+      final tg = s.sel('tags');
+      var n = 0;
+      for (final t in all) {
+        if (s.direction != null && t.type != s.direction) continue;
+        if (cat.isNotEmpty) {
+          final cref = switch (t.type) {
+            TxnType.expense => t.toRef,
+            TxnType.income => t.fromRef,
+            _ => null,
+          };
+          if (cref == null || !cat.contains(cref)) continue;
+        }
+        if (acc.isNotEmpty &&
+            !acc.contains(t.fromRef) &&
+            !acc.contains(t.toRef)) {
+          continue;
+        }
+        if (tg.isNotEmpty && !t.tags.any(tg.contains)) continue;
+        final amt = Fx.toBase(t.amount, t.currency).abs();
+        if (s.min != null && amt < s.min!) continue;
+        if (s.max != null && amt > s.max!) continue;
+        n++;
+      }
+      return n;
+    }
+
+    await showFilterSheet(
       context,
-      title: 'Filter',
-      initialSize: 0.7,
-      builder: (sheetContext, controller) {
-        return StatefulBuilder(
-          builder: (sheetContext, setSheet) {
-            // Every change applies immediately to the list behind (§2.2); the
-            // sheet redraws its own checks through [setSheet].
-            void apply(VoidCallback change) {
-              setState(change);
-              setSheet(() {});
-            }
-
-            final categories = store.categories;
-            final accounts = store.accounts;
-
-            return ListView(
-              controller: controller,
-              padding: const EdgeInsets.fromLTRB(
-                Insets.gutter,
-                0,
-                Insets.gutter,
-                Insets.xxl,
-              ),
-              children: [
-                _sheetLabel('DIRECTION'),
-                Wrap(
-                  spacing: Insets.sm,
-                  runSpacing: Insets.sm,
-                  children: [
-                    _dirChip('All', null, apply),
-                    _dirChip('Income', TxnType.income, apply),
-                    _dirChip('Expenses', TxnType.expense, apply),
-                    _dirChip('Transfers', TxnType.transfer, apply),
-                  ],
-                ),
-                const SizedBox(height: Insets.lg),
-                _sheetLabel('CATEGORIES'),
-                AppCard(
-                  child: Column(
-                    children: [
-                      for (var i = 0; i < categories.length; i++) ...[
-                        if (i > 0) const RowDivider(indent: Insets.md),
-                        _pickRow(
-                          icon: categories[i].icon,
-                          color: categories[i].color,
-                          name: categories[i].name,
-                          selected: _categoryIds.contains(categories[i].id),
-                          onTap: () => apply(() => _toggle(
-                                _categoryIds,
-                                categories[i].id,
-                              )),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                const SizedBox(height: Insets.lg),
-                _sheetLabel('ACCOUNTS'),
-                AppCard(
-                  child: Column(
-                    children: [
-                      for (var i = 0; i < accounts.length; i++) ...[
-                        if (i > 0) const RowDivider(indent: Insets.md),
-                        _pickRow(
-                          icon: accounts[i].displayIcon,
-                          color: accounts[i].color,
-                          name: accounts[i].name,
-                          selected: _accountIds.contains(accounts[i].id),
-                          onTap: () => apply(() => _toggle(
-                                _accountIds,
-                                accounts[i].id,
-                              )),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                const SizedBox(height: Insets.lg),
-                Row(
-                  children: [
-                    TextButton(
-                      onPressed: _filterActive
-                          ? () => apply(() {
-                                _direction = null;
-                                _categoryIds.clear();
-                                _accountIds.clear();
-                              })
-                          : null,
-                      child: const Text('Reset'),
-                    ),
-                    const Spacer(),
-                    FilledButton(
-                      onPressed: () => Navigator.of(sheetContext).pop(),
-                      style: FilledButton.styleFrom(
-                        backgroundColor: AppColors.accent,
-                        foregroundColor: Colors.white,
-                      ),
-                      child: const Text('Done'),
-                    ),
-                  ],
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
-
-  static void _toggle(Set<String> set, String id) {
-    set.contains(id) ? set.remove(id) : set.add(id);
-  }
-
-  Widget _sheetLabel(String text) => Padding(
-        padding: const EdgeInsets.fromLTRB(4, Insets.sm, 4, Insets.sm),
-        child: Text(text, style: AppText.label),
-      );
-
-  Widget _dirChip(String label, TxnType? type, void Function(VoidCallback) apply) {
-    final selected = _direction == type;
-    final color = type?.color ?? AppColors.accentSoft;
-    return GestureDetector(
-      onTap: () => apply(() => _direction = type),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        decoration: BoxDecoration(
-          color: selected ? AppColors.tint(color, 0.18) : AppColors.surface,
-          borderRadius: BorderRadius.circular(Radii.pill),
-          border: Border.all(color: selected ? color : AppColors.divider),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
-            color: selected ? AppColors.textPrimary : AppColors.textSecondary,
-          ),
-        ),
+      total: all.length,
+      searchable: true,
+      direction: const [
+        DirectionOption('All', null),
+        DirectionOption('Income', TxnType.income),
+        DirectionOption('Expenses', TxnType.expense),
+        DirectionOption('Transfers', TxnType.transfer),
+      ],
+      initial: FilterSnapshot(
+        direction: _direction,
+        selections: {
+          'categories': {..._categoryIds},
+          'accounts': {..._accountIds},
+          'tags': {..._tagIds},
+        },
+        min: _min,
+        max: _max,
       ),
-    );
-  }
-
-  Widget _pickRow({
-    required IconData icon,
-    required Color color,
-    required String name,
-    required bool selected,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: Insets.md,
-          vertical: Insets.sm,
+      matchCount: countMatches,
+      onChanged: (s) => setState(() {
+        _direction = s.direction;
+        _categoryIds
+          ..clear()
+          ..addAll(s.sel('categories'));
+        _accountIds
+          ..clear()
+          ..addAll(s.sel('accounts'));
+        _tagIds
+          ..clear()
+          ..addAll(s.sel('tags'));
+        _min = s.min;
+        _max = s.max;
+      }),
+      blocks: [
+        SectionFilterBlock(FilterSection(
+          key: 'categories',
+          label: 'CATEGORIES',
+          kind: FilterSectionKind.rows,
+          showCount: true,
+          showControls: true,
+          truncateAt: 5,
+          itemsFor: catItems,
+        )),
+        SectionFilterBlock(FilterSection(
+          key: 'accounts',
+          label: 'ACCOUNTS',
+          kind: FilterSectionKind.rows,
+          showCount: true,
+          showControls: true,
+          truncateAt: 5,
+          itemsFor: accItems,
+        )),
+        if (tags.isNotEmpty)
+          SectionFilterBlock(FilterSection(
+            key: 'tags',
+            label: 'TAGS',
+            kind: FilterSectionKind.chips,
+            showCount: true,
+            showControls: true,
+            truncateAt: 6,
+            itemsFor: tagItems,
+          )),
+        AmountFilterBlock(
+          rangeMin: rangeMin,
+          rangeMax: rangeMax,
+          maxHint: 'Any',
         ),
-        child: Row(
-          children: [
-            IconTile(icon, color: color, size: 30, iconSize: 15),
-            const SizedBox(width: Insets.sm),
-            Expanded(
-              child: Text(
-                name,
-                style: AppText.rowTitle,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            Icon(
-              selected
-                  ? Icons.check_circle_rounded
-                  : Icons.circle_outlined,
-              size: 20,
-              color: selected ? AppColors.accent : AppColors.textTertiary,
-            ),
-          ],
-        ),
-      ),
+      ],
     );
   }
 
