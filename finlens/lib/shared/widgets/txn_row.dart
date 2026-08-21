@@ -13,9 +13,14 @@ import 'destructive_sheet.dart';
 import 'swipe_actions.dart';
 
 /// One Ledger line. The main Ledger tab (2.1) drives it with the description
-/// toggle and per-row after-balances; the account-detail *perspective*
-/// (`perspectiveAccountId` + `runningBalance`) is preserved unchanged for the
-/// screens/tests that still use it.
+/// toggle; the account-detail *perspective* (`perspectiveAccountId` +
+/// `runningBalance`) is preserved unchanged for the screens/tests that still
+/// use it.
+///
+/// The main Ledger tab renders **no running balance**: its list interleaves
+/// every account, so a per-row figure reconciles against no series a reader can
+/// follow (balance spec §1). A balance appears only on the perspective callers,
+/// which are a single account's tape.
 ///
 /// Layout (spec §4): two compact lines by default —
 ///   line 1  `title ————— amount`
@@ -28,7 +33,6 @@ class TxnRow extends StatelessWidget {
     required this.txn,
     this.runningBalance,
     this.perspectiveAccountId,
-    this.afterBalance,
     this.showDescription = false,
     this.searchQuery,
     required this.onTap,
@@ -39,19 +43,14 @@ class TxnRow extends StatelessWidget {
 
   final Txn txn;
 
-  /// Account Detail shows the balance after each entry. When supplied (the
-  /// perspective callers) it wins over [afterBalance] — the row never computes
-  /// a second balance (spec §4.5).
+  /// Account Detail shows the balance after each entry — the only path on which
+  /// this row renders a balance at all. Null on the main Ledger tab, where a
+  /// running balance is never legible (balance spec §1).
   final double? runningBalance;
 
   /// Which side of the entry we are looking from — decides the sign shown and
   /// drops the (already-stated) account from line 2.
   final String? perspectiveAccountId;
-
-  /// The displayed account's balance immediately after this transaction, as
-  /// assembled once for the whole month by `AppStore.ledgerAfterBalances`
-  /// (spec §4.5). Used by the main Ledger; ignored when [runningBalance] is set.
-  final double? afterBalance;
 
   /// Whether the global descriptions toggle is on (spec §4.4). A noted row gains
   /// its third line; noteless rows are unaffected.
@@ -114,10 +113,10 @@ class TxnRow extends StatelessWidget {
     return _swipeWrap(_buildStandard(store));
   }
 
-  /// The affected account's after-balance for this row — the caller's
-  /// [runningBalance] (perspective) wins, else the month-assembled
-  /// [afterBalance]. Null when neither is available.
-  double? get _balance => runningBalance ?? afterBalance;
+  /// The affected account's after-balance for this row — supplied only by the
+  /// perspective callers (a single account's tape). Null on the main Ledger tab,
+  /// where no running balance renders (balance spec §1).
+  double? get _balance => runningBalance;
 
   // ── Standard rows: expense / income / rebalance ────────────────────────────
 
@@ -168,6 +167,10 @@ class TxnRow extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Row(
+                      // Two type sizes side by side read on their baseline, not
+                      // their centres — this is what makes the pairing deliberate.
+                      crossAxisAlignment: CrossAxisAlignment.baseline,
+                      textBaseline: TextBaseline.alphabetic,
                       children: [
                         Expanded(child: _highlighted(_title(store), _titleStyle)),
                         const SizedBox(width: Insets.sm),
@@ -248,6 +251,8 @@ class TxnRow extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                  textBaseline: TextBaseline.alphabetic,
                   children: [
                     Expanded(
                       child: Text(parties.from,
@@ -339,6 +344,8 @@ class TxnRow extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                  textBaseline: TextBaseline.alphabetic,
                   children: [
                     Expanded(
                       child: Text(other,

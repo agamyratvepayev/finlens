@@ -129,11 +129,13 @@ void main() {
       expect(find.text('Partial payment before statement'), findsNothing);
     });
 
-    testWidgets('the destination balance shows on line 2; the note is line 3 '
-        'only when the toggle is on', (tester) async {
+    testWidgets('the Ledger tab shows no balance; the note is line 3 only when '
+        'the toggle is on', (tester) async {
+      // The main Ledger tab renders no running balance (balance spec §1): a
+      // transfer row on it carries the two account lines and, behind the toggle,
+      // the note — never a per-row balance figure.
       Widget row({required bool show}) => TxnRow(
             txn: _transfer('a1', 'a2', note: 'Card debt payment'),
-            afterBalance: 11430, // destination balance after the transfer
             showDescription: show,
             onTap: () {},
             onEdit: () {},
@@ -142,12 +144,12 @@ void main() {
           );
 
       await tester.pumpWidget(_host(_store(), row(show: false)));
-      expect(find.text(r'$11,430'), findsOneWidget); // dest balance, both states
+      expect(find.text(r'$11,430'), findsNothing); // no running balance
       expect(find.text('Card debt payment'), findsNothing); // toggle off
 
       await tester.pumpWidget(_host(_store(), row(show: true)));
       await tester.pumpAndSettle();
-      expect(find.text(r'$11,430'), findsOneWidget);
+      expect(find.text(r'$11,430'), findsNothing);
       expect(find.text('Card debt payment'), findsOneWidget); // line 3 open
     });
 

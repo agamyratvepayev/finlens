@@ -242,8 +242,6 @@ class _LedgerScreenState extends State<LedgerScreen> {
         ? (expense / income).clamp(0.0, 1.0)
         : (expense > 0 ? 1.0 : 0.0);
 
-    // The month's per-row after-balances, assembled once (cached in the store).
-    final afterBalances = store.ledgerAfterBalances();
     final rowQuery = searching ? folded : null;
     final days = _groupByDay(visible);
 
@@ -311,7 +309,6 @@ class _LedgerScreenState extends State<LedgerScreen> {
                                 day,
                                 showDesc: showDesc,
                                 query: rowQuery,
-                                afterBalances: afterBalances,
                               ),
                             ],
                         ],
@@ -548,7 +545,6 @@ class _LedgerScreenState extends State<LedgerScreen> {
     LedgerDay day, {
     required bool showDesc,
     required String? query,
-    required Map<String, double> afterBalances,
   }) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: Insets.gutter),
@@ -562,7 +558,6 @@ class _LedgerScreenState extends State<LedgerScreen> {
               if (i > 0) const RowDivider(indent: Insets.md),
               TxnRow(
                 txn: day.txns[i],
-                afterBalance: afterBalances[day.txns[i].id],
                 showDescription: showDesc,
                 searchQuery: query,
                 onTap: () => day.txns[i].type == TxnType.transfer

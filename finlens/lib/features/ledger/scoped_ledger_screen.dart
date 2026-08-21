@@ -41,6 +41,12 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
   late LedgerScope _scope = widget.initialScope;
   late DateRange _range;
 
+  /// The descriptions toggle (spec §3/§4.4). Defaults on for the scoped screens
+  /// — a category or the scope's own name repeats down the list, so the
+  /// description is the row's identity, not decoration. Seeded from the persisted
+  /// store value and written back on change.
+  late bool _showDescriptions;
+
   FlowKind? _filter;
 
   /// True while the period sheet is open, so the chip can tint (spec §4).
@@ -87,6 +93,7 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
     super.initState();
     // Land on the period containing today, at the unit saved for this screen
     // type (account vs category) — the cursor is never persisted (spec §5).
+    _showDescriptions = StoreScope.read(context).scopedShowDescriptions;
     _range = _periodForScope(StoreScope.read(context), _scope);
     if (!_hintShown) {
       _hintShown = true;
@@ -122,6 +129,13 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
     } else {
       store.setCategoryPeriodUnit(unit);
     }
+  }
+
+  /// Flip the descriptions toggle and persist it (fire-and-forget, matching the
+  /// Ledger tab). A lasting view preference — it never resets on a period change.
+  void _toggleDescriptions(AppStore store) {
+    setState(() => _showDescriptions = !_showDescriptions);
+    store.setScopedShowDescriptions(_showDescriptions);
   }
 
   void _setScope(LedgerScope scope) {
@@ -282,6 +296,15 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
     final total = periodRows.length;
     final shown = visible.length;
 
+    // Whether a running-balance column is legible for the list as it now stands
+    // (balance spec §1): a single-account tape, in date order, nothing hidden.
+    // The three conditions live in one predicate, evaluated once here.
+    final shape = LedgerListShape(
+      accountCount: scopeAccountIds.length,
+      sort: sort,
+      narrowed: shown != total,
+    );
+
     final _EmptyReason? emptyReason = total == 0
         ? _EmptyReason.period
         : shown == 0
@@ -331,6 +354,8 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
                   grouped: sort.groupsByDay,
                   highlight: (_searching && q.isNotEmpty) ? q : null,
                   store: store,
+                  showDescription: _showDescriptions,
+                  showBalance: shape.showsRunningBalance,
                 ),
               ),
               _addButton(store),
@@ -677,6 +702,18 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
           ),
           ToolCluster(
             tools: [
+              // Descriptions toggle — same visual language as the Ledger tab's:
+              // an icon swap plus a brighter glyph, no background change. Defaults
+              // on here (see [_showDescriptions]).
+              Tool(
+                icon: _showDescriptions
+                    ? Icons.keyboard_double_arrow_up_rounded
+                    : Icons.keyboard_double_arrow_down_rounded,
+                tooltip: 'Show descriptions',
+                iconColor: _showDescriptions ? AppColors.accentLight : null,
+                semanticValue: _showDescriptions ? 'On' : 'Off',
+                onTap: () => _toggleDescriptions(store),
+              ),
               Tool(
                 icon: Icons.swap_vert_rounded,
                 tooltip: 'Sort transactions',
@@ -1005,6 +1042,8 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
     required bool grouped,
     required String? highlight,
     required AppStore store,
+    required bool showDescription,
+    required bool showBalance,
   }) {
     if (emptyReason != null) return _emptyState(store, emptyReason);
 
@@ -1040,6 +1079,8 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
           isFirstCard: i == 0,
           flat: !grouped,
           highlight: highlight,
+          showDescription: showDescription,
+          showBalance: showBalance,
           group: groups[i],
           scope: _scope,
           // A row tap opens a read-only screen, never the editor — the back

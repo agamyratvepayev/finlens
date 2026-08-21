@@ -66,11 +66,22 @@ class LedgerDayCard extends StatelessWidget {
     this.isFirstCard = false,
     this.flat = false,
     this.highlight,
+    this.showDescription = true,
+    this.showBalance = true,
   });
 
   final bool isFirstCard;
   final DayGroup group;
   final LedgerScope scope;
+
+  /// Whether noted rows reveal their description line — the scoped screens'
+  /// descriptions toggle (defaults on; a search-matched note still reveals).
+  final bool showDescription;
+
+  /// Whether the running-balance column is legible for this list — the
+  /// [LedgerListShape.showsRunningBalance] predicate. When false the figure does
+  /// not render (and is not announced), and nothing takes its place.
+  final bool showBalance;
 
   /// Row tap — opens the read-only Same-transactions screen. A tap never opens
   /// the editor (spec §1); editing stays behind the swipe menu.
@@ -182,6 +193,8 @@ class LedgerDayCard extends StatelessWidget {
                   onDelete: () => onDelete(rows[i].txn),
                   hint: isFirstCard && i == 0,
                   highlight: highlight,
+                  showDescription: showDescription,
+                  showBalance: showBalance,
                 ),
               ],
             ],
@@ -209,6 +222,8 @@ class LedgerTxnRow extends StatelessWidget {
     required this.onDelete,
     this.hint = false,
     this.highlight,
+    this.showDescription = true,
+    this.showBalance = true,
   });
 
   final bool hint;
@@ -224,6 +239,16 @@ class LedgerTxnRow extends StatelessWidget {
   /// Folded search query to highlight in this row's text, or null outside
   /// search mode (spec §3).
   final String? highlight;
+
+  /// Whether a noted row reveals its description line. A note-less row is
+  /// unaffected; a row whose note matched the search reveals it regardless.
+  final bool showDescription;
+
+  /// Whether the running-balance figure renders. False on any list that is not
+  /// a contiguous single-account tape (multi-account, non-date sort, or
+  /// narrowed) — see [LedgerListShape.showsRunningBalance]. When false the
+  /// figure is neither drawn nor announced, and nothing replaces it.
+  final bool showBalance;
 
   @override
   Widget build(BuildContext context) {
@@ -249,6 +274,13 @@ class LedgerTxnRow extends StatelessWidget {
     // transfer, whose title already names both sides) and the tag.
     final note = txn.note.trim();
     final hasNote = note.isNotEmpty;
+    // The description line follows the toggle, but a note the search matched
+    // reveals itself regardless (spec §3). A note-less row is unaffected either
+    // way.
+    final noteMatched = highlight != null &&
+        highlight!.isNotEmpty &&
+        foldSearch(note).contains(highlight!);
+    final descOpen = hasNote && (showDescription || noteMatched);
     final accountName = (scope is! AccountScope && !isTransfer)
         ? (store
                   .accountById(
@@ -267,7 +299,9 @@ class LedgerTxnRow extends StatelessWidget {
     );
     final balance0 = money(_runningBalance(store, txn), masked: store.masked);
     // Parts in reading order — title, amount, direction, description, balance,
-    // account, tag — not one merged string (spec §5).
+    // account, tag — not one merged string (spec §5). A figure a sighted user
+    // cannot see is never announced: the balance only when the column renders,
+    // the description only when it is open.
     final semanticsLabel = [
       isTransfer ? 'Transfer from ${parties!.from} to ${parties.to}' : category,
       money0,
@@ -277,8 +311,8 @@ class LedgerTxnRow extends StatelessWidget {
           FlowKind.outflow => 'expense',
           FlowKind.internal => 'internal transfer',
         },
-      if (hasNote) note,
-      'balance $balance0',
+      if (descOpen) note,
+      if (showBalance) 'balance $balance0',
       if (accountName.isNotEmpty) accountName,
       if (tag != null) 'tag $tag',
     ].join(', ');
@@ -429,16 +463,23 @@ class LedgerTxnRow extends StatelessWidget {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                // Line 1: title | amount. With no description the
-                                // balance sits beside the amount here instead of
-                                // on its own second line.
+                                // Line 1: title | amount, read on the baseline —
+                                // two type sizes side by side pair on their
+                                // baselines, not their centres. When the
+                                // description is closed and the balance renders,
+                                // it sits beside the amount here rather than on a
+                                // second line.
                                 Row(
+                                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                                  textBaseline: TextBaseline.alphabetic,
                                   children: [
                                     Expanded(child: titleWidget),
                                     const SizedBox(width: 10),
-                                    if (hasNote)
-                                      amountWidget
-                                    else
+                                    if (!descOpen && showBalance)
+                                      // Amount + balance stay centre-aligned to
+                                      // each other (they share this line); the
+                                      // outer row baselines the pair against the
+                                      // title.
                                       Row(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
@@ -446,12 +487,15 @@ class LedgerTxnRow extends StatelessWidget {
                                           const SizedBox(width: 6),
                                           balanceWidget,
                                         ],
-                                      ),
+                                      )
+                                    else
+                                      amountWidget,
                                   ],
                                 ),
-                                if (hasNote) ...[
+                                if (descOpen) ...[
                                   const SizedBox(height: 2),
-                                  // Line 2: description | balance.
+                                  // Line 2: description | balance (the balance
+                                  // only when the column is legible for this list).
                                   Row(
                                     children: [
                                       Expanded(
@@ -461,8 +505,10 @@ class LedgerTxnRow extends StatelessWidget {
                                           query: highlight,
                                         ),
                                       ),
-                                      const SizedBox(width: 10),
-                                      balanceWidget,
+                                      if (showBalance) ...[
+                                        const SizedBox(width: 10),
+                                        balanceWidget,
+                                      ],
                                     ],
                                   ),
                                 ],
@@ -593,16 +639,24 @@ class LedgerTxnRow extends StatelessWidget {
     }
 
     final balanceText = money(_runningBalance(store, txn), masked: store.masked);
+    final note = txn.note.trim();
+    // The account screen's note follows the descriptions toggle (a search-matched
+    // note reveals regardless); the group ledger's line 2 is the destination, a
+    // structural label the toggle never touches.
+    final noteMatched = highlight != null &&
+        highlight!.isNotEmpty &&
+        foldSearch(note).contains(highlight!);
+    final descOpen = note.isNotEmpty && (showDescription || noteMatched);
 
-    // Line 2 — always present on this screen: a balance (or the received leg
-    // on a cross-currency transfer) sits on its right regardless.
+    // Line 2. The running balance (or, cross-currency, the received leg — which
+    // is an amount, not a balance) sits on the right; the balance only when the
+    // column is legible for this list, the received leg always.
     String? line2Left;
     TextStyle line2LeftStyle = descStyle;
-    final Widget line2Right;
+    final Widget? line2Right;
     if (onAccount) {
-      final note = txn.note.trim();
-      if (note.isNotEmpty) line2Left = note;
-      line2Right = Text(balanceText, style: balanceStyle);
+      if (descOpen) line2Left = note;
+      line2Right = showBalance ? Text(balanceText, style: balanceStyle) : null;
     } else {
       line2Left = '→ ${parties.to}';
       line2LeftStyle = titleStyle.copyWith(color: AppColors.textSecondary);
@@ -612,14 +666,17 @@ class LedgerTxnRow extends StatelessWidget {
                   currency: toCur, signless: true, masked: store.masked),
               style: amountStyle,
             )
-          : Text(balanceText, style: balanceStyle);
+          : (showBalance ? Text(balanceText, style: balanceStyle) : null);
     }
+    final hasLine2 = line2Left != null || line2Right != null;
 
+    // A number a sighted user cannot see is not announced (spec §5): the balance
+    // only when the column renders, the note only when its line is open.
     final semanticsLabel = [
       'Transfer from ${parties.from} to ${parties.to}',
       money(txn.amount, currency: txn.currency, signless: true, masked: store.masked),
-      if (txn.note.trim().isNotEmpty) txn.note.trim(),
-      'balance $balanceText',
+      if (onAccount && descOpen) note,
+      if (showBalance) 'balance $balanceText',
     ].join(', ');
 
     return Semantics(
@@ -689,6 +746,8 @@ class LedgerTxnRow extends StatelessWidget {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Row(
+                              crossAxisAlignment: CrossAxisAlignment.baseline,
+                              textBaseline: TextBaseline.alphabetic,
                               children: [
                                 Expanded(
                                   child: Text(line1Text,
@@ -700,8 +759,13 @@ class LedgerTxnRow extends StatelessWidget {
                                 amountTop,
                               ],
                             ),
-                            const SizedBox(height: 2),
-                            Row(
+                            // Line 2 can vanish entirely — a tag-less, note-less
+                            // transfer whose balance is suppressed falls to the
+                            // 44pt floor, which is correct: the title already
+                            // names both sides.
+                            if (hasLine2) ...[
+                              const SizedBox(height: 2),
+                              Row(
                                 children: [
                                   Expanded(
                                     child: line2Left == null
@@ -711,10 +775,13 @@ class LedgerTxnRow extends StatelessWidget {
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis),
                                   ),
-                                  const SizedBox(width: 10),
-                                  line2Right,
+                                  if (line2Right != null) ...[
+                                    const SizedBox(width: 10),
+                                    line2Right,
+                                  ],
                                 ],
                               ),
+                            ],
                           ],
                         ),
                       ),

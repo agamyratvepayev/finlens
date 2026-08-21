@@ -1,6 +1,7 @@
 import '../../core/models/models.dart';
 import '../../core/store/app_store.dart';
 import '../../core/utils/fx.dart';
+import 'trans_filter.dart';
 
 /// What the ledger is currently showing.
 ///
@@ -53,6 +54,41 @@ class AccountScope extends LedgerScope {
   @override
   String title(AppStore store) =>
       store.accountById(accountId)?.name ?? 'Account';
+}
+
+/// Whether the list currently on screen is a legible running-balance tape.
+///
+/// A balance column is only a column: each row must differ from the one below
+/// it by that row's own amount. One foreign account, one hidden row, or one
+/// non-chronological sort and that stops being true, at which point the figure
+/// is decoration. The three conditions therefore live here as one predicate
+/// rather than being restated at each call site.
+class LedgerListShape {
+  const LedgerListShape({
+    required this.accountCount,
+    required this.sort,
+    required this.narrowed,
+  });
+
+  /// Accounts represented in the list — derived from the count, never the scope
+  /// class, so a one-account group qualifies as a tape just as an account screen
+  /// does.
+  final int accountCount;
+
+  /// The active sort; only the two date sorts leave the column reconciling
+  /// (amount/name orders make it arbitrary). Reuses [TransSort.groupsByDay] —
+  /// the day headers are honest under exactly the sorts the balance column is.
+  final TransSort sort;
+
+  /// An active filter, search query, or direction chip — the same `shown !=
+  /// total` quantity the toolbar's "N of M" label reports. A hidden row breaks
+  /// the arithmetic between the two rows around it.
+  final bool narrowed;
+
+  bool get isSingleAccount => accountCount == 1;
+
+  bool get showsRunningBalance =>
+      isSingleAccount && sort.groupsByDay && !narrowed;
 }
 
 /// How a transaction reads once the current scope is taken into account.

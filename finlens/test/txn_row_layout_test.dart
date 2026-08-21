@@ -7,10 +7,14 @@ import 'package:finlens/core/utils/search_fold.dart';
 import 'package:finlens/shared/widgets/txn_row.dart';
 import 'package:finlens/theme/app_theme.dart';
 
-// Layout/geometry tests for the redesigned TxnRow (Ledger tab). Two compact
-// lines by default (title/amount over account/tags/balance); the description is
-// a third line behind the global toggle (spec §4). Heights are intrinsic
-// (padding + content) with a 44pt floor, so assertions use tolerances.
+// Layout/geometry tests for the Ledger-tab TxnRow. Two compact lines by default
+// (title/amount over account/tags); the description is a third line behind the
+// global toggle (spec §4). The main Ledger tab renders NO running balance — its
+// list interleaves every account, so a per-row figure reconciles against no
+// series (balance spec §1). A balance appears only on the account-detail
+// perspective (`perspectiveAccountId` + `runningBalance`), a single account's
+// tape. Heights are intrinsic (padding + content) with a 44pt floor, so
+// assertions use tolerances.
 
 Category _cat(String id, String name) => Category(
       id: id,
@@ -60,7 +64,6 @@ Future<double> _pump(
   Txn txn, {
   String? perspective,
   double? runningBalance,
-  double? afterBalance,
   bool showDescription = false,
   String? searchQuery,
   double width = 360,
@@ -81,7 +84,6 @@ Future<double> _pump(
                 txn: txn,
                 perspectiveAccountId: perspective,
                 runningBalance: runningBalance,
-                afterBalance: afterBalance,
                 showDescription: showDescription,
                 searchQuery: searchQuery,
                 onTap: () {},
@@ -103,19 +105,19 @@ void main() {
   group('toggle & description line', () {
     testWidgets('a noteless row keeps its height across toggle states',
         (tester) async {
-      final off = await _pump(tester, _store(), _expense(), afterBalance: 880);
+      final off = await _pump(tester, _store(), _expense());
       final on = await _pump(tester, _store(), _expense(),
-          afterBalance: 880, showDescription: true);
+          showDescription: true);
       expect(on, closeTo(off, 0.5)); // no note -> no third line either way
     });
 
     testWidgets('a noted row grows by one line when the toggle is on',
         (tester) async {
       final off = await _pump(tester, _store(),
-          _expense(note: 'Bakery & fruit'), afterBalance: 880);
+          _expense(note: 'Bakery & fruit'));
       final on = await _pump(tester, _store(),
           _expense(note: 'Bakery & fruit'),
-          afterBalance: 880, showDescription: true);
+          showDescription: true);
       expect(off, closeTo(44, 6)); // two lines, floor binds
       expect(on, greaterThan(off + 6)); // description adds a line
     });
@@ -124,25 +126,38 @@ void main() {
         (tester) async {
       final noted = await _pump(tester, _store(),
           _expense(note: 'Bakery & fruit'),
-          afterBalance: 880, showDescription: true);
+          showDescription: true);
       final noteless = await _pump(tester, _store(), _expense(),
-          afterBalance: 880, showDescription: true);
+          showDescription: true);
       expect(noteless, lessThan(noted - 6));
     });
   });
 
-  group('remaining balance (line 2)', () {
-    testWidgets('the amount is unsigned/red while a negative balance keeps its '
-        'minus', (tester) async {
-      await _pump(tester, _store(), _expense(), afterBalance: -300);
+  group('no running balance on the Ledger tab', () {
+    testWidgets('the amount is unsigned/red and no balance figure renders',
+        (tester) async {
+      await _pump(tester, _store(), _expense());
       expect(find.text(r'$120'), findsOneWidget); // amount unsigned
       expect(find.text('−\$120'), findsNothing);
-      expect(find.text('−\$300'), findsOneWidget); // balance signed
+      // The tab interleaves every account, so the row shows no second figure at
+      // all — only its own amount (balance spec §1).
+      final dollarTexts = tester
+          .widgetList<Text>(find.byType(Text))
+          .where((t) => (t.data ?? '').startsWith(r'$'))
+          .toList();
+      expect(dollarTexts.length, 1);
     });
 
-    testWidgets('a non-negative balance shows unsigned on line 2',
-        (tester) async {
-      await _pump(tester, _store(), _expense(), afterBalance: 5430);
+    testWidgets('the account name still names line 2', (tester) async {
+      await _pump(tester, _store(), _expense());
+      expect(find.text('Main Checking'), findsOneWidget);
+    });
+
+    testWidgets('the perspective row (a single account tape) DOES show a '
+        'balance', (tester) async {
+      // The one path that renders a balance: an account-detail perspective.
+      await _pump(tester, _store(), _expense(),
+          perspective: 'a1', runningBalance: 5430);
       expect(find.text(r'$5,430'), findsOneWidget);
     });
   });
@@ -156,12 +171,11 @@ void main() {
       ]);
       await _pump(tester, store,
           _expense(tags: const ['commute', 'side']),
-          afterBalance: 5430, width: 320);
+          width: 320);
 
-      // The tag run collapsed; the full run is gone; the balance still shows.
+      // The tag run collapsed; the full run is gone.
       expect(find.text('#commute +1'), findsOneWidget);
       expect(find.text('#commute #side'), findsNothing);
-      expect(find.text(r'$5,430'), findsOneWidget);
 
       final acct = tester.widget<Text>(find
           .text('An extremely long account name that will not fit here'));
@@ -173,13 +187,13 @@ void main() {
     testWidgets('a matched note opens even with the toggle off, and closes '
         'when the search clears', (tester) async {
       final off = await _pump(tester, _store(),
-          _expense(note: 'Bakery & fruit'), afterBalance: 880);
+          _expense(note: 'Bakery & fruit'));
       final matched = await _pump(tester, _store(),
           _expense(note: 'Bakery & fruit'),
-          afterBalance: 880, searchQuery: foldSearch('bakery'));
+          searchQuery: foldSearch('bakery'));
       final unmatched = await _pump(tester, _store(),
           _expense(note: 'Bakery & fruit'),
-          afterBalance: 880, searchQuery: foldSearch('zzz'));
+          searchQuery: foldSearch('zzz'));
 
       expect(matched, greaterThan(off + 6)); // note revealed
       expect(unmatched, closeTo(off, 1)); // non-match stays closed
@@ -189,7 +203,7 @@ void main() {
   group('account label', () {
     testWidgets('shows on the Ledger, absent on an account-detail perspective',
         (tester) async {
-      await _pump(tester, _store(), _expense(), afterBalance: 880);
+      await _pump(tester, _store(), _expense());
       expect(find.text('Main Checking'), findsOneWidget);
 
       await _pump(tester, _store(), _expense(),
@@ -201,7 +215,7 @@ void main() {
   testWidgets('no overflow at 130% text scale', (tester) async {
     await _pump(tester, _store(),
         _expense(note: 'Bakery & fruit', tags: const ['side']),
-        afterBalance: 5430, showDescription: true, textScale: 1.3);
+        showDescription: true, textScale: 1.3);
     expect(tester.takeException(), isNull);
   });
 }
