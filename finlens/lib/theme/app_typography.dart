@@ -119,6 +119,27 @@ abstract final class AppText {
     color: AppColors.textSecondary,
   );
 
+  /// The single section total that now lives on the ASSETS / LIABILITIES
+  /// header (the bar's duplicate label row is gone). Coloured by direction at
+  /// the call site — [AppColors.positive] for assets, [AppColors.negative] for
+  /// liabilities.
+  static const sectionTotal = TextStyle(
+    fontSize: 12,
+    height: 1.2,
+    fontWeight: FontWeight.w600,
+    fontFeatures: _amountFeatures,
+  );
+
+  /// Group-row second line — "4 accounts · 10.0%". The share sits here in
+  /// neutral grey; on this screen green/red mean money direction only, and a
+  /// share is neither a gain nor a loss.
+  static const groupSubtitle = TextStyle(
+    fontSize: 10.5,
+    height: 1.2,
+    fontWeight: FontWeight.w500,
+    color: AppColors.textTertiary,
+  );
+
   static const groupName = TextStyle(
     fontSize: 15,
     height: 1.25,

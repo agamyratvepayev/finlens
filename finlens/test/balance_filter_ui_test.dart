@@ -29,11 +29,12 @@ void main() {
     // The hidden group is absent from the tree, not merely collapsed.
     expect(find.text('Valuables'), findsNothing);
 
-    // Percentages recompute against the *filtered* section total:
+    // Percentages recompute against the *filtered* section total and now live
+    // in the group-row subtitle, next to the account count:
     // Investments jumps 21.4% → 65.1%.
-    expect(find.text('30.6%'), findsOneWidget); // Spendable
-    expect(find.text('4.4%'), findsOneWidget); // Receivables
-    expect(find.text('65.1%'), findsOneWidget); // Investments
+    expect(find.text('4 accounts · 30.6%'), findsOneWidget); // Spendable
+    expect(find.text('4 accounts · 4.4%'), findsOneWidget); // Receivables
+    expect(find.text('5 accounts · 65.1%'), findsOneWidget); // Investments
   });
 
   testWidgets('filter button announces its active state to screen readers',

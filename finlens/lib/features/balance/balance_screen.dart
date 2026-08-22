@@ -158,16 +158,16 @@ class _BalanceScreenState extends State<BalanceScreen> {
 
   // ── Header ────────────────────────────────────────────────────────────────
 
-  /// 106px: label + dots + controls, then the amount beside the tools, then the
-  /// ratio bar. Pinned — only the list scrolls.
+  /// Header: label + dots + controls, then the hero amount alone, the slim
+  /// ratio bar, and a tool row (counter + the four tools). Pinned — only the
+  /// list scrolls.
   Widget _header(AppStore store) {
     final filter = store.balanceFilter;
     final showRatio = _section == BalanceSection.all && !_searching;
 
-    // 34 + 4 + 34 + 8 + 4 + 4 + 14 + 4 = 106 on the All section. The height is
-    // not hard-coded: with the ratio bar hidden the header shrinks and hands
-    // the space to the list, and it grows by one line when a past date is
-    // selected. Every vertical value here is a multiple of 2.
+    // Height is not hard-coded: the ratio bar shows only on the All section,
+    // the "as of" line appears only for a past date, and searching swaps the
+    // tool row for the field. AnimatedSize hands any freed space to the list.
     return AnimatedSize(
       duration: const Duration(milliseconds: 180),
       curve: Curves.easeOut,
@@ -187,9 +187,12 @@ class _BalanceScreenState extends State<BalanceScreen> {
                 assets: filter.sectionTotal(store, assets: true),
                 liabilities: filter.sectionTotal(store, assets: false).abs(),
               ),
-              const SizedBox(height: 4),
-              _ratioLabels(store),
             ],
+            // The tools left the hero's line for a row of their own, mirroring
+            // the Ledger's counter + tool-cluster grammar. The search field
+            // takes this row's place while searching, so the row never stacks
+            // on top of the field.
+            if (!_searching) _toolRow(store),
           ],
         ),
       ),
@@ -229,16 +232,16 @@ class _BalanceScreenState extends State<BalanceScreen> {
     );
   }
 
-  /// The amount and the tool cluster share one row; search replaces both
-  /// in place, so the row never changes height.
+  /// The hero amount owns its line now; search replaces it in place, so the
+  /// row never changes height.
   Widget _headerRow2(AppStore store) {
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 180),
-      child: _searching ? _searchField() : _amountAndTools(store),
+      child: _searching ? _searchField() : _amountOnly(store),
     );
   }
 
-  Widget _amountAndTools(AppStore store) {
+  Widget _amountOnly(AppStore store) {
     final filter = store.balanceFilter;
     // Every headline figure is the *filtered* one — hiding Valuables has to
     // move Net Worth, not just drop a row. The store getters stay unfiltered so
@@ -252,39 +255,46 @@ class _BalanceScreenState extends State<BalanceScreen> {
         ),
     };
 
-    return Row(
+    return Align(
       key: const ValueKey('amount'),
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.centerLeft,
-                child: AmountText.balance(
-                  amount,
-                  style: AppText.heroAmount,
-                  color: color,
-                ),
-              ),
-              // Without this line a user can easily believe a historical view
-              // is live data.
-              if (store.isHistorical)
-                Text(
-                  'as of ${dayMonthYear(store.asOf!)}',
-                  style: AppText.asOfLine,
-                ),
-            ],
+      alignment: Alignment.centerLeft,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: AmountText.balance(
+              amount,
+              style: AppText.heroAmount,
+              color: color,
+            ),
           ),
-        ),
-        const SizedBox(width: Insets.sm),
-        Padding(
-          // Sits level with the amount's baseline.
-          padding: const EdgeInsets.only(bottom: 2),
-          child: ToolCluster(
+          // Without this line a user can easily believe a historical view
+          // is live data.
+          if (store.isHistorical)
+            Text(
+              'as of ${dayMonthYear(store.asOf!)}',
+              style: AppText.asOfLine,
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// Counter on the left, the four tools on the right — the Ledger's tool-row
+  /// grammar, brought to Balance. The buttons are the same [ToolCluster] that
+  /// used to sit beside the hero; only their position changed.
+  Widget _toolRow(AppStore store) {
+    final filter = store.balanceFilter;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(0, 9, 0, 2),
+      child: Row(
+        children: [
+          Expanded(child: _counter(store)),
+          const SizedBox(width: Insets.sm),
+          ToolCluster(
             tools: [
               Tool(
                 icon: Icons.swap_vert_rounded,
@@ -321,9 +331,69 @@ class _BalanceScreenState extends State<BalanceScreen> {
               ),
             ],
           ),
-        ),
-      ],
+        ],
+      ),
     );
+  }
+
+  /// "7 groups · 24 accounts", or "7 groups · 18 of 24 accounts" when the
+  /// filter hides some — each half stays short until it is actually narrowed.
+  /// Counts the section currently in view; ellipsizes before it can push the
+  /// tools.
+  Widget _counter(AppStore store) {
+    final filter = store.balanceFilter;
+    final groups =
+        _visibleGroups.where((g) => store.accountsIn(g).isNotEmpty).toList();
+    final groupsTotal = groups.length;
+    final groupsVisible =
+        groups.where((g) => filter.isGroupVisible(store, g)).length;
+    var accountsTotal = 0;
+    var accountsVisible = 0;
+    for (final g in groups) {
+      accountsTotal += store.accountsIn(g).length;
+      accountsVisible += filter.visibleAccounts(store, g).length;
+    }
+
+    return Semantics(
+      liveRegion: true,
+      child: RichText(
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        text: TextSpan(
+          style: const TextStyle(
+            fontSize: 13,
+            height: 1.2,
+            fontWeight: FontWeight.w500,
+            color: AppColors.textSecondary,
+          ),
+          children: [
+            ..._countSpans(groupsVisible, groupsTotal, 'group', 'groups'),
+            const TextSpan(text: ' · '),
+            ..._countSpans(accountsVisible, accountsTotal, 'account',
+                'accounts'),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// One half of the counter — short "N nouns" when nothing is hidden, or the
+  /// bright "V of T nouns" reading (V emphasised) when it is narrowed.
+  List<InlineSpan> _countSpans(int visible, int total, String one, String many) {
+    final noun = total == 1 ? one : many;
+    if (visible == total) {
+      return [TextSpan(text: '$total $noun')];
+    }
+    return [
+      TextSpan(
+        text: '$visible',
+        style: const TextStyle(
+          fontWeight: FontWeight.w700,
+          color: AppColors.textPrimary,
+        ),
+      ),
+      TextSpan(text: ' of $total $noun'),
+    ];
   }
 
   Widget _searchField() {
@@ -386,31 +456,6 @@ class _BalanceScreenState extends State<BalanceScreen> {
                 color: AppColors.accentSoft,
               ),
             ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _ratioLabels(AppStore store) {
-    final filter = store.balanceFilter;
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Flexible(
-          child: _RatioLabel(
-            caption: 'Assets ',
-            value: filter.sectionTotal(store, assets: true),
-            color: AppColors.positive,
-            alignment: Alignment.centerLeft,
-          ),
-        ),
-        Flexible(
-          child: _RatioLabel(
-            caption: 'Liabilities ',
-            value: filter.sectionTotal(store, assets: false),
-            color: AppColors.negative,
-            alignment: Alignment.centerRight,
           ),
         ),
       ],
@@ -623,6 +668,7 @@ class _BalanceScreenState extends State<BalanceScreen> {
             child: _ListSectionHeader(
               label,
               filter.sectionTotal(store, assets: assets),
+              assets: assets,
               // The hint advertises account dragging until the first successful
               // drop dismisses it forever, and hides while searching (the
               // affordance it points at is off then).
@@ -1030,10 +1076,19 @@ class _PendingMove {
 // ── Header pieces ───────────────────────────────────────────────────────────
 
 class _ListSectionHeader extends StatelessWidget {
-  const _ListSectionHeader(this.label, this.total, {this.showHint = false});
+  const _ListSectionHeader(
+    this.label,
+    this.total, {
+    required this.assets,
+    this.showHint = false,
+  });
 
   final String label;
   final double total;
+
+  /// Colours the total — green for assets, red for liabilities. With the bar's
+  /// duplicate label row gone, this header is the section total's only home.
+  final bool assets;
 
   /// Renders the trailing "Hold an account to arrange" discoverability hint.
   final bool showHint;
@@ -1048,8 +1103,9 @@ class _ListSectionHeader extends StatelessWidget {
           // The flexible middle carries the right-aligned hint and is what
           // yields first at narrow widths: the hint truncates (ellipsis) inside
           // this Expanded while the total — outside it — always keeps its full
-          // width. The hint's line box is kept under the label's, so the row
-          // height never changes whether the hint shows or not.
+          // width. The hint sits to the left of the total with an 8px gap, and
+          // its line box is kept under the label's, so the row height never
+          // changes whether the hint shows or not.
           Expanded(
             child: showHint
                 ? const Padding(
@@ -1058,7 +1114,11 @@ class _ListSectionHeader extends StatelessWidget {
                   )
                 : const SizedBox.shrink(),
           ),
-          AmountText.balance(total, style: AppText.listSectionLabel),
+          AmountText.balance(
+            total,
+            style: AppText.sectionTotal,
+            color: assets ? AppColors.positive : AppColors.negative,
+          ),
         ],
       ),
     );
@@ -1116,20 +1176,20 @@ class _RatioBar extends StatelessWidget {
     // Everything hidden: no ratio to draw — a flat neutral track (spec §5),
     // and the guard that keeps the division below safe.
     if (total <= 0) {
-      return SizedBox(height: 4, child: _seg(AppColors.sheetCard));
+      return SizedBox(height: 3, child: _seg(AppColors.surfaceHigh));
     }
     // One side fully hidden reads as a single solid bar, not a bar with a
     // 1-flex sliver of the other colour.
     if (liabilities <= 0) {
-      return SizedBox(height: 4, child: _seg(AppColors.positive));
+      return SizedBox(height: 3, child: _seg(AppColors.positive));
     }
     if (assets <= 0) {
-      return SizedBox(height: 4, child: _seg(AppColors.negative));
+      return SizedBox(height: 3, child: _seg(AppColors.negative));
     }
 
     final ratio = (liabilities / total).clamp(0.0, 1.0);
     return SizedBox(
-      height: 4,
+      height: 3,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -1153,38 +1213,6 @@ class _RatioBar extends StatelessWidget {
           borderRadius: BorderRadius.circular(2),
         ),
       );
-}
-
-/// One side of the ratio caption. Scales down rather than overflowing when the
-/// figure is long or the text scale is large.
-class _RatioLabel extends StatelessWidget {
-  const _RatioLabel({
-    required this.caption,
-    required this.value,
-    required this.color,
-    required this.alignment,
-  });
-
-  final String caption;
-  final double value;
-  final Color color;
-  final Alignment alignment;
-
-  @override
-  Widget build(BuildContext context) {
-    final style = AppText.sharePercent.copyWith(color: color);
-    return FittedBox(
-      fit: BoxFit.scaleDown,
-      alignment: alignment,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(caption, style: style),
-          AmountText.balance(value, style: style),
-        ],
-      ),
-    );
-  }
 }
 
 class _DatePill extends StatelessWidget {

@@ -10,10 +10,10 @@ import '../../../theme/app_theme.dart';
 import '../../../theme/app_typography.dart';
 
 /// Left indent that lines child labels up under the group name:
-/// gutter (20) + icon (34) + gap (12).
-const kChildIndent = 66.0;
+/// gutter (20) + icon (26) + gap (12).
+const kChildIndent = 58.0;
 
-/// Group header — icon, name, "N accounts", amount and share.
+/// Group header — icon, name, "N accounts · P%" and the amount.
 ///
 /// The row carries two tap targets, because one tap cannot both expand the
 /// group and open its ledger:
@@ -25,6 +25,11 @@ const kChildIndent = 66.0;
 /// thumb aimed at the amount lands slightly left of centre more often than
 /// right, so an imprecise tap still navigates. The left zone (~250pt) has the
 /// width to give away.
+///
+/// The share percentage lives in the subtitle now, in neutral grey: colour on
+/// this screen means money direction only, and a share is not a gain. That
+/// leaves the amount alone on the right, so group and child amounts keep the
+/// one shared right edge that made this list drop chevrons in the first place.
 class GroupRow extends StatelessWidget {
   const GroupRow({
     super.key,
@@ -56,10 +61,10 @@ class GroupRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final shareColor =
-        group.isLiability ? AppColors.negative : AppColors.positive;
     final masked = StoreScope.of(context).masked;
     final countLabel = '$count ${count == 1 ? 'account' : 'accounts'}';
+    // Count and share on one quiet line — same numbers as before, new home.
+    final subtitle = '$countLabel · ${percent(share)}';
 
     return ColoredBox(
       // The wash spans the full row so it is unambiguous which group the
@@ -73,19 +78,19 @@ class GroupRow extends StatelessWidget {
             expanded: isOpen,
             label: '${group.label}, $countLabel, '
                 '${money(total, signless: true, masked: masked)}, '
-                '${percent(share)}',
+                '${percent(share)} of ${group.isAsset ? 'assets' : 'liabilities'}',
             child: PressZone(
               onTap: onToggle,
               onLongPress: onLongPress,
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(Insets.gutter, 10, 0, 10),
+                padding: const EdgeInsets.fromLTRB(Insets.gutter, 7, 0, 7),
                 child: ExcludeSemantics(
                   child: Row(
                     children: [
                       IconTile(group.icon,
                           color: group.color,
-                          size: 34,
-                          circle: true,
+                          size: 26,
+                          iconSize: 13,
                           solid: true),
                       const SizedBox(width: Insets.md),
                       Expanded(
@@ -94,12 +99,13 @@ class GroupRow extends StatelessWidget {
                           children: [
                             Text(
                               group.label,
-                              style: AppText.groupName,
+                              style: AppText.groupName
+                                  .copyWith(fontSize: 14, height: 1.2),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
                             const SizedBox(height: 2),
-                            Text(countLabel, style: AppText.accountCount),
+                            Text(subtitle, style: AppText.groupSubtitle),
                           ],
                         ),
                       ),
@@ -120,46 +126,18 @@ class GroupRow extends StatelessWidget {
               // of putting the boundary in the gap rather than on the number.
               padding: const EdgeInsets.fromLTRB(
                 Insets.sm,
-                10,
+                7,
                 Insets.gutter,
-                10,
+                7,
               ),
+              // A single right-aligned value now — the percentage that used to
+              // share this side moved into the subtitle, so the amount is alone
+              // on the one right edge it shares with the child rows.
               child: ExcludeSemantics(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    AmountText.balance(
-                      total,
-                      style: AppText.groupAmount,
-                      color:
-                          group.isLiability ? AppColors.amountGroupNeg : null,
-                    ),
-                    const SizedBox(height: 2),
-                    // The chevron rides the percentage line, never the amount
-                    // line: group and child amounts share one right edge at
-                    // 20px, and that alignment is why this list dropped
-                    // chevrons in the first place. The percentage has no
-                    // counterpart in the child rows, so it is the only line
-                    // that can carry one without moving the number column.
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          percent(share),
-                          style:
-                              AppText.sharePercent.copyWith(color: shareColor),
-                        ),
-                        // Shown only where the tap exists: GroupRow is reused
-                        // on the Assets/Liabilities screens, which have no
-                        // ledger to open, and an affordance that does nothing
-                        // is worse than none.
-                        if (onOpenLedger != null) ...[
-                          const SizedBox(width: 4),
-                          const _GroupChevron(),
-                        ],
-                      ],
-                    ),
-                  ],
+                child: AmountText.balance(
+                  total,
+                  style: AppText.groupAmount.copyWith(fontSize: 14),
+                  color: group.isLiability ? AppColors.amountGroupNeg : null,
                 ),
               ),
             ),
@@ -169,45 +147,6 @@ class GroupRow extends StatelessWidget {
       ),
     );
   }
-}
-
-/// The 9px affordance on the percentage line. Drawn rather than taken from the
-/// icon font so the 1.9 stroke is exact — at this size a font glyph's hinting
-/// makes the weight unpredictable, which is the same reason the nav icons are
-/// hand-drawn.
-class _GroupChevron extends StatelessWidget {
-  const _GroupChevron();
-
-  @override
-  Widget build(BuildContext context) => const SizedBox(
-        width: 9,
-        height: 9,
-        child: CustomPaint(painter: _ChevronPainter()),
-      );
-}
-
-class _ChevronPainter extends CustomPainter {
-  const _ChevronPainter();
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = const Color(0xFF3F3F43)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.9
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round;
-    canvas.drawPath(
-      Path()
-        ..moveTo(3.0, 1.6)
-        ..lineTo(6.2, 4.5)
-        ..lineTo(3.0, 7.4),
-      paint,
-    );
-  }
-
-  @override
-  bool shouldRepaint(_ChevronPainter oldDelegate) => false;
 }
 
 /// Press feedback bounded to a single tap zone.
@@ -298,14 +237,16 @@ class AccountRow extends StatelessWidget {
     final masked = StoreScope.of(context).masked;
 
     final name = Padding(
-      padding: const EdgeInsets.fromLTRB(kChildIndent, 4, 0, 4),
+      padding: const EdgeInsets.fromLTRB(kChildIndent, 5, 0, 5),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
             account.name,
-            style: AppText.childName,
+            // A step brighter than the amount now: these secondary drill rows
+            // read name-first, so the number recedes to the muted grey.
+            style: AppText.childName.copyWith(color: AppColors.amountChild),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
@@ -325,12 +266,14 @@ class AccountRow extends StatelessWidget {
 
     final amount = Padding(
       // The 8px lead-in belongs to the money side, same as the group row.
-      padding: const EdgeInsets.fromLTRB(Insets.sm, 4, Insets.gutter, 4),
+      padding: const EdgeInsets.fromLTRB(Insets.sm, 5, Insets.gutter, 5),
       child: AmountText.balance(
         balance,
         currency: account.currency,
-        style: AppText.childAmount,
-        color: account.isLiability ? AppColors.amountChildNeg : null,
+        style: AppText.childAmount.copyWith(fontSize: 13),
+        color: account.isLiability
+            ? AppColors.amountChildNeg
+            : AppColors.textSecondary,
       ),
     );
 

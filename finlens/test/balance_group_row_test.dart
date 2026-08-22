@@ -27,9 +27,10 @@ void main() {
     await tester.pumpAndSettle();
 
     // Spendable is expanded on load, so a group amount and its child amounts
-    // are both on screen. The chevron sits on the percentage line precisely so
-    // this stays true. Scoped to the rows — the header's ratio captions are a
-    // different column and legitimately end elsewhere.
+    // are both on screen. The amount is now the single value on the right (the
+    // share moved into the subtitle), so it keeps the child column's right edge
+    // with nothing to nudge it. Scoped to the rows — the section-header total
+    // is a different column and legitimately ends elsewhere.
     double edgeOf(Finder rowType) => tester
         .getBottomRight(
           find
@@ -44,7 +45,7 @@ void main() {
     expect(
       childEdge,
       groupEdge,
-      reason: 'the chevron must not shift the amount column',
+      reason: 'group and child amounts share one right edge',
     );
     expect(groupEdge, 390 - 20);
   });
