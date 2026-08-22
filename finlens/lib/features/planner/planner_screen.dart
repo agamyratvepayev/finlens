@@ -7,15 +7,18 @@ import '../../shared/widgets/amount_text.dart';
 import '../../shared/widgets/app_card.dart';
 import '../../shared/widgets/form_fields.dart';
 import '../../shared/widgets/screen_header.dart';
+import '../../shared/widgets/section_header.dart' show HorizontalSectionSwipe;
 import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/app_typography.dart';
 import '../balance/balance_screen.dart' show EmptyState;
 import '../quick_add/quick_add_sheet.dart';
 import 'archive_screen.dart';
+import 'budget_detail_screen.dart';
 import 'edit_budget_screen.dart';
 import 'edit_goal_screen.dart';
 import 'edit_task_screen.dart';
+import 'widgets/month_picker_sheet.dart';
 
 /// Spec 5 — the forward-looking module. Three tabs, each answering its own
 /// question in its own summary header (spec 6.2, "Tek özet kuralı").
@@ -29,6 +32,14 @@ class PlannerScreen extends StatefulWidget {
 class _PlannerScreenState extends State<PlannerScreen> {
   int _tab = 0;
 
+  /// Planner's own month — never `store.period`. Stepping it leaves Ledger and
+  /// Insight untouched (spec 5.1: Planner stops driving the global period).
+  late DateTime _month =
+      DateTime(AppStore.today.year, AppStore.today.month);
+
+  void _stepTab(int delta) =>
+      setState(() => _tab = (_tab + delta + 3) % 3);
+
   @override
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
@@ -37,8 +48,19 @@ class _PlannerScreenState extends State<PlannerScreen> {
       bottom: false,
       child: Column(
         children: [
+          // Row 1 — the period is the title. Budgets shows the month control;
+          // Goals and Schedule have no scope to set, so the slot is empty.
           ScreenHeader(
-            title: 'Planner',
+            titleWidget: _tab == 0
+                ? _MonthControl(
+                    month: _month,
+                    onTap: () => showPlannerMonthPicker(
+                      context,
+                      initial: _month,
+                      onPick: (m) => setState(() => _month = m),
+                    ),
+                  )
+                : const SizedBox.shrink(),
             onAdd: () => showQuickAdd(
               context,
               type: switch (_tab) {
@@ -48,6 +70,10 @@ class _PlannerScreenState extends State<PlannerScreen> {
               },
             ),
             trailing: IconButton(
+              visualDensity: VisualDensity.compact,
+              padding: EdgeInsets.zero,
+              constraints:
+                  const BoxConstraints.tightFor(width: 36, height: 36),
               icon: const Icon(Icons.more_horiz_rounded, size: 22),
               color: AppColors.textPrimary,
               // Spec 5.8 — Archive lives behind the ••• menu, never a tab.
@@ -56,59 +82,32 @@ class _PlannerScreenState extends State<PlannerScreen> {
               ),
             ),
           ),
-          _monthBar(store),
-          _summary(store),
+          // Row 2 — full-width tabs, now above the summary.
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: Insets.gutter),
+            padding: const EdgeInsets.fromLTRB(
+              Insets.gutter,
+              0,
+              Insets.gutter,
+              Insets.md,
+            ),
             child: UnderlineTabs(
               labels: const ['Budgets', 'Goals', 'Schedule'],
               index: _tab,
               onChanged: (i) => setState(() => _tab = i),
             ),
           ),
+          // Row 3 + content — swipe anywhere below the tabs to change tab.
           Expanded(
-            child: switch (_tab) {
-              1 => _GoalsTab(store: store),
-              2 => _ScheduleTab(store: store),
-              _ => _BudgetsTab(store: store),
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _monthBar(AppStore store) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        Insets.gutter,
-        0,
-        Insets.gutter,
-        Insets.md,
-      ),
-      child: Row(
-        children: [
-          Text(
-            monthYearLong(store.period),
-            style: AppText.rowTitle.copyWith(fontSize: 15),
-          ),
-          const Icon(
-            Icons.keyboard_arrow_down_rounded,
-            size: 18,
-            color: AppColors.textSecondary,
-          ),
-          const Spacer(),
-          IconButton(
-            visualDensity: VisualDensity.compact,
-            icon: const Icon(Icons.chevron_left_rounded, size: 20),
-            color: AppColors.textSecondary,
-            onPressed: () => store.shiftPeriod(-1),
-          ),
-          IconButton(
-            visualDensity: VisualDensity.compact,
-            icon: const Icon(Icons.chevron_right_rounded, size: 20),
-            color: AppColors.textSecondary,
-            onPressed: () => store.shiftPeriod(1),
+            child: HorizontalSectionSwipe(
+              onNext: () => _stepTab(1),
+              onPrevious: () => _stepTab(-1),
+              child: Column(
+                children: [
+                  _summary(store),
+                  Expanded(child: _content(store)),
+                ],
+              ),
+            ),
           ),
         ],
       ),
@@ -118,24 +117,92 @@ class _PlannerScreenState extends State<PlannerScreen> {
   Widget _summary(AppStore store) => switch (_tab) {
         1 => _GoalsSummary(store: store),
         2 => _ScheduleSummary(store: store),
-        _ => _BudgetSummary(store: store),
+        _ => _BudgetSummary(store: store, month: _month),
       };
+
+  Widget _content(AppStore store) => switch (_tab) {
+        1 => _GoalsTab(store: store),
+        2 => _ScheduleTab(store: store),
+        _ => _BudgetsTab(store: store, month: _month),
+      };
+}
+
+/// Row 1's month control on the Budgets tab — a title-weight `August 2026 ⌄`
+/// that opens the Planner month picker. Scales down rather than clipping so the
+/// three controls beside it keep their size at 320 pt (spec 5.1).
+class _MonthControl extends StatelessWidget {
+  const _MonthControl({required this.month, required this.onTap});
+
+  final DateTime month;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(Radii.sm),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Flexible(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    monthYearLong(month),
+                    maxLines: 1,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary,
+                      letterSpacing: -0.3,
+                    ),
+                  ),
+                ),
+              ),
+              const Icon(
+                Icons.keyboard_arrow_down_rounded,
+                size: 20,
+                color: AppColors.textSecondary,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 // ── 5.1 Budgets ─────────────────────────────────────────────────────────────
 
 class _BudgetSummary extends StatelessWidget {
-  const _BudgetSummary({required this.store});
+  const _BudgetSummary({required this.store, required this.month});
 
   final AppStore store;
+  final DateTime month;
 
   @override
   Widget build(BuildContext context) {
-    final left = store.leftToSpend;
-    final spent = store.totalSpentAgainstBudget;
     final budget = store.totalBudget;
-    final ratio = budget <= 0 ? 0.0 : spent / budget;
-    final overspend = store.projectedOverspend;
+    final hasBudget = budget > 0;
+    final budgeted = store.budgetedSpend(month);
+    final unbudgeted = store.unbudgetedSpend(month);
+    final spent = budgeted + unbudgeted;
+    // Left = budget − all spend (budgeted + unbudgeted). Negative keeps its
+    // minus sign: that sign means "below zero", not "money out" (spec 5.2).
+    final left = store.leftThisMonth(month);
+    final ratio = hasBudget ? spent / budget : 0.0;
+    final solidFrac = hasBudget ? budgeted / budget : 0.0;
+    final hatchFrac = hasBudget ? unbudgeted / budget : 0.0;
+    final isCurrent = store.isCurrentMonth(month);
+    final showUnbudgeted = hasBudget && unbudgeted > 0;
+
+    const noteStyle =
+        TextStyle(fontSize: 11, color: AppColors.textSecondary);
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(
@@ -147,7 +214,26 @@ class _BudgetSummary extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Left to spend', style: AppText.label),
+          Row(
+            children: [
+              Text('LEFT THIS MONTH', style: AppText.label),
+              const Spacer(),
+              // Neutral grey, never amber: spending outside a budget is a fact,
+              // not a warning (spec 5.2).
+              if (showUnbudgeted)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    AmountText(
+                      unbudgeted,
+                      style: noteStyle,
+                      color: AppColors.textSecondary,
+                    ),
+                    const Text(' unbudgeted', style: noteStyle),
+                  ],
+                ),
+            ],
+          ),
           const SizedBox(height: Insets.xs),
           Row(
             crossAxisAlignment: CrossAxisAlignment.baseline,
@@ -158,52 +244,53 @@ class _BudgetSummary extends StatelessWidget {
                   fit: BoxFit.scaleDown,
                   alignment: Alignment.centerLeft,
                   child: AmountText(
-                    left,
+                    hasBudget ? left : 0,
                     style: AppText.hero.copyWith(fontSize: 32),
-                    color: left < 0 ? AppColors.negative : null,
+                    color:
+                        (hasBudget && left < 0) ? AppColors.negative : null,
                   ),
                 ),
               ),
               const SizedBox(width: Insets.sm),
-              Text('of ${money(budget)} budget', style: AppText.caption),
+              Text('of ', style: AppText.caption),
+              AmountText(budget, style: AppText.caption),
+              Text(' budget', style: AppText.caption),
             ],
           ),
           const SizedBox(height: Insets.md),
-          // Spec 5.1 — the pace marker is what turns a percentage into a
-          // judgement: fill to the right of the line means overspending.
+          // Solid = budgeted share; hatch = unbudgeted share, drawn right after
+          // it. Both clamp inside 100 % (spec 5.2); over-budget is announced by
+          // the figure going negative, not by the bar.
           ProgressBar(
-            value: ratio,
+            value: solidFrac,
+            hatchValue: showUnbudgeted ? hatchFrac : null,
             color: ratio > 1
                 ? AppColors.negative
                 : (ratio > 0.8 ? AppColors.warning : AppColors.positive),
-            paceMarker: store.monthProgress,
+            paceMarker: isCurrent ? store.monthProgressFor(month) : null,
             height: 8,
           ),
           const SizedBox(height: Insets.sm),
           Row(
             children: [
               Text(
-                '${percent(ratio)} spent · day ${store.dayOfMonth} of '
-                '${store.daysInPeriod}',
+                isCurrent
+                    ? '${percent(ratio, decimals: 0)} spent · day '
+                        '${store.dayOfMonthFor(month)} of '
+                        '${store.daysInMonthOf(month)}'
+                    : '${percent(ratio, decimals: 0)} spent',
                 style: AppText.caption.copyWith(fontSize: 11.5),
               ),
-              const Spacer(),
-              Container(width: 2, height: 10, color: AppColors.textPrimary),
-              const SizedBox(width: 5),
-              Text(
-                'where you should be',
-                style: AppText.caption.copyWith(fontSize: 11.5),
-              ),
+              // Pace marker legend — only the summary bar is labelled; a closed
+              // or future month has no pace to keep, so it is hidden (spec 5.2).
+              if (isCurrent) ...[
+                const Spacer(),
+                Container(width: 2, height: 10, color: AppColors.textPrimary),
+                const SizedBox(width: 5),
+                Text('Pace', style: AppText.caption.copyWith(fontSize: 11.5)),
+              ],
             ],
           ),
-          if (overspend > 0) ...[
-            const SizedBox(height: Insets.md),
-            NoticeBanner(
-              margin: EdgeInsets.zero,
-              text: 'At this pace you\'ll overspend by ${money(overspend)} '
-                  'this month.',
-            ),
-          ],
         ],
       ),
     );
@@ -211,15 +298,17 @@ class _BudgetSummary extends StatelessWidget {
 }
 
 class _BudgetsTab extends StatelessWidget {
-  const _BudgetsTab({required this.store});
+  const _BudgetsTab({required this.store, required this.month});
 
   final AppStore store;
+  final DateTime month;
 
   @override
   Widget build(BuildContext context) {
     final budgets = store.budgetedCategories;
+    final unbudgeted = store.unbudgetedSpendingCategories(month);
 
-    if (budgets.isEmpty) {
+    if (budgets.isEmpty && unbudgeted.isEmpty) {
       return const Padding(
         padding: EdgeInsets.only(top: 56),
         child: EmptyState(
@@ -231,33 +320,56 @@ class _BudgetsTab extends StatelessWidget {
       );
     }
 
+    // Over-limit categories first, then the rest in their existing order.
+    bool over(Category c) =>
+        store.spentInCategory(c.id, month) > (c.effectiveLimit ?? 0);
+    final ordered = [
+      ...budgets.where(over),
+      ...budgets.where((c) => !over(c)),
+    ];
+
+    final totalLabelStyle =
+        AppText.label.copyWith(color: AppColors.textSecondary);
+
     return ListView(
       padding: const EdgeInsets.only(bottom: Insets.xxl),
       children: [
-        SectionLabel(
-          'Expense budgets',
-          trailing: Text(
-            '${money(store.totalSpentAgainstBudget)} / '
-            '${money(store.totalBudget)}',
-            style: AppText.label.copyWith(color: AppColors.textSecondary),
+        if (budgets.isNotEmpty) ...[
+          SectionLabel(
+            'Budgeted',
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                AmountText(store.budgetedSpend(month), style: totalLabelStyle),
+                Text(' / ', style: totalLabelStyle),
+                AmountText(store.totalBudget, style: totalLabelStyle),
+              ],
+            ),
           ),
-        ),
-        for (final c in budgets)
-          _BudgetRow(store: store, category: c),
+          for (final c in ordered)
+            _BudgetRow(store: store, category: c, month: month),
+        ],
+        if (unbudgeted.isNotEmpty)
+          _NoBudgetSection(store: store, month: month, categories: unbudgeted),
       ],
     );
   }
 }
 
 class _BudgetRow extends StatelessWidget {
-  const _BudgetRow({required this.store, required this.category});
+  const _BudgetRow({
+    required this.store,
+    required this.category,
+    required this.month,
+  });
 
   final AppStore store;
   final Category category;
+  final DateTime month;
 
   @override
   Widget build(BuildContext context) {
-    final spent = store.spentInCategory(category.id, store.period);
+    final spent = store.spentInCategory(category.id, month);
     final limit = category.effectiveLimit ?? 0;
     final ratio = limit <= 0 ? 0.0 : spent / limit;
 
@@ -268,6 +380,7 @@ class _BudgetRow extends StatelessWidget {
     final color = over
         ? AppColors.negative
         : (warn ? AppColors.warning : AppColors.positive);
+    final isCurrent = store.isCurrentMonth(month);
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(
@@ -279,20 +392,14 @@ class _BudgetRow extends StatelessWidget {
       child: AppCard(
         child: InkWell(
           borderRadius: BorderRadius.circular(Radii.card),
+          // Spec 5.6 — a tap opens the budget screen ("where did this go?"), not
+          // the editor. A stray tap must not land on financial editing.
           onTap: () => Navigator.of(context, rootNavigator: true).push(
             MaterialPageRoute(
-              builder: (_) => EditBudgetScreen(categoryId: category.id),
+              builder: (_) =>
+                BudgetDetailScreen(categoryId: category.id, month: month),
             ),
           ),
-          // Spec 5.1 — long-press opens this category's entries in the Ledger.
-          onLongPress: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('${category.name}: '
-                    '${store.txnCountForCategory(category.id)} entries'),
-              ),
-            );
-          },
           child: Padding(
             padding: const EdgeInsets.all(Insets.md),
             child: Column(
@@ -339,7 +446,14 @@ class _BudgetRow extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: Insets.md),
-                ProgressBar(value: ratio, color: color),
+                // The same unlabelled pace marker as the summary bar — only the
+                // summary is labelled (spec 5.1 §3).
+                ProgressBar(
+                  value: ratio,
+                  color: color,
+                  paceMarker:
+                      isCurrent ? store.monthProgressFor(month) : null,
+                ),
                 if (over) ...[
                   const SizedBox(height: 6),
                   Align(
@@ -353,12 +467,15 @@ class _BudgetRow extends StatelessWidget {
                     ),
                   ),
                 ],
+                // Spec 5.1 §4 — the row already prints the effective limit
+                // ($1,080), so the caption states the rollover, not a second
+                // figure to double-count.
                 if (category.budgetRollover && category.rolloverAmount > 0) ...[
                   const SizedBox(height: 6),
                   Align(
                     alignment: Alignment.centerLeft,
                     child: Text(
-                      '+${money(category.rolloverAmount)} rolled over',
+                      'includes ${money(category.rolloverAmount)} rolled over',
                       style: AppText.caption.copyWith(
                         fontSize: 11.5,
                         color: AppColors.info,
@@ -370,6 +487,112 @@ class _BudgetRow extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Spec 5.1 §5 — expense categories with spending but no budget this month,
+/// amount descending. Rendered only when non-empty: a category with nothing
+/// spent has nothing uncovered.
+class _NoBudgetSection extends StatelessWidget {
+  const _NoBudgetSection({
+    required this.store,
+    required this.month,
+    required this.categories,
+  });
+
+  final AppStore store;
+  final DateTime month;
+  final List<Category> categories;
+
+  @override
+  Widget build(BuildContext context) {
+    final total = categories.fold(
+      0.0,
+      (sum, c) => sum + store.spentInCategory(c.id, month),
+    );
+
+    return Column(
+      children: [
+        SectionLabel(
+          'No budget set',
+          trailing: AmountText(
+            total,
+            style: AppText.label.copyWith(color: AppColors.textSecondary),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: Insets.gutter),
+          child: AppCard(
+            child: Column(
+              children: [
+                for (var i = 0; i < categories.length; i++) ...[
+                  if (i > 0) const RowDivider(indent: Insets.md),
+                  _NoBudgetRow(
+                    store: store,
+                    category: categories[i],
+                    month: month,
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _NoBudgetRow extends StatelessWidget {
+  const _NoBudgetRow({
+    required this.store,
+    required this.category,
+    required this.month,
+  });
+
+  final AppStore store;
+  final Category category;
+  final DateTime month;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: Insets.md,
+        vertical: Insets.sm,
+      ),
+      child: Row(
+        children: [
+          IconTile(category.icon, color: category.color, size: 26),
+          const SizedBox(width: Insets.md),
+          Expanded(
+            child: Text(
+              category.name,
+              style: AppText.rowTitle,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(width: Insets.sm),
+          AmountText(store.spentInCategory(category.id, month)),
+          const SizedBox(width: Insets.xs),
+          TextButton(
+            onPressed: () => Navigator.of(context, rootNavigator: true).push(
+              MaterialPageRoute(
+                builder: (_) => EditBudgetScreen(categoryId: category.id),
+              ),
+            ),
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.accentLight,
+              visualDensity: VisualDensity.compact,
+              padding: const EdgeInsets.symmetric(horizontal: Insets.sm),
+              minimumSize: const Size(0, 0),
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            child: const Text('Set'),
+          ),
+        ],
       ),
     );
   }

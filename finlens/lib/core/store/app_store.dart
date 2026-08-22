@@ -842,45 +842,89 @@ class AppStore extends ChangeNotifier {
 
   // ── Budgets (spec 5.1) ────────────────────────────────────────────────────
 
+  /// Spent in a category over [month], in base currency. A foreign-currency
+  /// expense is converted through [Fx.toBase] before it is summed — every
+  /// Planner budget figure depends on this, so a raw fold would understate (or
+  /// overstate) burn for any non-base spending.
   double spentInCategory(String categoryId, DateTime month) => txnsInMonth(month)
       .where((t) => t.type == TxnType.expense && t.toRef == categoryId)
-      .fold(0.0, (sum, t) => sum + t.amount);
+      .fold(0.0, (sum, t) => sum + Fx.toBase(t.amount, t.currency));
 
   double earnedInCategory(String categoryId, DateTime month) =>
       txnsInMonth(month)
           .where((t) => t.type == TxnType.income && t.fromRef == categoryId)
-          .fold(0.0, (sum, t) => sum + t.amount);
+          .fold(0.0, (sum, t) => sum + Fx.toBase(t.amount, t.currency));
 
   int txnCountForCategory(String categoryId) => _txns
       .where((t) => t.fromRef == categoryId || t.toRef == categoryId)
       .length;
 
+  /// Sum of every budget's [Category.effectiveLimit] (rollover included). It has
+  /// no month argument because a limit is the same every month — only spend
+  /// varies. Planner's headline divides against this.
   double get totalBudget => budgetedCategories
       .fold(0.0, (sum, c) => sum + (c.effectiveLimit ?? 0));
 
-  double get totalSpentAgainstBudget => budgetedCategories
-      .fold(0.0, (sum, c) => sum + spentInCategory(c.id, _period));
+  /// Spent against budgeted categories in [month]. Planner passes its own month
+  /// here — it no longer reads the global [period].
+  double budgetedSpend(DateTime month) => budgetedCategories
+      .fold(0.0, (sum, c) => sum + spentInCategory(c.id, month));
 
-  double get leftToSpend => totalBudget - totalSpentAgainstBudget;
+  /// Spent in [month] on expense categories that carry **no** budget — the
+  /// spend the old "left to spend" figure ignored (spec 5.1: Eating out et al.).
+  double unbudgetedSpend(DateTime month) => categories
+      .where((c) => c.type == CategoryType.expense && c.monthlyBudget == null)
+      .fold(0.0, (sum, c) => sum + spentInCategory(c.id, month));
 
-  /// Fraction of the month elapsed — the pace marker on the burn-rate bar.
-  double get monthProgress {
-    final days = DateTime(_period.year, _period.month + 1, 0).day;
-    final isCurrentMonth =
-        _period.year == today.year && _period.month == today.month;
-    if (!isCurrentMonth) return _period.isBefore(today) ? 1.0 : 0.0;
-    return (today.day / days).clamp(0.0, 1.0);
+  /// The headline figure: budget minus *all* spend (budgeted + unbudgeted).
+  /// Goes negative — with its minus sign — when total spend passes the budget.
+  double leftThisMonth(DateTime month) =>
+      totalBudget - (budgetedSpend(month) + unbudgetedSpend(month));
+
+  /// Expense categories with no budget that have spending in [month], amount
+  /// descending — the `NO BUDGET SET` list. A category with nothing spent is
+  /// omitted (nothing is uncovered).
+  List<Category> unbudgetedSpendingCategories(DateTime month) {
+    final rows = categories
+        .where((c) =>
+            c.type == CategoryType.expense &&
+            c.monthlyBudget == null &&
+            spentInCategory(c.id, month) > 0)
+        .toList();
+    rows.sort((a, b) =>
+        spentInCategory(b.id, month).compareTo(spentInCategory(a.id, month)));
+    return rows;
   }
 
-  int get dayOfMonth =>
-      (_period.year == today.year && _period.month == today.month)
-          ? today.day
-          : DateTime(_period.year, _period.month + 1, 0).day;
+  bool isCurrentMonth(DateTime month) =>
+      month.year == today.year && month.month == today.month;
 
-  int get daysInPeriod => DateTime(_period.year, _period.month + 1, 0).day;
+  int daysInMonthOf(DateTime month) =>
+      DateTime(month.year, month.month + 1, 0).day;
 
-  /// Spec 5.1 — (spent / days elapsed) × days in month − budget. Positive means
-  /// the amber projection banner is shown.
+  /// Fraction of [month] elapsed — the pace marker on the burn-rate bar. A past
+  /// month reads full, a future month empty; only the current month is partial.
+  double monthProgressFor(DateTime month) {
+    if (!isCurrentMonth(month)) {
+      final firstOfThisMonth = DateTime(today.year, today.month);
+      return month.isBefore(firstOfThisMonth) ? 1.0 : 0.0;
+    }
+    return (today.day / daysInMonthOf(month)).clamp(0.0, 1.0);
+  }
+
+  int dayOfMonthFor(DateTime month) =>
+      isCurrentMonth(month) ? today.day : daysInMonthOf(month);
+
+  // Legacy `_period`-scoped getters, kept as thin delegates so any incidental
+  // caller (and the FX fix) flows through the parameterised versions above.
+  // Planner itself no longer reads these — it drives its own month.
+  double get totalSpentAgainstBudget => budgetedSpend(_period);
+  double get leftToSpend => totalBudget - totalSpentAgainstBudget;
+  double get monthProgress => monthProgressFor(_period);
+  int get dayOfMonth => dayOfMonthFor(_period);
+  int get daysInPeriod => daysInMonthOf(_period);
+
+  /// Spec 5.1 — (spent / days elapsed) × days in month − budget.
   double get projectedOverspend {
     if (dayOfMonth <= 0) return 0;
     final projected = (totalSpentAgainstBudget / dayOfMonth) * daysInPeriod;

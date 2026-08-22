@@ -11,16 +11,23 @@ import '../../theme/app_typography.dart';
 class ScreenHeader extends StatelessWidget {
   const ScreenHeader({
     super.key,
-    required this.title,
+    this.title,
+    this.titleWidget,
     this.showBack = false,
     this.showEye = true,
     this.showAdd = true,
     this.onAdd,
     this.trailing,
     this.subtitle,
-  });
+  }) : assert(title != null || titleWidget != null);
 
-  final String title;
+  final String? title;
+
+  /// Replaces the title in the leading (Expanded) slot. Planner uses it to put
+  /// the month control there on Budgets and nothing on Goals/Schedule — row 1
+  /// is the tab's scope control, so an empty slot is deliberate.
+  final Widget? titleWidget;
+
   final bool showBack;
   final bool showEye;
   final bool showAdd;
@@ -52,14 +59,15 @@ class ScreenHeader extends StatelessWidget {
               ),
             ),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(title, style: AppText.title),
-                ?subtitle,
-              ],
-            ),
+            child: titleWidget ??
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(title!, style: AppText.title),
+                    ?subtitle,
+                  ],
+                ),
           ),
           if (trailing != null) ...[trailing!, const SizedBox(width: Insets.sm)],
           if (showEye)
@@ -168,13 +176,16 @@ class UnderlineTabs extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
+        // Each tab takes an equal share of the width and centres its label; the
+        // underline spans the label, not the third (spec: full-width tabs).
         for (var i = 0; i < labels.length; i++)
-          _Tab(
-            label: labels[i],
-            selected: i == index,
-            onTap: () => onChanged(i),
+          Expanded(
+            child: _Tab(
+              label: labels[i],
+              selected: i == index,
+              onTap: () => onChanged(i),
+            ),
           ),
-        const Spacer(),
         ?trailing,
       ],
     );
@@ -193,10 +204,12 @@ class _Tab extends StatelessWidget {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 4),
+      // Center + a min-width column: the column shrinks to the label, so a
+      // stretched underline spans exactly the label's width.
+      child: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Padding(
               padding: const EdgeInsets.symmetric(
@@ -205,6 +218,9 @@ class _Tab extends StatelessWidget {
               ),
               child: Text(
                 label,
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontSize: 14.5,
                   fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
@@ -217,9 +233,8 @@ class _Tab extends StatelessWidget {
             AnimatedContainer(
               duration: const Duration(milliseconds: 180),
               height: 2,
-              width: selected ? 28 : 0,
               decoration: BoxDecoration(
-                color: AppColors.accentSoft,
+                color: selected ? AppColors.accentSoft : Colors.transparent,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
