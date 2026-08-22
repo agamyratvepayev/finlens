@@ -203,6 +203,50 @@ void main() {
     expect(find.text('COUNT 12'), findsOneWidget);
   });
 
+  // §5 — the frequency line reappears for a recent cluster in a long window.
+  // Three expenses on 8–9 Aug (span 1 day) that the old span-based rule hid:
+  // with the window as the denominator (Last 3 months, today 9 Aug → 70 days)
+  // the honest rate is ~1/month, so the line renders.
+  AppStore eatingOut() => AppStore(
+        accounts: [_acc('a1', 'Main Checking')],
+        categories: [_cat('c1', 'Eating out')],
+        txns: [
+          tx('e1', TxnType.expense, 'a1', 'c1', date: DateTime(2026, 8, 9)),
+          tx('e2', TxnType.expense, 'a1', 'c1', date: DateTime(2026, 8, 9)),
+          tx('e3', TxnType.expense, 'a1', 'c1', date: DateTime(2026, 8, 8)),
+        ],
+        goals: const <Goal>[],
+        tasks: const <Task>[],
+      );
+
+  testWidgets('Eating out at Last 3 months renders the frequency line',
+      (tester) async {
+    final store = eatingOut();
+    await tester.pumpWidget(
+        host(store, const SameTransactionsScreen(originTxnId: 'e1')));
+    store.setSameListRange(
+        const SameRangeChoice.preset(SameRangePreset.last3Months));
+    await tester.pumpAndSettle();
+
+    // The line renders (it was suppressed under the span-based denominator).
+    expect(find.textContaining('a month'), findsOneWidget);
+    expect(find.textContaining('last one today'), findsOneWidget);
+  });
+
+  testWidgets('a once-a-month rate reads the singular "time a month"',
+      (tester) async {
+    final store = eatingOut();
+    await tester.pumpWidget(
+        host(store, const SameTransactionsScreen(originTxnId: 'e1')));
+    store.setSameListRange(
+        const SameRangeChoice.preset(SameRangePreset.last3Months));
+    await tester.pumpAndSettle();
+
+    // n == 1 → "About 1 time a month", never "times".
+    expect(find.textContaining('time a month'), findsOneWidget);
+    expect(find.textContaining('times a month'), findsNothing);
+  });
+
   testWidgets('deleting the originating transaction pops the screen',
       (tester) async {
     final store = storeWith([

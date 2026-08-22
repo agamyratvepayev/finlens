@@ -58,9 +58,15 @@ class _SameTransactionsScreenState extends State<SameTransactionsScreen> {
 
     final key = SameKey.of(origin);
     final info = _KeyInfo.resolve(store, origin, key);
-    final range = store.sameListRange.resolve(AppStore.today);
+    final choice = store.sameListRange;
+    final range = choice.resolve(AppStore.today);
     final all = store.sameTransactions(key, from: range.start, to: range.end);
-    final stats = SameStats.of(all, AppStore.today);
+    // The frequency rate divides by the selected window, except All time, whose
+    // year-2000 start is artificial — there the transaction span stands in.
+    final unbounded =
+        !choice.isCustom && choice.preset == SameRangePreset.allTime;
+    final stats =
+        SameStats.of(all, AppStore.today, window: unbounded ? null : range);
     final shown = widget.showAll ? all : all.take(5).toList();
 
     return Scaffold(
@@ -389,7 +395,10 @@ class _SameTransactionsScreenState extends State<SameTransactionsScreen> {
           else ...[
             const TextSpan(text: 'About ', style: base),
             TextSpan(text: '$n', style: value),
-            const TextSpan(text: ' times a month', style: base),
+            // Singular at exactly one — a common result now the denominator is
+            // the window, not a recent cluster's span.
+            TextSpan(
+                text: n == 1 ? ' time a month' : ' times a month', style: base),
           ],
           const TextSpan(text: ' · last one ', style: base),
           TextSpan(text: last, style: value),

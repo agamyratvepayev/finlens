@@ -88,6 +88,7 @@ class SameStats {
     required this.count,
     required this.average,
     required this.spanDays,
+    required this.denominatorDays,
     required this.perMonth,
     required this.lastDaysAgo,
   });
@@ -95,9 +96,18 @@ class SameStats {
   final double total;
   final int count;
   final double average;
+
+  /// Days between the oldest and newest match. Still meaningful on its own, but
+  /// no longer the rate's denominator — see [denominatorDays].
   final int spanDays;
 
-  /// null when the span is under 14 days — too little data to claim a rate.
+  /// The observed time the rate is measured over: the selected window, or the
+  /// transaction span, whichever is longer (see [SameStats.of]). This is what
+  /// [perMonth] divides by, and what the 14-day floor is applied to.
+  final int denominatorDays;
+
+  /// null when [denominatorDays] is under 14 — too little observed time to
+  /// claim a rate.
   final double? perMonth;
 
   /// Whole days since the most recent match, or null when the list is empty.
@@ -108,11 +118,19 @@ class SameStats {
     count: 0,
     average: 0,
     spanDays: 0,
+    denominatorDays: 0,
     perMonth: null,
     lastDaysAgo: null,
   );
 
-  factory SameStats.of(List<Txn> list, DateTime today) {
+  /// [window] is the range the user selected, or null when that range is
+  /// unbounded (All time), whose year-2000 start is artificial rather than
+  /// chosen and so must not become a denominator.
+  factory SameStats.of(
+    List<Txn> list,
+    DateTime today, {
+    required DateRange? window,
+  }) {
     if (list.isEmpty) return empty;
     // A widened key can span accounts in different currencies (spec §3), so the
     // aggregate is summed in base currency — a €42 row must not land as $42.
@@ -124,14 +142,38 @@ class SameStats {
     final newest = list.first.date; // list is newest-first
     final oldest = list.last.date;
     final spanDays = newest.difference(oldest).inDays;
+
+    // The rate is measured over the window the user is looking at — or over the
+    // transactions themselves, whichever is longer. A null window keeps the
+    // span (All time). For a bounded window the transactions sit inside it, so
+    // it normally wins; [max] only matters for future-dated transactions in a
+    // range whose end was clamped, keeping the denominator ≥ the real span.
+    final int denominatorDays;
+    if (window == null) {
+      denominatorDays = spanDays;
+    } else {
+      // Clamp to today: the future has not happened, so days past today in the
+      // window are not observed time (a range ending 31 Aug on the 9th, or a
+      // custom range reaching into the future).
+      final end = window.end.isBefore(today) ? window.end : today;
+      final windowDays = end.isAfter(window.start)
+          ? end.difference(window.start).inDays + 1
+          : 0;
+      denominatorDays = spanDays > windowDays ? spanDays : windowDays;
+    }
+
     final day = DateTime(today.year, today.month, today.day);
     return SameStats(
       total: total,
       count: count,
       average: total / count,
       spanDays: spanDays,
-      // "about N a month" from under two weeks of data is a fabrication.
-      perMonth: spanDays < 14 ? null : count / (spanDays / 30.44),
+      denominatorDays: denominatorDays,
+      // "about N a month" from under two weeks of observed time is a
+      // fabrication. The floor guards the divide, so nothing below reaches it
+      // with a zero denominator.
+      perMonth:
+          denominatorDays < 14 ? null : count / (denominatorDays / 30.44),
       lastDaysAgo: day
           .difference(DateTime(newest.year, newest.month, newest.day))
           .inDays,
