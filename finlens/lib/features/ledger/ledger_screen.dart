@@ -17,6 +17,7 @@ import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/app_typography.dart';
 import '../balance/balance_screen.dart' show EmptyState;
+import '../balance/same_transactions_screen.dart';
 import '../quick_add/quick_add_sheet.dart';
 import 'ledger_day.dart';
 import 'transfer_detail_screen.dart';
@@ -560,6 +561,11 @@ class _LedgerScreenState extends State<LedgerScreen> {
                 txn: day.txns[i],
                 showDescription: showDesc,
                 searchQuery: query,
+                // A tap opens a read-only screen, never the editor (spec §1) —
+                // matching the scoped ledger. A transfer has no category key, so
+                // it opens its own transfer detail; everything else opens the
+                // Same-transactions list for its key. Editing stays behind the
+                // swipe menu and the ••• on the detail screen.
                 onTap: () => day.txns[i].type == TxnType.transfer
                     ? Navigator.of(context).push(
                         MaterialPageRoute(
@@ -569,7 +575,14 @@ class _LedgerScreenState extends State<LedgerScreen> {
                           ),
                         ),
                       )
-                    : showQuickAdd(context, editing: day.txns[i]),
+                    : Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => SameTransactionsScreen(
+                            originTxnId: day.txns[i].id,
+                            backLabel: 'Ledger',
+                          ),
+                        ),
+                      ),
                 onEdit: () => showQuickAdd(context, editing: day.txns[i]),
                 onCopy: () => showQuickAdd(context, copyOf: day.txns[i]),
                 onDelete: () async {

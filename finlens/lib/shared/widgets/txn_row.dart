@@ -579,7 +579,16 @@ class TxnRow extends StatelessWidget {
         ),
       ],
       child: InkWell(
-        onTap: onTap,
+        // When another row's swipe strip is open, the first tap only dismisses
+        // it — it never navigates out from under the user (spec §1). Shares the
+        // scoped ledger's helpers, not a second mechanism.
+        onTap: () {
+          if (anySwipeRowOpen) {
+            closeOpenSwipeRow();
+            return;
+          }
+          onTap();
+        },
         // Both a tap and a swipe target: never smaller than 44pt. No fixed
         // height beyond that floor — everything else is padding + intrinsic
         // content, so rows grow at large text scales rather than clipping.

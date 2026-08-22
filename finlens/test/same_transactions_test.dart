@@ -36,11 +36,15 @@ AppStore storeWith(List<Txn> txns) => AppStore(
 
 void main() {
   group('keyOf — the composite key', () {
-    test('same category on different accounts → different keys', () {
+    test('same category on different accounts → ONE key (spec §2)', () {
+      // The key widened to the category: a Groceries expense from Checking and
+      // one from Cash share a list, so they must share a key and hash.
       // expense: fromRef = account, toRef = category
       final a = tx('1', TxnType.expense, 'acc-checking', 'cat-groceries');
       final b = tx('2', TxnType.expense, 'acc-cash', 'cat-groceries');
-      expect(SameKey.of(a) == SameKey.of(b), isFalse);
+      expect(SameKey.of(a), SameKey.of(b));
+      final byKey = {SameKey.of(a): 'x'};
+      expect(byKey[SameKey.of(b)], 'x');
     });
 
     test('same category and account, opposite directions → different keys', () {
@@ -155,6 +159,35 @@ void main() {
       expect(s.perMonth!, closeTo(3.7, 0.1));
       expect(s.perMonth!.round(), 4);
       expect(s.lastDaysAgo, 7);
+    });
+
+    test('mixed-currency list totals in base currency (spec §3)', () {
+      // The widened key can span currencies, so the aggregate folds each row
+      // through Fx: €42 → 46.2 base (rate 1.10), $120 → 120. Total 166.2.
+      final list = [
+        Txn(
+          id: 'e',
+          type: TxnType.expense,
+          amount: 42,
+          currency: 'EUR',
+          fromRef: 'acc-a',
+          toRef: 'cat',
+          date: DateTime(2026, 8, 9),
+        ),
+        Txn(
+          id: 'u',
+          type: TxnType.expense,
+          amount: 120,
+          currency: 'USD',
+          fromRef: 'acc-b',
+          toRef: 'cat',
+          date: DateTime(2026, 8, 1),
+        ),
+      ];
+      final s = SameStats.of(list, DateTime(2026, 8, 16));
+      expect(s.total, closeTo(166.2, 0.001));
+      expect(s.count, 2);
+      expect(s.average, closeTo(83.1, 0.001));
     });
   });
 

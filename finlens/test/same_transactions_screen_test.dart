@@ -28,6 +28,22 @@ AppStore storeWith(List<Txn> txns) => AppStore(
       tasks: const <Task>[],
     );
 
+Account _acc(String id, String name) => Account(
+      id: id,
+      name: name,
+      group: AccountGroup.spendable,
+      currency: 'USD',
+      startingBalance: 1000,
+    );
+
+Category _cat(String id, String name) => Category(
+      id: id,
+      name: name,
+      type: CategoryType.expense,
+      icon: Icons.shopping_bag_rounded,
+      color: const Color(0xFF30D158),
+    );
+
 Widget host(AppStore store, Widget child, {GlobalKey<NavigatorState>? navKey}) =>
     StoreScope(
       store: store,
@@ -68,6 +84,123 @@ void main() {
     await tester.pumpAndSettle();
     // All time: both → TOTAL $20 (the summed metric, not a row amount).
     expect(find.text('\$20'), findsOneWidget);
+  });
+
+  testWidgets('a note-less expense row shows the account on line 1, never the '
+      'category as a title (spec §4)', (tester) async {
+    final store = AppStore(
+      accounts: [_acc('a1', 'Main Checking')],
+      categories: [_cat('c1', 'Groceries')],
+      txns: [
+        tx('e1', TxnType.expense, 'a1', 'c1', date: DateTime(2026, 8, 5)),
+      ],
+      goals: const <Goal>[],
+      tasks: const <Task>[],
+    );
+
+    await tester.pumpWidget(host(
+        store, const SameTransactionsScreen(originTxnId: 'e1', showAll: true)));
+    store.setSameListRange(
+        const SameRangeChoice.preset(SameRangePreset.allTime));
+    await tester.pumpAndSettle();
+
+    // The account leads line 1 — it appears exactly once (only in the row now
+    // that the subtitle is just the direction word).
+    expect(find.text('Main Checking'), findsOneWidget);
+    // The category is the screen's heading, never repeated as a row title: a
+    // note-less row that borrowed it would make this findsNWidgets(2).
+    expect(find.text('Groceries'), findsOneWidget);
+    // The subtitle is the direction alone (spec §6).
+    expect(find.text('Expense'), findsOneWidget);
+  });
+
+  testWidgets('a transfer row carries no account line — only the header names '
+      'the accounts (spec §4)', (tester) async {
+    final store = AppStore(
+      accounts: [_acc('a1', 'Main Checking'), _acc('a2', 'Savings')],
+      categories: const <Category>[],
+      txns: [
+        tx('t1', TxnType.transfer, 'a1', 'a2', date: DateTime(2026, 8, 5)),
+      ],
+      goals: const <Goal>[],
+      tasks: const <Task>[],
+    );
+
+    await tester.pumpWidget(host(
+        store, const SameTransactionsScreen(originTxnId: 't1', showAll: true)));
+    store.setSameListRange(
+        const SameRangeChoice.preset(SameRangePreset.allTime));
+    await tester.pumpAndSettle();
+
+    // No bare account text anywhere: the path is one string in both the header
+    // and the row, so a standalone account line would be the only source of it.
+    expect(find.text('Main Checking'), findsNothing);
+    expect(find.text('Savings'), findsNothing);
+    // The "A → B" path appears in the header title and the row's own line.
+    expect(find.text('Main Checking → Savings'), findsWidgets);
+  });
+
+  // Spec §5/§9 — the one-line stats band must fit at 320pt with four-digit
+  // values, and must not clip at 130% text scale (it wraps/grows instead).
+  AppStore band12() => AppStore(
+        accounts: [_acc('a1', 'Main Checking')],
+        categories: [_cat('c1', 'Groceries')],
+        txns: [
+          for (var i = 0; i < 12; i++)
+            tx('e$i', TxnType.expense, 'a1', 'c1',
+                date: DateTime(2026, 8, 1).add(Duration(days: i)), amount: 154),
+        ],
+        goals: const <Goal>[],
+        tasks: const <Task>[],
+      );
+
+  testWidgets('stats band fits one line at 320pt with four-digit TOTAL',
+      (tester) async {
+    tester.view.physicalSize = const Size(320, 640);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final store = band12();
+    await tester.pumpWidget(
+        host(store, const SameTransactionsScreen(originTxnId: 'e0')));
+    store.setSameListRange(
+        const SameRangeChoice.preset(SameRangePreset.allTime));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull); // no RenderFlex overflow at 320pt
+    // Each pair renders as one Text.rich (KEY value), so match the joined text.
+    expect(find.text('TOTAL \$1,848'), findsOneWidget);
+    expect(find.text('AVG \$154'), findsOneWidget);
+    expect(find.text('COUNT 12'), findsOneWidget);
+  });
+
+  testWidgets('stats band does not clip at 320pt / 130% text scale',
+      (tester) async {
+    tester.view.physicalSize = const Size(320, 640);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final store = band12();
+    await tester.pumpWidget(StoreScope(
+      store: store,
+      child: MaterialApp(
+        theme: AppTheme.dark,
+        home: MediaQuery(
+          data: const MediaQueryData(textScaler: TextScaler.linear(1.3)),
+          child: const SameTransactionsScreen(originTxnId: 'e0'),
+        ),
+      ),
+    ));
+    store.setSameListRange(
+        const SameRangeChoice.preset(SameRangePreset.allTime));
+    await tester.pumpAndSettle();
+
+    // Nothing clips — the band grows from intrinsic height instead (spec §8).
+    expect(tester.takeException(), isNull);
+    expect(find.text('TOTAL \$1,848'), findsOneWidget);
+    expect(find.text('COUNT 12'), findsOneWidget);
   });
 
   testWidgets('deleting the originating transaction pops the screen',

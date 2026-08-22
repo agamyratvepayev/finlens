@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/models/models.dart';
 import '../../core/utils/date_range.dart';
+import '../../core/utils/fx.dart';
 
 /// The composite key a tapped transaction resolves to. Every transaction that
 /// shares this key belongs on the Same-transactions screen.
@@ -17,46 +18,48 @@ sealed class SameKey {
 
   /// Resolves a transaction to its key.
   ///
-  /// - income / expense → category + account + direction
+  /// - income / expense → category + direction (NOT the account: one Groceries
+  ///   list spans every account it was paid from — see [LedgerKey]).
   /// - transfer         → from-account + to-account (directional)
   /// - rebalance is not a spec'd case; it falls back to a per-account ledger key
   ///   so a tapped revaluation row still opens a coherent (if rare) list.
   static SameKey of(Txn txn) {
     switch (txn.type) {
       case TxnType.expense:
-        // expense: fromRef = account, toRef = category
-        return LedgerKey(txn.toRef, txn.fromRef, TxnType.expense);
+        // expense: toRef = category
+        return LedgerKey(txn.toRef, TxnType.expense);
       case TxnType.income:
-        // income: fromRef = category, toRef = account
-        return LedgerKey(txn.fromRef, txn.toRef, TxnType.income);
+        // income: fromRef = category
+        return LedgerKey(txn.fromRef, TxnType.income);
       case TxnType.transfer:
         return TransferKey(txn.fromRef, txn.toRef);
       case TxnType.rebalance:
         // No category exists; group by the affected account.
-        return LedgerKey(txn.toRef, txn.toRef, TxnType.rebalance);
+        return LedgerKey(txn.toRef, TxnType.rebalance);
     }
   }
 
   bool get isTransfer => this is TransferKey;
 }
 
-/// Income/expense/rebalance key: one category, on one account, one direction.
+/// Income/expense/rebalance key: one category, one direction — deliberately
+/// *not* scoped to an account, so a category's list spans every account it
+/// touched (spec §2). For a rebalance there is no category, so [categoryId]
+/// holds the affected account id instead.
 class LedgerKey extends SameKey {
-  const LedgerKey(this.categoryId, this.accountId, this.direction);
+  const LedgerKey(this.categoryId, this.direction);
 
   final String categoryId;
-  final String accountId;
   final TxnType direction;
 
   @override
   bool operator ==(Object other) =>
       other is LedgerKey &&
       other.categoryId == categoryId &&
-      other.accountId == accountId &&
       other.direction == direction;
 
   @override
-  int get hashCode => Object.hash(categoryId, accountId, direction);
+  int get hashCode => Object.hash(categoryId, direction);
 }
 
 /// Directional transfer key: `A → B` and `B → A` are different lists.
@@ -111,7 +114,12 @@ class SameStats {
 
   factory SameStats.of(List<Txn> list, DateTime today) {
     if (list.isEmpty) return empty;
-    final total = list.fold<double>(0, (sum, t) => sum + t.amount.abs());
+    // A widened key can span accounts in different currencies (spec §3), so the
+    // aggregate is summed in base currency — a €42 row must not land as $42.
+    // Rows themselves still print in their own currency; only TOTAL/AVERAGE
+    // (which read [total]) are base.
+    final total = list.fold<double>(
+        0, (sum, t) => sum + Fx.toBase(t.amount, t.currency).abs());
     final count = list.length;
     final newest = list.first.date; // list is newest-first
     final oldest = list.last.date;

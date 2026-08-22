@@ -163,10 +163,14 @@ void main() {
     });
 
     test('the same category appears on two different accounts', () {
-      final groceriesExpense = keyed.keys.whereType<LedgerKey>().where((k) =>
-          k.categoryId == 'c-groceries' && k.direction == TxnType.expense);
-      expect(groceriesExpense.map((k) => k.accountId).toSet().length,
-          greaterThanOrEqualTo(2));
+      // The key no longer carries the account (spec §2), so this is asserted on
+      // the transactions themselves — groceries expenses paid from 2+ accounts
+      // are exactly what the widened key now folds into a single list.
+      final accounts = txns
+          .where((t) => t.type == TxnType.expense && t.toRef == 'c-groceries')
+          .map((t) => t.fromRef)
+          .toSet();
+      expect(accounts.length, greaterThanOrEqualTo(2));
     });
   });
 

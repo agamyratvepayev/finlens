@@ -74,7 +74,7 @@ class _SameTransactionsScreenState extends State<SameTransactionsScreen> {
                 padding: const EdgeInsets.only(bottom: Insets.xxl),
                 children: [
                   _header(info),
-                  _summaryCard(context, store, key, info, stats),
+                  _summaryCard(context, store, key, stats),
                   _sectionLabel(store, info),
                   if (all.isEmpty)
                     _emptyMessage(info, range)
@@ -251,8 +251,8 @@ class _SameTransactionsScreenState extends State<SameTransactionsScreen> {
 
   // ── Summary card ─────────────────────────────────────────────────────────
 
-  Widget _summaryCard(BuildContext context, AppStore store, SameKey key,
-      _KeyInfo info, SameStats stats) {
+  Widget _summaryCard(
+      BuildContext context, AppStore store, SameKey key, SameStats stats) {
     return Container(
       margin: const EdgeInsets.fromLTRB(Insets.md, 0, Insets.md, Insets.sm),
       decoration: BoxDecoration(
@@ -263,12 +263,15 @@ class _SameTransactionsScreenState extends State<SameTransactionsScreen> {
         children: [
           _rangeRow(context, store, key),
           Padding(
-            padding: const EdgeInsets.fromLTRB(6, 9, 6, 0),
+            // One inline row of key·value pairs (~26pt), down from three stacked
+            // key-over-value columns (~50pt) (spec §5).
+            padding: const EdgeInsets.fromLTRB(10, 10, 10, 0),
             child: Row(
               children: [
-                _metric('TOTAL', money(stats.total, currency: info.currency)),
-                _metric(
-                    'AVERAGE', money(stats.average, currency: info.currency)),
+                // TOTAL and AVG are base-currency aggregates (spec §3): a list
+                // can span currencies, so their sum is folded through Fx.
+                _metric('TOTAL', money(stats.total, currency: Fx.baseCurrency)),
+                _metric('AVG', money(stats.average, currency: Fx.baseCurrency)),
                 _metric('COUNT', '${stats.count}'),
               ],
             ),
@@ -323,32 +326,37 @@ class _SameTransactionsScreenState extends State<SameTransactionsScreen> {
     );
   }
 
+  /// One inline `KEY value` pair, centred in an equal-flex third of the band
+  /// (spec §5). The caps key sits beside its value on the shared baseline rather
+  /// than stacked above it, which takes the band from ~50pt to ~26pt.
+  ///
+  /// Built as one wrapping [Text.rich], not a fixed [Row]: at normal scale it is
+  /// a single line, and at large text scale it wraps at the space between key
+  /// and value — never mid-number and never clipping — so the band grows from
+  /// its intrinsic height instead (spec §8, §9).
   Widget _metric(String caps, String value) {
     return Expanded(
-      child: Column(
-        children: [
-          Text(
-            caps,
+      child: Text.rich(
+        TextSpan(children: [
+          TextSpan(
+            text: caps,
             style: const TextStyle(
-              fontSize: 10,
-              height: 1.2,
+              fontSize: 9.5,
               fontWeight: FontWeight.w600,
-              letterSpacing: 0.5, // 0.05em @ 10pt
+              letterSpacing: 0.475, // 0.05em @ 9.5pt
               color: AppColors.textSecondary,
             ),
           ),
-          const SizedBox(height: 1),
-          Text(
-            value,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: AppText.amount.copyWith(
-              fontSize: 17,
-              fontWeight: FontWeight.w700,
-              color: AppColors.textPrimary,
-            ),
+          // A space, not a SizedBox: it is the wrap opportunity that lets the
+          // value drop below the key cleanly at large text scale.
+          const TextSpan(text: ' '),
+          TextSpan(
+            text: value,
+            // AppText.amount is already 15pt / w600 / tabular / white.
+            style: AppText.amount,
           ),
-        ],
+        ]),
+        textAlign: TextAlign.center,
       ),
     );
   }
@@ -450,9 +458,10 @@ class _SameTransactionsScreenState extends State<SameTransactionsScreen> {
 
   Widget _emptyMessage(_KeyInfo info, DateRange range) {
     final label = range.label(AppStore.today);
-    final subject = info.isTransfer
-        ? info.title
-        : '${info.categoryName} on ${info.accountName}';
+    // The account no longer scopes an income/expense key, so the empty message
+    // names the category alone (spec §6); a transfer's categoryName is its
+    // "A → B" title.
+    final subject = info.categoryName;
     return Padding(
       padding: const EdgeInsets.fromLTRB(Insets.gutter, 24, Insets.gutter, 24),
       child: Text(
@@ -493,9 +502,18 @@ class _SameTransactionsScreenState extends State<SameTransactionsScreen> {
   }
 }
 
-/// A compact, non-tappable list row: date · title · unsigned amount. No account
-/// line (the account is fixed by the key) and no chevron (rows aren't tappable),
-/// but the swipe menu stays.
+/// A compact, non-tappable list row.
+///
+/// For an income/expense key — whose list can span accounts — line 1 is the
+/// row's own account and line 2 the note (absent when empty). For a
+/// transfer/rebalance key, whose account(s) the header already fixes, the row
+/// stays one line: the note, else a fallback. No chevron (rows aren't
+/// tappable), but the swipe menu stays.
+///
+/// **Rows native, aggregates base.** A row prints its amount in the currency it
+/// happened in (spec §3) — a €42 row reads €42. The summary card's TOTAL and
+/// AVERAGE instead print in base currency, converting each row through [Fx],
+/// because a figure summed across currencies belongs to no single statement.
 class _SameRow extends StatelessWidget {
   const _SameRow({
     required this.txn,
@@ -513,9 +531,36 @@ class _SameRow extends StatelessWidget {
   final VoidCallback onCopy;
   final VoidCallback onDelete;
 
+  /// The row's own account name, for an income/expense key (spec §4). expense
+  /// pays from [Txn.fromRef]; income lands in [Txn.toRef]. A deleted account
+  /// still resolves through [AppStore.refName], so the row renders regardless.
+  String _rowAccountName(AppStore store) =>
+      store.refName(txn.type == TxnType.income ? txn.toRef : txn.fromRef);
+
   @override
   Widget build(BuildContext context) {
-    final title = txn.note.isNotEmpty ? txn.note : info.rowFallbackTitle;
+    final store = StoreScope.of(context);
+    final note = txn.note.trim();
+
+    // The account line renders only when the key does not pin the account — an
+    // income/expense list can span accounts, so each row names its own on
+    // line 1. A transfer key fixes both accounts and a rebalance key's
+    // "category" is the account, so for them a per-row account would repeat the
+    // header (spec §4).
+    final String? account = info.showsRowAccount ? _rowAccountName(store) : null;
+
+    // Line 1 leads with the account (always present), so a note-less row never
+    // borrows the category name as a title — the fallback artefact §4 fixes.
+    // Where the key pins the account, line 1 is the note, else the fallback.
+    final String primary;
+    final String? secondary;
+    if (account != null) {
+      primary = account;
+      secondary = note.isEmpty ? null : note;
+    } else {
+      primary = note.isNotEmpty ? note : info.rowFallbackTitle;
+      secondary = null;
+    }
 
     final content = Container(
       // The row the user came from: a soft accent wash and a solid left edge,
@@ -530,6 +575,9 @@ class _SameRow extends StatelessWidget {
       ),
       padding: EdgeInsets.fromLTRB(isCurrent ? 12 - 2.5 : 12, 8, 12, 8),
       child: Row(
+        // Top-aligned so the date and amount sit against line 1 when a note
+        // adds a second line; for a one-line row this equals centre.
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
             width: 48,
@@ -543,21 +591,42 @@ class _SameRow extends StatelessWidget {
             ),
           ),
           Expanded(
-            child: Text(
-              title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontSize: 14.5,
-                height: 1.2,
-                color: AppColors.textPrimary,
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  primary,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    height: 1.2,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                if (secondary != null) ...[
+                  const SizedBox(height: 1),
+                  Text(
+                    secondary,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      height: 1.2,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
           const SizedBox(width: Insets.sm),
+          // Native currency — a row prints the amount in the currency it
+          // happened in (spec §3); only the aggregates convert to base.
           AmountText(
             txn.amount,
-            currency: info.currency,
+            currency: txn.currency,
             style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w600),
             color: info.amountColor,
           ),
@@ -569,11 +638,14 @@ class _SameRow extends StatelessWidget {
       // Direction in words — colour is the only other cue for an unsigned row.
       info.directionWord,
       dayMonth(txn.date),
-      title,
+      // primary names the account for an income/expense row — the fact that
+      // distinguishes two otherwise identical rows (spec §4).
+      primary,
+      ?secondary,
       money(txn.amount,
-          currency: info.currency,
+          currency: txn.currency,
           signless: true,
-          masked: StoreScope.of(context).masked),
+          masked: store.masked),
       if (isCurrent) 'current transaction',
     ].join(', ');
 
@@ -611,31 +683,31 @@ class _SameRow extends StatelessWidget {
   }
 }
 
-/// Everything the screen needs to render a key: titles, icon/color, currency,
-/// and the row amount color. Resolved once per build from the store.
+/// Everything the screen needs to render a key: titles, icon/color, and the row
+/// amount color. Resolved once per build from the store.
+///
+/// Currency is deliberately absent — rows print in their own [Txn.currency] and
+/// aggregates in [Fx.baseCurrency], so nothing here fixes one currency for the
+/// whole list (spec §3).
 class _KeyInfo {
   const _KeyInfo({
-    required this.isTransfer,
     required this.title,
     required this.subtitle,
     required this.sectionLabel,
     required this.icon,
     required this.color,
-    required this.currency,
     required this.amountColor,
     required this.directionWord,
     required this.rowFallbackTitle,
     required this.categoryName,
-    required this.accountName,
+    required this.showsRowAccount,
   });
 
-  final bool isTransfer;
   final String title;
   final String subtitle;
   final String sectionLabel;
   final IconData icon;
   final Color color;
-  final String currency;
   final Color amountColor;
 
   /// Direction in words for the row amount's semantics — colour is otherwise
@@ -643,24 +715,24 @@ class _KeyInfo {
   final String directionWord;
   final String rowFallbackTitle;
   final String categoryName;
-  final String accountName;
+
+  /// Whether rows carry a per-row account line: true only for an income/expense
+  /// key, whose list can span accounts. A transfer/rebalance key pins its
+  /// account(s) in the header, so its rows stay one line (spec §4).
+  final bool showsRowAccount;
 
   static _KeyInfo resolve(AppStore store, Txn origin, SameKey key) {
     if (key is TransferKey) {
-      final from = store.accountById(key.fromAccountId);
       // One shared helper composes "{from} → {to}" for the header, the row
       // fallback title, and the section label — never a second implementation.
       final parties = store.transferParties(origin);
       final title = store.transferTitle(origin);
       return _KeyInfo(
-        isTransfer: true,
         title: title,
         subtitle: 'Transfer',
         sectionLabel: title,
         icon: Icons.swap_horiz_rounded,
         color: AppColors.transfer,
-        // Source account's currency for a transfer key (spec §5).
-        currency: from?.currency ?? Fx.baseCurrency,
         // The app's existing transfer colour — never red/green.
         amountColor: AppColors.transfer,
         // Names both accounts in the row's semantics (spec §3).
@@ -668,16 +740,16 @@ class _KeyInfo {
         // A note-less transfer row shows the path, not the word "Transfer".
         rowFallbackTitle: title,
         categoryName: title,
-        accountName: parties.from,
+        // Both accounts are fixed by the key — no per-row account line.
+        showsRowAccount: false,
       );
     }
 
     final ledger = key as LedgerKey;
-    final account = store.accountById(ledger.accountId);
-    final accountName = account?.name ?? store.refName(ledger.accountId);
     final isRebalance = ledger.direction == TxnType.rebalance;
-    final categoryName =
-        isRebalance ? accountName : store.refName(ledger.categoryId);
+    // For a rebalance the key holds the account in categoryId (there is no
+    // category); refName resolves it to the account's name either way.
+    final categoryName = store.refName(ledger.categoryId);
     final directionWord = switch (ledger.direction) {
       TxnType.income => 'Income',
       TxnType.rebalance => 'Rebalance',
@@ -690,22 +762,25 @@ class _KeyInfo {
     };
 
     return _KeyInfo(
-      isTransfer: false,
       title: categoryName,
-      subtitle: '$accountName · $directionWord',
-      sectionLabel: '$categoryName · $accountName',
+      // Income/expense keys drop the account from their labels (spec §6):
+      // subtitle is the direction alone ("Expense"), section label the category
+      // alone ("GROCERIES"). A rebalance key still pins its account, so §6
+      // leaves its labels unchanged — the account (== categoryName here) stays.
+      subtitle: isRebalance ? '$categoryName · $directionWord' : directionWord,
+      sectionLabel: isRebalance ? '$categoryName · $categoryName' : categoryName,
       icon: isRebalance
           ? Icons.donut_large_rounded
           : store.refIcon(ledger.categoryId),
       color: isRebalance
           ? AppColors.rebalance
           : store.refColor(ledger.categoryId),
-      currency: account?.currency ?? Fx.baseCurrency,
       amountColor: amountColor,
       directionWord: directionWord,
       rowFallbackTitle: categoryName,
       categoryName: categoryName,
-      accountName: accountName,
+      // Only an income/expense key leaves the account unpinned (spec §4).
+      showsRowAccount: !isRebalance,
     );
   }
 }
