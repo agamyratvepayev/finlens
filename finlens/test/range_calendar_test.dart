@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:finlens/l10n/app_localizations.dart';
 import 'package:finlens/shared/widgets/range_calendar.dart';
 import 'package:finlens/theme/app_theme.dart';
 
@@ -19,6 +20,8 @@ Widget _host({
 }) {
   return MaterialApp(
     theme: AppTheme.dark,
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
     home: Scaffold(
       body: SingleChildScrollView(
         child: RangeCalendar(

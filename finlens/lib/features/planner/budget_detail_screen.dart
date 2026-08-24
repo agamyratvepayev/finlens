@@ -71,7 +71,7 @@ class BudgetDetailScreen extends StatelessWidget {
               child: ListView(
                 padding: const EdgeInsets.only(bottom: Insets.xxl),
                 children: [
-                  _header(category, monthlyBudget),
+                  _header(context, category, monthlyBudget),
                   _thisMonth(
                     context,
                     store,
@@ -166,7 +166,8 @@ class BudgetDetailScreen extends StatelessWidget {
 
   // ── Header ───────────────────────────────────────────────────────────────
 
-  Widget _header(Category category, double monthlyBudget) {
+  Widget _header(
+      BuildContext context, Category category, double monthlyBudget) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         Insets.gutter,
@@ -193,7 +194,8 @@ class BudgetDetailScreen extends StatelessWidget {
                 Row(
                   children: [
                     AmountText(monthlyBudget, style: AppText.rowSubtitle),
-                    Text(' a month', style: AppText.rowSubtitle),
+                    Text(' ${AppLocalizations.of(context).bdAMonth}',
+                        style: AppText.rowSubtitle),
                   ],
                 ),
               ],
@@ -227,7 +229,8 @@ class BudgetDetailScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('THIS MONTH', style: AppText.label),
+          Text(AppLocalizations.of(context).rangeThisMonth.toUpperCase(),
+              style: AppText.label),
           const SizedBox(height: Insets.sm),
           Row(
             crossAxisAlignment: CrossAxisAlignment.baseline,
@@ -241,8 +244,9 @@ class BudgetDetailScreen extends StatelessWidget {
               const SizedBox(width: Insets.sm),
               Text(
                 over
-                    ? 'spent · ${money(spent - effectiveLimit)} over'
-                    : 'spent',
+                    ? AppLocalizations.of(context)
+                        .bdSpentOver(money(spent - effectiveLimit))
+                    : AppLocalizations.of(context).bdSpent,
                 style: AppText.caption.copyWith(fontSize: 12),
               ),
             ],
@@ -259,9 +263,8 @@ class BudgetDetailScreen extends StatelessWidget {
             children: [
               Text(
                 isCurrent
-                    ? '${percent(ratio, decimals: 0)} · day '
-                        '${store.dayOfMonthFor(month)} of '
-                        '${store.daysInMonthOf(month)}'
+                    ? '${percent(ratio, decimals: 0)} · '
+                        '${AppLocalizations.of(context).bdDayOfMonth(store.dayOfMonthFor(month), store.daysInMonthOf(month))}'
                     : percent(ratio, decimals: 0),
                 style: AppText.caption.copyWith(fontSize: 11.5),
               ),
@@ -320,7 +323,7 @@ class BudgetDetailScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('AGAINST THE LIMIT', style: AppText.label),
+          Text(l.bdAgainstLimit, style: AppText.label),
           const SizedBox(height: Insets.md),
           for (var i = 0; i < months.length; i++) ...[
             if (i > 0) const SizedBox(height: Insets.md),

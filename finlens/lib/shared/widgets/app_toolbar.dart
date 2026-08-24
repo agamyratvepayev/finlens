@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
 
@@ -40,7 +41,7 @@ class AppToolbar extends StatefulWidget {
     required this.onTabChanged,
     this.tools = const [],
     this.onQueryChanged,
-    this.searchHint = 'Search',
+    this.searchHint,
   });
 
   final List<String> tabs;
@@ -50,7 +51,7 @@ class AppToolbar extends StatefulWidget {
 
   /// Providing this adds the search tool. Cleared to '' when search is closed.
   final ValueChanged<String>? onQueryChanged;
-  final String searchHint;
+  final String? searchHint;
 
   static const height = 44.0;
 
@@ -134,7 +135,7 @@ class _AppToolbarState extends State<AppToolbar> {
             tool: ToolbarTool(
               icon: Icons.search_rounded,
               onTap: _openSearch,
-              tooltip: 'Search',
+              tooltip: AppLocalizations.of(context).actionSearch,
             ),
           ),
       ],
@@ -174,7 +175,8 @@ class _AppToolbarState extends State<AppToolbar> {
                       isDense: true,
                       contentPadding: EdgeInsets.zero,
                       border: InputBorder.none,
-                      hintText: widget.searchHint,
+                      hintText:
+                          widget.searchHint ?? AppLocalizations.of(context).actionSearch,
                       hintStyle: const TextStyle(
                         fontSize: 14,
                         color: AppColors.textTertiary,

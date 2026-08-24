@@ -72,7 +72,7 @@ class _MonthPickerState extends State<_MonthPicker> {
               ),
             ),
             const SizedBox(height: Insets.lg),
-            const Text('MONTH', style: AppText.label),
+            Text(AppLocalizations.of(context).mpMonth, style: AppText.label),
             const SizedBox(height: Insets.md),
             _yearStepper(),
             const SizedBox(height: Insets.md),

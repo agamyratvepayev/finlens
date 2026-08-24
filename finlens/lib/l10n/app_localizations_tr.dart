@@ -1983,4 +1983,68 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get qaUnavailableNoAmount => 'tutar girilene kadar kullanılamaz';
+
+  @override
+  String get bfNetWorthFiltered => 'NET DEĞER · FİLTRELİ';
+
+  @override
+  String bfVisibleCategories(int visible, int total) {
+    return '$total kategoriden $visible tanesi';
+  }
+
+  @override
+  String bfVisibleAccounts(int visible, int total) {
+    return '$total hesaptan $visible tanesi';
+  }
+
+  @override
+  String get bdAMonth => 'aylık';
+
+  @override
+  String get bdSpent => 'harcandı';
+
+  @override
+  String bdSpentOver(String over) {
+    return 'harcandı · $over aşım';
+  }
+
+  @override
+  String bdDayOfMonth(int day, int total) {
+    return '$total günün $day. günü';
+  }
+
+  @override
+  String get bdAgainstLimit => 'LİMİTE KARŞI';
+
+  @override
+  String get mpMonth => 'AY';
+
+  @override
+  String get srDateRange => 'TARİH ARALIĞI';
+
+  @override
+  String get srCustomRange => 'ÖZEL ARALIK';
+
+  @override
+  String get calFrom => 'BAŞLANGIÇ';
+
+  @override
+  String get calTo => 'BİTİŞ';
+
+  @override
+  String plOfTarget(String target) {
+    return '$target hedeften';
+  }
+
+  @override
+  String get dsKeepIt => 'Kalsın';
+
+  @override
+  String get qaExampleCategory => 'örn. Market';
+
+  @override
+  String get qaExampleAccount => 'örn. Ana Hesap';
+
+  @override
+  String get qaExampleGoal => 'örn. MacBook Pro M4';
 }

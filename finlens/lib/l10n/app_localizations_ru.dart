@@ -2025,4 +2025,68 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get qaUnavailableNoAmount => 'недоступно, пока не введена сумма';
+
+  @override
+  String get bfNetWorthFiltered => 'КАПИТАЛ · ФИЛЬТР';
+
+  @override
+  String bfVisibleCategories(int visible, int total) {
+    return '$visible из $total категорий';
+  }
+
+  @override
+  String bfVisibleAccounts(int visible, int total) {
+    return '$visible из $total счетов';
+  }
+
+  @override
+  String get bdAMonth => 'в месяц';
+
+  @override
+  String get bdSpent => 'потрачено';
+
+  @override
+  String bdSpentOver(String over) {
+    return 'потрачено · $over сверх';
+  }
+
+  @override
+  String bdDayOfMonth(int day, int total) {
+    return 'день $day из $total';
+  }
+
+  @override
+  String get bdAgainstLimit => 'ОТНОСИТЕЛЬНО ЛИМИТА';
+
+  @override
+  String get mpMonth => 'МЕСЯЦ';
+
+  @override
+  String get srDateRange => 'ДИАПАЗОН ДАТ';
+
+  @override
+  String get srCustomRange => 'СВОЙ ПЕРИОД';
+
+  @override
+  String get calFrom => 'С';
+
+  @override
+  String get calTo => 'ПО';
+
+  @override
+  String plOfTarget(String target) {
+    return 'из $target цели';
+  }
+
+  @override
+  String get dsKeepIt => 'Оставить';
+
+  @override
+  String get qaExampleCategory => 'напр. Продукты';
+
+  @override
+  String get qaExampleAccount => 'напр. Основной счёт';
+
+  @override
+  String get qaExampleGoal => 'напр. MacBook Pro M4';
 }

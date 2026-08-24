@@ -3335,6 +3335,114 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'unavailable until an amount is entered'**
   String get qaUnavailableNoAmount;
+
+  /// No description provided for @bfNetWorthFiltered.
+  ///
+  /// In en, this message translates to:
+  /// **'NET WORTH · FILTERED'**
+  String get bfNetWorthFiltered;
+
+  /// No description provided for @bfVisibleCategories.
+  ///
+  /// In en, this message translates to:
+  /// **'{visible} of {total} categories'**
+  String bfVisibleCategories(int visible, int total);
+
+  /// No description provided for @bfVisibleAccounts.
+  ///
+  /// In en, this message translates to:
+  /// **'{visible} of {total} accounts'**
+  String bfVisibleAccounts(int visible, int total);
+
+  /// No description provided for @bdAMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'a month'**
+  String get bdAMonth;
+
+  /// No description provided for @bdSpent.
+  ///
+  /// In en, this message translates to:
+  /// **'spent'**
+  String get bdSpent;
+
+  /// No description provided for @bdSpentOver.
+  ///
+  /// In en, this message translates to:
+  /// **'spent · {over} over'**
+  String bdSpentOver(String over);
+
+  /// No description provided for @bdDayOfMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'day {day} of {total}'**
+  String bdDayOfMonth(int day, int total);
+
+  /// No description provided for @bdAgainstLimit.
+  ///
+  /// In en, this message translates to:
+  /// **'AGAINST THE LIMIT'**
+  String get bdAgainstLimit;
+
+  /// No description provided for @mpMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'MONTH'**
+  String get mpMonth;
+
+  /// No description provided for @srDateRange.
+  ///
+  /// In en, this message translates to:
+  /// **'DATE RANGE'**
+  String get srDateRange;
+
+  /// No description provided for @srCustomRange.
+  ///
+  /// In en, this message translates to:
+  /// **'CUSTOM RANGE'**
+  String get srCustomRange;
+
+  /// No description provided for @calFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'FROM'**
+  String get calFrom;
+
+  /// No description provided for @calTo.
+  ///
+  /// In en, this message translates to:
+  /// **'TO'**
+  String get calTo;
+
+  /// No description provided for @plOfTarget.
+  ///
+  /// In en, this message translates to:
+  /// **'of {target} target'**
+  String plOfTarget(String target);
+
+  /// No description provided for @dsKeepIt.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep it'**
+  String get dsKeepIt;
+
+  /// No description provided for @qaExampleCategory.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Groceries'**
+  String get qaExampleCategory;
+
+  /// No description provided for @qaExampleAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Main Checking'**
+  String get qaExampleAccount;
+
+  /// No description provided for @qaExampleGoal.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. MacBook Pro M4'**
+  String get qaExampleGoal;
 }
 
 class _AppLocalizationsDelegate

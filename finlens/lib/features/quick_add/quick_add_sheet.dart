@@ -315,7 +315,7 @@ class _QuickAddScreenState extends State<QuickAddScreen>
           final v = await _promptText(
             title: AppLocalizations.of(context).qaTag,
             initial: _tags.join(', '),
-            hint: 'e.g. Groceries',
+            hint: AppLocalizations.of(context).qaExampleCategory,
           );
           if (v == null || !mounted) return;
           setState(() => _tags = v
@@ -445,7 +445,9 @@ class _QuickAddScreenState extends State<QuickAddScreen>
             icon: Icons.category_rounded,
             label: AppLocalizations.of(context).qaTo,
             // A split replaces the single category with the line count (§2).
-            value: _hasSplit ? '${_splitLines!.length} categories' : to?.name,
+            value: _hasSplit
+                ? AppLocalizations.of(context).qaSplitCategories(_splitLines!.length)
+                : to?.name,
             emptyText: AppLocalizations.of(context).qaChooseCategory,
             flashId: 'to',
             onTap: _hasSplit
@@ -725,7 +727,7 @@ class _QuickAddScreenState extends State<QuickAddScreen>
               final v = await _promptText(
                 title: AppLocalizations.of(context).egGoalName,
                 initial: _title.text,
-                hint: 'e.g. MacBook Pro M4',
+                hint: AppLocalizations.of(context).qaExampleGoal,
               );
               if (v == null || !mounted) return;
               setState(() => _title.text = v);

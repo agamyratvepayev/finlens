@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/app_typography.dart';
@@ -21,8 +22,8 @@ Future<bool> showDestructiveConfirm(
   required String title,
   required String message,
   required List<ImpactLine> impact,
-  String confirmLabel = 'Delete',
-  String cancelLabel = 'Keep it',
+  String? confirmLabel,
+  String? cancelLabel,
 }) async {
   final result = await showModalBottomSheet<bool>(
     context: context,
@@ -99,7 +100,8 @@ Future<bool> showDestructiveConfirm(
                 ),
                 textStyle: AppText.button,
               ),
-              child: Text(confirmLabel),
+              child: Text(
+                  confirmLabel ?? AppLocalizations.of(context).actionDelete),
             ),
             const SizedBox(height: Insets.sm),
             TextButton(
@@ -109,7 +111,8 @@ Future<bool> showDestructiveConfirm(
                 minimumSize: const Size.fromHeight(46),
                 textStyle: AppText.button,
               ),
-              child: Text(cancelLabel),
+              child:
+                  Text(cancelLabel ?? AppLocalizations.of(context).dsKeepIt),
             ),
           ],
         ),

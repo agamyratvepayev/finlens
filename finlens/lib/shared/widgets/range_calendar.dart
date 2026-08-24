@@ -121,7 +121,7 @@ class _RangeCalendarState extends State<RangeCalendar> {
             children: [
               Expanded(
                 child: _field(
-                  'FROM',
+                  AppLocalizations.of(context).calFrom,
                   from,
                   active: _editing == _Editing.from,
                   onTap: () => setState(() => _editing = _Editing.from),
@@ -130,7 +130,7 @@ class _RangeCalendarState extends State<RangeCalendar> {
               const SizedBox(width: Insets.md),
               Expanded(
                 child: _field(
-                  'TO',
+                  AppLocalizations.of(context).calTo,
                   to,
                   active: _editing == _Editing.to,
                   onTap: from == null
@@ -170,8 +170,8 @@ class _RangeCalendarState extends State<RangeCalendar> {
               ),
               child: Text(
                 complete
-                    ? 'Apply · ${AppLocalizations.of(context).countTransactions(count)}'
-                    : 'Apply',
+                    ? '${AppLocalizations.of(context).actionApply} · ${AppLocalizations.of(context).countTransactions(count)}'
+                    : AppLocalizations.of(context).actionApply,
               ),
             ),
           ),

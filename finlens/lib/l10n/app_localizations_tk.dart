@@ -1985,4 +1985,68 @@ class AppLocalizationsTk extends AppLocalizations {
 
   @override
   String get qaUnavailableNoAmount => 'möçber girizilýänçä elýeterli däl';
+
+  @override
+  String get bfNetWorthFiltered => 'ARASSA BAÝLYK · SÜZGÜÇLI';
+
+  @override
+  String bfVisibleCategories(int visible, int total) {
+    return '$total kategoriýadan $visible';
+  }
+
+  @override
+  String bfVisibleAccounts(int visible, int total) {
+    return '$total hasapdan $visible';
+  }
+
+  @override
+  String get bdAMonth => 'aýda';
+
+  @override
+  String get bdSpent => 'harçlandy';
+
+  @override
+  String bdSpentOver(String over) {
+    return 'harçlandy · $over artyk';
+  }
+
+  @override
+  String bdDayOfMonth(int day, int total) {
+    return '$total günüň $day-nji güni';
+  }
+
+  @override
+  String get bdAgainstLimit => 'ÇÄKE GARŞY';
+
+  @override
+  String get mpMonth => 'AÝ';
+
+  @override
+  String get srDateRange => 'SENE ARALYGY';
+
+  @override
+  String get srCustomRange => 'ÖZ ARALYGY';
+
+  @override
+  String get calFrom => 'BAŞLANGYÇ';
+
+  @override
+  String get calTo => 'AHYRY';
+
+  @override
+  String plOfTarget(String target) {
+    return '$target maksatdan';
+  }
+
+  @override
+  String get dsKeepIt => 'Galsyn';
+
+  @override
+  String get qaExampleCategory => 'mysal: Azyk';
+
+  @override
+  String get qaExampleAccount => 'mysal: Esasy hasap';
+
+  @override
+  String get qaExampleGoal => 'mysal: MacBook Pro M4';
 }

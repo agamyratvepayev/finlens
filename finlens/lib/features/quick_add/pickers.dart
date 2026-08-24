@@ -792,7 +792,7 @@ class _NewCategoryFormState extends State<_NewCategoryForm> {
                     icon: Icons.label_rounded,
                     label: AppLocalizations.of(context).qaCategoryName,
                     controller: _name,
-                    hint: 'e.g. Groceries',
+                    hint: AppLocalizations.of(context).qaExampleCategory,
                     autofocus: widget.initialName.isEmpty,
                   ),
                 ],
@@ -1030,7 +1030,7 @@ class _NewAccountFormState extends State<_NewAccountForm> {
                     icon: Icons.drive_file_rename_outline_rounded,
                     label: AppLocalizations.of(context).qaAccountName,
                     controller: _name,
-                    hint: 'e.g. Main Checking',
+                    hint: AppLocalizations.of(context).qaExampleAccount,
                     autofocus: true,
                   ),
                 ],
@@ -1044,9 +1044,12 @@ class _NewAccountFormState extends State<_NewAccountForm> {
                     style: const TextStyle(fontSize: 12, color: AppColors.negative),
                   ),
                 ),
-              _groupList('ASSETS', AccountGroup.assets),
+              _groupList(AppLocalizations.of(context).qaAssets.toUpperCase(),
+                  AccountGroup.assets),
               const SizedBox(height: Insets.md),
-              _groupList('LIABILITIES', AccountGroup.liabilities),
+              _groupList(
+                  AppLocalizations.of(context).qaLiabilities.toUpperCase(),
+                  AccountGroup.liabilities),
               // The group drives everything below it; animate rows in and out
               // so the sheet never jumps (spec §5.4).
               AnimatedSize(
@@ -1136,7 +1139,7 @@ class _NewAccountFormState extends State<_NewAccountForm> {
       button: true,
       selected: selected,
       label:
-          '${g.label(AppLocalizations.of(context))}, ${g.isAsset ? 'assets' : 'liabilities'}',
+          '${g.label(AppLocalizations.of(context))}, ${g.isAsset ? AppLocalizations.of(context).qaAssets : AppLocalizations.of(context).qaLiabilities}',
       child: InkWell(
         onTap: () => _selectGroup(g),
         child: Container(

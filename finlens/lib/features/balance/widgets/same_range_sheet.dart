@@ -122,7 +122,7 @@ class _PresetList extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        const _SheetTitle('DATE RANGE'),
+        _SheetTitle(AppLocalizations.of(context).srDateRange),
         for (final preset in SameRangePreset.values)
           _presetRow(preset, counts[preset] ?? 0, AppLocalizations.of(context)),
         const Divider(height: 1, thickness: 1, color: AppColors.hairline),
@@ -215,7 +215,7 @@ class _CustomRangeState extends State<_CustomRange> {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        const _SheetTitle('CUSTOM RANGE'),
+        _SheetTitle(AppLocalizations.of(context).srCustomRange),
         // The Same-transactions calendar keeps its original behaviour: empty
         // start, future days tappable, and Apply disabled at n = 0.
         RangeCalendar(

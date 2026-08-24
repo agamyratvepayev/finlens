@@ -1986,4 +1986,68 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get qaUnavailableNoAmount => 'unavailable until an amount is entered';
+
+  @override
+  String get bfNetWorthFiltered => 'NET WORTH · FILTERED';
+
+  @override
+  String bfVisibleCategories(int visible, int total) {
+    return '$visible of $total categories';
+  }
+
+  @override
+  String bfVisibleAccounts(int visible, int total) {
+    return '$visible of $total accounts';
+  }
+
+  @override
+  String get bdAMonth => 'a month';
+
+  @override
+  String get bdSpent => 'spent';
+
+  @override
+  String bdSpentOver(String over) {
+    return 'spent · $over over';
+  }
+
+  @override
+  String bdDayOfMonth(int day, int total) {
+    return 'day $day of $total';
+  }
+
+  @override
+  String get bdAgainstLimit => 'AGAINST THE LIMIT';
+
+  @override
+  String get mpMonth => 'MONTH';
+
+  @override
+  String get srDateRange => 'DATE RANGE';
+
+  @override
+  String get srCustomRange => 'CUSTOM RANGE';
+
+  @override
+  String get calFrom => 'FROM';
+
+  @override
+  String get calTo => 'TO';
+
+  @override
+  String plOfTarget(String target) {
+    return 'of $target target';
+  }
+
+  @override
+  String get dsKeepIt => 'Keep it';
+
+  @override
+  String get qaExampleCategory => 'e.g. Groceries';
+
+  @override
+  String get qaExampleAccount => 'e.g. Main Checking';
+
+  @override
+  String get qaExampleGoal => 'e.g. MacBook Pro M4';
 }

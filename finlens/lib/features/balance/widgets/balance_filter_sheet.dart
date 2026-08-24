@@ -157,9 +157,9 @@ class _BalanceFilterSheetState extends State<_BalanceFilterSheet> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text(
-                  'NET WORTH · FILTERED',
-                  style: TextStyle(
+                Text(
+                  AppLocalizations.of(context).bfNetWorthFiltered,
+                  style: const TextStyle(
                     fontSize: 11,
                     height: 1.2,
                     fontWeight: FontWeight.w600,
@@ -184,10 +184,15 @@ class _BalanceFilterSheetState extends State<_BalanceFilterSheet> {
             crossAxisAlignment: CrossAxisAlignment.end,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('$visibleCats of $totalCats categories',
+              Text(
+                  AppLocalizations.of(context)
+                      .bfVisibleCategories(visibleCats, totalCats),
                   style: _previewMeta),
               const SizedBox(height: 2),
-              Text('$visibleAccts of $totalAccts accounts', style: _previewMeta),
+              Text(
+                  AppLocalizations.of(context)
+                      .bfVisibleAccounts(visibleAccts, totalAccts),
+                  style: _previewMeta),
             ],
           ),
         ],
@@ -211,11 +216,14 @@ class _BalanceFilterSheetState extends State<_BalanceFilterSheet> {
       padding: const EdgeInsets.fromLTRB(12, 6, 12, 0),
       children: [
         if (assets.isNotEmpty) ...[
-          _sectionLabel('ASSETS'),
+          _sectionLabel(
+              AppLocalizations.of(context).balanceSectionAssets.toUpperCase()),
           for (final g in assets) _categoryCard(store, filter, g),
         ],
         if (liabilities.isNotEmpty) ...[
-          _sectionLabel('LIABILITIES'),
+          _sectionLabel(AppLocalizations.of(context)
+              .balanceSectionLiabilities
+              .toUpperCase()),
           for (final g in liabilities) _categoryCard(store, filter, g),
         ],
       ],
@@ -400,7 +408,8 @@ class _BalanceFilterSheetState extends State<_BalanceFilterSheet> {
                 width: 38,
                 height: 22,
                 knob: 18,
-                semanticLabel: '${a.name}, ${visible ? 'shown' : 'hidden'}',
+                semanticLabel:
+                    '${a.name}, ${visible ? AppLocalizations.of(context).a11yShown : AppLocalizations.of(context).a11yHidden}',
                 onTap: () => _apply(filter.toggleAccount(store, a)),
               ),
             ],
