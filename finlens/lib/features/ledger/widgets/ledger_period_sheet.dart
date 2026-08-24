@@ -183,7 +183,7 @@ class _PeriodPageState extends State<_PeriodPage> {
       key: const ValueKey('period'),
       mainAxisSize: MainAxisSize.min,
       children: [
-        const _SheetTitle('PERIOD'),
+        _SheetTitle(AppLocalizations.of(context).ldgPeriod.toUpperCase()),
         // Custom range… — an accent row that opens the calendar page. While a
         // lens is active it states what is applied: the lens's own label plus a
         // checkmark (the app's selection mark). It still opens the calendar to
@@ -202,7 +202,7 @@ class _PeriodPageState extends State<_PeriodPage> {
                   child: Text(
                       lens != null
                           ? lens.label(AppStore.today, AppLocalizations.of(context))
-                          : 'Custom range…',
+                          : '${AppLocalizations.of(context).ldgCustomRange}…',
                       style: const TextStyle(
                           fontSize: 15, color: AppColors.accentLight)),
                 ),
@@ -248,7 +248,7 @@ class _PeriodPageState extends State<_PeriodPage> {
         _StepButton(
           icon: Icons.chevron_left_rounded,
           enabled: canBack,
-          semanticLabel: 'Previous year',
+          semanticLabel: AppLocalizations.of(context).ldgPreviousYear,
           onTap: () => _stepYear(-1),
         ),
         SizedBox(
@@ -267,7 +267,7 @@ class _PeriodPageState extends State<_PeriodPage> {
         _StepButton(
           icon: Icons.chevron_right_rounded,
           enabled: canFwd,
-          semanticLabel: 'Next year',
+          semanticLabel: AppLocalizations.of(context).ldgNextYear,
           onTap: () => _stepYear(1),
         ),
       ],
@@ -548,23 +548,23 @@ class _CalendarPage extends StatelessWidget {
               GestureDetector(
                 behavior: HitTestBehavior.opaque,
                 onTap: onBack,
-                child: const Padding(
-                  padding: EdgeInsets.all(4),
+                child: Padding(
+                  padding: const EdgeInsets.all(4),
                   child: Row(
                     children: [
-                      Icon(Icons.chevron_left_rounded,
+                      const Icon(Icons.chevron_left_rounded,
                           size: 20, color: AppColors.accent),
-                      Text('Period',
-                          style:
-                              TextStyle(fontSize: 15, color: AppColors.accent)),
+                      Text(AppLocalizations.of(context).ldgPeriod,
+                          style: const TextStyle(
+                              fontSize: 15, color: AppColors.accent)),
                     ],
                   ),
                 ),
               ),
               const Spacer(),
-              const Text(
-                'CUSTOM RANGE',
-                style: TextStyle(
+              Text(
+                AppLocalizations.of(context).ldgCustomRange.toUpperCase(),
+                style: const TextStyle(
                   fontSize: 11,
                   height: 1.2,
                   fontWeight: FontWeight.w600,

@@ -141,7 +141,7 @@ class LedgerDayCard extends StatelessWidget {
                     duration: const Duration(milliseconds: 180),
                     child: Semantics(
                       label:
-                          '${net < 0 ? 'Net out' : 'Net in'}, '
+                          '${net < 0 ? AppLocalizations.of(context).ldgNetOut : AppLocalizations.of(context).ldgNetIn}, '
                           '${money(net, signless: true, masked: StoreScope.of(context).masked)}',
                       excludeSemantics: true,
                       child: Text(
@@ -259,7 +259,7 @@ class LedgerTxnRow extends StatelessWidget {
     // source and `→ destination` in a group/all ledger, collapsed to just the
     // counterpart on a single account's screen. Never a category colour.
     if (txn.type == TxnType.transfer) return _buildTransfer(context, store);
-    final category = _categoryLabel(store, txn);
+    final category = _categoryLabel(context, store, txn);
     final colour = _refColour(store, txn);
     final isTransfer = txn.type == TxnType.transfer;
     final parties = isTransfer ? store.transferParties(txn) : null;
@@ -304,7 +304,9 @@ class LedgerTxnRow extends StatelessWidget {
     // cannot see is never announced: the balance only when the column renders,
     // the description only when it is open.
     final semanticsLabel = [
-      isTransfer ? 'Transfer from ${parties!.from} to ${parties.to}' : category,
+      isTransfer
+          ? AppLocalizations.of(context).transferFromTo(parties!.from, parties.to)
+          : category,
       money0,
       if (!isTransfer)
         switch (row.kind) {
@@ -379,9 +381,9 @@ class LedgerTxnRow extends StatelessWidget {
       // Swipe actions are invisible to assistive tech unless declared, so all
       // three are exposed to the action rotor. The row itself stays read-only.
       customSemanticsActions: {
-        const CustomSemanticsAction(label: 'Edit'): onEdit,
-        const CustomSemanticsAction(label: 'Copy'): onCopy,
-        const CustomSemanticsAction(label: 'Delete'): onDelete,
+        CustomSemanticsAction(label: AppLocalizations.of(context).actionEdit): onEdit,
+        CustomSemanticsAction(label: AppLocalizations.of(context).actionCopy): onCopy,
+        CustomSemanticsAction(label: AppLocalizations.of(context).actionDelete): onDelete,
       },
       label: semanticsLabel,
       child: SwipeActions(
@@ -390,19 +392,19 @@ class LedgerTxnRow extends StatelessWidget {
         actions: [
           SwipeActionItem(
             icon: Icons.edit_rounded,
-            label: 'Edit',
+            label: AppLocalizations.of(context).actionEdit,
             color: const Color(0xFF2C2C2E),
             onTap: onEdit,
           ),
           SwipeActionItem(
             icon: Icons.copy_rounded,
-            label: 'Copy',
+            label: AppLocalizations.of(context).actionCopy,
             color: const Color(0xFF0A84FF),
             onTap: onCopy,
           ),
           SwipeActionItem(
             icon: Icons.delete_outline_rounded,
-            label: 'Delete',
+            label: AppLocalizations.of(context).actionDelete,
             color: const Color(0xFFFF453A),
             onTap: onDelete,
           ),
@@ -674,7 +676,7 @@ class LedgerTxnRow extends StatelessWidget {
     // A number a sighted user cannot see is not announced (spec §5): the balance
     // only when the column renders, the note only when its line is open.
     final semanticsLabel = [
-      'Transfer from ${parties.from} to ${parties.to}',
+      AppLocalizations.of(context).transferFromTo(parties.from, parties.to),
       money(txn.amount, currency: txn.currency, signless: true, masked: store.masked),
       if (onAccount && descOpen) note,
       if (showBalance) 'balance $balanceText',
@@ -682,9 +684,9 @@ class LedgerTxnRow extends StatelessWidget {
 
     return Semantics(
       customSemanticsActions: {
-        const CustomSemanticsAction(label: 'Edit'): onEdit,
-        const CustomSemanticsAction(label: 'Copy'): onCopy,
-        const CustomSemanticsAction(label: 'Delete'): onDelete,
+        CustomSemanticsAction(label: AppLocalizations.of(context).actionEdit): onEdit,
+        CustomSemanticsAction(label: AppLocalizations.of(context).actionCopy): onCopy,
+        CustomSemanticsAction(label: AppLocalizations.of(context).actionDelete): onDelete,
       },
       label: semanticsLabel,
       child: SwipeActions(
@@ -693,19 +695,19 @@ class LedgerTxnRow extends StatelessWidget {
         actions: [
           SwipeActionItem(
             icon: Icons.edit_rounded,
-            label: 'Edit',
+            label: AppLocalizations.of(context).actionEdit,
             color: const Color(0xFF2C2C2E),
             onTap: onEdit,
           ),
           SwipeActionItem(
             icon: Icons.copy_rounded,
-            label: 'Copy',
+            label: AppLocalizations.of(context).actionCopy,
             color: const Color(0xFF0A84FF),
             onTap: onCopy,
           ),
           SwipeActionItem(
             icon: Icons.delete_outline_rounded,
-            label: 'Delete',
+            label: AppLocalizations.of(context).actionDelete,
             color: const Color(0xFFFF453A),
             onTap: onDelete,
           ),
@@ -808,15 +810,17 @@ class LedgerTxnRow extends StatelessWidget {
         : store.runningBalanceAt(ref, txn);
   }
 
-  String _categoryLabel(AppStore store, Txn txn) => switch (txn.type) {
-    TxnType.expense => store.refName(txn.toRef),
-    TxnType.income => store.refName(txn.fromRef),
-    TxnType.transfer =>
-      scope is AccountScope
-          ? 'Transfer ${row.counterpartyLine ?? ''}'.trim()
-          : 'Transfer',
-    TxnType.rebalance => 'Revaluation',
-  };
+  String _categoryLabel(BuildContext context, AppStore store, Txn txn) {
+    final l = AppLocalizations.of(context);
+    return switch (txn.type) {
+      TxnType.expense => store.refName(txn.toRef),
+      TxnType.income => store.refName(txn.fromRef),
+      TxnType.transfer => scope is AccountScope
+          ? '${l.txnTypeTransfer} ${row.counterpartyLine ?? ''}'.trim()
+          : l.txnTypeTransfer,
+      TxnType.rebalance => l.txnRevaluation,
+    };
+  }
 
   Color _refColour(AppStore store, Txn txn) => switch (txn.type) {
     TxnType.expense => store.refColor(txn.toRef),
@@ -838,9 +842,9 @@ class _NoCashPill extends StatelessWidget {
       color: AppColors.chipBg,
       borderRadius: BorderRadius.circular(4),
     ),
-    child: const Text(
-      'NO CASH',
-      style: TextStyle(
+    child: Text(
+      AppLocalizations.of(context).ldgNoCash.toUpperCase(),
+      style: const TextStyle(
         fontSize: 9.5,
         fontWeight: FontWeight.w700,
         letterSpacing: 0.05 * 9.5,

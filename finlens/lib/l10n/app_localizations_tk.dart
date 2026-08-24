@@ -1288,4 +1288,204 @@ class AppLocalizationsTk extends AppLocalizations {
 
   @override
   String get arClearArchive => 'Arhiwi arassala';
+
+  @override
+  String get stateOn => 'Açyk';
+
+  @override
+  String get stateOff => 'Öçük';
+
+  @override
+  String get filterAll => 'Ählisi';
+
+  @override
+  String get actionClose => 'Ýap';
+
+  @override
+  String get ldgShowDescriptions => 'Düşündirişleri görkez';
+
+  @override
+  String get ldgSortTransactions => 'Amallary tertiple';
+
+  @override
+  String get ldgFilterTransactions => 'Amallary süz';
+
+  @override
+  String get ldgSearchTransactions => 'Amallary gözle';
+
+  @override
+  String ldgFilterActive(Object shown, Object total) {
+    return 'Işjeň, $total amalyň $shown görkezilýär';
+  }
+
+  @override
+  String ldgNoResultsFor(Object query) {
+    return '\"$query\" boýunça netije ýok';
+  }
+
+  @override
+  String get ldgNoMatchFilter => 'Süzgüçiňize gabat gelýän amal ýok';
+
+  @override
+  String get ldgClearFilter => 'Süzgüji arassala';
+
+  @override
+  String get ldgNothingHere => 'Bu ýerde entek hiç zat ýok';
+
+  @override
+  String get ldgNothingHereMsg => 'Goşan ýazgylaryňyz şu sanawda görüner.';
+
+  @override
+  String get ldgAddEntry => 'Ýazgy goş';
+
+  @override
+  String get ldgCategories => 'Kategoriýalar';
+
+  @override
+  String get ldgAccounts => 'Hasaplar';
+
+  @override
+  String get ldgTags => 'Bellikler';
+
+  @override
+  String get ldgType => 'Görnüş';
+
+  @override
+  String get ldgDirection => 'Ugry';
+
+  @override
+  String get ldgAmount => 'Möçber';
+
+  @override
+  String get ldgAny => 'Islendik';
+
+  @override
+  String get ldgClearCustomRange => 'Öz aralygyny arassala';
+
+  @override
+  String ldgSpentOf(Object expense, Object income) {
+    return '$income mukdaryň $expense harçlandy';
+  }
+
+  @override
+  String get ldgOut => 'Çykýan';
+
+  @override
+  String get ldgLeft => 'Galan';
+
+  @override
+  String get ldgChangePeriod => 'Döwri üýtget';
+
+  @override
+  String get ldgBalance => 'Balans';
+
+  @override
+  String get ldgTransactionDeleted => 'Amal pozuldy';
+
+  @override
+  String get ldgNoTransactions => 'Amal ýok';
+
+  @override
+  String get ldgPeriod => 'Döwür';
+
+  @override
+  String get ldgShow => 'Görkez';
+
+  @override
+  String get ldgCustomRange => 'Öz aralygy';
+
+  @override
+  String get ldgPreviousYear => 'Öňki ýyl';
+
+  @override
+  String get ldgNextYear => 'Indiki ýyl';
+
+  @override
+  String ldgShowCountOf(Object count, Object total) {
+    return '$total amalyň $count görkez';
+  }
+
+  @override
+  String ldgShowAll(Object count) {
+    return 'Ählisini görkez $count';
+  }
+
+  @override
+  String ldgPlusMore(Object count) {
+    return '+$count ýene';
+  }
+
+  @override
+  String get ldgNetIn => 'Arassa giriş';
+
+  @override
+  String get ldgNetOut => 'Arassa çykyş';
+
+  @override
+  String get ldgMoneyIn => 'Gelýän';
+
+  @override
+  String get ldgMoneyOut => 'Çykýan';
+
+  @override
+  String get ldgNoCash => 'Nagt ýok';
+
+  @override
+  String get ldgIn => 'Gelen';
+
+  @override
+  String ldgRangeHint(Object min, Object max) {
+    return 'Bu ýerdäki amallar $min – $max aralygynda';
+  }
+
+  @override
+  String ldgSearchWithin(Object labels) {
+    return '$labels içinde gözle';
+  }
+
+  @override
+  String ldgSelectAllIn(Object section) {
+    return '$section içinde ählisini saýla';
+  }
+
+  @override
+  String ldgClearSelection(Object section) {
+    return '$section saýlawyny arassala';
+  }
+
+  @override
+  String get ldgSelectAll => 'Ählisini saýla';
+
+  @override
+  String get ldgClear => 'Arassala';
+
+  @override
+  String get ldgMin => 'Min';
+
+  @override
+  String get ldgMax => 'Maks';
+
+  @override
+  String get ldgResetFilter => 'Süzgüji täzele';
+
+  @override
+  String get tdFrom => 'Nireden';
+
+  @override
+  String get tdTo => 'Nirä';
+
+  @override
+  String get tdDeletedAccount => 'Pozulan hasap';
+
+  @override
+  String get tdRate => 'Kurs';
+
+  @override
+  String get tdNote => 'Bellik';
+
+  @override
+  String get tdNetWorth => 'Arassa baýlyk';
+
+  @override
+  String get tdUnchanged => 'Üýtgemedik';
 }

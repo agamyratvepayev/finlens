@@ -384,25 +384,25 @@ class _LedgerScreenState extends State<LedgerScreen> {
                   icon: showDesc
                       ? Icons.keyboard_double_arrow_up_rounded
                       : Icons.keyboard_double_arrow_down_rounded,
-                  tooltip: 'Show descriptions',
+                  tooltip: AppLocalizations.of(context).ldgShowDescriptions,
                   iconColor: showDesc ? AppColors.accentLight : null,
-                  semanticValue: showDesc ? 'On' : 'Off',
+                  semanticValue: showDesc ? AppLocalizations.of(context).stateOn : AppLocalizations.of(context).stateOff,
                   onTap: _toggleDescriptions,
                 ),
                 Tool(
                   icon: _filterActive
                       ? Icons.filter_alt_rounded
                       : Icons.filter_alt_outlined,
-                  tooltip: 'Filter transactions',
+                  tooltip: AppLocalizations.of(context).ldgFilterTransactions,
                   iconColor: _filterActive ? AppColors.textPrimary : null,
                   semanticValue: _filterActive
-                      ? 'Active, $shown of $total shown'
-                      : 'Off',
+                      ? AppLocalizations.of(context).ldgFilterActive('$shown', '$total')
+                      : AppLocalizations.of(context).stateOff,
                   onTap: () => _openFilter(store),
                 ),
                 Tool(
                   icon: _searching ? Icons.close_rounded : Icons.search_rounded,
-                  tooltip: 'Search transactions',
+                  tooltip: AppLocalizations.of(context).ldgSearchTransactions,
                   onTap: () => _searching ? _exitSearch() : _enterSearch(),
                 ),
               ],
@@ -440,12 +440,12 @@ class _LedgerScreenState extends State<LedgerScreen> {
                   fontSize: 14,
                   color: AppColors.textPrimary,
                 ),
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   isDense: true,
                   contentPadding: EdgeInsets.zero,
                   border: InputBorder.none,
-                  hintText: 'Search',
-                  hintStyle: TextStyle(color: AppColors.textTertiary),
+                  hintText: AppLocalizations.of(context).actionSearch,
+                  hintStyle: const TextStyle(color: AppColors.textTertiary),
                 ),
                 onChanged: _onSearchChanged,
               ),
@@ -477,7 +477,7 @@ class _LedgerScreenState extends State<LedgerScreen> {
       return Padding(
         padding: const EdgeInsets.only(top: 64),
         child: Text(
-          'No results for "${_debouncedQuery.trim()}"',
+          AppLocalizations.of(context).ldgNoResultsFor(_debouncedQuery.trim()),
           textAlign: TextAlign.center,
           style: const TextStyle(fontSize: 14, color: AppColors.textTertiary),
         ),
@@ -489,10 +489,10 @@ class _LedgerScreenState extends State<LedgerScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text(
-              'No transactions match your filter',
+            Text(
+              AppLocalizations.of(context).ldgNoMatchFilter,
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 14, color: AppColors.textTertiary),
+              style: const TextStyle(fontSize: 14, color: AppColors.textTertiary),
             ),
             const SizedBox(height: 8),
             GestureDetector(
@@ -505,11 +505,11 @@ class _LedgerScreenState extends State<LedgerScreen> {
                 _min = null;
                 _max = null;
               }),
-              child: const Padding(
-                padding: EdgeInsets.all(8),
+              child: Padding(
+                padding: const EdgeInsets.all(8),
                 child: Text(
-                  'Clear filter',
-                  style: TextStyle(fontSize: 14, color: AppColors.accent),
+                  AppLocalizations.of(context).ldgClearFilter,
+                  style: const TextStyle(fontSize: 14, color: AppColors.accent),
                 ),
               ),
             ),
@@ -521,12 +521,12 @@ class _LedgerScreenState extends State<LedgerScreen> {
       padding: const EdgeInsets.only(top: 64),
       child: EmptyState(
         icon: Icons.receipt_long_rounded,
-        title: 'Nothing here yet',
-        message: 'Entries you add will appear in this list.',
+        title: AppLocalizations.of(context).ldgNothingHere,
+        message: AppLocalizations.of(context).ldgNothingHereMsg,
         action: FilledButton.icon(
           onPressed: () => showQuickAdd(context),
           icon: const Icon(Icons.add_rounded, size: 18),
-          label: const Text('Add an entry'),
+          label: Text(AppLocalizations.of(context).ldgAddEntry),
           style: FilledButton.styleFrom(
             backgroundColor: AppColors.accent,
             foregroundColor: Colors.white,
@@ -572,7 +572,7 @@ class _LedgerScreenState extends State<LedgerScreen> {
                         MaterialPageRoute(
                           builder: (_) => TransferDetailScreen(
                             txnId: day.txns[i].id,
-                            backLabel: 'Ledger',
+                            backLabel: AppLocalizations.of(context).navLedger,
                           ),
                         ),
                       )
@@ -580,7 +580,7 @@ class _LedgerScreenState extends State<LedgerScreen> {
                         MaterialPageRoute(
                           builder: (_) => SameTransactionsScreen(
                             originTxnId: day.txns[i].id,
-                            backLabel: 'Ledger',
+                            backLabel: AppLocalizations.of(context).navLedger,
                           ),
                         ),
                       ),
@@ -659,6 +659,7 @@ class _LedgerScreenState extends State<LedgerScreen> {
   /// search belongs to the list search, which already matches notes and tags
   /// and combines multiplicatively with this filter (spec §7).
   Future<void> _openFilter(AppStore store) async {
+    final l = AppLocalizations.of(context);
     final all = store.txnsInWindow(store.ledgerWindow);
     final accountIds = {for (final a in store.accounts) a.id};
 
@@ -779,10 +780,10 @@ class _LedgerScreenState extends State<LedgerScreen> {
       context,
       total: all.length,
       searchable: true,
-      direction: const [
-        DirectionOption('All', null),
-        DirectionOption('Income', TxnType.income),
-        DirectionOption('Expenses', TxnType.expense),
+      direction: [
+        DirectionOption(l.filterAll, null),
+        DirectionOption(l.txnTypeIncome, TxnType.income),
+        DirectionOption(l.txnTypeExpense, TxnType.expense),
         DirectionOption('Transfers', TxnType.transfer),
       ],
       initial: FilterSnapshot(
@@ -813,7 +814,7 @@ class _LedgerScreenState extends State<LedgerScreen> {
       blocks: [
         SectionFilterBlock(FilterSection(
           key: 'categories',
-          label: 'CATEGORIES',
+          label: l.ldgCategories.toUpperCase(),
           kind: FilterSectionKind.rows,
           showCount: true,
           showControls: true,
@@ -822,7 +823,7 @@ class _LedgerScreenState extends State<LedgerScreen> {
         )),
         SectionFilterBlock(FilterSection(
           key: 'accounts',
-          label: 'ACCOUNTS',
+          label: l.ldgAccounts.toUpperCase(),
           kind: FilterSectionKind.rows,
           showCount: true,
           showControls: true,
@@ -832,7 +833,7 @@ class _LedgerScreenState extends State<LedgerScreen> {
         if (tags.isNotEmpty)
           SectionFilterBlock(FilterSection(
             key: 'tags',
-            label: 'TAGS',
+            label: l.ldgTags.toUpperCase(),
             kind: FilterSectionKind.chips,
             showCount: true,
             showControls: true,
@@ -842,7 +843,7 @@ class _LedgerScreenState extends State<LedgerScreen> {
         AmountFilterBlock(
           rangeMin: rangeMin,
           rangeMax: rangeMax,
-          maxHint: 'Any',
+          maxHint: l.ldgAny,
         ),
       ],
     );
@@ -896,7 +897,7 @@ class _HeaderZone extends StatelessWidget {
                   const SizedBox(width: Insets.sm),
                   Semantics(
                     button: true,
-                    label: 'Clear custom range',
+                    label: AppLocalizations.of(context).ldgClearCustomRange,
                     hint: 'Back to ${monthYearLong(store.period, AppLocalizations.of(context))}',
                     child: _CircleButton(
                       icon: Icons.close_rounded,
@@ -927,8 +928,9 @@ class _HeaderZone extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
             child: Semantics(
               label: income > 0 || expense > 0
-                  ? 'Spent ${money(expense, masked: store.masked)} of '
-                      '${money(income, masked: store.masked)}'
+                  ? AppLocalizations.of(context).ldgSpentOf(
+                      money(expense, masked: store.masked),
+                      money(income, masked: store.masked))
                   : null,
               child: ProgressBar(
                 value: ratio,
@@ -951,10 +953,13 @@ class _HeaderZone extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.baseline,
                 textBaseline: TextBaseline.alphabetic,
                 children: [
-                  _Metric(label: 'IN', value: income, color: AppColors.positive),
+                  _Metric(
+                      label: AppLocalizations.of(context).ldgIn.toUpperCase(),
+                      value: income,
+                      color: AppColors.positive),
                   const SizedBox(width: 13),
                   _Metric(
-                      label: 'OUT',
+                      label: AppLocalizations.of(context).ldgOut.toUpperCase(),
                       value: expense,
                       color: AppColors.negative),
                   const Spacer(),
@@ -962,7 +967,7 @@ class _HeaderZone extends StatelessWidget {
                   // Balance-like: it keeps its minus sign and turns red when the
                   // month is overspent (§1.2).
                   _Metric(
-                    label: 'LEFT',
+                    label: AppLocalizations.of(context).ldgLeft.toUpperCase(),
                     value: left,
                     color: left < 0
                         ? AppColors.negative
@@ -1008,7 +1013,7 @@ class _PeriodTitle extends StatelessWidget {
     return Semantics(
       button: true,
       label: semanticLabel,
-      hint: 'Change period',
+      hint: AppLocalizations.of(context).ldgChangePeriod,
       excludeSemantics: true,
       child: GestureDetector(
         onTap: onTap,

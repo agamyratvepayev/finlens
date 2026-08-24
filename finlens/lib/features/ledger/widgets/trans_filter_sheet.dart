@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../../../core/models/models.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../core/utils/search_fold.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../../theme/app_colors.dart';
@@ -156,10 +157,11 @@ Future<void> showTransFilterSheet(
   required TransFilter initial,
   required ValueChanged<TransFilter> onChanged,
 }) {
-  const typeOptions = [
-    (TxnType.expense, 'Expense'),
-    (TxnType.income, 'Income'),
-    (TxnType.transfer, 'Transfer'),
+  final l = AppLocalizations.of(context);
+  final typeOptions = [
+    (TxnType.expense, l.txnTypeExpense),
+    (TxnType.income, l.txnTypeIncome),
+    (TxnType.transfer, l.txnTypeTransfer),
   ];
 
   TransFilter fromSnapshot(FilterSnapshot s) => TransFilter(
@@ -193,7 +195,7 @@ Future<void> showTransFilterSheet(
     blocks: [
       SectionFilterBlock(FilterSection(
         key: 'types',
-        label: 'TYPE',
+        label: l.ldgType.toUpperCase(),
         kind: FilterSectionKind.chips,
         itemsFor: (_) => [
           for (final o in typeOptions)
@@ -212,14 +214,13 @@ Future<void> showTransFilterSheet(
       AmountFilterBlock(
         rangeMin: rangeMin,
         rangeMax: rangeMax,
-        rangeHint: 'Transactions here range '
-            '${money(rangeMin, signless: true)} – '
-            '${money(rangeMax, signless: true)}',
+        rangeHint: l.ldgRangeHint(money(rangeMin, signless: true),
+            money(rangeMax, signless: true)),
       ),
       if (tags.isNotEmpty)
         SectionFilterBlock(FilterSection(
           key: 'tags',
-          label: 'TAGS',
+          label: l.ldgTags.toUpperCase(),
           kind: FilterSectionKind.chips,
           showControls: true,
           itemsFor: (_) => tags,
@@ -378,7 +379,8 @@ class _FilterSheetState extends State<_FilterSheet> {
       for (final b in widget.blocks)
         if (b is SectionFilterBlock) b.section.label.toLowerCase(),
     ];
-    return labels.isEmpty ? 'Search' : 'Search ${labels.join(', ')}';
+    final l = AppLocalizations.of(context);
+    return labels.isEmpty ? l.actionSearch : l.ldgSearchWithin(labels.join(', '));
   }
 
   @override
@@ -433,9 +435,9 @@ class _FilterSheetState extends State<_FilterSheet> {
       padding: const EdgeInsets.fromLTRB(18, 11, 8, 8),
       child: Row(
         children: [
-          const Text(
-            'Filter',
-            style: TextStyle(
+          Text(
+            AppLocalizations.of(context).filterTitle,
+            style: const TextStyle(
               fontSize: 17,
               fontWeight: FontWeight.w600,
               color: Colors.white,
@@ -446,7 +448,7 @@ class _FilterSheetState extends State<_FilterSheet> {
           // filter already applied — identical outcome to Show … .
           Semantics(
             button: true,
-            label: 'Close',
+            label: AppLocalizations.of(context).actionClose,
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
               onTap: () => Navigator.of(context).pop(),
@@ -548,7 +550,7 @@ class _FilterSheetState extends State<_FilterSheet> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _sectionLabel('DIRECTION', first: true),
+        _sectionLabel(AppLocalizations.of(context).ldgDirection.toUpperCase(), first: true),
         Wrap(
           spacing: 8,
           runSpacing: 8,
@@ -620,7 +622,7 @@ class _FilterSheetState extends State<_FilterSheet> {
               onTap: () => setState(() => _expanded[s.key] = true),
               child: Text(
                 s.kind == FilterSectionKind.rows
-                    ? 'Show all ${items.length}'
+                    ? AppLocalizations.of(context).ldgShowAll('${items.length}')
                     : '+$hidden more',
                 style: const TextStyle(
                   fontSize: 13,
@@ -683,8 +685,8 @@ class _FilterSheetState extends State<_FilterSheet> {
           Semantics(
             button: true,
             label: selectedCount == 0
-                ? 'Select all in ${s.label}'
-                : 'Clear ${s.label} selection',
+                ? AppLocalizations.of(context).ldgSelectAllIn(s.label)
+                : AppLocalizations.of(context).ldgClearSelection(s.label),
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
               onTap: () {
@@ -697,7 +699,7 @@ class _FilterSheetState extends State<_FilterSheet> {
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
                 child: Text(
-                  selectedCount == 0 ? 'Select all' : 'Clear',
+                  selectedCount == 0 ? AppLocalizations.of(context).ldgSelectAll : AppLocalizations.of(context).ldgClear,
                   style: const TextStyle(
                     fontSize: 12.5,
                     fontWeight: FontWeight.w600,
@@ -757,13 +759,13 @@ class _FilterSheetState extends State<_FilterSheet> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _sectionLabel('AMOUNT'),
+        _sectionLabel(AppLocalizations.of(context).ldgAmount.toUpperCase()),
         Row(
           children: [
             Expanded(
               child: _AmountField(
                 key: const ValueKey('filter-min'),
-                keyLabel: 'MIN',
+                keyLabel: AppLocalizations.of(context).ldgMin.toUpperCase(),
                 controller: _minCtrl,
                 focusNode: _minFocus,
                 focused: _minFocus.hasFocus,
@@ -780,7 +782,7 @@ class _FilterSheetState extends State<_FilterSheet> {
             Expanded(
               child: _AmountField(
                 key: const ValueKey('filter-max'),
-                keyLabel: 'MAX',
+                keyLabel: AppLocalizations.of(context).ldgMax.toUpperCase(),
                 controller: _maxCtrl,
                 focusNode: _maxFocus,
                 focused: _maxFocus.hasFocus,
@@ -819,17 +821,17 @@ class _FilterSheetState extends State<_FilterSheet> {
           Semantics(
             button: true,
             enabled: canReset,
-            label: 'Reset filter',
+            label: AppLocalizations.of(context).ldgResetFilter,
             child: Opacity(
               opacity: canReset ? 1 : 0.35,
               child: GestureDetector(
                 behavior: HitTestBehavior.opaque,
                 onTap: canReset ? _reset : null,
-                child: const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
                   child: Text(
-                    'Reset',
-                    style: TextStyle(
+                    AppLocalizations.of(context).actionReset,
+                    style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w500,
                       color: AppColors.accent,
@@ -854,7 +856,7 @@ class _FilterSheetState extends State<_FilterSheet> {
                       borderRadius: BorderRadius.circular(14)),
                 ),
                 child: Text(
-                  'Show $_liveCount of ${widget.total}',
+                  AppLocalizations.of(context).ldgShowCountOf('$_liveCount', '${widget.total}'),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(

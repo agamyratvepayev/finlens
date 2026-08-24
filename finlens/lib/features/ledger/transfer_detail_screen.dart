@@ -67,6 +67,7 @@ class TransferDetailScreen extends StatelessWidget {
                 children: [
                   _hero(context, store, txn),
                   _accountsCard(
+                    context,
                     store,
                     txn,
                     from: from,
@@ -77,7 +78,7 @@ class TransferDetailScreen extends StatelessWidget {
                     receivedAmount: receivedAmount,
                     crossCurrency: crossCurrency,
                   ),
-                  _metaCard(store, txn),
+                  _metaCard(context, store, txn),
                 ],
               ),
             ),
@@ -107,7 +108,7 @@ class TransferDetailScreen extends StatelessWidget {
                         size: 20, color: AppColors.accentLight),
                     Flexible(
                       child: Text(
-                        backLabel ?? 'Back',
+                        backLabel ?? AppLocalizations.of(context).actionBack,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
@@ -153,14 +154,14 @@ class TransferDetailScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: Insets.sm),
-            _menuRow(sheetContext, Icons.edit_rounded, 'Edit',
+            _menuRow(sheetContext, Icons.edit_rounded, AppLocalizations.of(context).actionEdit,
                 () => showQuickAdd(context, editing: txn)),
-            _menuRow(sheetContext, Icons.copy_rounded, 'Copy',
+            _menuRow(sheetContext, Icons.copy_rounded, AppLocalizations.of(context).actionCopy,
                 () => showQuickAdd(context, copyOf: txn)),
             _menuRow(
               sheetContext,
               Icons.delete_rounded,
-              'Delete',
+              AppLocalizations.of(context).actionDelete,
               () async {
                 final ok = await confirmDeleteTxn(context, txn);
                 if (ok && context.mounted) store.deleteTxn(txn);
@@ -238,6 +239,7 @@ class TransferDetailScreen extends StatelessWidget {
   // ── Accounts card ──────────────────────────────────────────────────────────
 
   Widget _accountsCard(
+    BuildContext context,
     AppStore store,
     Txn txn, {
     required Account? from,
@@ -259,9 +261,10 @@ class TransferDetailScreen extends StatelessWidget {
         child: Column(
           children: [
             _legRow(
+              context,
               store,
               account: from,
-              caps: 'FROM',
+              caps: AppLocalizations.of(context).tdFrom.toUpperCase(),
               // The source loses money: negative, here and only here.
               signedAmount: -sentAmount,
               currency: fromCur,
@@ -272,9 +275,10 @@ class TransferDetailScreen extends StatelessWidget {
             const Divider(
                 height: 1, thickness: 1, color: AppColors.divider),
             _legRow(
+              context,
               store,
               account: to,
-              caps: 'TO',
+              caps: AppLocalizations.of(context).tdTo.toUpperCase(),
               signedAmount: receivedAmount,
               currency: toCur,
               balanceAfter:
@@ -283,7 +287,7 @@ class TransferDetailScreen extends StatelessWidget {
             if (crossCurrency) ...[
               const Divider(
                   height: 1, thickness: 1, color: AppColors.divider),
-              _rateRow(txn, fromCur, toCur, sentAmount, receivedAmount),
+              _rateRow(context, txn, fromCur, toCur, sentAmount, receivedAmount),
             ],
           ],
         ),
@@ -292,6 +296,7 @@ class TransferDetailScreen extends StatelessWidget {
   }
 
   Widget _legRow(
+    BuildContext context,
     AppStore store, {
     required Account? account,
     required String caps,
@@ -341,7 +346,7 @@ class TransferDetailScreen extends StatelessWidget {
                 Text(caps, style: capsStyle),
                 const SizedBox(height: 2),
                 Text(
-                  account?.name ?? 'Deleted account',
+                  account?.name ?? AppLocalizations.of(context).tdDeletedAccount,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: nameStyle,
@@ -383,8 +388,8 @@ class TransferDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _rateRow(
-      Txn txn, String fromCur, String toCur, double sent, double received) {
+  Widget _rateRow(BuildContext context, Txn txn, String fromCur, String toCur,
+      double sent, double received) {
     // Prefer the two real leg figures over the stored rate: they are what the
     // balances were actually built from, so the printed rate can never disagree
     // with the amounts above it.
@@ -399,7 +404,7 @@ class TransferDetailScreen extends StatelessWidget {
           horizontal: Insets.md, vertical: Insets.md),
       child: Row(
         children: [
-          Text('Rate',
+          Text(AppLocalizations.of(context).tdRate,
               style: AppText.body.copyWith(color: AppColors.textSecondary)),
           const Spacer(),
           Text(
@@ -427,7 +432,7 @@ class TransferDetailScreen extends StatelessWidget {
 
   // ── Meta card ──────────────────────────────────────────────────────────────
 
-  Widget _metaCard(AppStore store, Txn txn) {
+  Widget _metaCard(BuildContext context, AppStore store, Txn txn) {
     final note = txn.note.trim();
     return Padding(
       padding: const EdgeInsets.fromLTRB(Insets.md, Insets.sm, Insets.md, Insets.sm),
@@ -439,11 +444,11 @@ class TransferDetailScreen extends StatelessWidget {
         clipBehavior: Clip.antiAlias,
         child: Column(
           children: [
-            _metaRow('Note', note.isEmpty ? '—' : note),
+            _metaRow(AppLocalizations.of(context).tdNote, note.isEmpty ? '—' : note),
             const Divider(height: 1, thickness: 1, color: AppColors.divider),
             // The one place the app states plainly why a transfer is coloured
             // differently from everything around it: it changed no net worth.
-            _metaRow('Net worth', 'Unchanged'),
+            _metaRow(AppLocalizations.of(context).tdNetWorth, AppLocalizations.of(context).tdUnchanged),
           ],
         ),
       ),

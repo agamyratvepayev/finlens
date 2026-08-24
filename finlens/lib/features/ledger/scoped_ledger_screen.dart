@@ -475,17 +475,17 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
           Flexible(
             child: InkWell(
               onTap: () => Navigator.of(context).pop(),
-              child: const Row(
+              child: Row(
                 children: [
-                  SizedBox(width: 8),
-                  Icon(
+                  const SizedBox(width: 8),
+                  const Icon(
                     Icons.chevron_left_rounded,
                     size: 17,
                     color: AppColors.accent,
                   ),
                   Flexible(
                     child: Text(
-                      'Balance',
+                      AppLocalizations.of(context).ldgBalance,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
@@ -712,14 +712,14 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
                 icon: _showDescriptions
                     ? Icons.keyboard_double_arrow_up_rounded
                     : Icons.keyboard_double_arrow_down_rounded,
-                tooltip: 'Show descriptions',
+                tooltip: AppLocalizations.of(context).ldgShowDescriptions,
                 iconColor: _showDescriptions ? AppColors.accentLight : null,
-                semanticValue: _showDescriptions ? 'On' : 'Off',
+                semanticValue: _showDescriptions ? AppLocalizations.of(context).stateOn : AppLocalizations.of(context).stateOff,
                 onTap: () => _toggleDescriptions(store),
               ),
               Tool(
                 icon: Icons.swap_vert_rounded,
-                tooltip: 'Sort transactions',
+                tooltip: AppLocalizations.of(context).ldgSortTransactions,
                 onTap: () => _openSort(store),
               ),
               // Active state follows the Balance filter button: the glyph fills
@@ -728,17 +728,17 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
                 icon: filter.isActive
                     ? Icons.filter_alt_rounded
                     : Icons.filter_alt_outlined,
-                tooltip: 'Filter transactions',
+                tooltip: AppLocalizations.of(context).ldgFilterTransactions,
                 iconColor: filter.isActive ? AppColors.textPrimary : null,
                 semanticValue: filter.isActive
-                    ? 'Active, $shown of $total shown'
-                    : 'Off',
+                    ? AppLocalizations.of(context).ldgFilterActive('$shown', '$total')
+                    : AppLocalizations.of(context).stateOff,
                 onTap: () =>
                     _openFilter(store, filter, periodRows, scopeAccountIds),
               ),
               Tool(
                 icon: Icons.search_rounded,
-                tooltip: 'Search transactions',
+                tooltip: AppLocalizations.of(context).ldgSearchTransactions,
                 onTap: () => setState(() => _searching = true),
               ),
             ],
@@ -794,11 +794,11 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
                             fontSize: 14,
                             color: AppColors.textPrimary,
                           ),
-                          decoration: const InputDecoration(
+                          decoration: InputDecoration(
                             isDense: true,
                             contentPadding: EdgeInsets.zero,
                             border: InputBorder.none,
-                            hintText: 'Search',
+                            hintText: AppLocalizations.of(context).actionSearch,
                             hintStyle: TextStyle(color: AppColors.textTertiary),
                           ),
                           onChanged: _onSearchChanged,
@@ -828,8 +828,8 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
               GestureDetector(
                 behavior: HitTestBehavior.opaque,
                 onTap: () => setState(_exitSearch),
-                child: const Text(
-                  'Cancel',
+                child: Text(
+                  AppLocalizations.of(context).actionCancel,
                   style: TextStyle(fontSize: 15, color: AppColors.accent),
                 ),
               ),
@@ -884,12 +884,12 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
-            const Padding(
-              padding: EdgeInsets.fromLTRB(20, 16, 20, 8),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
-                  'SORT',
+                  AppLocalizations.of(context).balSortTooltip.toUpperCase(),
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
@@ -990,7 +990,7 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
 
     showTransFilterSheet(
       context,
-      groupSectionLabel: _byCategory ? 'CATEGORIES' : 'ACCOUNTS',
+      groupSectionLabel: _byCategory ? AppLocalizations.of(context).ldgCategories.toUpperCase() : AppLocalizations.of(context).ldgAccounts.toUpperCase(),
       groups: groups,
       tags: tags,
       rangeMin: rangeMin,
@@ -1134,8 +1134,8 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text(
-                'No transactions match your filter',
+              Text(
+                AppLocalizations.of(context).ldgNoMatchFilter,
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 14, color: AppColors.textTertiary),
               ),
@@ -1143,10 +1143,10 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
               GestureDetector(
                 behavior: HitTestBehavior.opaque,
                 onTap: () => store.setTransFilter(_scopeKey, TransFilter.empty),
-                child: const Padding(
-                  padding: EdgeInsets.all(8),
+                child: Padding(
+                  padding: const EdgeInsets.all(8),
                   child: Text(
-                    'Clear filter',
+                    AppLocalizations.of(context).ldgClearFilter,
                     style: TextStyle(fontSize: 14, color: AppColors.accent),
                   ),
                 ),
@@ -1158,7 +1158,7 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
         return Padding(
           padding: const EdgeInsets.only(top: 64),
           child: Text(
-            'No results for "${_debouncedQuery.trim()}"',
+            AppLocalizations.of(context).ldgNoResultsFor(_debouncedQuery.trim()),
             textAlign: TextAlign.center,
             style: const TextStyle(fontSize: 14, color: AppColors.textTertiary),
           ),
@@ -1176,10 +1176,10 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
       ..hideCurrentSnackBar()
       ..showSnackBar(
         SnackBar(
-          content: const Text('Transaction deleted'),
+          content: Text(AppLocalizations.of(context).ldgTransactionDeleted),
           duration: const Duration(seconds: 5),
           action: SnackBarAction(
-            label: 'Undo',
+            label: AppLocalizations.of(context).actionUndo,
             onPressed: () {
               if (mounted) setState(() => _pendingDelete.remove(txn.id));
             },
@@ -1227,12 +1227,12 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
-            const Padding(
-              padding: EdgeInsets.fromLTRB(20, 16, 20, 8),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
-                  'Period',
+                  AppLocalizations.of(context).ldgPeriod,
                   style: TextStyle(
                     fontSize: 16.5,
                     fontWeight: FontWeight.w600,
@@ -1316,12 +1316,12 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
-            const Padding(
-              padding: EdgeInsets.fromLTRB(20, 16, 20, 8),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
-                  'Show',
+                  AppLocalizations.of(context).ldgShow,
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
@@ -1340,8 +1340,8 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
                       size: 20,
                       color: AppColors.textSecondary,
                     ),
-                    title: const Text(
-                      'All accounts',
+                    title: Text(
+                      AppLocalizations.of(context).ledgerAllAccounts,
                       style: TextStyle(
                         fontSize: 15,
                         color: AppColors.textPrimary,

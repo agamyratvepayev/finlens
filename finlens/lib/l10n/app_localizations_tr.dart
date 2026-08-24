@@ -1288,4 +1288,204 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get arClearArchive => 'Arşivi temizle';
+
+  @override
+  String get stateOn => 'Açık';
+
+  @override
+  String get stateOff => 'Kapalı';
+
+  @override
+  String get filterAll => 'Tümü';
+
+  @override
+  String get actionClose => 'Kapat';
+
+  @override
+  String get ldgShowDescriptions => 'Açıklamaları göster';
+
+  @override
+  String get ldgSortTransactions => 'İşlemleri sırala';
+
+  @override
+  String get ldgFilterTransactions => 'İşlemleri filtrele';
+
+  @override
+  String get ldgSearchTransactions => 'İşlemlerde ara';
+
+  @override
+  String ldgFilterActive(Object shown, Object total) {
+    return 'Etkin, $total işlemin $shown tanesi gösteriliyor';
+  }
+
+  @override
+  String ldgNoResultsFor(Object query) {
+    return '\"$query\" için sonuç yok';
+  }
+
+  @override
+  String get ldgNoMatchFilter => 'Filtrenizle eşleşen işlem yok';
+
+  @override
+  String get ldgClearFilter => 'Filtreyi temizle';
+
+  @override
+  String get ldgNothingHere => 'Burada henüz bir şey yok';
+
+  @override
+  String get ldgNothingHereMsg => 'Eklediğiniz kayıtlar bu listede görünür.';
+
+  @override
+  String get ldgAddEntry => 'Kayıt ekle';
+
+  @override
+  String get ldgCategories => 'Kategoriler';
+
+  @override
+  String get ldgAccounts => 'Hesaplar';
+
+  @override
+  String get ldgTags => 'Etiketler';
+
+  @override
+  String get ldgType => 'Tür';
+
+  @override
+  String get ldgDirection => 'Yön';
+
+  @override
+  String get ldgAmount => 'Tutar';
+
+  @override
+  String get ldgAny => 'Herhangi';
+
+  @override
+  String get ldgClearCustomRange => 'Özel aralığı temizle';
+
+  @override
+  String ldgSpentOf(Object expense, Object income) {
+    return '$income tutarın $expense harcandı';
+  }
+
+  @override
+  String get ldgOut => 'Çıkan';
+
+  @override
+  String get ldgLeft => 'Kalan';
+
+  @override
+  String get ldgChangePeriod => 'Dönemi değiştir';
+
+  @override
+  String get ldgBalance => 'Bakiye';
+
+  @override
+  String get ldgTransactionDeleted => 'İşlem silindi';
+
+  @override
+  String get ldgNoTransactions => 'İşlem yok';
+
+  @override
+  String get ldgPeriod => 'Dönem';
+
+  @override
+  String get ldgShow => 'Göster';
+
+  @override
+  String get ldgCustomRange => 'Özel aralık';
+
+  @override
+  String get ldgPreviousYear => 'Önceki yıl';
+
+  @override
+  String get ldgNextYear => 'Sonraki yıl';
+
+  @override
+  String ldgShowCountOf(Object count, Object total) {
+    return '$total işlemin $count tanesini göster';
+  }
+
+  @override
+  String ldgShowAll(Object count) {
+    return 'Tümünü göster $count';
+  }
+
+  @override
+  String ldgPlusMore(Object count) {
+    return '+$count daha';
+  }
+
+  @override
+  String get ldgNetIn => 'Net giriş';
+
+  @override
+  String get ldgNetOut => 'Net çıkış';
+
+  @override
+  String get ldgMoneyIn => 'Gelen';
+
+  @override
+  String get ldgMoneyOut => 'Giden';
+
+  @override
+  String get ldgNoCash => 'Nakit yok';
+
+  @override
+  String get ldgIn => 'Giren';
+
+  @override
+  String ldgRangeHint(Object min, Object max) {
+    return 'Buradaki işlemler $min – $max arasında';
+  }
+
+  @override
+  String ldgSearchWithin(Object labels) {
+    return '$labels içinde ara';
+  }
+
+  @override
+  String ldgSelectAllIn(Object section) {
+    return '$section içinde tümünü seç';
+  }
+
+  @override
+  String ldgClearSelection(Object section) {
+    return '$section seçimini temizle';
+  }
+
+  @override
+  String get ldgSelectAll => 'Tümünü seç';
+
+  @override
+  String get ldgClear => 'Temizle';
+
+  @override
+  String get ldgMin => 'Min';
+
+  @override
+  String get ldgMax => 'Maks';
+
+  @override
+  String get ldgResetFilter => 'Filtreyi sıfırla';
+
+  @override
+  String get tdFrom => 'Kaynak';
+
+  @override
+  String get tdTo => 'Hedef';
+
+  @override
+  String get tdDeletedAccount => 'Silinmiş hesap';
+
+  @override
+  String get tdRate => 'Kur';
+
+  @override
+  String get tdNote => 'Not';
+
+  @override
+  String get tdNetWorth => 'Net değer';
+
+  @override
+  String get tdUnchanged => 'Değişmedi';
 }

@@ -2081,6 +2081,366 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Clear archive'**
   String get arClearArchive;
+
+  /// No description provided for @stateOn.
+  ///
+  /// In en, this message translates to:
+  /// **'On'**
+  String get stateOn;
+
+  /// No description provided for @stateOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Off'**
+  String get stateOff;
+
+  /// No description provided for @filterAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get filterAll;
+
+  /// No description provided for @actionClose.
+  ///
+  /// In en, this message translates to:
+  /// **'Close'**
+  String get actionClose;
+
+  /// No description provided for @ldgShowDescriptions.
+  ///
+  /// In en, this message translates to:
+  /// **'Show descriptions'**
+  String get ldgShowDescriptions;
+
+  /// No description provided for @ldgSortTransactions.
+  ///
+  /// In en, this message translates to:
+  /// **'Sort transactions'**
+  String get ldgSortTransactions;
+
+  /// No description provided for @ldgFilterTransactions.
+  ///
+  /// In en, this message translates to:
+  /// **'Filter transactions'**
+  String get ldgFilterTransactions;
+
+  /// No description provided for @ldgSearchTransactions.
+  ///
+  /// In en, this message translates to:
+  /// **'Search transactions'**
+  String get ldgSearchTransactions;
+
+  /// No description provided for @ldgFilterActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Active, {shown} of {total} shown'**
+  String ldgFilterActive(Object shown, Object total);
+
+  /// No description provided for @ldgNoResultsFor.
+  ///
+  /// In en, this message translates to:
+  /// **'No results for \"{query}\"'**
+  String ldgNoResultsFor(Object query);
+
+  /// No description provided for @ldgNoMatchFilter.
+  ///
+  /// In en, this message translates to:
+  /// **'No transactions match your filter'**
+  String get ldgNoMatchFilter;
+
+  /// No description provided for @ldgClearFilter.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear filter'**
+  String get ldgClearFilter;
+
+  /// No description provided for @ldgNothingHere.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing here yet'**
+  String get ldgNothingHere;
+
+  /// No description provided for @ldgNothingHereMsg.
+  ///
+  /// In en, this message translates to:
+  /// **'Entries you add will appear in this list.'**
+  String get ldgNothingHereMsg;
+
+  /// No description provided for @ldgAddEntry.
+  ///
+  /// In en, this message translates to:
+  /// **'Add an entry'**
+  String get ldgAddEntry;
+
+  /// No description provided for @ldgCategories.
+  ///
+  /// In en, this message translates to:
+  /// **'Categories'**
+  String get ldgCategories;
+
+  /// No description provided for @ldgAccounts.
+  ///
+  /// In en, this message translates to:
+  /// **'Accounts'**
+  String get ldgAccounts;
+
+  /// No description provided for @ldgTags.
+  ///
+  /// In en, this message translates to:
+  /// **'Tags'**
+  String get ldgTags;
+
+  /// No description provided for @ldgType.
+  ///
+  /// In en, this message translates to:
+  /// **'Type'**
+  String get ldgType;
+
+  /// No description provided for @ldgDirection.
+  ///
+  /// In en, this message translates to:
+  /// **'Direction'**
+  String get ldgDirection;
+
+  /// No description provided for @ldgAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Amount'**
+  String get ldgAmount;
+
+  /// No description provided for @ldgAny.
+  ///
+  /// In en, this message translates to:
+  /// **'Any'**
+  String get ldgAny;
+
+  /// No description provided for @ldgClearCustomRange.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear custom range'**
+  String get ldgClearCustomRange;
+
+  /// No description provided for @ldgSpentOf.
+  ///
+  /// In en, this message translates to:
+  /// **'Spent {expense} of {income}'**
+  String ldgSpentOf(Object expense, Object income);
+
+  /// No description provided for @ldgOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Out'**
+  String get ldgOut;
+
+  /// No description provided for @ldgLeft.
+  ///
+  /// In en, this message translates to:
+  /// **'Left'**
+  String get ldgLeft;
+
+  /// No description provided for @ldgChangePeriod.
+  ///
+  /// In en, this message translates to:
+  /// **'Change period'**
+  String get ldgChangePeriod;
+
+  /// No description provided for @ldgBalance.
+  ///
+  /// In en, this message translates to:
+  /// **'Balance'**
+  String get ldgBalance;
+
+  /// No description provided for @ldgTransactionDeleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Transaction deleted'**
+  String get ldgTransactionDeleted;
+
+  /// No description provided for @ldgNoTransactions.
+  ///
+  /// In en, this message translates to:
+  /// **'No transactions'**
+  String get ldgNoTransactions;
+
+  /// No description provided for @ldgPeriod.
+  ///
+  /// In en, this message translates to:
+  /// **'Period'**
+  String get ldgPeriod;
+
+  /// No description provided for @ldgShow.
+  ///
+  /// In en, this message translates to:
+  /// **'Show'**
+  String get ldgShow;
+
+  /// No description provided for @ldgCustomRange.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom range'**
+  String get ldgCustomRange;
+
+  /// No description provided for @ldgPreviousYear.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous year'**
+  String get ldgPreviousYear;
+
+  /// No description provided for @ldgNextYear.
+  ///
+  /// In en, this message translates to:
+  /// **'Next year'**
+  String get ldgNextYear;
+
+  /// No description provided for @ldgShowCountOf.
+  ///
+  /// In en, this message translates to:
+  /// **'Show {count} of {total}'**
+  String ldgShowCountOf(Object count, Object total);
+
+  /// No description provided for @ldgShowAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Show all {count}'**
+  String ldgShowAll(Object count);
+
+  /// No description provided for @ldgPlusMore.
+  ///
+  /// In en, this message translates to:
+  /// **'+{count} more'**
+  String ldgPlusMore(Object count);
+
+  /// No description provided for @ldgNetIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Net in'**
+  String get ldgNetIn;
+
+  /// No description provided for @ldgNetOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Net out'**
+  String get ldgNetOut;
+
+  /// No description provided for @ldgMoneyIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Money in'**
+  String get ldgMoneyIn;
+
+  /// No description provided for @ldgMoneyOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Money out'**
+  String get ldgMoneyOut;
+
+  /// No description provided for @ldgNoCash.
+  ///
+  /// In en, this message translates to:
+  /// **'No cash'**
+  String get ldgNoCash;
+
+  /// No description provided for @ldgIn.
+  ///
+  /// In en, this message translates to:
+  /// **'In'**
+  String get ldgIn;
+
+  /// No description provided for @ldgRangeHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Transactions here range {min} – {max}'**
+  String ldgRangeHint(Object min, Object max);
+
+  /// No description provided for @ldgSearchWithin.
+  ///
+  /// In en, this message translates to:
+  /// **'Search {labels}'**
+  String ldgSearchWithin(Object labels);
+
+  /// No description provided for @ldgSelectAllIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Select all in {section}'**
+  String ldgSelectAllIn(Object section);
+
+  /// No description provided for @ldgClearSelection.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear {section} selection'**
+  String ldgClearSelection(Object section);
+
+  /// No description provided for @ldgSelectAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Select all'**
+  String get ldgSelectAll;
+
+  /// No description provided for @ldgClear.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear'**
+  String get ldgClear;
+
+  /// No description provided for @ldgMin.
+  ///
+  /// In en, this message translates to:
+  /// **'Min'**
+  String get ldgMin;
+
+  /// No description provided for @ldgMax.
+  ///
+  /// In en, this message translates to:
+  /// **'Max'**
+  String get ldgMax;
+
+  /// No description provided for @ldgResetFilter.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset filter'**
+  String get ldgResetFilter;
+
+  /// No description provided for @tdFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'From'**
+  String get tdFrom;
+
+  /// No description provided for @tdTo.
+  ///
+  /// In en, this message translates to:
+  /// **'To'**
+  String get tdTo;
+
+  /// No description provided for @tdDeletedAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Deleted account'**
+  String get tdDeletedAccount;
+
+  /// No description provided for @tdRate.
+  ///
+  /// In en, this message translates to:
+  /// **'Rate'**
+  String get tdRate;
+
+  /// No description provided for @tdNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Note'**
+  String get tdNote;
+
+  /// No description provided for @tdNetWorth.
+  ///
+  /// In en, this message translates to:
+  /// **'Net worth'**
+  String get tdNetWorth;
+
+  /// No description provided for @tdUnchanged.
+  ///
+  /// In en, this message translates to:
+  /// **'Unchanged'**
+  String get tdUnchanged;
 }
 
 class _AppLocalizationsDelegate

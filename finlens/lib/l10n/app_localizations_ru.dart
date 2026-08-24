@@ -1327,4 +1327,204 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get arClearArchive => 'Очистить архив';
+
+  @override
+  String get stateOn => 'Вкл';
+
+  @override
+  String get stateOff => 'Выкл';
+
+  @override
+  String get filterAll => 'Все';
+
+  @override
+  String get actionClose => 'Закрыть';
+
+  @override
+  String get ldgShowDescriptions => 'Показывать описания';
+
+  @override
+  String get ldgSortTransactions => 'Сортировать операции';
+
+  @override
+  String get ldgFilterTransactions => 'Фильтровать операции';
+
+  @override
+  String get ldgSearchTransactions => 'Искать операции';
+
+  @override
+  String ldgFilterActive(Object shown, Object total) {
+    return 'Активен, $shown из $total показано';
+  }
+
+  @override
+  String ldgNoResultsFor(Object query) {
+    return 'Ничего не найдено по «$query»';
+  }
+
+  @override
+  String get ldgNoMatchFilter => 'Нет операций по вашему фильтру';
+
+  @override
+  String get ldgClearFilter => 'Сбросить фильтр';
+
+  @override
+  String get ldgNothingHere => 'Здесь пока пусто';
+
+  @override
+  String get ldgNothingHereMsg => 'Добавленные записи появятся в этом списке.';
+
+  @override
+  String get ldgAddEntry => 'Добавить запись';
+
+  @override
+  String get ldgCategories => 'Категории';
+
+  @override
+  String get ldgAccounts => 'Счета';
+
+  @override
+  String get ldgTags => 'Метки';
+
+  @override
+  String get ldgType => 'Тип';
+
+  @override
+  String get ldgDirection => 'Направление';
+
+  @override
+  String get ldgAmount => 'Сумма';
+
+  @override
+  String get ldgAny => 'Любая';
+
+  @override
+  String get ldgClearCustomRange => 'Сбросить период';
+
+  @override
+  String ldgSpentOf(Object expense, Object income) {
+    return 'Потрачено $expense из $income';
+  }
+
+  @override
+  String get ldgOut => 'Расход';
+
+  @override
+  String get ldgLeft => 'Остаток';
+
+  @override
+  String get ldgChangePeriod => 'Сменить период';
+
+  @override
+  String get ldgBalance => 'Баланс';
+
+  @override
+  String get ldgTransactionDeleted => 'Операция удалена';
+
+  @override
+  String get ldgNoTransactions => 'Нет операций';
+
+  @override
+  String get ldgPeriod => 'Период';
+
+  @override
+  String get ldgShow => 'Показ';
+
+  @override
+  String get ldgCustomRange => 'Свой период';
+
+  @override
+  String get ldgPreviousYear => 'Предыдущий год';
+
+  @override
+  String get ldgNextYear => 'Следующий год';
+
+  @override
+  String ldgShowCountOf(Object count, Object total) {
+    return 'Показать $count из $total';
+  }
+
+  @override
+  String ldgShowAll(Object count) {
+    return 'Показать все $count';
+  }
+
+  @override
+  String ldgPlusMore(Object count) {
+    return '+$count ещё';
+  }
+
+  @override
+  String get ldgNetIn => 'Чистый приход';
+
+  @override
+  String get ldgNetOut => 'Чистый расход';
+
+  @override
+  String get ldgMoneyIn => 'Приход';
+
+  @override
+  String get ldgMoneyOut => 'Расход';
+
+  @override
+  String get ldgNoCash => 'Без денег';
+
+  @override
+  String get ldgIn => 'Приход';
+
+  @override
+  String ldgRangeHint(Object min, Object max) {
+    return 'Операции здесь от $min до $max';
+  }
+
+  @override
+  String ldgSearchWithin(Object labels) {
+    return 'Искать в $labels';
+  }
+
+  @override
+  String ldgSelectAllIn(Object section) {
+    return 'Выбрать все в «$section»';
+  }
+
+  @override
+  String ldgClearSelection(Object section) {
+    return 'Снять выбор «$section»';
+  }
+
+  @override
+  String get ldgSelectAll => 'Выбрать все';
+
+  @override
+  String get ldgClear => 'Снять';
+
+  @override
+  String get ldgMin => 'Мин';
+
+  @override
+  String get ldgMax => 'Макс';
+
+  @override
+  String get ldgResetFilter => 'Сбросить фильтр';
+
+  @override
+  String get tdFrom => 'Откуда';
+
+  @override
+  String get tdTo => 'Куда';
+
+  @override
+  String get tdDeletedAccount => 'Удалённый счёт';
+
+  @override
+  String get tdRate => 'Курс';
+
+  @override
+  String get tdNote => 'Заметка';
+
+  @override
+  String get tdNetWorth => 'Капитал';
+
+  @override
+  String get tdUnchanged => 'Без изменений';
 }

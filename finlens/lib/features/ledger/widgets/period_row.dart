@@ -210,7 +210,7 @@ class _Figure extends StatelessWidget {
     return Semantics(
       button: true,
       selected: active,
-      label: '${isIn ? 'Money in' : 'Money out'}, '
+      label: '${isIn ? AppLocalizations.of(context).ldgMoneyIn : AppLocalizations.of(context).ldgMoneyOut}, '
           '${money(amount, signless: true, masked: StoreScope.of(context).masked)}',
       child: InkWell(
         onTap: onTap,

@@ -1291,4 +1291,204 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get arClearArchive => 'Clear archive';
+
+  @override
+  String get stateOn => 'On';
+
+  @override
+  String get stateOff => 'Off';
+
+  @override
+  String get filterAll => 'All';
+
+  @override
+  String get actionClose => 'Close';
+
+  @override
+  String get ldgShowDescriptions => 'Show descriptions';
+
+  @override
+  String get ldgSortTransactions => 'Sort transactions';
+
+  @override
+  String get ldgFilterTransactions => 'Filter transactions';
+
+  @override
+  String get ldgSearchTransactions => 'Search transactions';
+
+  @override
+  String ldgFilterActive(Object shown, Object total) {
+    return 'Active, $shown of $total shown';
+  }
+
+  @override
+  String ldgNoResultsFor(Object query) {
+    return 'No results for \"$query\"';
+  }
+
+  @override
+  String get ldgNoMatchFilter => 'No transactions match your filter';
+
+  @override
+  String get ldgClearFilter => 'Clear filter';
+
+  @override
+  String get ldgNothingHere => 'Nothing here yet';
+
+  @override
+  String get ldgNothingHereMsg => 'Entries you add will appear in this list.';
+
+  @override
+  String get ldgAddEntry => 'Add an entry';
+
+  @override
+  String get ldgCategories => 'Categories';
+
+  @override
+  String get ldgAccounts => 'Accounts';
+
+  @override
+  String get ldgTags => 'Tags';
+
+  @override
+  String get ldgType => 'Type';
+
+  @override
+  String get ldgDirection => 'Direction';
+
+  @override
+  String get ldgAmount => 'Amount';
+
+  @override
+  String get ldgAny => 'Any';
+
+  @override
+  String get ldgClearCustomRange => 'Clear custom range';
+
+  @override
+  String ldgSpentOf(Object expense, Object income) {
+    return 'Spent $expense of $income';
+  }
+
+  @override
+  String get ldgOut => 'Out';
+
+  @override
+  String get ldgLeft => 'Left';
+
+  @override
+  String get ldgChangePeriod => 'Change period';
+
+  @override
+  String get ldgBalance => 'Balance';
+
+  @override
+  String get ldgTransactionDeleted => 'Transaction deleted';
+
+  @override
+  String get ldgNoTransactions => 'No transactions';
+
+  @override
+  String get ldgPeriod => 'Period';
+
+  @override
+  String get ldgShow => 'Show';
+
+  @override
+  String get ldgCustomRange => 'Custom range';
+
+  @override
+  String get ldgPreviousYear => 'Previous year';
+
+  @override
+  String get ldgNextYear => 'Next year';
+
+  @override
+  String ldgShowCountOf(Object count, Object total) {
+    return 'Show $count of $total';
+  }
+
+  @override
+  String ldgShowAll(Object count) {
+    return 'Show all $count';
+  }
+
+  @override
+  String ldgPlusMore(Object count) {
+    return '+$count more';
+  }
+
+  @override
+  String get ldgNetIn => 'Net in';
+
+  @override
+  String get ldgNetOut => 'Net out';
+
+  @override
+  String get ldgMoneyIn => 'Money in';
+
+  @override
+  String get ldgMoneyOut => 'Money out';
+
+  @override
+  String get ldgNoCash => 'No cash';
+
+  @override
+  String get ldgIn => 'In';
+
+  @override
+  String ldgRangeHint(Object min, Object max) {
+    return 'Transactions here range $min – $max';
+  }
+
+  @override
+  String ldgSearchWithin(Object labels) {
+    return 'Search $labels';
+  }
+
+  @override
+  String ldgSelectAllIn(Object section) {
+    return 'Select all in $section';
+  }
+
+  @override
+  String ldgClearSelection(Object section) {
+    return 'Clear $section selection';
+  }
+
+  @override
+  String get ldgSelectAll => 'Select all';
+
+  @override
+  String get ldgClear => 'Clear';
+
+  @override
+  String get ldgMin => 'Min';
+
+  @override
+  String get ldgMax => 'Max';
+
+  @override
+  String get ldgResetFilter => 'Reset filter';
+
+  @override
+  String get tdFrom => 'From';
+
+  @override
+  String get tdTo => 'To';
+
+  @override
+  String get tdDeletedAccount => 'Deleted account';
+
+  @override
+  String get tdRate => 'Rate';
+
+  @override
+  String get tdNote => 'Note';
+
+  @override
+  String get tdNetWorth => 'Net worth';
+
+  @override
+  String get tdUnchanged => 'Unchanged';
 }
