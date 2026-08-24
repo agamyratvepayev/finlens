@@ -425,4 +425,313 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get moreAddAccount => 'Hesap ekle';
+
+  @override
+  String get insightTitle => 'Analiz';
+
+  @override
+  String get insightLeftOver => 'Kalan';
+
+  @override
+  String get insightNoIncome => 'Bu ay gelir kaydedilmedi';
+
+  @override
+  String insightKept(String percent, String amount) {
+    return '$amount tutarın $percent kadarı korundu';
+  }
+
+  @override
+  String get insightWhereItWent => 'Nereye gitti';
+
+  @override
+  String get insightGoalPerformance => 'Hedef performansı';
+
+  @override
+  String get insightReached => 'Ulaşıldı';
+
+  @override
+  String get insightSuccessRate => 'Başarı oranı';
+
+  @override
+  String get insightAvgTime => 'Ort. süre';
+
+  @override
+  String insightMonthsShort(int count) {
+    return '$count ay';
+  }
+
+  @override
+  String get actionCancel => 'İptal';
+
+  @override
+  String get actionSave => 'Kaydet';
+
+  @override
+  String get actionDelete => 'Sil';
+
+  @override
+  String get actionEdit => 'Düzenle';
+
+  @override
+  String get actionCopy => 'Kopyala';
+
+  @override
+  String get actionUndo => 'Geri al';
+
+  @override
+  String get actionApply => 'Uygula';
+
+  @override
+  String get actionSearch => 'Ara';
+
+  @override
+  String get actionMoveUp => 'Yukarı taşı';
+
+  @override
+  String get actionMoveDown => 'Aşağı taşı';
+
+  @override
+  String get actionCollapseAll => 'Tümünü daralt';
+
+  @override
+  String get actionExpandAll => 'Tümünü genişlet';
+
+  @override
+  String get actionReset => 'Sıfırla';
+
+  @override
+  String get balSearchAccounts => 'Hesap ara';
+
+  @override
+  String get balNoResults => 'Sonuç yok';
+
+  @override
+  String get balNoAccountsYet => 'Henüz hesap yok';
+
+  @override
+  String get balNoAccountMatch => 'Aramanızla eşleşen hesap veya grup yok.';
+
+  @override
+  String get balAddFirstAccount => 'İlk hesabınızı ekleyin';
+
+  @override
+  String get balNoAccountsMessage =>
+      'Hesaplarınızı ekleyin, FinLens kaydettiğiniz işlemlerden net değerinizi hesaplasın.';
+
+  @override
+  String get balAdjustFilter => 'Filtreyi ayarla';
+
+  @override
+  String get balSortTooltip => 'Sırala';
+
+  @override
+  String get balHoldToArrange => 'Düzenlemek için bir hesabı basılı tutun';
+
+  @override
+  String get balPressHoldMove => 'Taşımak için bir hesaba basılı tutun';
+
+  @override
+  String get balFilterCategories => 'Kategorileri filtrele';
+
+  @override
+  String get balNoVisibleCategories => 'Görünür kategori yok';
+
+  @override
+  String balSeeAll(int count) {
+    return 'Tümünü gör $count  ›';
+  }
+
+  @override
+  String transferFromTo(String from, String to) {
+    return '$from hesabından $to hesabına transfer';
+  }
+
+  @override
+  String get eaName => 'Ad';
+
+  @override
+  String get eaGroup => 'Grup';
+
+  @override
+  String get eaCurrency => 'Para birimi';
+
+  @override
+  String get eaStartingBalance => 'Başlangıç bakiyesi';
+
+  @override
+  String get eaStartingBalanceLock =>
+      'Bakiyeyi düzeltmek için bunun yerine bir işlem ekleyin';
+
+  @override
+  String get eaCreditLimit => 'Kredi limiti';
+
+  @override
+  String get eaStatementDay => 'Ekstre günü';
+
+  @override
+  String get eaPaymentDue => 'Son ödeme günü';
+
+  @override
+  String get eaNotSet => 'Ayarlanmadı';
+
+  @override
+  String get eaHideFromBalance => 'Bakiye\'den gizle';
+
+  @override
+  String get eaHideDesc => 'Toplamlarda kalır, listelerden kaybolur';
+
+  @override
+  String get eaRemoveThisAccount => 'Bu hesabı kaldır';
+
+  @override
+  String get eaRemovePermanent => 'Bu hesabı kalıcı olarak siler';
+
+  @override
+  String get eaRemoveHasHistory => 'Geçmişi var — silinmez, arşivlenir';
+
+  @override
+  String eaRemoveTitle(String name) {
+    return '$name kaldırılsın mı?';
+  }
+
+  @override
+  String get eaArchivedMsg =>
+      'Bu hesabın geçmişi olduğundan silinmek yerine arşivlenir.';
+
+  @override
+  String get eaDeleteMsg => 'Bu hesabın işlemi yok ve tamamen silinebilir.';
+
+  @override
+  String eaTxnStays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count işleminiz Defter\'de dokunulmadan kalır.',
+      one: '$count işleminiz Defter\'de dokunulmadan kalır.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String eaGroupDropsBy(String group, String amount) {
+    return '$group $amount azalır.';
+  }
+
+  @override
+  String get eaDisappearsPicker => 'Her hesap seçiciden kaybolur.';
+
+  @override
+  String get eaCannotUndo => 'Bu geri alınamaz.';
+
+  @override
+  String get eaArchiveAccount => 'Hesabı arşivle';
+
+  @override
+  String get eaRemoveAccount => 'Hesabı kaldır';
+
+  @override
+  String get eaEditAccount => 'Hesabı düzenle';
+
+  @override
+  String balFilterActive(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Etkin, $count öğe gizli',
+      one: 'Etkin, $count öğe gizli',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get balFilterOff => 'Kapalı';
+
+  @override
+  String get balMoved => 'Taşındı';
+
+  @override
+  String get balMovedCustom => 'Taşındı · Özele göre sıralı';
+
+  @override
+  String balTotalOf(String name) {
+    return 'Toplam $name';
+  }
+
+  @override
+  String balUtilization(String percent) {
+    return 'Kullanım: $percent';
+  }
+
+  @override
+  String get balOverdue => 'Gecikmiş';
+
+  @override
+  String balDue(String when) {
+    return 'Ödeme $when';
+  }
+
+  @override
+  String balNextPayment(String date) {
+    return 'Sonraki ödeme: $date';
+  }
+
+  @override
+  String get actionDone => 'Bitti';
+
+  @override
+  String get actionBack => 'Geri';
+
+  @override
+  String get filterTitle => 'Filtre';
+
+  @override
+  String get sheetApply => 'Uygula';
+
+  @override
+  String get sheetToday => 'Bugün';
+
+  @override
+  String balNoBetween(String subject, String range) {
+    return '$range aralığında $subject yok';
+  }
+
+  @override
+  String get freqLessThanMonthly => 'Ayda bir defadan az';
+
+  @override
+  String get freqAbout => 'Yaklaşık ';
+
+  @override
+  String freqTimesAMonth(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: ' defa ayda',
+      one: ' defa ayda',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String txnDeleteEntryTitle(String type) {
+    return 'Bu $type silinsin mi?';
+  }
+
+  @override
+  String get txnDeleteEntryMessage =>
+      'Bu kayıt kalıcı olarak silinir ve aşağıdaki bakiyeler eski haline döner.';
+
+  @override
+  String get txnDeleteNothingElse => 'Defterinizde başka hiçbir şey değişmez.';
+
+  @override
+  String get txnDeleteEntryConfirm => 'Kaydı sil';
+
+  @override
+  String get freqLastOne => ' · sonuncusu ';
+
+  @override
+  String txnBudgetImpact(Object name, Object before, Object after) {
+    return '$name bütçesi $before → $after';
+  }
 }

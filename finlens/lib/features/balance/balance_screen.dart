@@ -214,7 +214,7 @@ class _BalanceScreenState extends State<BalanceScreen> {
         _DatePill(
           label: store.isHistorical
               ? dayMonth(store.asOf!, AppLocalizations.of(context))
-              : 'Today',
+              : AppLocalizations.of(context).dateToday,
           onTap: () => _pickDate(store),
         ),
         const SizedBox(width: Insets.sm),
@@ -300,7 +300,7 @@ class _BalanceScreenState extends State<BalanceScreen> {
             tools: [
               Tool(
                 icon: Icons.swap_vert_rounded,
-                tooltip: 'Sort',
+                tooltip: AppLocalizations.of(context).balSortTooltip,
                 showDot: store.balanceSort != AccountSort.defaultSort,
                 onTap: _pickSort,
               ),
@@ -308,7 +308,7 @@ class _BalanceScreenState extends State<BalanceScreen> {
                 icon: _anyOpen
                     ? Icons.unfold_less_rounded
                     : Icons.unfold_more_rounded,
-                tooltip: _anyOpen ? 'Collapse all' : 'Expand all',
+                tooltip: _anyOpen ? AppLocalizations.of(context).actionCollapseAll : AppLocalizations.of(context).actionExpandAll,
                 filled: !_anyOpen,
                 onTap: _toggleAll,
               ),
@@ -320,15 +320,16 @@ class _BalanceScreenState extends State<BalanceScreen> {
                     ? Icons.filter_alt_rounded
                     : Icons.filter_alt_outlined,
                 iconColor: filter.isActive ? AppColors.textPrimary : null,
-                tooltip: 'Filter categories',
+                tooltip: AppLocalizations.of(context).balFilterCategories,
                 semanticValue: filter.isActive
-                    ? 'Active, ${filter.hiddenItemCount(store)} items hidden'
-                    : 'Off',
+                    ? AppLocalizations.of(context)
+                        .balFilterActive(filter.hiddenItemCount(store))
+                    : AppLocalizations.of(context).balFilterOff,
                 onTap: () => showBalanceFilterSheet(context),
               ),
               Tool(
                 icon: Icons.search_rounded,
-                tooltip: 'Search',
+                tooltip: AppLocalizations.of(context).actionSearch,
                 onTap: _openSearch,
               ),
             ],
@@ -428,12 +429,12 @@ class _BalanceScreenState extends State<BalanceScreen> {
                     style: const TextStyle(fontSize: 14, height: 1.2),
                     cursorColor: AppColors.accentSoft,
                     cursorHeight: 16,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       isDense: true,
                       contentPadding: EdgeInsets.zero,
                       border: InputBorder.none,
-                      hintText: 'Search accounts',
-                      hintStyle: TextStyle(
+                      hintText: AppLocalizations.of(context).balSearchAccounts,
+                      hintStyle: const TextStyle(
                         fontSize: 14,
                         color: AppColors.textTertiary,
                       ),
@@ -447,11 +448,11 @@ class _BalanceScreenState extends State<BalanceScreen> {
         GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: _closeSearch,
-          child: const Padding(
-            padding: EdgeInsets.only(left: Insets.md),
+          child: Padding(
+            padding: const EdgeInsets.only(left: Insets.md),
             child: Text(
-              'Cancel',
-              style: TextStyle(
+              AppLocalizations.of(context).actionCancel,
+              style: const TextStyle(
                 fontSize: 14,
                 height: 1.2,
                 fontWeight: FontWeight.w500,
@@ -575,9 +576,9 @@ class _BalanceScreenState extends State<BalanceScreen> {
                 title: Text(AccountSort.custom.label(l), style: AppText.body),
                 // The second, permanent advertisement of the gesture (the
                 // section-header hint is the first, and self-dismissing).
-                subtitle: const Text(
-                  'Press and hold an account to move it',
-                  style: TextStyle(
+                subtitle: Text(
+                  AppLocalizations.of(context).balPressHoldMove,
+                  style: const TextStyle(
                     fontSize: 12,
                     height: 1.2,
                     color: AppColors.textSecondary,
@@ -658,7 +659,9 @@ class _BalanceScreenState extends State<BalanceScreen> {
     required bool showHeader,
   }) {
     final filter = store.balanceFilter;
-    final label = assets ? 'Assets' : 'Liabilities';
+    final label = assets
+        ? AppLocalizations.of(context).balanceSectionAssets
+        : AppLocalizations.of(context).balanceSectionLiabilities;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -693,7 +696,7 @@ class _BalanceScreenState extends State<BalanceScreen> {
         child: Column(
           children: [
             Text(
-              'No visible categories',
+              AppLocalizations.of(context).balNoVisibleCategories,
               style: AppText.body.copyWith(color: AppColors.textTertiary),
             ),
             TextButton(
@@ -702,18 +705,18 @@ class _BalanceScreenState extends State<BalanceScreen> {
                 foregroundColor: AppColors.accent,
                 minimumSize: const Size(0, 36),
               ),
-              child: const Text('Adjust filter'),
+              child: Text(AppLocalizations.of(context).balAdjustFilter),
             ),
           ],
         ),
       );
 
-  Widget _noResults() => const Padding(
-        padding: EdgeInsets.only(top: 72),
+  Widget _noResults() => Padding(
+        padding: const EdgeInsets.only(top: 72),
         child: EmptyState(
           icon: Icons.search_off_rounded,
-          title: 'No results',
-          message: 'No account or group matches your search.',
+          title: AppLocalizations.of(context).balNoResults,
+          message: AppLocalizations.of(context).balNoAccountMatch,
         ),
       );
 
@@ -723,13 +726,12 @@ class _BalanceScreenState extends State<BalanceScreen> {
         padding: const EdgeInsets.only(top: 72),
         child: EmptyState(
           icon: Icons.account_balance_wallet_rounded,
-          title: 'No accounts yet',
-          message: 'Add your accounts and FinLens works out your net worth '
-              'from the transactions you record.',
+          title: AppLocalizations.of(context).balNoAccountsYet,
+          message: AppLocalizations.of(context).balNoAccountsMessage,
           action: FilledButton.icon(
             onPressed: () => showNewAccountSheet(context),
             icon: const Icon(Icons.add_rounded, size: 18),
-            label: const Text('Add your first account'),
+            label: Text(AppLocalizations.of(context).balAddFirstAccount),
             style: FilledButton.styleFrom(
               backgroundColor: AppColors.accent,
               foregroundColor: Colors.white,
@@ -979,7 +981,8 @@ class _BalanceScreenState extends State<BalanceScreen> {
 
   void _showUndoBar(AppStore store, {required bool flipped}) {
     // Names the flip to Custom the first time, plain "Moved" once already there.
-    final text = flipped ? 'Moved · sorted by Custom' : 'Moved';
+    final l = AppLocalizations.of(context);
+    final text = flipped ? l.balMovedCustom : l.balMoved;
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(
@@ -995,7 +998,7 @@ class _BalanceScreenState extends State<BalanceScreen> {
           ),
           duration: const Duration(seconds: 5),
           action: SnackBarAction(
-            label: 'Undo',
+            label: AppLocalizations.of(context).actionUndo,
             onPressed: () => _undoLastMove(store),
           ),
         ),
@@ -1143,23 +1146,23 @@ class _ReorderHint extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const ExcludeSemantics(
+    return ExcludeSemantics(
       child: Row(
         mainAxisSize: MainAxisSize.min,
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          Icon(
+          const Icon(
             Icons.touch_app_outlined,
             size: 13,
             color: AppColors.textTertiary,
           ),
-          SizedBox(width: 4),
+          const SizedBox(width: 4),
           Flexible(
             child: Text(
-              'Hold an account to arrange',
+              AppLocalizations.of(context).balHoldToArrange,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 11,
                 height: 1.1,
                 color: AppColors.textTertiary,

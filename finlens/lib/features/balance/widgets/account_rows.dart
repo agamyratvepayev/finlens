@@ -320,7 +320,7 @@ class AccountRow extends StatelessWidget {
     case AccountGroup.creditCards:
       final u = store.utilisationOf(a.id);
       return (
-        text: u == null ? null : 'Utilization: ${percent(u, decimals: 0)}',
+        text: u == null ? null : l.balUtilization(percent(u, decimals: 0)),
         color: null,
       );
     case AccountGroup.payables:
@@ -339,7 +339,10 @@ class AccountRow extends StatelessWidget {
           .inDays;
       // Spec 1.3 — the label warms up as the due date approaches.
       final color = days < 3 ? AppColors.negative : AppColors.warning;
-      return (text: days < 0 ? 'Overdue' : 'Due ${dueLabel(days, l)}', color: color);
+      return (
+        text: days < 0 ? l.balOverdue : l.balDue(dueLabel(days, l)),
+        color: color,
+      );
     case AccountGroup.bankLoans:
       if (a.paymentDue == null) return (text: null, color: null);
       final next = DateTime(
@@ -347,7 +350,7 @@ class AccountRow extends StatelessWidget {
         AppStore.today.month + (a.paymentDue! < AppStore.today.day ? 1 : 0),
         a.paymentDue!,
       );
-      return (text: 'Next payment: ${dayMonthYear(next, l)}', color: null);
+      return (text: l.balNextPayment(dayMonthYear(next, l)), color: null);
     default:
       return (text: null, color: null);
   }

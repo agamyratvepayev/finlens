@@ -96,9 +96,9 @@ class _BalanceFilterSheetState extends State<_BalanceFilterSheet> {
       padding: const EdgeInsets.fromLTRB(18, 11, 18, 9),
       child: Row(
         children: [
-          const Text(
-            'Filter',
-            style: TextStyle(
+          Text(
+            AppLocalizations.of(context).filterTitle,
+            style: const TextStyle(
               fontSize: 17,
               height: 1.2,
               fontWeight: FontWeight.w600, // 650 rounds to semi-bold
@@ -112,9 +112,9 @@ class _BalanceFilterSheetState extends State<_BalanceFilterSheet> {
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
               onTap: canReset ? () => _apply(const BalanceFilter()) : null,
-              child: const Text(
-                'Reset',
-                style: TextStyle(
+              child: Text(
+                AppLocalizations.of(context).actionReset,
+                style: const TextStyle(
                   fontSize: 15,
                   height: 1.2,
                   fontWeight: FontWeight.w500,
@@ -434,9 +434,9 @@ class _BalanceFilterSheetState extends State<_BalanceFilterSheet> {
               borderRadius: BorderRadius.circular(14),
             ),
           ),
-          child: const Text(
-            'Done',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+          child: Text(
+            AppLocalizations.of(context).actionDone,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
           ),
         ),
       ),

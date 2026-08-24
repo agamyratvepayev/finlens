@@ -58,7 +58,7 @@ class _SameTransactionsScreenState extends State<SameTransactionsScreen> {
     }
 
     final key = SameKey.of(origin);
-    final info = _KeyInfo.resolve(store, origin, key);
+    final info = _KeyInfo.resolve(store, origin, key, AppLocalizations.of(context));
     final choice = store.sameListRange;
     final range = choice.resolve(AppStore.today);
     final all = store.sameTransactions(key, from: range.start, to: range.end);
@@ -118,7 +118,7 @@ class _SameTransactionsScreenState extends State<SameTransactionsScreen> {
                         size: 20, color: AppColors.accentLight),
                     Flexible(
                       child: Text(
-                        widget.backLabel ?? 'Back',
+                        widget.backLabel ?? AppLocalizations.of(context).actionBack,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
@@ -166,14 +166,14 @@ class _SameTransactionsScreenState extends State<SameTransactionsScreen> {
               ),
             ),
             const SizedBox(height: Insets.sm),
-            _menuRow(sheetContext, Icons.edit_rounded, 'Edit',
+            _menuRow(sheetContext, Icons.edit_rounded, AppLocalizations.of(context).actionEdit,
                 () => showQuickAdd(context, editing: origin)),
-            _menuRow(sheetContext, Icons.copy_rounded, 'Copy',
+            _menuRow(sheetContext, Icons.copy_rounded, AppLocalizations.of(context).actionCopy,
                 () => showQuickAdd(context, copyOf: origin)),
             _menuRow(
               sheetContext,
               Icons.delete_rounded,
-              'Delete',
+              AppLocalizations.of(context).actionDelete,
               () async {
                 final ok = await confirmDeleteTxn(context, origin);
                 if (ok && context.mounted) store.deleteTxn(origin);
@@ -393,16 +393,15 @@ class _SameTransactionsScreenState extends State<SameTransactionsScreen> {
       child: Text.rich(
         TextSpan(children: [
           if (n == 0)
-            const TextSpan(text: 'Less than once a month', style: base)
+            TextSpan(text: l.freqLessThanMonthly, style: base)
           else ...[
-            const TextSpan(text: 'About ', style: base),
+            TextSpan(text: l.freqAbout, style: base),
             TextSpan(text: '$n', style: value),
             // Singular at exactly one — a common result now the denominator is
             // the window, not a recent cluster's span.
-            TextSpan(
-                text: n == 1 ? ' time a month' : ' times a month', style: base),
+            TextSpan(text: l.freqTimesAMonth(n), style: base),
           ],
-          const TextSpan(text: ' · last one ', style: base),
+          TextSpan(text: l.freqLastOne, style: base),
           TextSpan(text: last, style: value),
         ]),
         textAlign: TextAlign.center,
@@ -476,7 +475,7 @@ class _SameTransactionsScreenState extends State<SameTransactionsScreen> {
     return Padding(
       padding: const EdgeInsets.fromLTRB(Insets.gutter, 24, Insets.gutter, 24),
       child: Text(
-        'No $subject between $label',
+        AppLocalizations.of(context).balNoBetween(subject, label),
         textAlign: TextAlign.center,
         style: AppText.caption.copyWith(color: AppColors.textTertiary),
       ),
@@ -499,7 +498,7 @@ class _SameTransactionsScreenState extends State<SameTransactionsScreen> {
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 10),
           child: Text(
-            'See all $total  ›',
+            AppLocalizations.of(context).balSeeAll(total),
             textAlign: TextAlign.center,
             style: const TextStyle(
               fontSize: 14,
@@ -668,19 +667,19 @@ class _SameRow extends StatelessWidget {
       actions: [
         SwipeActionItem(
           icon: Icons.edit_rounded,
-          label: 'Edit',
+          label: AppLocalizations.of(context).actionEdit,
           color: AppColors.surfaceHigh,
           onTap: onEdit,
         ),
         SwipeActionItem(
           icon: Icons.copy_rounded,
-          label: 'Copy',
+          label: AppLocalizations.of(context).actionCopy,
           color: AppColors.info,
           onTap: onCopy,
         ),
         SwipeActionItem(
           icon: Icons.delete_rounded,
-          label: 'Delete',
+          label: AppLocalizations.of(context).actionDelete,
           color: AppColors.negative,
           onTap: onDelete,
         ),
@@ -732,7 +731,8 @@ class _KeyInfo {
   /// account(s) in the header, so its rows stay one line (spec §4).
   final bool showsRowAccount;
 
-  static _KeyInfo resolve(AppStore store, Txn origin, SameKey key) {
+  static _KeyInfo resolve(
+      AppStore store, Txn origin, SameKey key, AppLocalizations l) {
     if (key is TransferKey) {
       // One shared helper composes "{from} → {to}" for the header, the row
       // fallback title, and the section label — never a second implementation.
@@ -740,14 +740,14 @@ class _KeyInfo {
       final title = store.transferTitle(origin);
       return _KeyInfo(
         title: title,
-        subtitle: 'Transfer',
+        subtitle: l.txnTypeTransfer,
         sectionLabel: title,
         icon: Icons.swap_horiz_rounded,
         color: AppColors.transfer,
         // The app's existing transfer colour — never red/green.
         amountColor: AppColors.transfer,
         // Names both accounts in the row's semantics (spec §3).
-        directionWord: 'Transfer from ${parties.from} to ${parties.to}',
+        directionWord: l.transferFromTo(parties.from, parties.to),
         // A note-less transfer row shows the path, not the word "Transfer".
         rowFallbackTitle: title,
         categoryName: title,
@@ -762,9 +762,9 @@ class _KeyInfo {
     // category); refName resolves it to the account's name either way.
     final categoryName = store.refName(ledger.categoryId);
     final directionWord = switch (ledger.direction) {
-      TxnType.income => 'Income',
-      TxnType.rebalance => 'Rebalance',
-      _ => 'Expense',
+      TxnType.income => l.txnTypeIncome,
+      TxnType.rebalance => l.txnTypeRebalance,
+      _ => l.txnTypeExpense,
     };
     final amountColor = switch (ledger.direction) {
       TxnType.income => AppColors.positive,

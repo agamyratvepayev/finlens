@@ -425,4 +425,314 @@ class AppLocalizationsTk extends AppLocalizations {
 
   @override
   String get moreAddAccount => 'Hasap goş';
+
+  @override
+  String get insightTitle => 'Derňew';
+
+  @override
+  String get insightLeftOver => 'Galan';
+
+  @override
+  String get insightNoIncome => 'Bu aý girdeji hasaba alynmady';
+
+  @override
+  String insightKept(String percent, String amount) {
+    return '$amount mukdaryň $percent bölegi saklandy';
+  }
+
+  @override
+  String get insightWhereItWent => 'Nirä gitdi';
+
+  @override
+  String get insightGoalPerformance => 'Maksat netijeliligi';
+
+  @override
+  String get insightReached => 'Ýetildi';
+
+  @override
+  String get insightSuccessRate => 'Üstünlik derejesi';
+
+  @override
+  String get insightAvgTime => 'Ort. wagt';
+
+  @override
+  String insightMonthsShort(int count) {
+    return '$count aý';
+  }
+
+  @override
+  String get actionCancel => 'Ýatyr';
+
+  @override
+  String get actionSave => 'Ýatda sakla';
+
+  @override
+  String get actionDelete => 'Poz';
+
+  @override
+  String get actionEdit => 'Üýtget';
+
+  @override
+  String get actionCopy => 'Nusgala';
+
+  @override
+  String get actionUndo => 'Yza gaýtar';
+
+  @override
+  String get actionApply => 'Ulan';
+
+  @override
+  String get actionSearch => 'Gözle';
+
+  @override
+  String get actionMoveUp => 'Ýokary';
+
+  @override
+  String get actionMoveDown => 'Aşak';
+
+  @override
+  String get actionCollapseAll => 'Ählisini ýygna';
+
+  @override
+  String get actionExpandAll => 'Ählisini aç';
+
+  @override
+  String get actionReset => 'Täzeden';
+
+  @override
+  String get balSearchAccounts => 'Hasap gözle';
+
+  @override
+  String get balNoResults => 'Netije ýok';
+
+  @override
+  String get balNoAccountsYet => 'Entek hasap ýok';
+
+  @override
+  String get balNoAccountMatch =>
+      'Gözlegiňize gabat gelýän hasap ýa-da topar ýok.';
+
+  @override
+  String get balAddFirstAccount => 'Ilkinji hasabyňyzy goşuň';
+
+  @override
+  String get balNoAccountsMessage =>
+      'Hasaplaryňyzy goşuň, FinLens ýazgy eden amallaryňyzdan arassa baýlygyňyzy hasaplar.';
+
+  @override
+  String get balAdjustFilter => 'Süzgüji sazla';
+
+  @override
+  String get balSortTooltip => 'Tertiple';
+
+  @override
+  String get balHoldToArrange => 'Tertiplemek üçin hasaby basyp saklaň';
+
+  @override
+  String get balPressHoldMove => 'Süýşürmek üçin hasaby basyp saklaň';
+
+  @override
+  String get balFilterCategories => 'Kategoriýalary süz';
+
+  @override
+  String get balNoVisibleCategories => 'Görünýän kategoriýa ýok';
+
+  @override
+  String balSeeAll(int count) {
+    return 'Ählisini gör $count  ›';
+  }
+
+  @override
+  String transferFromTo(String from, String to) {
+    return '$from hasabyndan $to hasabyna geçirim';
+  }
+
+  @override
+  String get eaName => 'Ady';
+
+  @override
+  String get eaGroup => 'Topar';
+
+  @override
+  String get eaCurrency => 'Walýuta';
+
+  @override
+  String get eaStartingBalance => 'Başlangyç balans';
+
+  @override
+  String get eaStartingBalanceLock =>
+      'Balansy düzetmek üçin oňa derek amal goşuň';
+
+  @override
+  String get eaCreditLimit => 'Karz çägi';
+
+  @override
+  String get eaStatementDay => 'Hasabat güni';
+
+  @override
+  String get eaPaymentDue => 'Töleg möhleti';
+
+  @override
+  String get eaNotSet => 'Bellenmedik';
+
+  @override
+  String get eaHideFromBalance => 'Balansdan gizle';
+
+  @override
+  String get eaHideDesc => 'Jemlerde galýar, sanawlardan ýitýär';
+
+  @override
+  String get eaRemoveThisAccount => 'Bu hasaby aýyr';
+
+  @override
+  String get eaRemovePermanent => 'Bu hasaby hemişelik pozýar';
+
+  @override
+  String get eaRemoveHasHistory => 'Taryhy bar — pozulman, arhiwlenýär';
+
+  @override
+  String eaRemoveTitle(String name) {
+    return '$name aýyrylsynmy?';
+  }
+
+  @override
+  String get eaArchivedMsg =>
+      'Bu hasabyň taryhy bar, şonuň üçin pozulman arhiwlenýär.';
+
+  @override
+  String get eaDeleteMsg => 'Bu hasabyň amaly ýok we doly pozulyp bilner.';
+
+  @override
+  String eaTxnStays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count amalyňyz Hasapda üýtgewsiz galýar.',
+      one: '$count amalyňyz Hasapda üýtgewsiz galýar.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String eaGroupDropsBy(String group, String amount) {
+    return '$group $amount azalýar.';
+  }
+
+  @override
+  String get eaDisappearsPicker => 'Ol her hasap saýlaýjydan ýitýär.';
+
+  @override
+  String get eaCannotUndo => 'Muny yzyna gaýtaryp bolmaýar.';
+
+  @override
+  String get eaArchiveAccount => 'Hasaby arhiwle';
+
+  @override
+  String get eaRemoveAccount => 'Hasaby aýyr';
+
+  @override
+  String get eaEditAccount => 'Hasaby üýtget';
+
+  @override
+  String balFilterActive(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Işjeň, $count element gizli',
+      one: 'Işjeň, $count element gizli',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get balFilterOff => 'Öçük';
+
+  @override
+  String get balMoved => 'Süýşürildi';
+
+  @override
+  String get balMovedCustom => 'Süýşürildi · Elde tertipde';
+
+  @override
+  String balTotalOf(String name) {
+    return 'Jemi: $name';
+  }
+
+  @override
+  String balUtilization(String percent) {
+    return 'Ulanylyşy: $percent';
+  }
+
+  @override
+  String get balOverdue => 'Möhleti geçdi';
+
+  @override
+  String balDue(String when) {
+    return 'Töleg $when';
+  }
+
+  @override
+  String balNextPayment(String date) {
+    return 'Indiki töleg: $date';
+  }
+
+  @override
+  String get actionDone => 'Taýýar';
+
+  @override
+  String get actionBack => 'Yza';
+
+  @override
+  String get filterTitle => 'Süzgüç';
+
+  @override
+  String get sheetApply => 'Ulan';
+
+  @override
+  String get sheetToday => 'Şu gün';
+
+  @override
+  String balNoBetween(String subject, String range) {
+    return '$range aralygynda $subject ýok';
+  }
+
+  @override
+  String get freqLessThanMonthly => 'Aýda bir gezekden az';
+
+  @override
+  String get freqAbout => 'Takmynan ';
+
+  @override
+  String freqTimesAMonth(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: ' gezek aýda',
+      one: ' gezek aýda',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String txnDeleteEntryTitle(String type) {
+    return 'Bu $type pozulsynmy?';
+  }
+
+  @override
+  String get txnDeleteEntryMessage =>
+      'Bu ýazgy hemişelik pozulýar we aşakdaky balanslar öňki ýagdaýyna dolanýar.';
+
+  @override
+  String get txnDeleteNothingElse => 'Hasabyňyzda başga hiç zat üýtgemeýär.';
+
+  @override
+  String get txnDeleteEntryConfirm => 'Ýazgyny poz';
+
+  @override
+  String get freqLastOne => ' · soňkusy ';
+
+  @override
+  String txnBudgetImpact(Object name, Object before, Object after) {
+    return '$name býujeti $before → $after';
+  }
 }

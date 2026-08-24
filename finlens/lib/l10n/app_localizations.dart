@@ -689,6 +689,516 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Add an account'**
   String get moreAddAccount;
+
+  /// No description provided for @insightTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Insight'**
+  String get insightTitle;
+
+  /// No description provided for @insightLeftOver.
+  ///
+  /// In en, this message translates to:
+  /// **'Left over'**
+  String get insightLeftOver;
+
+  /// No description provided for @insightNoIncome.
+  ///
+  /// In en, this message translates to:
+  /// **'No income recorded this month'**
+  String get insightNoIncome;
+
+  /// No description provided for @insightKept.
+  ///
+  /// In en, this message translates to:
+  /// **'{percent} of {amount} kept'**
+  String insightKept(String percent, String amount);
+
+  /// No description provided for @insightWhereItWent.
+  ///
+  /// In en, this message translates to:
+  /// **'Where it went'**
+  String get insightWhereItWent;
+
+  /// No description provided for @insightGoalPerformance.
+  ///
+  /// In en, this message translates to:
+  /// **'Goal performance'**
+  String get insightGoalPerformance;
+
+  /// No description provided for @insightReached.
+  ///
+  /// In en, this message translates to:
+  /// **'Reached'**
+  String get insightReached;
+
+  /// No description provided for @insightSuccessRate.
+  ///
+  /// In en, this message translates to:
+  /// **'Success rate'**
+  String get insightSuccessRate;
+
+  /// No description provided for @insightAvgTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Avg. time'**
+  String get insightAvgTime;
+
+  /// No description provided for @insightMonthsShort.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} mo'**
+  String insightMonthsShort(int count);
+
+  /// No description provided for @actionCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get actionCancel;
+
+  /// No description provided for @actionSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get actionSave;
+
+  /// No description provided for @actionDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get actionDelete;
+
+  /// No description provided for @actionEdit.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit'**
+  String get actionEdit;
+
+  /// No description provided for @actionCopy.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy'**
+  String get actionCopy;
+
+  /// No description provided for @actionUndo.
+  ///
+  /// In en, this message translates to:
+  /// **'Undo'**
+  String get actionUndo;
+
+  /// No description provided for @actionApply.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply'**
+  String get actionApply;
+
+  /// No description provided for @actionSearch.
+  ///
+  /// In en, this message translates to:
+  /// **'Search'**
+  String get actionSearch;
+
+  /// No description provided for @actionMoveUp.
+  ///
+  /// In en, this message translates to:
+  /// **'Move up'**
+  String get actionMoveUp;
+
+  /// No description provided for @actionMoveDown.
+  ///
+  /// In en, this message translates to:
+  /// **'Move down'**
+  String get actionMoveDown;
+
+  /// No description provided for @actionCollapseAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Collapse all'**
+  String get actionCollapseAll;
+
+  /// No description provided for @actionExpandAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Expand all'**
+  String get actionExpandAll;
+
+  /// No description provided for @actionReset.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset'**
+  String get actionReset;
+
+  /// No description provided for @balSearchAccounts.
+  ///
+  /// In en, this message translates to:
+  /// **'Search accounts'**
+  String get balSearchAccounts;
+
+  /// No description provided for @balNoResults.
+  ///
+  /// In en, this message translates to:
+  /// **'No results'**
+  String get balNoResults;
+
+  /// No description provided for @balNoAccountsYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No accounts yet'**
+  String get balNoAccountsYet;
+
+  /// No description provided for @balNoAccountMatch.
+  ///
+  /// In en, this message translates to:
+  /// **'No account or group matches your search.'**
+  String get balNoAccountMatch;
+
+  /// No description provided for @balAddFirstAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Add your first account'**
+  String get balAddFirstAccount;
+
+  /// No description provided for @balNoAccountsMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Add your accounts and FinLens works out your net worth from the transactions you record.'**
+  String get balNoAccountsMessage;
+
+  /// No description provided for @balAdjustFilter.
+  ///
+  /// In en, this message translates to:
+  /// **'Adjust filter'**
+  String get balAdjustFilter;
+
+  /// No description provided for @balSortTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Sort'**
+  String get balSortTooltip;
+
+  /// No description provided for @balHoldToArrange.
+  ///
+  /// In en, this message translates to:
+  /// **'Hold an account to arrange'**
+  String get balHoldToArrange;
+
+  /// No description provided for @balPressHoldMove.
+  ///
+  /// In en, this message translates to:
+  /// **'Press and hold an account to move it'**
+  String get balPressHoldMove;
+
+  /// No description provided for @balFilterCategories.
+  ///
+  /// In en, this message translates to:
+  /// **'Filter categories'**
+  String get balFilterCategories;
+
+  /// No description provided for @balNoVisibleCategories.
+  ///
+  /// In en, this message translates to:
+  /// **'No visible categories'**
+  String get balNoVisibleCategories;
+
+  /// No description provided for @balSeeAll.
+  ///
+  /// In en, this message translates to:
+  /// **'See all {count}  ›'**
+  String balSeeAll(int count);
+
+  /// No description provided for @transferFromTo.
+  ///
+  /// In en, this message translates to:
+  /// **'Transfer from {from} to {to}'**
+  String transferFromTo(String from, String to);
+
+  /// No description provided for @eaName.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get eaName;
+
+  /// No description provided for @eaGroup.
+  ///
+  /// In en, this message translates to:
+  /// **'Group'**
+  String get eaGroup;
+
+  /// No description provided for @eaCurrency.
+  ///
+  /// In en, this message translates to:
+  /// **'Currency'**
+  String get eaCurrency;
+
+  /// No description provided for @eaStartingBalance.
+  ///
+  /// In en, this message translates to:
+  /// **'Starting balance'**
+  String get eaStartingBalance;
+
+  /// No description provided for @eaStartingBalanceLock.
+  ///
+  /// In en, this message translates to:
+  /// **'To fix the balance, add a transaction instead'**
+  String get eaStartingBalanceLock;
+
+  /// No description provided for @eaCreditLimit.
+  ///
+  /// In en, this message translates to:
+  /// **'Credit limit'**
+  String get eaCreditLimit;
+
+  /// No description provided for @eaStatementDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Statement day'**
+  String get eaStatementDay;
+
+  /// No description provided for @eaPaymentDue.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment due'**
+  String get eaPaymentDue;
+
+  /// No description provided for @eaNotSet.
+  ///
+  /// In en, this message translates to:
+  /// **'Not set'**
+  String get eaNotSet;
+
+  /// No description provided for @eaHideFromBalance.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide from Balance'**
+  String get eaHideFromBalance;
+
+  /// No description provided for @eaHideDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Stays in your totals, disappears from the lists'**
+  String get eaHideDesc;
+
+  /// No description provided for @eaRemoveThisAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove this account'**
+  String get eaRemoveThisAccount;
+
+  /// No description provided for @eaRemovePermanent.
+  ///
+  /// In en, this message translates to:
+  /// **'Permanently deletes this account'**
+  String get eaRemovePermanent;
+
+  /// No description provided for @eaRemoveHasHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'Has history — it will be archived, not erased'**
+  String get eaRemoveHasHistory;
+
+  /// No description provided for @eaRemoveTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove {name}?'**
+  String eaRemoveTitle(String name);
+
+  /// No description provided for @eaArchivedMsg.
+  ///
+  /// In en, this message translates to:
+  /// **'This account has history, so it is archived rather than erased.'**
+  String get eaArchivedMsg;
+
+  /// No description provided for @eaDeleteMsg.
+  ///
+  /// In en, this message translates to:
+  /// **'This account has no transactions and can be deleted outright.'**
+  String get eaDeleteMsg;
+
+  /// No description provided for @eaTxnStays.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{Your {count} transaction stays in the Ledger, untouched.} other{Your {count} transactions stay in the Ledger, untouched.}}'**
+  String eaTxnStays(int count);
+
+  /// No description provided for @eaGroupDropsBy.
+  ///
+  /// In en, this message translates to:
+  /// **'{group} drops by {amount}.'**
+  String eaGroupDropsBy(String group, String amount);
+
+  /// No description provided for @eaDisappearsPicker.
+  ///
+  /// In en, this message translates to:
+  /// **'It disappears from every account picker.'**
+  String get eaDisappearsPicker;
+
+  /// No description provided for @eaCannotUndo.
+  ///
+  /// In en, this message translates to:
+  /// **'This cannot be undone.'**
+  String get eaCannotUndo;
+
+  /// No description provided for @eaArchiveAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Archive account'**
+  String get eaArchiveAccount;
+
+  /// No description provided for @eaRemoveAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove account'**
+  String get eaRemoveAccount;
+
+  /// No description provided for @eaEditAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit account'**
+  String get eaEditAccount;
+
+  /// No description provided for @balFilterActive.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{Active, {count} item hidden} other{Active, {count} items hidden}}'**
+  String balFilterActive(int count);
+
+  /// No description provided for @balFilterOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Off'**
+  String get balFilterOff;
+
+  /// No description provided for @balMoved.
+  ///
+  /// In en, this message translates to:
+  /// **'Moved'**
+  String get balMoved;
+
+  /// No description provided for @balMovedCustom.
+  ///
+  /// In en, this message translates to:
+  /// **'Moved · sorted by Custom'**
+  String get balMovedCustom;
+
+  /// No description provided for @balTotalOf.
+  ///
+  /// In en, this message translates to:
+  /// **'Total {name}'**
+  String balTotalOf(String name);
+
+  /// No description provided for @balUtilization.
+  ///
+  /// In en, this message translates to:
+  /// **'Utilization: {percent}'**
+  String balUtilization(String percent);
+
+  /// No description provided for @balOverdue.
+  ///
+  /// In en, this message translates to:
+  /// **'Overdue'**
+  String get balOverdue;
+
+  /// No description provided for @balDue.
+  ///
+  /// In en, this message translates to:
+  /// **'Due {when}'**
+  String balDue(String when);
+
+  /// No description provided for @balNextPayment.
+  ///
+  /// In en, this message translates to:
+  /// **'Next payment: {date}'**
+  String balNextPayment(String date);
+
+  /// No description provided for @actionDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Done'**
+  String get actionDone;
+
+  /// No description provided for @actionBack.
+  ///
+  /// In en, this message translates to:
+  /// **'Back'**
+  String get actionBack;
+
+  /// No description provided for @filterTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Filter'**
+  String get filterTitle;
+
+  /// No description provided for @sheetApply.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply'**
+  String get sheetApply;
+
+  /// No description provided for @sheetToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Today'**
+  String get sheetToday;
+
+  /// No description provided for @balNoBetween.
+  ///
+  /// In en, this message translates to:
+  /// **'No {subject} between {range}'**
+  String balNoBetween(String subject, String range);
+
+  /// No description provided for @freqLessThanMonthly.
+  ///
+  /// In en, this message translates to:
+  /// **'Less than once a month'**
+  String get freqLessThanMonthly;
+
+  /// No description provided for @freqAbout.
+  ///
+  /// In en, this message translates to:
+  /// **'About '**
+  String get freqAbout;
+
+  /// No description provided for @freqTimesAMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{ time a month} other{ times a month}}'**
+  String freqTimesAMonth(int count);
+
+  /// No description provided for @txnDeleteEntryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete this {type}?'**
+  String txnDeleteEntryTitle(String type);
+
+  /// No description provided for @txnDeleteEntryMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'This entry is removed for good and the balances below go back to what they were.'**
+  String get txnDeleteEntryMessage;
+
+  /// No description provided for @txnDeleteNothingElse.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing else in your ledger changes.'**
+  String get txnDeleteNothingElse;
+
+  /// No description provided for @txnDeleteEntryConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete entry'**
+  String get txnDeleteEntryConfirm;
+
+  /// No description provided for @freqLastOne.
+  ///
+  /// In en, this message translates to:
+  /// **' · last one '**
+  String get freqLastOne;
+
+  /// No description provided for @txnBudgetImpact.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} budget {before} → {after}'**
+  String txnBudgetImpact(Object name, Object before, Object after);
 }
 
 class _AppLocalizationsDelegate

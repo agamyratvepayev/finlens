@@ -23,6 +23,7 @@ class InsightScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
+    final l = AppLocalizations.of(context);
     final income = store.monthIncome(store.period);
     final expense = store.monthExpense(store.period);
 
@@ -31,7 +32,7 @@ class InsightScreen extends StatelessWidget {
       child: Column(
         children: [
           ScreenHeader(
-            title: 'Insight',
+            title: l.insightTitle,
             onAdd: () => showQuickAdd(context),
           ),
           Expanded(
@@ -49,7 +50,7 @@ class InsightScreen extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                          'Left over · ${monthYearLong(store.period, AppLocalizations.of(context))}',
+                          '${l.insightLeftOver} · ${monthYearLong(store.period, l)}',
                           style: AppText.label),
                       const SizedBox(height: Insets.xs),
                       FittedBox(
@@ -66,16 +67,18 @@ class InsightScreen extends StatelessWidget {
                       const SizedBox(height: 2),
                       Text(
                         income <= 0
-                            ? 'No income recorded this month'
-                            : '${percent(store.monthLeftOverFraction(store.period), decimals: 0)} '
-                                'of ${money(income)} kept',
+                            ? l.insightNoIncome
+                            : l.insightKept(
+                                percent(store.monthLeftOverFraction(store.period),
+                                    decimals: 0),
+                                money(income)),
                         style: AppText.caption,
                       ),
                     ],
                   ),
                 ),
-                _spendingByCategory(store),
-                _goalPerformance(store),
+                _spendingByCategory(store, l),
+                _goalPerformance(store, l),
               ],
             ),
           ),
@@ -84,7 +87,7 @@ class InsightScreen extends StatelessWidget {
     );
   }
 
-  Widget _spendingByCategory(AppStore store) {
+  Widget _spendingByCategory(AppStore store, AppLocalizations l) {
     final rows = <(Category, double)>[];
     for (final c in store.categoriesOfType(CategoryType.expense)) {
       final spent = store.spentInCategory(c.id, store.period);
@@ -97,7 +100,7 @@ class InsightScreen extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SectionLabel('Where it went'),
+        SectionLabel(l.insightWhereItWent),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: Insets.gutter),
           child: AppCard(
@@ -147,7 +150,7 @@ class InsightScreen extends StatelessWidget {
 
   /// Spec 5.6 — "Mark as reached" writes completed_at and duration_months
   /// precisely so this section can exist.
-  Widget _goalPerformance(AppStore store) {
+  Widget _goalPerformance(AppStore store, AppLocalizations l) {
     final reached = store.archivedGoals
         .where((g) => g.status == GoalStatus.reached)
         .toList();
@@ -164,7 +167,7 @@ class InsightScreen extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SectionLabel('Goal performance'),
+        SectionLabel(l.insightGoalPerformance),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: Insets.gutter),
           child: AppCard(
@@ -172,18 +175,18 @@ class InsightScreen extends StatelessWidget {
             child: Row(
               children: [
                 _Stat(
-                  label: 'Reached',
+                  label: l.insightReached,
                   value: '${reached.length}',
                   color: AppColors.positive,
                 ),
                 _Stat(
-                  label: 'Success rate',
+                  label: l.insightSuccessRate,
                   value: finished == 0 ? '—' : percent(rate, decimals: 0),
                   color: AppColors.goal,
                 ),
                 _Stat(
-                  label: 'Avg. time',
-                  value: reached.isEmpty ? '—' : '$avgMonths mo',
+                  label: l.insightAvgTime,
+                  value: reached.isEmpty ? '—' : l.insightMonthsShort(avgMonths),
                   color: AppColors.info,
                 ),
               ],

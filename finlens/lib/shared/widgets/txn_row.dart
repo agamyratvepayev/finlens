@@ -784,19 +784,18 @@ Future<bool> confirmDeleteTxn(BuildContext context, Txn txn) async {
     final before = store.spentInCategory(category.id, month);
     final after = store.categorySpendWithout(category.id, txn);
     if (before == after) continue;
-    impact.add(ImpactLine.lost(
-      '${category.name} budget ${money(before)} → ${money(after)}',
-    ));
+    impact.add(ImpactLine.lost(AppLocalizations.of(context)
+        .txnBudgetImpact(category.name, money(before), money(after))));
   }
 
-  impact.add(const ImpactLine.kept('Nothing else in your ledger changes.'));
+  final l = AppLocalizations.of(context);
+  impact.add(ImpactLine.kept(l.txnDeleteNothingElse));
 
   return showDestructiveConfirm(
     context,
-    title: 'Delete this ${txn.type.label(AppLocalizations.of(context)).toLowerCase()}?',
-    message: 'This entry is removed for good and the balances below go back to '
-        'what they were.',
+    title: l.txnDeleteEntryTitle(txn.type.label(l).toLowerCase()),
+    message: l.txnDeleteEntryMessage,
     impact: impact,
-    confirmLabel: 'Delete entry',
+    confirmLabel: l.txnDeleteEntryConfirm,
   );
 }

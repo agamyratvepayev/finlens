@@ -9,6 +9,6 @@ class LiabilitiesScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const GroupDetailScreen(title: 'Liabilities', isAssets: false);
+    return const GroupDetailScreen(isAssets: false);
   }
 }

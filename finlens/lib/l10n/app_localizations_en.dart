@@ -425,4 +425,315 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get moreAddAccount => 'Add an account';
+
+  @override
+  String get insightTitle => 'Insight';
+
+  @override
+  String get insightLeftOver => 'Left over';
+
+  @override
+  String get insightNoIncome => 'No income recorded this month';
+
+  @override
+  String insightKept(String percent, String amount) {
+    return '$percent of $amount kept';
+  }
+
+  @override
+  String get insightWhereItWent => 'Where it went';
+
+  @override
+  String get insightGoalPerformance => 'Goal performance';
+
+  @override
+  String get insightReached => 'Reached';
+
+  @override
+  String get insightSuccessRate => 'Success rate';
+
+  @override
+  String get insightAvgTime => 'Avg. time';
+
+  @override
+  String insightMonthsShort(int count) {
+    return '$count mo';
+  }
+
+  @override
+  String get actionCancel => 'Cancel';
+
+  @override
+  String get actionSave => 'Save';
+
+  @override
+  String get actionDelete => 'Delete';
+
+  @override
+  String get actionEdit => 'Edit';
+
+  @override
+  String get actionCopy => 'Copy';
+
+  @override
+  String get actionUndo => 'Undo';
+
+  @override
+  String get actionApply => 'Apply';
+
+  @override
+  String get actionSearch => 'Search';
+
+  @override
+  String get actionMoveUp => 'Move up';
+
+  @override
+  String get actionMoveDown => 'Move down';
+
+  @override
+  String get actionCollapseAll => 'Collapse all';
+
+  @override
+  String get actionExpandAll => 'Expand all';
+
+  @override
+  String get actionReset => 'Reset';
+
+  @override
+  String get balSearchAccounts => 'Search accounts';
+
+  @override
+  String get balNoResults => 'No results';
+
+  @override
+  String get balNoAccountsYet => 'No accounts yet';
+
+  @override
+  String get balNoAccountMatch => 'No account or group matches your search.';
+
+  @override
+  String get balAddFirstAccount => 'Add your first account';
+
+  @override
+  String get balNoAccountsMessage =>
+      'Add your accounts and FinLens works out your net worth from the transactions you record.';
+
+  @override
+  String get balAdjustFilter => 'Adjust filter';
+
+  @override
+  String get balSortTooltip => 'Sort';
+
+  @override
+  String get balHoldToArrange => 'Hold an account to arrange';
+
+  @override
+  String get balPressHoldMove => 'Press and hold an account to move it';
+
+  @override
+  String get balFilterCategories => 'Filter categories';
+
+  @override
+  String get balNoVisibleCategories => 'No visible categories';
+
+  @override
+  String balSeeAll(int count) {
+    return 'See all $count  ›';
+  }
+
+  @override
+  String transferFromTo(String from, String to) {
+    return 'Transfer from $from to $to';
+  }
+
+  @override
+  String get eaName => 'Name';
+
+  @override
+  String get eaGroup => 'Group';
+
+  @override
+  String get eaCurrency => 'Currency';
+
+  @override
+  String get eaStartingBalance => 'Starting balance';
+
+  @override
+  String get eaStartingBalanceLock =>
+      'To fix the balance, add a transaction instead';
+
+  @override
+  String get eaCreditLimit => 'Credit limit';
+
+  @override
+  String get eaStatementDay => 'Statement day';
+
+  @override
+  String get eaPaymentDue => 'Payment due';
+
+  @override
+  String get eaNotSet => 'Not set';
+
+  @override
+  String get eaHideFromBalance => 'Hide from Balance';
+
+  @override
+  String get eaHideDesc => 'Stays in your totals, disappears from the lists';
+
+  @override
+  String get eaRemoveThisAccount => 'Remove this account';
+
+  @override
+  String get eaRemovePermanent => 'Permanently deletes this account';
+
+  @override
+  String get eaRemoveHasHistory =>
+      'Has history — it will be archived, not erased';
+
+  @override
+  String eaRemoveTitle(String name) {
+    return 'Remove $name?';
+  }
+
+  @override
+  String get eaArchivedMsg =>
+      'This account has history, so it is archived rather than erased.';
+
+  @override
+  String get eaDeleteMsg =>
+      'This account has no transactions and can be deleted outright.';
+
+  @override
+  String eaTxnStays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Your $count transactions stay in the Ledger, untouched.',
+      one: 'Your $count transaction stays in the Ledger, untouched.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String eaGroupDropsBy(String group, String amount) {
+    return '$group drops by $amount.';
+  }
+
+  @override
+  String get eaDisappearsPicker => 'It disappears from every account picker.';
+
+  @override
+  String get eaCannotUndo => 'This cannot be undone.';
+
+  @override
+  String get eaArchiveAccount => 'Archive account';
+
+  @override
+  String get eaRemoveAccount => 'Remove account';
+
+  @override
+  String get eaEditAccount => 'Edit account';
+
+  @override
+  String balFilterActive(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Active, $count items hidden',
+      one: 'Active, $count item hidden',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get balFilterOff => 'Off';
+
+  @override
+  String get balMoved => 'Moved';
+
+  @override
+  String get balMovedCustom => 'Moved · sorted by Custom';
+
+  @override
+  String balTotalOf(String name) {
+    return 'Total $name';
+  }
+
+  @override
+  String balUtilization(String percent) {
+    return 'Utilization: $percent';
+  }
+
+  @override
+  String get balOverdue => 'Overdue';
+
+  @override
+  String balDue(String when) {
+    return 'Due $when';
+  }
+
+  @override
+  String balNextPayment(String date) {
+    return 'Next payment: $date';
+  }
+
+  @override
+  String get actionDone => 'Done';
+
+  @override
+  String get actionBack => 'Back';
+
+  @override
+  String get filterTitle => 'Filter';
+
+  @override
+  String get sheetApply => 'Apply';
+
+  @override
+  String get sheetToday => 'Today';
+
+  @override
+  String balNoBetween(String subject, String range) {
+    return 'No $subject between $range';
+  }
+
+  @override
+  String get freqLessThanMonthly => 'Less than once a month';
+
+  @override
+  String get freqAbout => 'About ';
+
+  @override
+  String freqTimesAMonth(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: ' times a month',
+      one: ' time a month',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String txnDeleteEntryTitle(String type) {
+    return 'Delete this $type?';
+  }
+
+  @override
+  String get txnDeleteEntryMessage =>
+      'This entry is removed for good and the balances below go back to what they were.';
+
+  @override
+  String get txnDeleteNothingElse => 'Nothing else in your ledger changes.';
+
+  @override
+  String get txnDeleteEntryConfirm => 'Delete entry';
+
+  @override
+  String get freqLastOne => ' · last one ';
+
+  @override
+  String txnBudgetImpact(Object name, Object before, Object after) {
+    return '$name budget $before → $after';
+  }
 }

@@ -443,4 +443,323 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get moreAddAccount => 'Добавить счёт';
+
+  @override
+  String get insightTitle => 'Аналитика';
+
+  @override
+  String get insightLeftOver => 'Остаток';
+
+  @override
+  String get insightNoIncome => 'В этом месяце дохода не было';
+
+  @override
+  String insightKept(String percent, String amount) {
+    return '$percent из $amount сохранено';
+  }
+
+  @override
+  String get insightWhereItWent => 'Куда ушло';
+
+  @override
+  String get insightGoalPerformance => 'Достижение целей';
+
+  @override
+  String get insightReached => 'Достигнуто';
+
+  @override
+  String get insightSuccessRate => 'Успешность';
+
+  @override
+  String get insightAvgTime => 'Ср. время';
+
+  @override
+  String insightMonthsShort(int count) {
+    return '$count мес';
+  }
+
+  @override
+  String get actionCancel => 'Отмена';
+
+  @override
+  String get actionSave => 'Сохранить';
+
+  @override
+  String get actionDelete => 'Удалить';
+
+  @override
+  String get actionEdit => 'Изменить';
+
+  @override
+  String get actionCopy => 'Копировать';
+
+  @override
+  String get actionUndo => 'Отменить';
+
+  @override
+  String get actionApply => 'Применить';
+
+  @override
+  String get actionSearch => 'Поиск';
+
+  @override
+  String get actionMoveUp => 'Вверх';
+
+  @override
+  String get actionMoveDown => 'Вниз';
+
+  @override
+  String get actionCollapseAll => 'Свернуть все';
+
+  @override
+  String get actionExpandAll => 'Развернуть все';
+
+  @override
+  String get actionReset => 'Сбросить';
+
+  @override
+  String get balSearchAccounts => 'Поиск по счетам';
+
+  @override
+  String get balNoResults => 'Ничего не найдено';
+
+  @override
+  String get balNoAccountsYet => 'Пока нет счетов';
+
+  @override
+  String get balNoAccountMatch =>
+      'Ни один счёт или группа не подходят под запрос.';
+
+  @override
+  String get balAddFirstAccount => 'Добавьте первый счёт';
+
+  @override
+  String get balNoAccountsMessage =>
+      'Добавьте счета, и FinLens сам рассчитает капитал по вашим операциям.';
+
+  @override
+  String get balAdjustFilter => 'Настроить фильтр';
+
+  @override
+  String get balSortTooltip => 'Сортировка';
+
+  @override
+  String get balHoldToArrange => 'Удерживайте счёт, чтобы упорядочить';
+
+  @override
+  String get balPressHoldMove =>
+      'Нажмите и удерживайте счёт, чтобы переместить';
+
+  @override
+  String get balFilterCategories => 'Фильтр категорий';
+
+  @override
+  String get balNoVisibleCategories => 'Нет видимых категорий';
+
+  @override
+  String balSeeAll(int count) {
+    return 'Показать все $count  ›';
+  }
+
+  @override
+  String transferFromTo(String from, String to) {
+    return 'Перевод с $from на $to';
+  }
+
+  @override
+  String get eaName => 'Название';
+
+  @override
+  String get eaGroup => 'Группа';
+
+  @override
+  String get eaCurrency => 'Валюта';
+
+  @override
+  String get eaStartingBalance => 'Начальный баланс';
+
+  @override
+  String get eaStartingBalanceLock =>
+      'Чтобы исправить баланс, добавьте операцию';
+
+  @override
+  String get eaCreditLimit => 'Кредитный лимит';
+
+  @override
+  String get eaStatementDay => 'День выписки';
+
+  @override
+  String get eaPaymentDue => 'Срок платежа';
+
+  @override
+  String get eaNotSet => 'Не задано';
+
+  @override
+  String get eaHideFromBalance => 'Скрыть с Баланса';
+
+  @override
+  String get eaHideDesc => 'Остаётся в итогах, но исчезает из списков';
+
+  @override
+  String get eaRemoveThisAccount => 'Удалить этот счёт';
+
+  @override
+  String get eaRemovePermanent => 'Счёт удаляется безвозвратно';
+
+  @override
+  String get eaRemoveHasHistory =>
+      'Есть история — будет архивирован, а не удалён';
+
+  @override
+  String eaRemoveTitle(String name) {
+    return 'Удалить $name?';
+  }
+
+  @override
+  String get eaArchivedMsg =>
+      'У счёта есть история, поэтому он архивируется, а не удаляется.';
+
+  @override
+  String get eaDeleteMsg =>
+      'У счёта нет операций, его можно удалить полностью.';
+
+  @override
+  String eaTxnStays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Ваши $count операции останутся в журнале без изменений.',
+      many: 'Ваши $count операций останутся в журнале без изменений.',
+      few: 'Ваши $count операции останутся в журнале без изменений.',
+      one: 'Ваша $count операция останется в журнале без изменений.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String eaGroupDropsBy(String group, String amount) {
+    return '$group уменьшится на $amount.';
+  }
+
+  @override
+  String get eaDisappearsPicker => 'Он исчезнет из всех списков выбора счёта.';
+
+  @override
+  String get eaCannotUndo => 'Это действие нельзя отменить.';
+
+  @override
+  String get eaArchiveAccount => 'Архивировать счёт';
+
+  @override
+  String get eaRemoveAccount => 'Удалить счёт';
+
+  @override
+  String get eaEditAccount => 'Изменить счёт';
+
+  @override
+  String balFilterActive(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Активен, $count скрыто',
+      many: 'Активен, $count скрыто',
+      few: 'Активен, $count скрыто',
+      one: 'Активен, $count скрыт',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get balFilterOff => 'Выкл';
+
+  @override
+  String get balMoved => 'Перемещено';
+
+  @override
+  String get balMovedCustom => 'Перемещено · сортировка Вручную';
+
+  @override
+  String balTotalOf(String name) {
+    return 'Всего: $name';
+  }
+
+  @override
+  String balUtilization(String percent) {
+    return 'Использование: $percent';
+  }
+
+  @override
+  String get balOverdue => 'Просрочено';
+
+  @override
+  String balDue(String when) {
+    return 'Оплата $when';
+  }
+
+  @override
+  String balNextPayment(String date) {
+    return 'Следующий платёж: $date';
+  }
+
+  @override
+  String get actionDone => 'Готово';
+
+  @override
+  String get actionBack => 'Назад';
+
+  @override
+  String get filterTitle => 'Фильтр';
+
+  @override
+  String get sheetApply => 'Применить';
+
+  @override
+  String get sheetToday => 'Сегодня';
+
+  @override
+  String balNoBetween(String subject, String range) {
+    return 'Нет «$subject» за период $range';
+  }
+
+  @override
+  String get freqLessThanMonthly => 'Реже раза в месяц';
+
+  @override
+  String get freqAbout => 'Около ';
+
+  @override
+  String freqTimesAMonth(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: ' раза в месяц',
+      many: ' раз в месяц',
+      few: ' раза в месяц',
+      one: ' раз в месяц',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String txnDeleteEntryTitle(String type) {
+    return 'Удалить $type?';
+  }
+
+  @override
+  String get txnDeleteEntryMessage =>
+      'Запись удаляется навсегда, и балансы ниже возвращаются к прежним значениям.';
+
+  @override
+  String get txnDeleteNothingElse => 'Больше ничего в журнале не меняется.';
+
+  @override
+  String get txnDeleteEntryConfirm => 'Удалить запись';
+
+  @override
+  String get freqLastOne => ' · последний раз ';
+
+  @override
+  String txnBudgetImpact(Object name, Object before, Object after) {
+    return '$name: бюджет $before → $after';
+  }
 }

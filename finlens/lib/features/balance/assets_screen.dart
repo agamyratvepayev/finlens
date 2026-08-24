@@ -24,7 +24,6 @@ class AssetsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const GroupDetailScreen(
-      title: 'Assets',
       groups: null,
       isAssets: true,
     );
@@ -35,12 +34,10 @@ class AssetsScreen extends StatelessWidget {
 class GroupDetailScreen extends StatelessWidget {
   const GroupDetailScreen({
     super.key,
-    required this.title,
     required this.isAssets,
     this.groups,
   });
 
-  final String title;
   final bool isAssets;
   final List<AccountGroup>? groups;
 
@@ -48,6 +45,8 @@ class GroupDetailScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
     final l = AppLocalizations.of(context);
+    final title =
+        isAssets ? l.balanceSectionAssets : l.balanceSectionLiabilities;
     final list = groups ??
         (isAssets ? AccountGroup.assets : AccountGroup.liabilities);
     // Sum the groups actually being shown, not the whole side. Opening this
@@ -92,7 +91,7 @@ class GroupDetailScreen extends StatelessWidget {
                                 ),
                               ),
                               const SizedBox(height: 2),
-                              Text('Total $title', style: AppText.caption),
+                              Text(l.balTotalOf(title), style: AppText.caption),
                             ],
                           ),
                         ),

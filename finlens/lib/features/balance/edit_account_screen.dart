@@ -51,6 +51,7 @@ class _EditAccountScreenState extends State<EditAccountScreen> {
   @override
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
+    final l = AppLocalizations.of(context);
 
     return Scaffold(
       body: SafeArea(
@@ -71,11 +72,11 @@ class _EditAccountScreenState extends State<EditAccountScreen> {
                     style: TextButton.styleFrom(
                       foregroundColor: AppColors.textSecondary,
                     ),
-                    child: const Text('Cancel'),
+                    child: Text(l.actionCancel),
                   ),
-                  const Expanded(
+                  Expanded(
                     child: Center(
-                      child: Text('Edit account', style: AppText.rowTitle),
+                      child: Text(l.eaEditAccount, style: AppText.rowTitle),
                     ),
                   ),
                   TextButton(
@@ -84,7 +85,7 @@ class _EditAccountScreenState extends State<EditAccountScreen> {
                       foregroundColor: AppColors.accentSoft,
                       textStyle: AppText.button,
                     ),
-                    child: const Text('Save'),
+                    child: Text(l.actionSave),
                   ),
                 ],
               ),
@@ -97,7 +98,7 @@ class _EditAccountScreenState extends State<EditAccountScreen> {
                     children: [
                       TextFieldRow(
                         icon: Icons.badge_rounded,
-                        label: 'Name',
+                        label: l.eaName,
                         controller: _name,
                         trailing: const Icon(
                           Icons.edit_rounded,
@@ -107,14 +108,14 @@ class _EditAccountScreenState extends State<EditAccountScreen> {
                       ),
                       FormRow(
                         icon: Icons.folder_rounded,
-                        label: 'Group',
+                        label: l.eaGroup,
                         value: _group.label(AppLocalizations.of(context)),
                         showChevron: true,
                         onTap: _pickGroup,
                       ),
                       FormRow(
                         icon: Icons.language_rounded,
-                        label: 'Currency',
+                        label: l.eaCurrency,
                         value: _currency,
                         showChevron: true,
                         onTap: () async {
@@ -126,9 +127,9 @@ class _EditAccountScreenState extends State<EditAccountScreen> {
                       // never edited directly, only corrected by a transaction.
                       FormRow(
                         icon: Icons.lock_clock_rounded,
-                        label: 'Starting balance',
+                        label: l.eaStartingBalance,
                         subtitle:
-                            'To fix the balance, add a transaction instead',
+                            l.eaStartingBalanceLock,
                         locked: true,
                         value: money(
                           _account.startingBalance,
@@ -144,7 +145,7 @@ class _EditAccountScreenState extends State<EditAccountScreen> {
                         if (_group.hasCreditLimit)
                           TextFieldRow(
                             icon: Icons.speed_rounded,
-                            label: 'Credit limit',
+                            label: l.eaCreditLimit,
                             controller: _limit,
                             hint: '0',
                             trailing: Text(
@@ -157,25 +158,25 @@ class _EditAccountScreenState extends State<EditAccountScreen> {
                         if (_group.hasStatement) ...[
                           FormRow(
                             icon: Icons.receipt_long_rounded,
-                            label: 'Statement day',
+                            label: l.eaStatementDay,
                             value: _statementDay == null
-                                ? 'Not set'
+                                ? l.eaNotSet
                                 : ordinalDay(_statementDay!, AppLocalizations.of(context)),
                             showChevron: true,
                             onTap: () async {
-                              final d = await _pickDay('Statement day');
+                              final d = await _pickDay(AppLocalizations.of(context).eaStatementDay);
                               if (d != null) setState(() => _statementDay = d);
                             },
                           ),
                           FormRow(
                             icon: Icons.event_available_rounded,
-                            label: 'Payment due',
+                            label: l.eaPaymentDue,
                             value: _paymentDue == null
-                                ? 'Not set'
+                                ? l.eaNotSet
                                 : ordinalDay(_paymentDue!, AppLocalizations.of(context)),
                             showChevron: true,
                             onTap: () async {
-                              final d = await _pickDay('Payment due');
+                              final d = await _pickDay(AppLocalizations.of(context).eaPaymentDue);
                               if (d != null) setState(() => _paymentDue = d);
                             },
                           ),
@@ -186,19 +187,19 @@ class _EditAccountScreenState extends State<EditAccountScreen> {
                     children: [
                       ToggleRow(
                         icon: Icons.visibility_off_rounded,
-                        label: 'Hide from Balance',
+                        label: l.eaHideFromBalance,
                         subtitle:
-                            'Stays in your totals, disappears from the lists',
+                            l.eaHideDesc,
                         value: _hidden,
                         onChanged: (v) => setState(() => _hidden = v),
                       ),
                     ],
                   ),
                   DestructiveRow(
-                    label: 'Remove this account',
+                    label: l.eaRemoveThisAccount,
                     subtitle: store.txnsForAccount(_account.id).isEmpty
-                        ? 'Permanently deletes this account'
-                        : 'Has history — it will be archived, not erased',
+                        ? l.eaRemovePermanent
+                        : l.eaRemoveHasHistory,
                     onTap: _confirmRemove,
                   ),
                 ],
@@ -247,7 +248,7 @@ class _EditAccountScreenState extends State<EditAccountScreen> {
   Future<void> _pickGroup() async {
     final picked = await showAppSheet<AccountGroup>(
       context,
-      title: 'Group',
+      title: AppLocalizations.of(context).eaGroup,
       initialSize: 0.65,
       builder: (context, controller) => ListView(
         controller: controller,
@@ -306,27 +307,21 @@ class _EditAccountScreenState extends State<EditAccountScreen> {
     final balance = _store.balanceOf(_account.id);
     final archiving = count > 0;
 
+    final l = AppLocalizations.of(context);
     final ok = await showDestructiveConfirm(
       context,
-      title: 'Remove ${_account.name}?',
-      message: archiving
-          ? 'This account has history, so it is archived rather than erased.'
-          : 'This account has no transactions and can be deleted outright.',
+      title: l.eaRemoveTitle(_account.name),
+      message: archiving ? l.eaArchivedMsg : l.eaDeleteMsg,
       impact: [
-        if (archiving)
-          ImpactLine.kept(
-            'Your $count ${count == 1 ? 'transaction stays' : 'transactions stay'} '
-            'in the Ledger, untouched.',
-          ),
-        ImpactLine.lost(
-          '${_account.group.label(AppLocalizations.of(context))} drops by '
-          '${money(balance.abs(), currency: _currency)}.',
-        ),
-        ImpactLine.lost('It disappears from every account picker.'),
-        if (!archiving)
-          const ImpactLine.lost('This cannot be undone.'),
+        if (archiving) ImpactLine.kept(l.eaTxnStays(count)),
+        ImpactLine.lost(l.eaGroupDropsBy(
+          _account.group.label(l),
+          money(balance.abs(), currency: _currency),
+        )),
+        ImpactLine.lost(l.eaDisappearsPicker),
+        if (!archiving) ImpactLine.lost(l.eaCannotUndo),
       ],
-      confirmLabel: archiving ? 'Archive account' : 'Remove account',
+      confirmLabel: archiving ? l.eaArchiveAccount : l.eaRemoveAccount,
     );
 
     if (!ok || !mounted) return;
