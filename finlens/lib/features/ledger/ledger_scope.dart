@@ -270,6 +270,17 @@ class LedgerQuery {
         GroupScope(:final group) => store.groupTotal(group),
         AccountScope(:final accountId) => store.balanceOf(accountId),
       };
+
+  /// The currency [balance] is denominated in — resolved from the same scope,
+  /// side by side, so the figure and its symbol can never drift apart. An
+  /// account ledger's balance is native to that account; a group or all-
+  /// accounts total sums across currencies and so is base-currency.
+  String get currency => switch (scope) {
+        AllAccountsScope() => Fx.baseCurrency,
+        GroupScope() => Fx.baseCurrency,
+        AccountScope(:final accountId) =>
+          store.accountById(accountId)?.currency ?? Fx.baseCurrency,
+      };
 }
 
 /// One calendar day's rendered rows, and whether its net is worth printing.

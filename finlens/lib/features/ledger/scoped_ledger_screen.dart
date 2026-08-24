@@ -560,16 +560,21 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                InkWell(
-                  onTap: () => _pickScope(store),
-                  child: ConstrainedBox(
-                    // The switcher is the name itself, so it has to clear 44pt.
-                    constraints: const BoxConstraints(minHeight: 44),
-                    child: Row(
+            child: InkWell(
+              onTap: () => _pickScope(store),
+              child: ConstrainedBox(
+                // The whole identity block — name and subtitle — is the
+                // switcher, so it carries the 44pt tap target, not the name
+                // alone. mainAxisAlignment.start drops the block's slack below
+                // the subtitle instead of between the two lines, so they sit at
+                // their natural leading rather than the name floating above.
+                constraints: const BoxConstraints(minHeight: 44),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
                       children: [
                         Flexible(
                           child: Text(
@@ -593,24 +598,29 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
                         ),
                       ],
                     ),
-                  ),
+                    Text(
+                      _metaPrefix(store),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        height: 1.25,
+                        color: AppColors.formDim2,
+                      ),
+                    ),
+                  ],
                 ),
-                Text(
-                  _metaPrefix(store),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    height: 1.25,
-                    color: AppColors.formDim2,
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
           const SizedBox(width: 10),
           Text(
-            money(query.balance, signless: true, masked: store.masked),
+            money(
+              query.balance,
+              currency: query.currency,
+              signless: true,
+              masked: store.masked,
+            ),
             style: const TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.w700,
