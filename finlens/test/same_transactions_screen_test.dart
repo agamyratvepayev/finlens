@@ -247,6 +247,69 @@ void main() {
     expect(find.textContaining('times a month'), findsNothing);
   });
 
+  // ── Nav bar: the ••• must be right-aligned ─────────────────────────────────
+  // The bar is Padding(fromLTRB(sm,sm,sm,0), child: SizedBox(height: 42, Row)).
+  // The SizedBox spans the padded content width, so its right edge IS the bar's
+  // right padding — the ••• should end flush against it.
+  Finder navBar() =>
+      find.byWidgetPredicate((w) => w is SizedBox && w.height == 42).first;
+  Finder moreButton() =>
+      find.widgetWithIcon(IconButton, Icons.more_horiz_rounded);
+
+  testWidgets('the ••• sits flush with the nav bar right edge', (tester) async {
+    final store = storeWith([
+      tx('a', TxnType.expense, 'acc', 'cat', date: DateTime(2026, 8, 9)),
+    ]);
+    await tester.pumpWidget(host(store,
+        const SameTransactionsScreen(originTxnId: 'a', backLabel: 'Ledger')));
+    await tester.pumpAndSettle();
+
+    final bar = tester.getRect(navBar());
+    final more = tester.getRect(moreButton());
+    expect((bar.right - more.right).abs(), lessThan(2),
+        reason: "the ••• ink ends within 2px of the bar's right padding");
+  });
+
+  testWidgets('a long back label ellipsises and does not move the •••',
+      (tester) async {
+    final store = storeWith([
+      tx('a', TxnType.expense, 'acc', 'cat', date: DateTime(2026, 8, 9)),
+    ]);
+    await tester.pumpWidget(host(
+        store,
+        const SameTransactionsScreen(
+            originTxnId: 'a',
+            backLabel: 'Cash (EUR Wallet) — a very long back label indeed')));
+    await tester.pumpAndSettle();
+
+    // No RenderFlex overflow: the bounded Align width lets the label ellipsise.
+    expect(tester.takeException(), isNull);
+    final bar = tester.getRect(navBar());
+    final more = tester.getRect(moreButton());
+    expect((bar.right - more.right).abs(), lessThan(2),
+        reason: 'the ••• stays at the edge regardless of label length');
+  });
+
+  testWidgets('tapping the empty middle of the nav bar does not pop',
+      (tester) async {
+    final store = storeWith([
+      tx('a', TxnType.expense, 'acc', 'cat', date: DateTime(2026, 8, 9)),
+    ]);
+    final navKey = GlobalKey<NavigatorState>();
+    await tester.pumpWidget(host(store, const Scaffold(), navKey: navKey));
+    navKey.currentState!.push(MaterialPageRoute(
+        builder: (_) => const SameTransactionsScreen(
+            originTxnId: 'a', backLabel: 'Ledger')));
+    await tester.pumpAndSettle();
+    expect(find.byType(SameTransactionsScreen), findsOneWidget);
+
+    // The InkWell wraps only the back control; the Expanded's dead centre is
+    // not a back button. Tapping it must leave the screen in place.
+    await tester.tapAt(tester.getRect(navBar()).center);
+    await tester.pumpAndSettle();
+    expect(find.byType(SameTransactionsScreen), findsOneWidget);
+  });
+
   testWidgets('deleting the originating transaction pops the screen',
       (tester) async {
     final store = storeWith([

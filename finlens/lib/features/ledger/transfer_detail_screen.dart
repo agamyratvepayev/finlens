@@ -97,32 +97,39 @@ class TransferDetailScreen extends StatelessWidget {
         height: 42,
         child: Row(
           children: [
-            Flexible(
-              child: InkWell(
-                onTap: () => Navigator.of(context).pop(),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const SizedBox(width: 8),
-                    const Icon(Icons.chevron_left_rounded,
-                        size: 20, color: AppColors.accentLight),
-                    Flexible(
-                      child: Text(
-                        backLabel ?? AppLocalizations.of(context).actionBack,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w400,
-                          color: AppColors.accentLight,
+            // Expanded (not Flexible) so the back control owns the whole run and
+            // the ••• lands hard against the bar's right padding; a Spacer here
+            // would split the slack 50/50 with the Flexible and float the ••• in.
+            // Align(centerStart) keeps the control at the leading edge while
+            // still passing a bounded width down, so a long backLabel ellipsises.
+            Expanded(
+              child: Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: InkWell(
+                  onTap: () => Navigator.of(context).pop(),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const SizedBox(width: 8),
+                      const Icon(Icons.chevron_left_rounded,
+                          size: 20, color: AppColors.accentLight),
+                      Flexible(
+                        child: Text(
+                          backLabel ?? AppLocalizations.of(context).actionBack,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w400,
+                            color: AppColors.accentLight,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
-            const Spacer(),
             IconButton(
               icon: const Icon(Icons.more_horiz_rounded,
                   size: 22, color: AppColors.accentLight),

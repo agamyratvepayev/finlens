@@ -189,4 +189,82 @@ void main() {
       expect(find.text('Transfer'), findsNothing);
     });
   });
+
+  // The bar is Padding(fromLTRB(sm,sm,sm,0), child: SizedBox(height: 42, Row));
+  // the SizedBox spans the padded content width, so its right edge is the bar's
+  // right padding — the ••• should end flush against it, not float in.
+  group('nav bar — the ••• is right-aligned', () {
+    Finder navBar() =>
+        find.byWidgetPredicate((w) => w is SizedBox && w.height == 42).first;
+    Finder moreButton() =>
+        find.widgetWithIcon(IconButton, Icons.more_horiz_rounded);
+
+    Txn seedTransfer(AppStore store) => store.addTxn(
+          type: TxnType.transfer,
+          amount: 500,
+          currency: 'USD',
+          fromRef: 'a1',
+          toRef: 'a2',
+          date: DateTime(2026, 8, 5),
+        );
+
+    testWidgets('the ••• sits flush with the nav bar right edge',
+        (tester) async {
+      final store = _store();
+      final t = seedTransfer(store);
+      await tester.pumpWidget(
+          _host(store, TransferDetailScreen(txnId: t.id, backLabel: 'Ledger')));
+      await tester.pumpAndSettle();
+
+      final bar = tester.getRect(navBar());
+      final more = tester.getRect(moreButton());
+      expect((bar.right - more.right).abs(), lessThan(2),
+          reason: "the ••• ink ends within 2px of the bar's right padding");
+    });
+
+    testWidgets('a long back label ellipsises and does not move the •••',
+        (tester) async {
+      final store = _store();
+      final t = seedTransfer(store);
+      await tester.pumpWidget(_host(
+          store,
+          TransferDetailScreen(
+              txnId: t.id,
+              backLabel: 'Cash (EUR Wallet) — a very long back label indeed')));
+      await tester.pumpAndSettle();
+
+      // No RenderFlex overflow: the bounded Align width lets it ellipsise.
+      expect(tester.takeException(), isNull);
+      final bar = tester.getRect(navBar());
+      final more = tester.getRect(moreButton());
+      expect((bar.right - more.right).abs(), lessThan(2),
+          reason: 'the ••• stays at the edge regardless of label length');
+    });
+
+    testWidgets('tapping the empty middle of the nav bar does not pop',
+        (tester) async {
+      final store = _store();
+      final t = seedTransfer(store);
+      final navKey = GlobalKey<NavigatorState>();
+      await tester.pumpWidget(StoreScope(
+        store: store,
+        child: MaterialApp(
+          navigatorKey: navKey,
+          theme: AppTheme.dark,
+          home: const Scaffold(),
+        ),
+      ));
+      navKey.currentState!.push(MaterialPageRoute(
+          builder: (_) =>
+              TransferDetailScreen(txnId: t.id, backLabel: 'Ledger')));
+      await tester.pumpAndSettle();
+      expect(find.byType(TransferDetailScreen), findsOneWidget);
+
+      // The InkWell wraps only the back control, not the Expanded — the dead
+      // centre of the bar must not act as a back button.
+      await tester.tapAt(tester.getRect(navBar()).center);
+      await tester.pumpAndSettle();
+      expect(find.byType(TransferDetailScreen), findsOneWidget);
+    });
+  });
 }
