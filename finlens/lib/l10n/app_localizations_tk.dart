@@ -735,4 +735,107 @@ class AppLocalizationsTk extends AppLocalizations {
   String txnBudgetImpact(Object name, Object before, Object after) {
     return '$name býujeti $before → $after';
   }
+
+  @override
+  String get txnRevaluation => 'Gaýtadan bahalandyrma';
+
+  @override
+  String get txnTransferOut => 'Çykýan geçirim';
+
+  @override
+  String get txnTransferIn => 'Gelýän geçirim';
+
+  @override
+  String get plTabBudgets => 'Býujetler';
+
+  @override
+  String get plTabGoals => 'Maksatlar';
+
+  @override
+  String get plTabSchedule => 'Meýilnama';
+
+  @override
+  String get plNoBudgetsYet => 'Entek býujet ýok';
+
+  @override
+  String get plNoBudgetsMsg =>
+      'Kategoriýa aýlyk çäk beriň, ol şu ýerde görüner.';
+
+  @override
+  String get plBudgeted => 'Býujetlenen';
+
+  @override
+  String get plNoBudgetSet => 'Býujet bellenmedik';
+
+  @override
+  String get plSet => 'Belle';
+
+  @override
+  String get plNoGoalsYet => 'Entek maksat ýok';
+
+  @override
+  String get plNoGoalsMsg => 'Maksat belläň, FinLens aýlyk depgini hasaplar.';
+
+  @override
+  String get plNewGoal => 'Täze maksat';
+
+  @override
+  String get plNewTask => 'Täze tabşyryk';
+
+  @override
+  String get plCompleteReady => 'Taýýar · arhiwe geçirmäge taýýar';
+
+  @override
+  String get plNoTargetDate => 'Sene bellenmedik';
+
+  @override
+  String get plMoNeeded => '/aýda gerek';
+
+  @override
+  String get plComingIn => 'Gelýän';
+
+  @override
+  String get plGoingOut => 'Çykýan';
+
+  @override
+  String get schOverdue => 'Möhleti geçdi';
+
+  @override
+  String get schThisWeek => 'Şu hepde';
+
+  @override
+  String get schLater => 'Şu aýyň soňunda';
+
+  @override
+  String get plNothingScheduled => 'Meýilnama ýok';
+
+  @override
+  String get plNothingSchedMsg =>
+      'Meýilleşdiren hasaplaryňyz, aýlyklaryňyz we abunalaryňyz şu ýerde görüner.';
+
+  @override
+  String get plLeftThisMonth => 'Şu aý galan';
+
+  @override
+  String get plUnbudgeted => 'býujetsiz';
+
+  @override
+  String get plOf => '/';
+
+  @override
+  String get plBudgetWord => 'býujet';
+
+  @override
+  String get plSavedTowardGoals => 'Maksatlara toplanan';
+
+  @override
+  String plPaymentsOverdue(int count, Object amount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count töleg gijä galdy',
+      one: '$count töleg gijä galdy',
+    );
+    return '$_temp0 · $amount';
+  }
 }

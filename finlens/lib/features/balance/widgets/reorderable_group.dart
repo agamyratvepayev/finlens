@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_colors.dart';
 
 /// One independent reorder group: a non-scrolling column of rows the user can
@@ -339,12 +340,13 @@ class _ReorderableGroupState<T> extends State<ReorderableGroup<T>> {
     // No rotor moves when dragging is disabled (an active search): the gesture
     // affordance and its accessible equivalent go together.
     final actions = <CustomSemanticsAction, VoidCallback>{};
+    final l = AppLocalizations.of(context);
     if (widget.enabled && index > 0) {
-      actions[const CustomSemanticsAction(label: 'Move up')] =
+      actions[CustomSemanticsAction(label: l.actionMoveUp)] =
           () => _rotorMove(index, -1);
     }
     if (widget.enabled && index < _count - 1) {
-      actions[const CustomSemanticsAction(label: 'Move down')] =
+      actions[CustomSemanticsAction(label: l.actionMoveDown)] =
           () => _rotorMove(index, 1);
     }
 

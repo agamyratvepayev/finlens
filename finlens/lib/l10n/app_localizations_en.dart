@@ -736,4 +736,108 @@ class AppLocalizationsEn extends AppLocalizations {
   String txnBudgetImpact(Object name, Object before, Object after) {
     return '$name budget $before → $after';
   }
+
+  @override
+  String get txnRevaluation => 'Revaluation';
+
+  @override
+  String get txnTransferOut => 'Transfer out';
+
+  @override
+  String get txnTransferIn => 'Transfer in';
+
+  @override
+  String get plTabBudgets => 'Budgets';
+
+  @override
+  String get plTabGoals => 'Goals';
+
+  @override
+  String get plTabSchedule => 'Schedule';
+
+  @override
+  String get plNoBudgetsYet => 'No budgets yet';
+
+  @override
+  String get plNoBudgetsMsg =>
+      'Give a category a monthly limit and it will show up here.';
+
+  @override
+  String get plBudgeted => 'Budgeted';
+
+  @override
+  String get plNoBudgetSet => 'No budget set';
+
+  @override
+  String get plSet => 'Set';
+
+  @override
+  String get plNoGoalsYet => 'No goals yet';
+
+  @override
+  String get plNoGoalsMsg =>
+      'Set a target and FinLens works out the monthly pace.';
+
+  @override
+  String get plNewGoal => 'New goal';
+
+  @override
+  String get plNewTask => 'New task';
+
+  @override
+  String get plCompleteReady => 'Complete · ready to archive';
+
+  @override
+  String get plNoTargetDate => 'No target date set';
+
+  @override
+  String get plMoNeeded => '/mo needed';
+
+  @override
+  String get plComingIn => 'Coming in';
+
+  @override
+  String get plGoingOut => 'Going out';
+
+  @override
+  String get schOverdue => 'Overdue';
+
+  @override
+  String get schThisWeek => 'This week';
+
+  @override
+  String get schLater => 'Later this month';
+
+  @override
+  String get plNothingScheduled => 'Nothing scheduled';
+
+  @override
+  String get plNothingSchedMsg =>
+      'Bills, salaries and subscriptions you plan will land here.';
+
+  @override
+  String get plLeftThisMonth => 'Left this month';
+
+  @override
+  String get plUnbudgeted => 'unbudgeted';
+
+  @override
+  String get plOf => 'of';
+
+  @override
+  String get plBudgetWord => 'budget';
+
+  @override
+  String get plSavedTowardGoals => 'Saved toward goals';
+
+  @override
+  String plPaymentsOverdue(int count, Object amount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count payments overdue',
+      one: '$count payment overdue',
+    );
+    return '$_temp0 · $amount';
+  }
 }

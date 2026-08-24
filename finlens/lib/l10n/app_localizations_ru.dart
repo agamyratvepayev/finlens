@@ -762,4 +762,110 @@ class AppLocalizationsRu extends AppLocalizations {
   String txnBudgetImpact(Object name, Object before, Object after) {
     return '$name: бюджет $before → $after';
   }
+
+  @override
+  String get txnRevaluation => 'Переоценка';
+
+  @override
+  String get txnTransferOut => 'Перевод со счёта';
+
+  @override
+  String get txnTransferIn => 'Перевод на счёт';
+
+  @override
+  String get plTabBudgets => 'Бюджеты';
+
+  @override
+  String get plTabGoals => 'Цели';
+
+  @override
+  String get plTabSchedule => 'График';
+
+  @override
+  String get plNoBudgetsYet => 'Пока нет бюджетов';
+
+  @override
+  String get plNoBudgetsMsg =>
+      'Задайте категории месячный лимит, и она появится здесь.';
+
+  @override
+  String get plBudgeted => 'В бюджете';
+
+  @override
+  String get plNoBudgetSet => 'Бюджет не задан';
+
+  @override
+  String get plSet => 'Задать';
+
+  @override
+  String get plNoGoalsYet => 'Пока нет целей';
+
+  @override
+  String get plNoGoalsMsg =>
+      'Задайте цель, и FinLens рассчитает месячный темп.';
+
+  @override
+  String get plNewGoal => 'Новая цель';
+
+  @override
+  String get plNewTask => 'Новая задача';
+
+  @override
+  String get plCompleteReady => 'Готово · можно в архив';
+
+  @override
+  String get plNoTargetDate => 'Дата не задана';
+
+  @override
+  String get plMoNeeded => '/мес нужно';
+
+  @override
+  String get plComingIn => 'Поступления';
+
+  @override
+  String get plGoingOut => 'Списания';
+
+  @override
+  String get schOverdue => 'Просрочено';
+
+  @override
+  String get schThisWeek => 'На этой неделе';
+
+  @override
+  String get schLater => 'Позже в этом месяце';
+
+  @override
+  String get plNothingScheduled => 'Ничего не запланировано';
+
+  @override
+  String get plNothingSchedMsg =>
+      'Счета, зарплаты и подписки, которые вы запланируете, появятся здесь.';
+
+  @override
+  String get plLeftThisMonth => 'Осталось за месяц';
+
+  @override
+  String get plUnbudgeted => 'вне бюджета';
+
+  @override
+  String get plOf => 'из';
+
+  @override
+  String get plBudgetWord => 'бюджета';
+
+  @override
+  String get plSavedTowardGoals => 'Накоплено на цели';
+
+  @override
+  String plPaymentsOverdue(int count, Object amount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count платежа просрочено',
+      many: '$count платежей просрочено',
+      few: '$count платежа просрочено',
+      one: '$count платёж просрочен',
+    );
+    return '$_temp0 · $amount';
+  }
 }

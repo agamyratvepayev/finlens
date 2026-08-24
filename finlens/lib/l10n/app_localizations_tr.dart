@@ -734,4 +734,108 @@ class AppLocalizationsTr extends AppLocalizations {
   String txnBudgetImpact(Object name, Object before, Object after) {
     return '$name bütçesi $before → $after';
   }
+
+  @override
+  String get txnRevaluation => 'Yeniden değerleme';
+
+  @override
+  String get txnTransferOut => 'Giden transfer';
+
+  @override
+  String get txnTransferIn => 'Gelen transfer';
+
+  @override
+  String get plTabBudgets => 'Bütçeler';
+
+  @override
+  String get plTabGoals => 'Hedefler';
+
+  @override
+  String get plTabSchedule => 'Takvim';
+
+  @override
+  String get plNoBudgetsYet => 'Henüz bütçe yok';
+
+  @override
+  String get plNoBudgetsMsg =>
+      'Bir kategoriye aylık limit verin, burada görünsün.';
+
+  @override
+  String get plBudgeted => 'Bütçelenen';
+
+  @override
+  String get plNoBudgetSet => 'Bütçe ayarlanmadı';
+
+  @override
+  String get plSet => 'Ayarla';
+
+  @override
+  String get plNoGoalsYet => 'Henüz hedef yok';
+
+  @override
+  String get plNoGoalsMsg =>
+      'Bir hedef belirleyin, FinLens aylık hızı hesaplasın.';
+
+  @override
+  String get plNewGoal => 'Yeni hedef';
+
+  @override
+  String get plNewTask => 'Yeni görev';
+
+  @override
+  String get plCompleteReady => 'Tamamlandı · arşive hazır';
+
+  @override
+  String get plNoTargetDate => 'Tarih ayarlanmadı';
+
+  @override
+  String get plMoNeeded => '/ay gerekli';
+
+  @override
+  String get plComingIn => 'Gelen';
+
+  @override
+  String get plGoingOut => 'Giden';
+
+  @override
+  String get schOverdue => 'Gecikmiş';
+
+  @override
+  String get schThisWeek => 'Bu hafta';
+
+  @override
+  String get schLater => 'Bu ayın ilerisi';
+
+  @override
+  String get plNothingScheduled => 'Planlanmış bir şey yok';
+
+  @override
+  String get plNothingSchedMsg =>
+      'Planladığınız faturalar, maaşlar ve abonelikler burada görünür.';
+
+  @override
+  String get plLeftThisMonth => 'Bu ay kalan';
+
+  @override
+  String get plUnbudgeted => 'bütçesiz';
+
+  @override
+  String get plOf => '/';
+
+  @override
+  String get plBudgetWord => 'bütçe';
+
+  @override
+  String get plSavedTowardGoals => 'Hedeflere biriktirilen';
+
+  @override
+  String plPaymentsOverdue(int count, Object amount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ödeme gecikmiş',
+      one: '$count ödeme gecikmiş',
+    );
+    return '$_temp0 · $amount';
+  }
 }

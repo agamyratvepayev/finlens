@@ -107,12 +107,13 @@ class TxnRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
+    final l = AppLocalizations.of(context);
     if (txn.type == TxnType.transfer) {
       return perspectiveAccountId != null
-          ? _swipeWrap(_buildTransferDetail(store))
-          : _swipeWrap(_buildTransferLedger(store));
+          ? _swipeWrap(l, _buildTransferDetail(l, store))
+          : _swipeWrap(l, _buildTransferLedger(l, store));
     }
-    return _swipeWrap(_buildStandard(store));
+    return _swipeWrap(l, _buildStandard(l, store));
   }
 
   /// The affected account's after-balance for this row — supplied only by the
@@ -122,7 +123,7 @@ class TxnRow extends StatelessWidget {
 
   // ── Standard rows: expense / income / rebalance ────────────────────────────
 
-  Widget _buildStandard(AppStore store) {
+  Widget _buildStandard(AppLocalizations l, AppStore store) {
     final signed = _signedAmount(store);
     final amountColor = txn.type == TxnType.rebalance
         ? (txn.amount >= 0 ? AppColors.positive : AppColors.negative)
@@ -136,7 +137,7 @@ class TxnRow extends StatelessWidget {
       forceDecimals: signed.abs() % 1 != 0,
     );
 
-    final account = _accountLabel(store);
+    final account = _accountLabel(l, store);
     final balance = _balance;
 
     // One secondary figure on line 2 (spec §4.3): a rebalance's "no cash · value"
@@ -149,7 +150,7 @@ class TxnRow extends StatelessWidget {
         account.isNotEmpty || txn.tags.isNotEmpty || secondary != null;
 
     return Semantics(
-      label: _standardSemantics(store, signed, account, balance),
+      label: _standardSemantics(l, store, signed, account, balance),
       excludeSemantics: true,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -174,7 +175,7 @@ class TxnRow extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.baseline,
                       textBaseline: TextBaseline.alphabetic,
                       children: [
-                        Expanded(child: _highlighted(_title(store), _titleStyle)),
+                        Expanded(child: _highlighted(_title(l, store), _titleStyle)),
                         const SizedBox(width: Insets.sm),
                         amount,
                       ],
@@ -203,7 +204,7 @@ class TxnRow extends StatelessWidget {
 
   // ── Transfers: main Ledger (spec §4.6) ─────────────────────────────────────
 
-  Widget _buildTransferLedger(AppStore store) {
+  Widget _buildTransferLedger(AppLocalizations l, AppStore store) {
     final parties = store.transferParties(txn);
     final fromCur = store.accountById(txn.fromRef)?.currency ?? txn.currency;
     final toCur = store.accountById(txn.toRef)?.currency ?? txn.currency;
@@ -303,7 +304,7 @@ class TxnRow extends StatelessWidget {
 
   // ── Transfers: account-detail perspective (preserved) ──────────────────────
 
-  Widget _buildTransferDetail(AppStore store) {
+  Widget _buildTransferDetail(AppLocalizations l, AppStore store) {
     final parties = store.transferParties(txn);
     final outgoing = txn.fromRef == perspectiveAccountId;
     final toCur = store.accountById(txn.toRef)?.currency ?? txn.currency;
@@ -440,10 +441,10 @@ class TxnRow extends StatelessWidget {
 
   // ── Semantics ──────────────────────────────────────────────────────────────
 
-  String _standardSemantics(
-      AppStore store, double signed, String account, double? balance) {
+  String _standardSemantics(AppLocalizations l, AppStore store, double signed,
+      String account, double? balance) {
     final parts = <String>[
-      _directionWord(signed),
+      _directionWord(l, signed),
       money(signed, currency: txn.currency, signless: true, masked: store.masked),
     ];
     if (balance != null) {
@@ -465,21 +466,21 @@ class TxnRow extends StatelessWidget {
 
   // ── Resolvers (unchanged semantics) ────────────────────────────────────────
 
-  String _accountLabel(AppStore store) {
+  String _accountLabel(AppLocalizations l, AppStore store) {
     if (perspectiveAccountId != null) return '';
     return switch (txn.type) {
       TxnType.expense => store.refName(txn.fromRef),
       TxnType.income => store.refName(txn.toRef),
       TxnType.transfer => '',
-      TxnType.rebalance => 'Revaluation',
+      TxnType.rebalance => l.txnRevaluation,
     };
   }
 
-  String _directionWord(double signed) => switch (txn.type) {
-        TxnType.expense => 'Expense',
-        TxnType.income => 'Income',
-        TxnType.rebalance => 'Revaluation',
-        TxnType.transfer => signed < 0 ? 'Transfer out' : 'Transfer in',
+  String _directionWord(AppLocalizations l, double signed) => switch (txn.type) {
+        TxnType.expense => l.txnTypeExpense,
+        TxnType.income => l.txnTypeIncome,
+        TxnType.rebalance => l.txnRevaluation,
+        TxnType.transfer => signed < 0 ? l.txnTransferOut : l.txnTransferIn,
       };
 
   double _signedAmount(AppStore store) {
@@ -497,10 +498,10 @@ class TxnRow extends StatelessWidget {
     };
   }
 
-  String _title(AppStore store) => switch (txn.type) {
+  String _title(AppLocalizations l, AppStore store) => switch (txn.type) {
         TxnType.expense => store.refName(txn.toRef),
         TxnType.income => store.refName(txn.fromRef),
-        TxnType.transfer => 'Transfer',
+        TxnType.transfer => l.txnTypeTransfer,
         TxnType.rebalance => store.refName(txn.toRef),
       };
 
@@ -558,24 +559,24 @@ class TxnRow extends StatelessWidget {
 
   // ── Chrome: swipe actions + tap target ─────────────────────────────────────
 
-  Widget _swipeWrap(Widget body) {
+  Widget _swipeWrap(AppLocalizations l, Widget body) {
     return SwipeActions(
       actions: [
         SwipeActionItem(
           icon: Icons.edit_rounded,
-          label: 'Edit',
+          label: l.actionEdit,
           color: AppColors.surfaceHigh,
           onTap: onEdit,
         ),
         SwipeActionItem(
           icon: Icons.copy_rounded,
-          label: 'Copy',
+          label: l.actionCopy,
           color: AppColors.info,
           onTap: onCopy,
         ),
         SwipeActionItem(
           icon: Icons.delete_rounded,
-          label: 'Delete',
+          label: l.actionDelete,
           color: AppColors.negative,
           onTap: onDelete,
         ),

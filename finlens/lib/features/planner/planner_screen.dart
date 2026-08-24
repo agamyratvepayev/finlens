@@ -93,7 +93,7 @@ class _PlannerScreenState extends State<PlannerScreen> {
               Insets.md,
             ),
             child: UnderlineTabs(
-              labels: const ['Budgets', 'Goals', 'Schedule'],
+              labels: [AppLocalizations.of(context).plTabBudgets, AppLocalizations.of(context).plTabGoals, AppLocalizations.of(context).plTabSchedule],
               index: _tab,
               onChanged: (i) => setState(() => _tab = i),
             ),
@@ -218,7 +218,8 @@ class _BudgetSummary extends StatelessWidget {
         children: [
           Row(
             children: [
-              Text('LEFT THIS MONTH', style: AppText.label),
+              Text(AppLocalizations.of(context).plLeftThisMonth.toUpperCase(),
+                  style: AppText.label),
               const Spacer(),
               // Neutral grey, never amber: spending outside a budget is a fact,
               // not a warning (spec 5.2).
@@ -231,7 +232,8 @@ class _BudgetSummary extends StatelessWidget {
                       style: noteStyle,
                       color: AppColors.textSecondary,
                     ),
-                    const Text(' unbudgeted', style: noteStyle),
+                    Text(' ${AppLocalizations.of(context).plUnbudgeted}',
+                        style: noteStyle),
                   ],
                 ),
             ],
@@ -254,9 +256,10 @@ class _BudgetSummary extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: Insets.sm),
-              Text('of ', style: AppText.caption),
+              Text(' ${AppLocalizations.of(context).plOf} ', style: AppText.caption),
               AmountText(budget, style: AppText.caption),
-              Text(' budget', style: AppText.caption),
+              Text(' ${AppLocalizations.of(context).plBudgetWord}',
+                  style: AppText.caption),
             ],
           ),
           const SizedBox(height: Insets.md),
@@ -311,13 +314,12 @@ class _BudgetsTab extends StatelessWidget {
     final unbudgeted = store.unbudgetedSpendingCategories(month);
 
     if (budgets.isEmpty && unbudgeted.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.only(top: 56),
+      return Padding(
+        padding: const EdgeInsets.only(top: 56),
         child: EmptyState(
           icon: Icons.donut_small_rounded,
-          title: 'No budgets yet',
-          message:
-              'Give a category a monthly limit and it will show up here.',
+          title: AppLocalizations.of(context).plNoBudgetsYet,
+          message: AppLocalizations.of(context).plNoBudgetsMsg,
         ),
       );
     }
@@ -338,7 +340,7 @@ class _BudgetsTab extends StatelessWidget {
       children: [
         if (budgets.isNotEmpty) ...[
           SectionLabel(
-            'Budgeted',
+            AppLocalizations.of(context).plBudgeted,
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -518,7 +520,7 @@ class _NoBudgetSection extends StatelessWidget {
     return Column(
       children: [
         SectionLabel(
-          'No budget set',
+          AppLocalizations.of(context).plNoBudgetSet,
           trailing: AmountText(
             total,
             style: AppText.label.copyWith(color: AppColors.textSecondary),
@@ -592,7 +594,7 @@ class _NoBudgetRow extends StatelessWidget {
               minimumSize: const Size(0, 0),
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
-            child: const Text('Set'),
+            child: Text(AppLocalizations.of(context).plSet),
           ),
         ],
       ),
@@ -622,7 +624,7 @@ class _GoalsSummary extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Saved toward goals', style: AppText.label),
+          Text(AppLocalizations.of(context).plSavedTowardGoals, style: AppText.label),
           const SizedBox(height: Insets.xs),
           Row(
             crossAxisAlignment: CrossAxisAlignment.baseline,
@@ -680,13 +682,13 @@ class _GoalsTab extends StatelessWidget {
         padding: const EdgeInsets.only(top: 56),
         child: EmptyState(
           icon: Icons.flag_rounded,
-          title: 'No goals yet',
-          message: 'Set a target and FinLens works out the monthly pace.',
+          title: AppLocalizations.of(context).plNoGoalsYet,
+          message: AppLocalizations.of(context).plNoGoalsMsg,
           action: FilledButton.icon(
             onPressed: () =>
                 showQuickAdd(context, type: QuickAddType.newGoal),
             icon: const Icon(Icons.add_rounded, size: 18),
-            label: const Text('New goal'),
+            label: Text(AppLocalizations.of(context).plNewGoal),
             style: FilledButton.styleFrom(
               backgroundColor: AppColors.accent,
               foregroundColor: Colors.white,
@@ -726,11 +728,12 @@ class _GoalRow extends StatelessWidget {
     final tooFast = monthly != null &&
         monthly > store.monthIncome(store.period) - store.monthExpense(store.period);
 
+    final l = AppLocalizations.of(context);
     final subtitle = goal.isComplete
-        ? 'Complete · ready to archive'
+        ? l.plCompleteReady
         : goal.targetDate == null
-            ? 'No target date set'
-            : '${monthYear(goal.targetDate!, AppLocalizations.of(context))} · ${money(monthly ?? 0)}/mo needed';
+            ? l.plNoTargetDate
+            : '${monthYear(goal.targetDate!, l)} · ${money(monthly ?? 0)}${l.plMoNeeded}';
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(
@@ -839,7 +842,7 @@ class _ScheduleSummary extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  'Coming in',
+                  AppLocalizations.of(context).plComingIn,
                   style: AppText.body.copyWith(fontSize: 14),
                 ),
               ),
@@ -855,7 +858,7 @@ class _ScheduleSummary extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  'Going out',
+                  AppLocalizations.of(context).plGoingOut,
                   style: AppText.body.copyWith(fontSize: 14),
                 ),
               ),
@@ -872,9 +875,8 @@ class _ScheduleSummary extends StatelessWidget {
               margin: EdgeInsets.zero,
               color: AppColors.negative,
               icon: Icons.error_outline_rounded,
-              text: '${overdue.length} payment'
-                  '${overdue.length == 1 ? '' : 's'} overdue · '
-                  '${money(store.overdueAmount)}',
+              text: AppLocalizations.of(context)
+                  .plPaymentsOverdue(overdue.length, money(store.overdueAmount)),
             ),
           ],
         ],
@@ -892,10 +894,11 @@ class _ScheduleTab extends StatelessWidget {
   Widget build(BuildContext context) {
     // Spec 5.3 — one timeline ordered by date, never grouped by pay-in /
     // pay-out. Direction survives as icon colour and the ↻ recurring mark.
+    final l = AppLocalizations.of(context);
     final sections = <(String, List<Task>)>[
-      ('Overdue', store.overdueTasks),
-      ('This week', store.thisWeekTasks),
-      ('Later this month', store.laterTasks),
+      (l.schOverdue, store.overdueTasks),
+      (l.schThisWeek, store.thisWeekTasks),
+      (l.schLater, store.laterTasks),
     ].where((s) => s.$2.isNotEmpty).toList();
 
     if (sections.isEmpty) {
@@ -903,13 +906,13 @@ class _ScheduleTab extends StatelessWidget {
         padding: const EdgeInsets.only(top: 56),
         child: EmptyState(
           icon: Icons.event_available_rounded,
-          title: 'Nothing scheduled',
-          message: 'Bills, salaries and subscriptions you plan will land here.',
+          title: AppLocalizations.of(context).plNothingScheduled,
+          message: AppLocalizations.of(context).plNothingSchedMsg,
           action: FilledButton.icon(
             onPressed: () =>
                 showQuickAdd(context, type: QuickAddType.newTask),
             icon: const Icon(Icons.add_rounded, size: 18),
-            label: const Text('New task'),
+            label: Text(AppLocalizations.of(context).plNewTask),
             style: FilledButton.styleFrom(
               backgroundColor: AppColors.accent,
               foregroundColor: Colors.white,

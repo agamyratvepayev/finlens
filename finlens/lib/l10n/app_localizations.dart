@@ -1199,6 +1199,192 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{name} budget {before} → {after}'**
   String txnBudgetImpact(Object name, Object before, Object after);
+
+  /// No description provided for @txnRevaluation.
+  ///
+  /// In en, this message translates to:
+  /// **'Revaluation'**
+  String get txnRevaluation;
+
+  /// No description provided for @txnTransferOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Transfer out'**
+  String get txnTransferOut;
+
+  /// No description provided for @txnTransferIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Transfer in'**
+  String get txnTransferIn;
+
+  /// No description provided for @plTabBudgets.
+  ///
+  /// In en, this message translates to:
+  /// **'Budgets'**
+  String get plTabBudgets;
+
+  /// No description provided for @plTabGoals.
+  ///
+  /// In en, this message translates to:
+  /// **'Goals'**
+  String get plTabGoals;
+
+  /// No description provided for @plTabSchedule.
+  ///
+  /// In en, this message translates to:
+  /// **'Schedule'**
+  String get plTabSchedule;
+
+  /// No description provided for @plNoBudgetsYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No budgets yet'**
+  String get plNoBudgetsYet;
+
+  /// No description provided for @plNoBudgetsMsg.
+  ///
+  /// In en, this message translates to:
+  /// **'Give a category a monthly limit and it will show up here.'**
+  String get plNoBudgetsMsg;
+
+  /// No description provided for @plBudgeted.
+  ///
+  /// In en, this message translates to:
+  /// **'Budgeted'**
+  String get plBudgeted;
+
+  /// No description provided for @plNoBudgetSet.
+  ///
+  /// In en, this message translates to:
+  /// **'No budget set'**
+  String get plNoBudgetSet;
+
+  /// No description provided for @plSet.
+  ///
+  /// In en, this message translates to:
+  /// **'Set'**
+  String get plSet;
+
+  /// No description provided for @plNoGoalsYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No goals yet'**
+  String get plNoGoalsYet;
+
+  /// No description provided for @plNoGoalsMsg.
+  ///
+  /// In en, this message translates to:
+  /// **'Set a target and FinLens works out the monthly pace.'**
+  String get plNoGoalsMsg;
+
+  /// No description provided for @plNewGoal.
+  ///
+  /// In en, this message translates to:
+  /// **'New goal'**
+  String get plNewGoal;
+
+  /// No description provided for @plNewTask.
+  ///
+  /// In en, this message translates to:
+  /// **'New task'**
+  String get plNewTask;
+
+  /// No description provided for @plCompleteReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete · ready to archive'**
+  String get plCompleteReady;
+
+  /// No description provided for @plNoTargetDate.
+  ///
+  /// In en, this message translates to:
+  /// **'No target date set'**
+  String get plNoTargetDate;
+
+  /// No description provided for @plMoNeeded.
+  ///
+  /// In en, this message translates to:
+  /// **'/mo needed'**
+  String get plMoNeeded;
+
+  /// No description provided for @plComingIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Coming in'**
+  String get plComingIn;
+
+  /// No description provided for @plGoingOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Going out'**
+  String get plGoingOut;
+
+  /// No description provided for @schOverdue.
+  ///
+  /// In en, this message translates to:
+  /// **'Overdue'**
+  String get schOverdue;
+
+  /// No description provided for @schThisWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'This week'**
+  String get schThisWeek;
+
+  /// No description provided for @schLater.
+  ///
+  /// In en, this message translates to:
+  /// **'Later this month'**
+  String get schLater;
+
+  /// No description provided for @plNothingScheduled.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing scheduled'**
+  String get plNothingScheduled;
+
+  /// No description provided for @plNothingSchedMsg.
+  ///
+  /// In en, this message translates to:
+  /// **'Bills, salaries and subscriptions you plan will land here.'**
+  String get plNothingSchedMsg;
+
+  /// No description provided for @plLeftThisMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Left this month'**
+  String get plLeftThisMonth;
+
+  /// No description provided for @plUnbudgeted.
+  ///
+  /// In en, this message translates to:
+  /// **'unbudgeted'**
+  String get plUnbudgeted;
+
+  /// No description provided for @plOf.
+  ///
+  /// In en, this message translates to:
+  /// **'of'**
+  String get plOf;
+
+  /// No description provided for @plBudgetWord.
+  ///
+  /// In en, this message translates to:
+  /// **'budget'**
+  String get plBudgetWord;
+
+  /// No description provided for @plSavedTowardGoals.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved toward goals'**
+  String get plSavedTowardGoals;
+
+  /// No description provided for @plPaymentsOverdue.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{{count} payment overdue} other{{count} payments overdue}} · {amount}'**
+  String plPaymentsOverdue(int count, Object amount);
 }
 
 class _AppLocalizationsDelegate
