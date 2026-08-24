@@ -3282,6 +3282,12 @@ abstract class AppLocalizations {
   /// **'Remaining'**
   String get ssRemaining;
 
+  /// No description provided for @ssOverBy.
+  ///
+  /// In en, this message translates to:
+  /// **'Over by'**
+  String get ssOverBy;
+
   /// No description provided for @ssSplitEvenly.
   ///
   /// In en, this message translates to:

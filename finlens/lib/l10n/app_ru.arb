@@ -546,6 +546,7 @@
   "ssRemoveLine": "Убрать строку",
   "ssAddCategory": "Добавить категорию",
   "ssRemaining": "Осталось",
+  "ssOverBy": "Превышение на",
   "ssSplitEvenly": "Поровну",
   "ssRestToLast": "Остаток в последнюю",
   "ssApplySplit": "Применить разбивку",

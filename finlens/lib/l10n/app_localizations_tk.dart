@@ -1988,6 +1988,9 @@ class AppLocalizationsTk extends AppLocalizations {
   String get ssRemaining => 'Galan';
 
   @override
+  String get ssOverBy => 'Artyk';
+
+  @override
   String get ssSplitEvenly => 'Deň böl';
 
   @override

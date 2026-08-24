@@ -1988,6 +1988,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get ssRemaining => 'Kalan';
 
   @override
+  String get ssOverBy => 'Fazla';
+
+  @override
   String get ssSplitEvenly => 'Eşit böl';
 
   @override

@@ -1991,6 +1991,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ssRemaining => 'Remaining';
 
   @override
+  String get ssOverBy => 'Over by';
+
+  @override
   String get ssSplitEvenly => 'Split evenly';
 
   @override

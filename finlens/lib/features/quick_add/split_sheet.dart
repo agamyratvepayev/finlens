@@ -105,9 +105,9 @@ class _SplitSheetState extends State<_SplitSheet> {
   @override
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
+    final masked = store.masked;
     final remaining = splitRemaining(widget.total, _lines);
     final balanced = splitBalanced(widget.total, _lines);
-    final zero = remaining.abs() < kMoneyEpsilon;
 
     return SafeArea(
       child: Padding(
@@ -125,14 +125,14 @@ class _SplitSheetState extends State<_SplitSheet> {
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
-            _header(),
+            _header(masked),
             Flexible(
               child: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    _linesCard(store),
-                    _remainingRow(remaining, zero),
+                    _linesCard(store, masked),
+                    _remainingRow(remaining, masked),
                     _helpers(),
                   ],
                 ),
@@ -160,7 +160,7 @@ class _SplitSheetState extends State<_SplitSheet> {
     );
   }
 
-  Widget _header() => Padding(
+  Widget _header(bool masked) => Padding(
         padding: const EdgeInsets.fromLTRB(16, 14, 14, 12),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -178,7 +178,8 @@ class _SplitSheetState extends State<_SplitSheet> {
                   const SizedBox(height: 3),
                   Text(
                     AppLocalizations.of(context).ssTotalCovers(
-                        money(widget.total, currency: widget.currency),
+                        money(widget.total,
+                            currency: widget.currency, masked: masked),
                         widget.accountName),
                     style: const TextStyle(
                         fontSize: 12, color: AppColors.textSecondary),
@@ -196,7 +197,7 @@ class _SplitSheetState extends State<_SplitSheet> {
         ),
       );
 
-  Widget _linesCard(AppStore store) => Container(
+  Widget _linesCard(AppStore store, bool masked) => Container(
         margin: const EdgeInsets.fromLTRB(14, 0, 14, 8),
         decoration: BoxDecoration(
           color: AppColors.sheetCard,
@@ -209,7 +210,7 @@ class _SplitSheetState extends State<_SplitSheet> {
               if (i > 0)
                 Container(
                     height: 1, color: Colors.white.withValues(alpha: 0.07)),
-              _lineRow(store, i),
+              _lineRow(store, i, masked),
             ],
             Container(height: 1, color: Colors.white.withValues(alpha: 0.07)),
             _addRow(),
@@ -217,10 +218,13 @@ class _SplitSheetState extends State<_SplitSheet> {
         ),
       );
 
-  Widget _lineRow(AppStore store, int index) {
+  Widget _lineRow(AppStore store, int index, bool masked) {
     final line = _lines[index];
     final category = store.categoryById(line.categoryId);
     final color = category?.color ?? AppColors.textSecondary;
+    // A single line alone exceeding the payment is marked in the negative
+    // colour (spec §2). Equal-to-total is fine; only a real overshoot is red.
+    final overLine = line.amount - widget.total > kMoneyEpsilon;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
       child: Row(
@@ -264,12 +268,12 @@ class _SplitSheetState extends State<_SplitSheet> {
             behavior: HitTestBehavior.opaque,
             onTap: () => _editAmount(index),
             child: Text(
-              money(line.amount, currency: widget.currency),
-              style: const TextStyle(
+              money(line.amount, currency: widget.currency, masked: masked),
+              style: TextStyle(
                 fontSize: 14.5,
                 fontWeight: FontWeight.w600,
-                color: Colors.white,
-                fontFeatures: [FontFeature.tabularFigures()],
+                color: overLine ? AppColors.negative : Colors.white,
+                fontFeatures: const [FontFeature.tabularFigures()],
               ),
             ),
           ),
@@ -310,28 +314,57 @@ class _SplitSheetState extends State<_SplitSheet> {
         ),
       );
 
-  Widget _remainingRow(double remaining, bool zero) => Padding(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-        child: Row(
-          children: [
-            Text(AppLocalizations.of(context).ssRemaining,
-                style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
-            const Spacer(),
-            Semantics(
-              liveRegion: true,
-              child: Text(
-                money(remaining, currency: widget.currency, showSign: true),
-                style: TextStyle(
-                  fontSize: 14.5,
-                  fontWeight: FontWeight.w600,
-                  color: zero ? AppColors.positive : AppColors.negative,
-                  fontFeatures: const [FontFeature.tabularFigures()],
-                ),
+  /// Three named states (spec §2). The word carries the meaning so the figure
+  /// never needs a sign — an overage is announced as a word, not just a colour:
+  ///   remaining >  ε → "Remaining"  · signed figure   · textSecondary
+  ///   |remaining| ≤ ε → "Remaining"  · $0             · positive
+  ///   remaining < −ε → "Over by"    · unsigned figure · negative
+  Widget _remainingRow(double remaining, bool masked) {
+    final l = AppLocalizations.of(context);
+    final over = remaining < -kMoneyEpsilon;
+    final zero = remaining.abs() < kMoneyEpsilon;
+    final word = over ? l.ssOverBy : l.ssRemaining;
+    final figure = over
+        ? money(remaining.abs(), currency: widget.currency, masked: masked)
+        : zero
+            ? money(0, currency: widget.currency, masked: masked)
+            : money(remaining,
+                currency: widget.currency, showSign: true, masked: masked);
+    final color = over
+        ? AppColors.negative
+        : zero
+            ? AppColors.positive
+            : AppColors.textSecondary;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+      child: Row(
+        children: [
+          ExcludeSemantics(
+            child: Text(word,
+                style:
+                    TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+          ),
+          const Spacer(),
+          // liveRegion announces the change; its label carries the word too so
+          // a screen reader hears "Over by $500", not just the number.
+          Semantics(
+            liveRegion: true,
+            excludeSemantics: true,
+            label: '$word $figure',
+            child: Text(
+              figure,
+              style: TextStyle(
+                fontSize: 14.5,
+                fontWeight: FontWeight.w600,
+                color: color,
+                fontFeatures: const [FontFeature.tabularFigures()],
               ),
             ),
-          ],
-        ),
-      );
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _helpers() => Padding(
         padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
@@ -413,69 +446,100 @@ class _SplitSheetState extends State<_SplitSheet> {
   }
 
   Future<void> _editAmount(int index) async {
-    final controller = TextEditingController(
-        text: _lines[index].amount == 0 ? '' : '${_lines[index].amount}');
+    // The editor owns its own controller (see [_AmountEditor]): disposing it
+    // here, right after the future resolves on Navigator.pop, would tear the
+    // controller out while the route's exit animation still has the TextField
+    // mounted and listening — the '_dependents.isEmpty' assertion crash.
     final value = await showModalBottomSheet<double>(
       context: context,
       isScrollControlled: true,
       backgroundColor: AppColors.surfaceAlt,
-      builder: (sheetContext) => Padding(
-        padding: EdgeInsets.only(
-            bottom: MediaQuery.viewInsetsOf(sheetContext).bottom),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(AppLocalizations.of(context).qaAmount, style: AppText.rowTitle),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: controller,
-                  autofocus: true,
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
-                  inputFormatters: [
-                    FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
-                  ],
-                  cursorColor: AppColors.accent,
-                  style: AppText.body.copyWith(fontSize: 16),
-                  decoration: InputDecoration(
-                    filled: true,
-                    fillColor: AppColors.fieldCard,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide.none,
-                    ),
+      builder: (_) => _AmountEditor(initial: _lines[index].amount),
+    );
+    if (value != null && mounted) {
+      setState(() => _lines[index].amount = value);
+    }
+  }
+}
+
+/// The amount-entry sheet body. A [StatefulWidget] so it owns its
+/// [TextEditingController] for the widget's whole lifetime and disposes it in
+/// [dispose] — which Flutter calls only after the route is fully gone, so the
+/// TextField is never listening to a dead controller (the split-sheet crash).
+class _AmountEditor extends StatefulWidget {
+  const _AmountEditor({required this.initial});
+
+  final double initial;
+
+  @override
+  State<_AmountEditor> createState() => _AmountEditorState();
+}
+
+class _AmountEditorState extends State<_AmountEditor> {
+  late final TextEditingController _controller = TextEditingController(
+      text: widget.initial == 0 ? '' : '${widget.initial}');
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _submit() =>
+      Navigator.of(context).pop(double.tryParse(_controller.text));
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding:
+          EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(AppLocalizations.of(context).qaAmount, style: AppText.rowTitle),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _controller,
+                autofocus: true,
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+                ],
+                cursorColor: AppColors.accent,
+                style: AppText.body.copyWith(fontSize: 16),
+                decoration: InputDecoration(
+                  filled: true,
+                  fillColor: AppColors.fieldCard,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide.none,
                   ),
-                  onSubmitted: (v) =>
-                      Navigator.of(sheetContext).pop(double.tryParse(v)),
                 ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton(
-                    onPressed: () => Navigator.of(sheetContext)
-                        .pop(double.tryParse(controller.text)),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: AppColors.accent,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                    ),
-                    child: Text(AppLocalizations.of(context).actionDone),
+                onSubmitted: (_) => _submit(),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: _submit,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.accent,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
+                  child: Text(AppLocalizations.of(context).actionDone),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
     );
-    controller.dispose();
-    if (value != null && mounted) {
-      setState(() => _lines[index].amount = value);
-    }
   }
 }
 

@@ -692,6 +692,7 @@
   "ssRemoveLine": "Remove line",
   "ssAddCategory": "Add category",
   "ssRemaining": "Remaining",
+  "ssOverBy": "Over by",
   "ssSplitEvenly": "Split evenly",
   "ssRestToLast": "Rest to last",
   "ssApplySplit": "Apply split",

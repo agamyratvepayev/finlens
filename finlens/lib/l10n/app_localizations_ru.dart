@@ -2030,6 +2030,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get ssRemaining => 'Осталось';
 
   @override
+  String get ssOverBy => 'Превышение на';
+
+  @override
   String get ssSplitEvenly => 'Поровну';
 
   @override
