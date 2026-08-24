@@ -345,11 +345,37 @@ class _FilterSheetState extends State<_FilterSheet> {
 
   int get _liveCount => widget.matchCount(_snapshot());
 
+  /// A section narrows the list only when its selection is a *proper, non-empty
+  /// subset* of the items available for the current direction. Both an empty
+  /// selection and a complete one show every item, so neither is a filter —
+  /// counting a complete selection as active is exactly the Select-all defect
+  /// this removes: the list stays at "24 of 24" while Reset and the funnel light
+  /// up over a selection that changed nothing.
+  ///
+  /// Completeness is measured against [FilterSection.itemsFor] — the same list
+  /// Select all fills from — so the two can never disagree. A section with no
+  /// items for the current direction has an empty selection (n == 0) and never
+  /// filters, so a zero length is safe.
+  ///
+  /// Known limitation (accepted, per spec §1): a selection saved while complete
+  /// is stored as an explicit id set, not as "all". If a category/account is
+  /// created afterwards the stored set is no longer complete, so it silently
+  /// becomes a real filter and hides the new item. On the Ledger tab this is
+  /// short-lived — the filter is a session lens reset on every period change; on
+  /// the scoped screens it persists. Normalising a complete selection to an
+  /// empty one on write would fix it but would make Select all visibly inert
+  /// again — the defect being removed — so the behaviour is left as-is.
+  bool _sectionFilters(FilterSection s) {
+    final n = _selFor(s.key).length;
+    return n > 0 && n < s.itemsFor(_direction).length;
+  }
+
   bool get _isActive =>
       _direction != null ||
       _min != null ||
       _max != null ||
-      _sel.values.any((s) => s.isNotEmpty);
+      widget.blocks.any(
+          (b) => b is SectionFilterBlock && _sectionFilters(b.section));
 
   bool get _rangeError => _min != null && _max != null && _min! > _max!;
 
@@ -444,6 +470,13 @@ class _FilterSheetState extends State<_FilterSheet> {
             ),
           ),
           const Spacer(),
+          // Reset lives in the header — matching the Balance filter sheet's
+          // placement and disabled treatment (spec §2). A dim text button reads
+          // as "unavailable" here; dimming it in the footer beside the loud
+          // filled button read as "broken", and hiding it there resized the
+          // primary button on the first selection.
+          _resetButton(),
+          const SizedBox(width: 12),
           // Immediate-apply means there is no cancel: ✕ closes with the current
           // filter already applied — identical outcome to Show … .
           Semantics(
@@ -468,6 +501,34 @@ class _FilterSheetState extends State<_FilterSheet> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  /// The header Reset — same text style and accent as before, 35% opacity and
+  /// non-interactive when nothing filters. Placement, size and disabled
+  /// treatment match [balance_filter_sheet]'s header Reset (spec §2).
+  Widget _resetButton() {
+    final canReset = _isActive;
+    return Semantics(
+      button: true,
+      enabled: canReset,
+      label: AppLocalizations.of(context).ldgResetFilter,
+      child: Opacity(
+        opacity: canReset ? 1 : 0.35,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: canReset ? _reset : null,
+          child: Text(
+            AppLocalizations.of(context).actionReset,
+            style: const TextStyle(
+              fontSize: 15,
+              height: 1.2,
+              fontWeight: FontWeight.w500,
+              color: AppColors.accent,
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -643,14 +704,25 @@ class _FilterSheetState extends State<_FilterSheet> {
     final all = s.itemsFor(_direction);
     final folded = foldSearch(_query.trim());
     final querying = widget.searchable && folded.isNotEmpty;
-    // Select all targets the *visible* items — every item normally, only the
-    // matches while a query is active (spec §3, the "select everything named X"
-    // workflow).
+    // Select all / Clear target the *visible* items — every item normally, only
+    // the matches while a query is active (spec §3/§4, the "select everything
+    // named X" workflow).
     final visibleIds = (querying
             ? all.where((i) => foldSearch(i.label).contains(folded))
             : all)
         .map((i) => i.id)
         .toList();
+
+    final sel = _sel[s.key] ?? const <String>{};
+    // Complete against the same list Select all fills from, so "· all" and
+    // "not a filter" (see [_sectionFilters]) agree. Partial otherwise.
+    final complete = selectedCount > 0 && selectedCount >= all.length;
+    // With a query up, the toggle follows the visible matches: Select all while
+    // any visible match is unselected, Clear once they all are — mirroring how
+    // the two operate. Without a query, any selection offers Clear (spec §4).
+    final showClear = querying
+        ? visibleIds.isNotEmpty && visibleIds.every(sel.contains)
+        : selectedCount > 0;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(2, 13, 2, 6),
@@ -672,8 +744,11 @@ class _FilterSheetState extends State<_FilterSheet> {
           if (selectedCount > 0)
             Padding(
               padding: const EdgeInsets.only(left: 6),
+              // "· all" over "· 14 selected": the number carries nothing when it
+              // equals the total, and the word says this section isn't narrowing
+              // anything (spec §4).
               child: Text(
-                '· $selectedCount selected',
+                complete ? '· all' : '· $selectedCount selected',
                 style: const TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
@@ -684,22 +759,28 @@ class _FilterSheetState extends State<_FilterSheet> {
           const Spacer(),
           Semantics(
             button: true,
-            label: selectedCount == 0
-                ? AppLocalizations.of(context).ldgSelectAllIn(s.label)
-                : AppLocalizations.of(context).ldgClearSelection(s.label),
+            label: showClear
+                ? AppLocalizations.of(context).ldgClearSelection(s.label)
+                : AppLocalizations.of(context).ldgSelectAllIn(s.label),
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
               onTap: () {
-                if (selectedCount == 0) {
-                  _apply(() => _sel[s.key] = {...visibleIds});
+                if (showClear) {
+                  // Clear only the visible matches under a query, so selections
+                  // the query is hiding survive (spec §4); otherwise clear all.
+                  _apply(() => querying
+                      ? _selFor(s.key).removeAll(visibleIds)
+                      : _selFor(s.key).clear());
                 } else {
-                  _apply(() => _selFor(s.key).clear());
+                  // Add (not replace) so selections hidden by the query survive:
+                  // Select all adds the remaining visible matches only.
+                  _apply(() => _selFor(s.key).addAll(visibleIds));
                 }
               },
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
                 child: Text(
-                  selectedCount == 0 ? AppLocalizations.of(context).ldgSelectAll : AppLocalizations.of(context).ldgClear,
+                  showClear ? AppLocalizations.of(context).ldgClear : AppLocalizations.of(context).ldgSelectAll,
                   style: const TextStyle(
                     fontSize: 12.5,
                     fontWeight: FontWeight.w600,
@@ -810,62 +891,40 @@ class _FilterSheetState extends State<_FilterSheet> {
 
   Widget _footer() {
     final bottom = MediaQuery.paddingOf(context).bottom;
-    final canReset = _isActive;
+    final l = AppLocalizations.of(context);
+    // When the result is everything the button's only job is to close, so it
+    // says Done; the count returns the moment it means something (spec §3).
+    // Keyed off the outcome (_liveCount), not _isActive, on purpose: an amount
+    // range that happens to match every transaction leaves Reset live (a filter
+    // is set) while the button reads Done (the result is everything).
+    final label = _liveCount < widget.total
+        ? l.ldgShowCountOf('$_liveCount', '${widget.total}')
+        : l.actionDone;
     return Container(
       decoration: const BoxDecoration(
         border: Border(top: BorderSide(color: AppColors.divider, width: 1)),
       ),
       padding: EdgeInsets.fromLTRB(16, 11, 16, 13 + bottom),
-      child: Row(
-        children: [
-          Semantics(
-            button: true,
-            enabled: canReset,
-            label: AppLocalizations.of(context).ldgResetFilter,
-            child: Opacity(
-              opacity: canReset ? 1 : 0.35,
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: canReset ? _reset : null,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
-                  child: Text(
-                    AppLocalizations.of(context).actionReset,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w500,
-                      color: AppColors.accent,
-                    ),
-                  ),
-                ),
-              ),
-            ),
+      child: SizedBox(
+        width: double.infinity,
+        height: 47,
+        child: FilledButton(
+          // Closing on a zero result is legitimate — the list's empty state
+          // explains — so the button stays enabled at 0.
+          onPressed: () => Navigator.of(context).pop(),
+          style: FilledButton.styleFrom(
+            backgroundColor: AppColors.accent,
+            foregroundColor: Colors.white,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
           ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: SizedBox(
-              height: 47,
-              child: FilledButton(
-                // Closing on a zero result is legitimate — the list's empty
-                // state explains — so the button stays enabled at 0.
-                onPressed: () => Navigator.of(context).pop(),
-                style: FilledButton.styleFrom(
-                  backgroundColor: AppColors.accent,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14)),
-                ),
-                child: Text(
-                  AppLocalizations.of(context).ldgShowCountOf('$_liveCount', '${widget.total}'),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                      fontSize: 16, fontWeight: FontWeight.w600),
-                ),
-              ),
-            ),
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
           ),
-        ],
+        ),
       ),
     );
   }

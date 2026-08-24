@@ -147,6 +147,27 @@ Finder _rowCount(String name, String count) => find.descendant(
       matching: find.text(count),
     );
 
+/// The opacity the header Reset is rendered at — 1.0 when a real filter exists,
+/// 0.35 when nothing narrows the list.
+double _resetOpacity(WidgetTester tester) => tester
+    .widget<Opacity>(
+      find.ancestor(of: find.text('Reset'), matching: find.byType(Opacity)).first,
+    )
+    .opacity;
+
+/// A one-category / no-transfer store, so selecting the sole category is a
+/// *complete* selection that still matches every transaction.
+AppStore _singleCatStore() => AppStore(
+      accounts: [_acc('a1', 'Main Checking')],
+      categories: [_cat('c-food', 'Groceries', CategoryType.expense)],
+      txns: [
+        _exp('t1', 10, 'a1', 'c-food', 2),
+        _exp('t2', 20, 'a1', 'c-food', 3),
+      ],
+      goals: const [],
+      tasks: const [],
+    );
+
 void main() {
   testWidgets('funnel opens the unified sheet in spec order (§6)',
       (tester) async {
@@ -159,8 +180,10 @@ void main() {
     expect(find.text('ACCOUNTS'), findsOneWidget);
     expect(find.text('TAGS'), findsOneWidget);
     expect(find.text('AMOUNT'), findsOneWidget);
-    // Sticky footer live count, nothing selected → everything passes.
-    expect(find.text('Show 24 of 24'), findsOneWidget);
+    // Nothing selected → the result is everything, so the button reads Done, not
+    // "Show 24 of 24" (spec §3: the count returns only when it means something).
+    expect(find.text('Done'), findsOneWidget);
+    expect(find.text('Show 24 of 24'), findsNothing);
   });
 
   testWidgets('per-item counts: Groceries 4, Eating out 5, Housing 0 dimmed',
@@ -222,15 +245,21 @@ void main() {
     await tester.tap(selectAll.at(1));
     await tester.pump();
 
-    // All three accounts touch every txn → still 24; header flips to Clear.
-    expect(find.text('Show 24 of 24'), findsOneWidget);
-    expect(find.text('· 3 selected'), findsOneWidget);
+    // A complete selection is not a filter (spec §1/§4): the result is still
+    // everything → the button stays on Done, the header reads "· all", and the
+    // control flips to Clear. Reset stays disabled.
+    expect(find.text('Done'), findsOneWidget);
+    expect(find.text('· all'), findsOneWidget);
+    expect(find.text('· 3 selected'), findsNothing);
     expect(find.text('Clear'), findsWidgets);
 
-    // Untick the Card account → the everything-except-Card lens; count drops.
+    // Untick the Card account → the everything-except-Card lens; a real filter
+    // now, so the header switches to a count and the button to "Show N of 24".
     await tester.tap(find.widgetWithText(InkWell, 'Card'));
     await tester.pump();
-    expect(find.text('Show 24 of 24'), findsNothing);
+    expect(find.text('· all'), findsNothing);
+    expect(find.text('· 2 selected'), findsOneWidget);
+    expect(find.text('Done'), findsNothing);
     expect(find.textContaining('of 24'), findsOneWidget);
   });
 
@@ -302,8 +331,8 @@ void main() {
     await tester.tap(find.text('Reset'));
     await tester.pump();
 
-    // Back to the unfiltered lens.
-    expect(find.text('Show 24 of 24'), findsOneWidget);
+    // Back to the unfiltered lens: the result is everything → button reads Done.
+    expect(find.text('Done'), findsOneWidget);
     expect(find.text('· 1 selected'), findsNothing);
   });
 
@@ -335,8 +364,122 @@ void main() {
     await tester.pump();
     expect(find.byIcon(Icons.filter_alt_outlined), findsOneWidget);
 
-    // Reopening shows an empty filter over the new (empty) period.
+    // Reopening shows an empty filter over the new (empty) period: 0 of 0 is
+    // still "everything", so the button reads Done (spec §3), not "Show 0 of 0".
     await _openSheet(tester);
-    expect(find.text('Show 0 of 0'), findsOneWidget);
+    expect(find.text('Done'), findsOneWidget);
+  });
+
+  // ── §1/§3/§4 — a complete selection is not a filter ────────────────────────
+
+  testWidgets('empty state: Reset dim in the header, footer button reads Done',
+      (tester) async {
+    await _pump(tester, _store());
+    await _openSheet(tester);
+
+    // Reset moved into the header (spec §2) and is disabled while nothing filters.
+    expect(find.text('Reset'), findsOneWidget);
+    expect(_resetOpacity(tester), 0.35);
+    // The single full-width footer button (no second control beside it).
+    expect(find.text('Done'), findsOneWidget);
+    expect(find.textContaining('Show'), findsNothing);
+  });
+
+  testWidgets(
+      'Select all (accounts) is complete, not a filter: Reset stays disabled, '
+      'button stays Done, header reads · all', (tester) async {
+    await _pump(tester, _store());
+    await _openSheet(tester);
+
+    // ACCOUNTS Select all (2nd control); all three accounts touch every txn.
+    await tester.tap(find.text('Select all').at(1));
+    await tester.pump();
+
+    expect(find.text('· all'), findsOneWidget);
+    expect(find.text('Done'), findsOneWidget); // result is still everything
+    expect(_resetOpacity(tester), 0.35); // complete → not a filter → Reset dim
+  });
+
+  testWidgets(
+      'unticking one item wakes Reset, header count and button together',
+      (tester) async {
+    await _pump(tester, _store());
+    await _openSheet(tester);
+
+    await tester.tap(find.text('Select all').at(1)); // accounts → complete
+    await tester.pump();
+    // Sanity: nothing narrows yet.
+    expect(_resetOpacity(tester), 0.35);
+
+    // Untick Card → a proper subset → a real filter exists now.
+    await tester.tap(find.widgetWithText(InkWell, 'Card'));
+    await tester.pump();
+
+    expect(_resetOpacity(tester), 1.0); // Reset live
+    expect(find.text('· 2 selected'), findsOneWidget); // header count returns
+    expect(find.text('· all'), findsNothing);
+    expect(find.text('Show 18 of 24'), findsOneWidget); // button shows the count
+    expect(find.text('Done'), findsNothing);
+  });
+
+  testWidgets('single-item section: selecting the sole item is not a filter',
+      (tester) async {
+    await _pump(tester, _singleCatStore());
+    await _openSheet(tester);
+
+    // One category → Select all fills it (complete). Every txn is that category
+    // and there are no transfers, so the result stays everything.
+    await tester.tap(find.text('Select all').first);
+    await tester.pump();
+
+    expect(find.text('· all'), findsOneWidget);
+    expect(find.text('Done'), findsOneWidget);
+    expect(_resetOpacity(tester), 0.35);
+  });
+
+  testWidgets('button reads Done at N == total, Show N of M below it',
+      (tester) async {
+    await _pump(tester, _store());
+    await _openSheet(tester);
+
+    // Nothing selected → everything → Done.
+    expect(find.text('Done'), findsOneWidget);
+
+    // A direction narrows to the 20 expenses → the count returns.
+    await tester.tap(find.text('Expenses'));
+    await tester.pump();
+    expect(find.text('Done'), findsNothing);
+    expect(find.text('Show 20 of 24'), findsOneWidget);
+    expect(_resetOpacity(tester), 1.0); // direction set → a filter → Reset live
+  });
+
+  testWidgets('Clear under an active query deselects only the visible matches',
+      (tester) async {
+    await _pump(tester, _store());
+    await _openSheet(tester);
+
+    // Select Savings with no query.
+    await tester.tap(find.widgetWithText(InkWell, 'Savings'));
+    await tester.pump();
+    expect(find.text('· 1 selected'), findsOneWidget);
+
+    // Query "ca" → only the Card account matches; Savings is hidden.
+    await tester.enterText(find.byKey(const ValueKey('filter-search')), 'ca');
+    await tester.pump();
+    expect(find.text('Card'), findsOneWidget);
+    expect(find.text('Savings'), findsNothing);
+
+    // Select the visible match, then Clear — which must touch Card only, not the
+    // hidden Savings selection (spec §4).
+    await tester.tap(find.widgetWithText(InkWell, 'Card'));
+    await tester.pump();
+    await tester.tap(find.text('Clear'));
+    await tester.pump();
+
+    // Drop the query — the Savings selection made earlier has survived.
+    await tester.enterText(find.byKey(const ValueKey('filter-search')), '');
+    await tester.pump();
+    expect(find.text('· 1 selected'), findsOneWidget);
+    expect(find.text('· all'), findsNothing);
   });
 }
