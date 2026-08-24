@@ -203,6 +203,15 @@ class AppStore extends ChangeNotifier {
   CustomOrder _balanceOrder = const CustomOrder();
   CustomOrder get balanceOrder => _balanceOrder;
 
+  /// True only when the list is genuinely not in its default order. Custom with
+  /// nothing arranged yet renders identically to the default, so it must not
+  /// claim to be active — an indicator that fires while nothing on screen has
+  /// changed teaches the user to ignore it. Lives here beside [balanceSort] so
+  /// the sort sheet and the toolbar indicator cannot drift apart.
+  bool get sortIsActive =>
+      _balanceSort != AccountSort.defaultSort &&
+      (_balanceSort != AccountSort.custom || _balanceOrder.isConfigured);
+
   /// Selecting an option in the SORT sheet. Persisted so the choice survives a
   /// relaunch, alongside the custom order.
   void setBalanceSort(AccountSort sort) {

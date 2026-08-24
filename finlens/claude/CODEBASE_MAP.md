@@ -807,7 +807,7 @@ holds everywhere.
 | `SectionLabel` | screen_header.dart | Uppercase section label |
 | `SegmentedPicker<T>` | screen_header.dart | Generic segmented control (New/Edit Goal type picker) |
 | **`SectionIndicator`** | [section_header.dart](lib/shared/widgets/section_header.dart) | Label + page dots, tap advances/wraps (Balance's section switcher) |
-| **`ToolCluster` / `Tool`** | section_header.dart | **The 3-button tool row.** 30×28, radius `Radii.sm`, 5px gaps, `showDot` for non-default state, `filled` for on-toggles |
+| **`ToolCluster` / `Tool`** | section_header.dart | **The tool row.** 30×28, radius `Radii.sm`, 5px gaps, `filled` for on-toggles, `iconColor`/`semanticValue` to brighten a glyph one step for an active state (Sort + Filter). No floating dot. |
 | `HorizontalSectionSwipe` | section_header.dart | Horizontal swipe that won't steal vertical scroll (55px threshold, 1.6× dominance) |
 | `TxnRow` | [txn_row.dart](lib/shared/widgets/txn_row.dart) | Ledger-tab + account-detail row (**signed** amounts) |
 | `confirmDeleteTxn()` | txn_row.dart | Builds the impact lines and shows the destructive sheet |
@@ -877,8 +877,9 @@ narrowing: a filtered section auto-opens all its groups.
 - **Row 2 (`AnimatedSwitcher`):** hero amount (`AppText.heroAmount`, `FittedBox`)
   + `"as of <date>"` line when historical, beside a 3-button **`ToolCluster`**:
   - **Sort** (`swap_vert`) → `_pickSort()` bottom sheet, 4 `AccountSort` options,
-    applies immediately; `showDot` when non-default. **Sorts accounts *within*
-    each group only — group order never changes.**
+    applies immediately; the glyph brightens one step (`iconColor`, gated on
+    `store.sortIsActive`) when the order is genuinely non-default. **Sorts
+    accounts *within* each group only — group order never changes.**
   - **Expand/collapse all** (`unfold_more`/`unfold_less`, `filled` when
     collapsed) → `_toggleAll()`.
   - **Search** (`search`) → replaces row 2 in place with a `TextField` +
@@ -989,8 +990,6 @@ stays one level deep.
 >
 > - **Sort** — [scoped_ledger_screen.dart:325](lib/features/ledger/scoped_ledger_screen.dart:325)
 > - **Filter** — [scoped_ledger_screen.dart:331](lib/features/ledger/scoped_ledger_screen.dart:331)
->   (it does show `showDot: _filter != null`, but the dot is driven by the
->   `PeriodRow` figures, not by this button)
 > - **Search** — [scoped_ledger_screen.dart:336](lib/features/ledger/scoped_ledger_screen.dart:336)
 >
 > These are the **only literal `onTap: () {}` / `onPressed: () {}` stubs in the

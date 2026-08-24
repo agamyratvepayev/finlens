@@ -57,7 +57,6 @@ class Tool {
   const Tool({
     required this.icon,
     required this.onTap,
-    this.showDot = false,
     this.filled = false,
     this.tooltip,
     this.iconColor,
@@ -66,10 +65,6 @@ class Tool {
 
   final IconData icon;
   final VoidCallback onTap;
-
-  /// Marks a non-default state (e.g. a custom sort), so the user can tell why
-  /// the list is not in the order they expect.
-  final bool showDot;
 
   /// Brand fill + white icon, for a toggle that is currently "on".
   final bool filled;
@@ -148,20 +143,6 @@ class _ToolButton extends StatelessWidget {
                 ),
               ),
             ),
-            if (tool.showDot)
-              Positioned(
-                top: -2,
-                right: -2,
-                child: Container(
-                  width: 7,
-                  height: 7,
-                  decoration: BoxDecoration(
-                    color: AppColors.accent,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: AppColors.bg, width: 1.5),
-                  ),
-                ),
-              ),
           ],
         ),
       ),

@@ -882,6 +882,12 @@ abstract class AppLocalizations {
   /// **'Sort'**
   String get balSortTooltip;
 
+  /// No description provided for @balSortDefault.
+  ///
+  /// In en, this message translates to:
+  /// **'Default order'**
+  String get balSortDefault;
+
   /// No description provided for @balPressHoldMove.
   ///
   /// In en, this message translates to:

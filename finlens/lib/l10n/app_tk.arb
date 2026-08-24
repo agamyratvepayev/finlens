@@ -152,6 +152,7 @@
   "balNoAccountsMessage": "Hasaplaryňyzy goşuň, FinLens ýazgy eden amallaryňyzdan arassa baýlygyňyzy hasaplar.",
   "balAdjustFilter": "Süzgüji sazla",
   "balSortTooltip": "Tertiple",
+  "balSortDefault": "Adaty tertip",
   "balPressHoldMove": "Süýşürmek üçin hasaby basyp saklaň",
   "balFilterCategories": "Kategoriýalary süz",
   "balNoVisibleCategories": "Görünýän kategoriýa ýok",

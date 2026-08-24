@@ -298,10 +298,18 @@ class _BalanceScreenState extends State<BalanceScreen> {
           const SizedBox(width: Insets.sm),
           ToolCluster(
             tools: [
+              // No dot: the sort tool joins the filter's convention two entries
+              // below — it brightens its glyph one step (muted → high-emphasis)
+              // when the order is non-default, and the surface never changes.
+              // swap_vert_rounded has no meaningful outlined counterpart, so the
+              // brightness step alone carries the state.
               Tool(
                 icon: Icons.swap_vert_rounded,
                 tooltip: AppLocalizations.of(context).balSortTooltip,
-                showDot: store.balanceSort != AccountSort.defaultSort,
+                iconColor: store.sortIsActive ? AppColors.textPrimary : null,
+                semanticValue: store.sortIsActive
+                    ? store.balanceSort.label(AppLocalizations.of(context))
+                    : AppLocalizations.of(context).balSortDefault,
                 onTap: _pickSort,
               ),
               Tool(

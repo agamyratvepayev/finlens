@@ -209,4 +209,56 @@ void main() {
       expect(AccountSort.automatic, isNot(contains(AccountSort.custom)));
     });
   });
+
+  group('sortIsActive — the toolbar indicator predicate', () {
+    // A configured order for the seed store, so the Custom-with-a-real-drag
+    // case has something to point at.
+    CustomOrder configuredOrder() {
+      const g = AccountGroup.valuables;
+      return CustomOrder(
+        accountOrder: {g: store.accountsIn(g).map((a) => a.id).toList()},
+      );
+    }
+
+    test('the default sort (valueDesc) is not active', () {
+      expect(store.balanceSort, AccountSort.defaultSort);
+      expect(store.sortIsActive, isFalse);
+    });
+
+    test('every non-default automatic sort is active', () {
+      for (final sort in const [
+        AccountSort.valueAsc,
+        AccountSort.nameAsc,
+        AccountSort.activity,
+      ]) {
+        store.setBalanceSort(sort);
+        expect(store.sortIsActive, isTrue, reason: '$sort should be active');
+      }
+    });
+
+    test('an automatic sort is active regardless of the stored order', () {
+      store.setBalanceOrder(configuredOrder(), sort: AccountSort.nameAsc);
+      expect(store.sortIsActive, isTrue);
+    });
+
+    test('Custom with nothing arranged yet is NOT active', () {
+      store.setBalanceOrder(const CustomOrder(), sort: AccountSort.custom);
+      expect(store.balanceSort, AccountSort.custom);
+      expect(store.balanceOrder.isConfigured, isFalse);
+      expect(store.sortIsActive, isFalse);
+    });
+
+    test('Custom after a real drag IS active', () {
+      store.setBalanceOrder(configuredOrder(), sort: AccountSort.custom);
+      expect(store.balanceOrder.isConfigured, isTrue);
+      expect(store.sortIsActive, isTrue);
+    });
+
+    test('a configured order under the default sort is still not active', () {
+      // Order configured, but the mode is back to the default: the list is in
+      // default order, so the indicator must stay dark.
+      store.setBalanceOrder(configuredOrder(), sort: AccountSort.valueDesc);
+      expect(store.sortIsActive, isFalse);
+    });
+  });
 }

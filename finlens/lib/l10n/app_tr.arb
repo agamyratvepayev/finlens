@@ -152,6 +152,7 @@
   "balNoAccountsMessage": "Hesaplarınızı ekleyin, FinLens kaydettiğiniz işlemlerden net değerinizi hesaplasın.",
   "balAdjustFilter": "Filtreyi ayarla",
   "balSortTooltip": "Sırala",
+  "balSortDefault": "Varsayılan sıralama",
   "balPressHoldMove": "Taşımak için bir hesaba basılı tutun",
   "balFilterCategories": "Kategorileri filtrele",
   "balNoVisibleCategories": "Görünür kategori yok",

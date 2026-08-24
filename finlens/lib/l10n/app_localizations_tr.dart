@@ -528,6 +528,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get balSortTooltip => 'Sırala';
 
   @override
+  String get balSortDefault => 'Varsayılan sıralama';
+
+  @override
   String get balPressHoldMove => 'Taşımak için bir hesaba basılı tutun';
 
   @override
