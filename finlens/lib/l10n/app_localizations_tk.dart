@@ -829,6 +829,9 @@ class AppLocalizationsTk extends AppLocalizations {
   String get plSavedTowardGoals => 'Maksatlara toplanan';
 
   @override
+  String get plPace => 'Depgin';
+
+  @override
   String plPaymentsOverdue(int count, Object amount) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -1488,4 +1491,498 @@ class AppLocalizationsTk extends AppLocalizations {
 
   @override
   String get tdUnchanged => 'Üýtgemedik';
+
+  @override
+  String get qaAmount => 'Möçber';
+
+  @override
+  String get qaDue => 'Möhlet';
+
+  @override
+  String get qaNewBalance => 'Täze balans';
+
+  @override
+  String get qaTarget => 'Maksat';
+
+  @override
+  String get qaDate => 'Sene';
+
+  @override
+  String get qaTag => 'Bellik';
+
+  @override
+  String get qaNone => 'Ýok';
+
+  @override
+  String get qaNote => 'Bellik';
+
+  @override
+  String get qaAddNote => 'Bellik goş';
+
+  @override
+  String get qaOptional => 'Islege bagly';
+
+  @override
+  String get qaSplit => 'Böl';
+
+  @override
+  String qaSplitCategories(Object count) {
+    return '$count kategoriýa';
+  }
+
+  @override
+  String get qaGroupRequired => 'Hökman';
+
+  @override
+  String get qaGroupOptional => 'Islege bagly';
+
+  @override
+  String get qaFrom => 'Nireden';
+
+  @override
+  String get qaTo => 'Nirä';
+
+  @override
+  String get qaChooseAccount => 'Hasap saýla';
+
+  @override
+  String get qaChooseCategory => 'Kategoriýa saýla';
+
+  @override
+  String get qaChooseSource => 'Çeşme saýla';
+
+  @override
+  String get qaPayFrom => 'Şundan töle';
+
+  @override
+  String get qaDepositInto => 'Şuňa geçir';
+
+  @override
+  String get qaTransferFrom => 'Şundan geçirim';
+
+  @override
+  String get qaTransferTo => 'Şuňa geçirim';
+
+  @override
+  String get qaRate => 'Kurs';
+
+  @override
+  String get qaReceives => 'Alýar';
+
+  @override
+  String get qaFee => 'Töleg';
+
+  @override
+  String get qaAccount => 'Hasap';
+
+  @override
+  String get qaRevalueAccount => 'Hasaby gaýtadan bahala';
+
+  @override
+  String get qaCurrent => 'Häzirki';
+
+  @override
+  String get qaDifference => 'Tapawut';
+
+  @override
+  String get qaReason => 'Sebäp';
+
+  @override
+  String get qaAdjustment => 'Düzediş';
+
+  @override
+  String get qaBalanceUnchanged => 'Balans üýtgemedik';
+
+  @override
+  String get qaName => 'Ady';
+
+  @override
+  String get qaNameYourGoal => 'Maksadyňyzy atlandyryň';
+
+  @override
+  String get qaGoalNameHint => 'mysal üçin MacBook Pro M4';
+
+  @override
+  String get qaSetDate => 'Sene belle';
+
+  @override
+  String get qaFundingAccount => 'Doldurym hasaby';
+
+  @override
+  String get qaStartingAmount => 'Başlangyç mukdar';
+
+  @override
+  String get qaIconColour => 'Nyşan we reňk';
+
+  @override
+  String get qaTapToChange => 'Üýtgetmek üçin basyň';
+
+  @override
+  String get qaAutoFund => 'Awtomatiki doldur';
+
+  @override
+  String get qaRemind => 'Ýatladyş';
+
+  @override
+  String get qaTaskPlaceholder => 'Näme etmeli?';
+
+  @override
+  String get qaExchangeRate => 'Alyş-çalyş kursy';
+
+  @override
+  String qaFxRate(Object from, Object to) {
+    return '1 $from = ? $to';
+  }
+
+  @override
+  String get qaWhatAdding => 'Näme goşýarsyňyz?';
+
+  @override
+  String get qaDeleteEntry => 'Bu ýazgyny poz';
+
+  @override
+  String get qaBalanceAdjustment => 'Balans düzedişi';
+
+  @override
+  String get qaRecurring => 'Gaýtalanýan';
+
+  @override
+  String qaLinkedSplit(Object count) {
+    return 'Bu $count baglanan bölünme amalynyň biri.';
+  }
+
+  @override
+  String qaDeleteAll(Object count) {
+    return 'Ählisini poz $count';
+  }
+
+  @override
+  String get qaDeleteJustLine => 'Diňe bu setiri poz';
+
+  @override
+  String get qaSaveExpense => 'Çykdajyny sakla';
+
+  @override
+  String get qaSaveIncome => 'Girdejini sakla';
+
+  @override
+  String get qaSaveTransfer => 'Geçirimi sakla';
+
+  @override
+  String get qaSaveAdjustment => 'Düzedişi sakla';
+
+  @override
+  String get qaCreateGoal => 'Maksat döret';
+
+  @override
+  String get qaCreateTask => 'Tabşyryk döret';
+
+  @override
+  String qaSaved(Object type) {
+    return '$type saklandy';
+  }
+
+  @override
+  String get qaBlockAmount => 'Möçber giriziň';
+
+  @override
+  String get qaBlockAccount => 'Hasap saýlaň';
+
+  @override
+  String get qaBlockCategory => 'Kategoriýa saýlaň';
+
+  @override
+  String get qaBlockSource => 'Çeşme saýlaň';
+
+  @override
+  String get qaBlockSplit => 'Bölünmäni deňleşdiriň';
+
+  @override
+  String get qaBlockSourceAccount => 'Çeşme hasaby saýlaň';
+
+  @override
+  String get qaBlockDestination => 'Nyşan saýlaň';
+
+  @override
+  String get qaBlockBalanceUnchanged => 'Balans üýtgemedik';
+
+  @override
+  String get qaBlockNameGoal => 'Maksadyňyzy atlandyryň';
+
+  @override
+  String get qaBlockSetTarget => 'Maksat belläň';
+
+  @override
+  String get qaBlockSetTargetDate => 'Maksat senesini belläň';
+
+  @override
+  String get qaBlockFunding => 'Doldurym hasabyny saýlaň';
+
+  @override
+  String get qaBlockNameTask => 'Tabşyrygy atlandyryň';
+
+  @override
+  String get qaBlockDueDate => 'Möhlet belläň';
+
+  @override
+  String get qaNewAccount => 'Täze hasap';
+
+  @override
+  String get qaNewCategory => 'Täze kategoriýa';
+
+  @override
+  String get qaNewShort => 'Täze';
+
+  @override
+  String get qaSelectAccount => 'Hasap saýlaň';
+
+  @override
+  String get qaSearchAccounts => 'Hasap gözle';
+
+  @override
+  String get qaSearchCategories => 'Kategoriýa gözle';
+
+  @override
+  String qaNoAccountMatch(Object query) {
+    return '\"$query\" boýunça hasap ýok.';
+  }
+
+  @override
+  String qaNoCategoryMatch(Object query) {
+    return '\"$query\" boýunça kategoriýa ýok.';
+  }
+
+  @override
+  String get qaExpenseCategory => 'Çykdajy kategoriýasy';
+
+  @override
+  String get qaIncomeCategory => 'Girdeji kategoriýasy';
+
+  @override
+  String get qaSearchCleared => 'Gözleg arassalandy';
+
+  @override
+  String get qaClearSearch => 'Gözlegi arassala';
+
+  @override
+  String get qaCategoryName => 'Kategoriýanyň ady';
+
+  @override
+  String get qaIcon => 'Nyşan';
+
+  @override
+  String get qaColour => 'Reňk';
+
+  @override
+  String get qaMonthlyBudget => 'Aýlyk býujet (islege bagly)';
+
+  @override
+  String get qaCategoryPlannerNote =>
+      'Bu kategoriýa Meýilnama → Çykdajy býujetinde-de görüner, ol ýerde çykdajyny yzarlap bilersiňiz.';
+
+  @override
+  String get qaCreateSelect => 'Döret we saýla';
+
+  @override
+  String get qaAccountName => 'Hasabyň ady';
+
+  @override
+  String get qaAccountExists => 'Bu atly hasap eýýäm bar';
+
+  @override
+  String get qaAssets => 'Aktiwler';
+
+  @override
+  String get qaLiabilities => 'Borçlar';
+
+  @override
+  String get qaAmountOwed => 'Bergi mukdary';
+
+  @override
+  String get qaPaymentDay => 'Töleg güni';
+
+  @override
+  String get qaOwedHint =>
+      'Bergiňizi položitel san hökmünde giriziň — ol arassa baýlygyňyzy azaldýar.';
+
+  @override
+  String get qaStartingBalanceHint =>
+      'Muny bir gezek giriziň. Mundan soň balans amallaryňyzdan hasaplanýar.';
+
+  @override
+  String get qaPaymentDayHint => 'Bundan gysga aýlar öz soňky gününi ulanýar.';
+
+  @override
+  String get qaMoreIcons => 'Köp nyşan';
+
+  @override
+  String get qaChooseIcon => 'Nyşan saýla';
+
+  @override
+  String get qaSearchIcons => 'Nyşan gözle';
+
+  @override
+  String get qaResults => 'Netijeler';
+
+  @override
+  String get qaNoIconsMatch => 'Gabat gelýän nyşan ýok';
+
+  @override
+  String get ssRemoveSplit => 'Bölünmäni aýyr';
+
+  @override
+  String get ssSplitByCategory => 'Kategoriýa boýunça böl';
+
+  @override
+  String ssTotalCovers(Object total, Object covered) {
+    return 'Jemi $total · $covered';
+  }
+
+  @override
+  String get ssRemoveLine => 'Setiri aýyr';
+
+  @override
+  String get ssAddCategory => 'Kategoriýa goş';
+
+  @override
+  String get ssRemaining => 'Galan';
+
+  @override
+  String get ssSplitEvenly => 'Deň böl';
+
+  @override
+  String get ssRestToLast => 'Galany soňkusyna';
+
+  @override
+  String get ssApplySplit => 'Bölünmäni ulan';
+
+  @override
+  String get ssApplySplitBlocked =>
+      'Bölünmäni ulanmak, galan nol bolýança elýeterli däl';
+
+  @override
+  String get rsRepeat => 'Gaýtala';
+
+  @override
+  String get rsHowOften => 'Näçe ýygy';
+
+  @override
+  String get rsEveryWeek => 'Her hepde';
+
+  @override
+  String get rsEveryMonth => 'Her aý';
+
+  @override
+  String get rsEveryQuarter => 'Her çärýek';
+
+  @override
+  String get rsEveryYear => 'Her ýyl';
+
+  @override
+  String rsSummary(Object cadence, Object date) {
+    return '$cadence gaýtalanýar, $date-den başlap. Meýilnamada dolandyrylýar.';
+  }
+
+  @override
+  String rsWeekly(Object weekday) {
+    return 'her hepde $weekday';
+  }
+
+  @override
+  String rsMonthly(Object day) {
+    return 'her aýyň $day';
+  }
+
+  @override
+  String rsQuarterly(Object day) {
+    return '$day, her 3 aýda';
+  }
+
+  @override
+  String rsYearly(Object day, Object month) {
+    return 'her ýyl $day $month';
+  }
+
+  @override
+  String get qaExchange => 'Alyş-çalyş';
+
+  @override
+  String get qaEnterNewBalance => 'Täze balansy giriziň';
+
+  @override
+  String get qaDeleteSplit => 'Bölünmäni poz';
+
+  @override
+  String get qaBooksPrefix => 'Şu gün senesi bilen ';
+
+  @override
+  String get qaBooksSuffix =>
+      ' düzediş ýazýar. Geçmiş hasabatlar täzeden ýazylmaýar.';
+
+  @override
+  String get qaPutAsidePrefix => 'Aýryň: ';
+
+  @override
+  String qaPerMonth(Object amount) {
+    return '$amount / aý';
+  }
+
+  @override
+  String qaToReachMonths(Object months) {
+    return ' wagtynda ýetmek üçin $months aý dowamynda.';
+  }
+
+  @override
+  String qaCreated(Object date) {
+    return 'Döredildi $date';
+  }
+
+  @override
+  String qaEditedTimes(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: ' · $count gezek üýtgedildi',
+      one: ' · $count gezek üýtgedildi',
+      zero: '',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get a11yShown => 'görkezilýär';
+
+  @override
+  String get a11yPartiallyShown => 'bölekleýin görkezilýär';
+
+  @override
+  String get a11yHidden => 'gizlenen';
+
+  @override
+  String get a11yDoubleTapShow =>
+      'Ähli hasaplary görkezmek üçin iki gezek basyň';
+
+  @override
+  String get a11yDoubleTapHide =>
+      'Ähli hasaplary gizlemek üçin iki gezek basyň';
+
+  @override
+  String get a11yInternalTransfer => 'içki geçirim';
+
+  @override
+  String get a11yOfAssets => 'aktiwlerden';
+
+  @override
+  String get a11yOfLiabilities => 'borçlardan';
+
+  @override
+  String get a11yBalanceWord => 'balans';
+
+  @override
+  String a11yAccountBalance(Object account, Object amount) {
+    return '$account balansy $amount';
+  }
+
+  @override
+  String get qaUnavailableNoAmount => 'möçber girizilýänçä elýeterli däl';
 }

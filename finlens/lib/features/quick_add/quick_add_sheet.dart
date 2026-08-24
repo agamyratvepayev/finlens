@@ -289,8 +289,8 @@ class _QuickAddScreenState extends State<QuickAddScreen>
 
   // ── Shared field builders ─────────────────────────────────────────────────
 
-  NumericHero _amountHero([String label = 'Amount']) => NumericHero(
-        label: label,
+  NumericHero _amountHero([String? label]) => NumericHero(
+        label: label ?? AppLocalizations.of(context).qaAmount,
         raw: _raw,
         currency: _currency,
         onCurrencyTap: () async {
@@ -299,21 +299,21 @@ class _QuickAddScreenState extends State<QuickAddScreen>
         },
       );
 
-  FieldSpec _dateField({String label = 'Date'}) => FieldSpec(
+  FieldSpec _dateField({String? label}) => FieldSpec(
         icon: Icons.event_rounded,
-        label: label,
+        label: label ?? AppLocalizations.of(context).qaDate,
         value: dateTimeLabel(_date, AppLocalizations.of(context), now: AppStore.today),
         onTap: _pickDate,
       );
 
   FieldSpec _tagField() => FieldSpec(
         icon: Icons.sell_rounded,
-        label: 'Tag',
+        label: AppLocalizations.of(context).qaTag,
         value: _tags.isEmpty ? null : _tags.join(', '),
-        emptyText: 'None',
+        emptyText: AppLocalizations.of(context).qaNone,
         onTap: () async {
           final v = await _promptText(
-            title: 'Tag',
+            title: AppLocalizations.of(context).qaTag,
             initial: _tags.join(', '),
             hint: 'e.g. Groceries',
           );
@@ -328,18 +328,19 @@ class _QuickAddScreenState extends State<QuickAddScreen>
 
   FieldSpec _noteField() {
     final text = _note.text.trim();
+    final l = AppLocalizations.of(context);
     return FieldSpec(
       icon: Icons.notes_rounded,
-      label: 'Note',
+      label: l.qaNote,
       value: text.isEmpty
           ? null
           : (text.length > 20 ? '${text.substring(0, 20)}…' : text),
-      emptyText: 'Add a note',
+      emptyText: l.qaAddNote,
       onTap: () async {
         final v = await _promptText(
-          title: 'Note',
+          title: l.qaNote,
           initial: _note.text,
-          hint: 'Optional',
+          hint: l.qaOptional,
         );
         if (v == null || !mounted) return;
         setState(() => _note.text = v);
@@ -349,22 +350,26 @@ class _QuickAddScreenState extends State<QuickAddScreen>
 
   FormToggle _repeatToggle() => FormToggle(
         icon: Icons.repeat_rounded,
-        label: repeatButtonLabel(_repeatFreq),
+        label: repeatButtonLabel(_repeatFreq, AppLocalizations.of(context)),
         value: _hasRepeat,
         semanticValue: _hasRepeat
-            ? repeatButtonLabel(_repeatFreq).toLowerCase()
+            ? repeatButtonLabel(_repeatFreq, AppLocalizations.of(context)).toLowerCase()
             : 'off',
         onTap: _openRepeat,
       );
 
   FormToggle _splitToggle(AppStore store) => FormToggle(
         icon: Icons.call_split_rounded,
-        label: _hasSplit ? '${_splitLines!.length} categories' : 'Split',
+        label: _hasSplit
+            ? AppLocalizations.of(context).qaSplitCategories('${_splitLines!.length}')
+            : AppLocalizations.of(context).qaSplit,
         value: _hasSplit,
         enabled: _amount > 0,
         semanticValue: _amount <= 0
-            ? 'unavailable until an amount is entered'
-            : (_hasSplit ? '${_splitLines!.length} categories' : 'off'),
+            ? AppLocalizations.of(context).qaUnavailableNoAmount
+            : (_hasSplit
+                ? AppLocalizations.of(context).qaSplitCategories('${_splitLines!.length}')
+                : AppLocalizations.of(context).stateOff.toLowerCase()),
         onTap: () => _openSplit(store),
       );
 
@@ -420,48 +425,48 @@ class _QuickAddScreenState extends State<QuickAddScreen>
     final from = store.accountById(_fromRef);
     final to = store.categoryById(_toRef);
     return FormConfig(
-      typeName: 'Expense',
+      typeName: AppLocalizations.of(context).quickAddExpense,
       accent: AppColors.expense,
       accentDim: AppColors.expenseDim,
       hero: _amountHero(),
       groups: [
-        FieldGroup('REQUIRED', [
+        FieldGroup(AppLocalizations.of(context).qaGroupRequired.toUpperCase(), [
           FieldSpec(
             icon: Icons.account_balance_wallet_rounded,
-            label: 'From',
+            label: AppLocalizations.of(context).qaFrom,
             value: from?.name,
-            emptyText: 'Choose account',
+            emptyText: AppLocalizations.of(context).qaChooseAccount,
             flashId: 'from',
             onTap: widget.fixedFromAccountId != null
                 ? null
-                : () => _pickAccountInto(store, isFrom: true, title: 'Pay from'),
+                : () => _pickAccountInto(store, isFrom: true, title: AppLocalizations.of(context).qaPayFrom),
           ),
           FieldSpec(
             icon: Icons.category_rounded,
-            label: 'To',
+            label: AppLocalizations.of(context).qaTo,
             // A split replaces the single category with the line count (§2).
             value: _hasSplit ? '${_splitLines!.length} categories' : to?.name,
-            emptyText: 'Choose category',
+            emptyText: AppLocalizations.of(context).qaChooseCategory,
             flashId: 'to',
             onTap: _hasSplit
                 ? () => _openSplit(store)
                 : () => _pickCategoryInto(CategoryType.expense, isFrom: false),
           ),
         ]),
-        FieldGroup('OPTIONAL', [_dateField(), _tagField(), _noteField()]),
+        FieldGroup(AppLocalizations.of(context).qaGroupOptional.toUpperCase(), [_dateField(), _tagField(), _noteField()]),
       ],
       toggles: [_repeatToggle(), _splitToggle(store)],
-      saveLabel: 'Save expense',
+      saveLabel: AppLocalizations.of(context).qaSaveExpense,
       blockers: [
-        Blocker(unmet: _amount <= 0, label: 'Enter an amount', flashId: 'amount'),
-        Blocker(unmet: _fromRef == null, label: 'Choose an account', flashId: 'from'),
+        Blocker(unmet: _amount <= 0, label: AppLocalizations.of(context).qaBlockAmount, flashId: 'amount'),
+        Blocker(unmet: _fromRef == null, label: AppLocalizations.of(context).qaBlockAccount, flashId: 'from'),
         Blocker(
             unmet: _toRef == null && !_hasSplit,
-            label: 'Choose a category',
+            label: AppLocalizations.of(context).qaBlockCategory,
             flashId: 'to'),
         Blocker(
             unmet: _hasSplit && !_splitBalanced(),
-            label: 'Balance the split',
+            label: AppLocalizations.of(context).qaBlockSplit,
             flashId: 'to'),
       ],
       trailing: _editingExtras(),
@@ -472,18 +477,18 @@ class _QuickAddScreenState extends State<QuickAddScreen>
     final from = store.categoryById(_fromRef);
     final to = store.accountById(_toRef);
     return FormConfig(
-      typeName: 'Income',
+      typeName: AppLocalizations.of(context).quickAddIncome,
       accent: AppColors.income,
       accentDim: AppColors.incomeDim,
       hero: _amountHero(),
       groups: [
-        FieldGroup('REQUIRED', [
+        FieldGroup(AppLocalizations.of(context).qaGroupRequired.toUpperCase(), [
           FieldSpec(
             icon: Icons.category_rounded,
-            label: 'From',
+            label: AppLocalizations.of(context).qaFrom,
             // Income splits the source category, so From carries the count.
             value: _hasSplit ? '${_splitLines!.length} categories' : from?.name,
-            emptyText: 'Choose source',
+            emptyText: AppLocalizations.of(context).qaChooseSource,
             flashId: 'from',
             onTap: _hasSplit
                 ? () => _openSplit(store)
@@ -491,28 +496,28 @@ class _QuickAddScreenState extends State<QuickAddScreen>
           ),
           FieldSpec(
             icon: Icons.account_balance_wallet_rounded,
-            label: 'To',
+            label: AppLocalizations.of(context).qaTo,
             value: to?.name,
-            emptyText: 'Choose account',
+            emptyText: AppLocalizations.of(context).qaChooseAccount,
             flashId: 'to',
             onTap: () =>
-                _pickAccountInto(store, isFrom: false, title: 'Deposit into'),
+                _pickAccountInto(store, isFrom: false, title: AppLocalizations.of(context).qaDepositInto),
           ),
         ]),
-        FieldGroup('OPTIONAL', [_dateField(), _tagField(), _noteField()]),
+        FieldGroup(AppLocalizations.of(context).qaGroupOptional.toUpperCase(), [_dateField(), _tagField(), _noteField()]),
       ],
       toggles: [_repeatToggle(), _splitToggle(store)],
-      saveLabel: 'Save income',
+      saveLabel: AppLocalizations.of(context).qaSaveIncome,
       blockers: [
-        Blocker(unmet: _amount <= 0, label: 'Enter an amount', flashId: 'amount'),
+        Blocker(unmet: _amount <= 0, label: AppLocalizations.of(context).qaBlockAmount, flashId: 'amount'),
         Blocker(
             unmet: _fromRef == null && !_hasSplit,
-            label: 'Choose a source',
+            label: AppLocalizations.of(context).qaBlockSource,
             flashId: 'from'),
-        Blocker(unmet: _toRef == null, label: 'Choose an account', flashId: 'to'),
+        Blocker(unmet: _toRef == null, label: AppLocalizations.of(context).qaBlockAccount, flashId: 'to'),
         Blocker(
             unmet: _hasSplit && !_splitBalanced(),
-            label: 'Balance the split',
+            label: AppLocalizations.of(context).qaBlockSplit,
             flashId: 'from'),
       ],
       trailing: _editingExtras(),
@@ -527,39 +532,39 @@ class _QuickAddScreenState extends State<QuickAddScreen>
     final rate = _rateOverride ?? _defaultRate(from, to);
 
     return FormConfig(
-      typeName: 'Transfer',
+      typeName: AppLocalizations.of(context).quickAddTransfer,
       accent: AppColors.transfer,
       accentDim: AppColors.transferDim,
       hero: _amountHero(),
       groups: [
-        FieldGroup('REQUIRED', [
+        FieldGroup(AppLocalizations.of(context).qaGroupRequired.toUpperCase(), [
           FieldSpec(
             icon: Icons.north_east_rounded,
-            label: 'From',
+            label: AppLocalizations.of(context).qaFrom,
             value: from?.name,
-            emptyText: 'Choose account',
+            emptyText: AppLocalizations.of(context).qaChooseAccount,
             flashId: 'from',
             onTap: widget.fixedFromAccountId != null
                 ? null
                 : () => _pickAccountInto(
                       store,
                       isFrom: true,
-                      title: 'Transfer from',
+                      title: AppLocalizations.of(context).qaTransferFrom,
                       excludeId: _toRef,
                     ),
           ),
           FieldSpec(
             icon: Icons.south_west_rounded,
-            label: 'To',
+            label: AppLocalizations.of(context).qaTo,
             value: to?.name,
-            emptyText: 'Choose account',
+            emptyText: AppLocalizations.of(context).qaChooseAccount,
             flashId: 'to',
             onTap: widget.fixedToAccountId != null
                 ? null
                 : () => _pickAccountInto(
                       store,
                       isFrom: false,
-                      title: 'Transfer to',
+                      title: AppLocalizations.of(context).qaTransferTo,
                       excludeId: _fromRef,
                     ),
           ),
@@ -567,43 +572,43 @@ class _QuickAddScreenState extends State<QuickAddScreen>
         // Absent entirely when both sides share a currency — not disabled,
         // not empty.
         if (cross)
-          FieldGroup('EXCHANGE', [
+          FieldGroup(AppLocalizations.of(context).qaExchange.toUpperCase(), [
             FieldSpec(
               icon: Icons.currency_exchange_rounded,
-              label: 'Rate',
+              label: AppLocalizations.of(context).qaRate,
               value: '1 ${from.currency} = ${rate.toStringAsFixed(4)} '
                   '${to.currency}',
               onTap: () => _editRate(from, to, rate),
             ),
             FieldSpec(
               icon: Icons.check_circle_rounded,
-              label: 'Receives',
+              label: AppLocalizations.of(context).qaReceives,
               value: money(_amount * rate, currency: to.currency),
             ),
           ]),
         // No Tag: money moved between your own accounts is not spending and
         // should not enter tag reporting.
-        FieldGroup('OPTIONAL', [_dateField(), _noteField()]),
+        FieldGroup(AppLocalizations.of(context).qaGroupOptional.toUpperCase(), [_dateField(), _noteField()]),
       ],
       toggles: [
         _repeatToggle(),
         FormToggle(
           icon: Icons.percent_rounded,
-          label: 'Fee',
+          label: AppLocalizations.of(context).qaFee,
           value: _hasFee,
           onTap: () => setState(() => _hasFee = !_hasFee),
         ),
       ],
-      saveLabel: 'Save transfer',
+      saveLabel: AppLocalizations.of(context).qaSaveTransfer,
       blockers: [
-        Blocker(unmet: _amount <= 0, label: 'Enter an amount', flashId: 'amount'),
+        Blocker(unmet: _amount <= 0, label: AppLocalizations.of(context).qaBlockAmount, flashId: 'amount'),
         Blocker(
             unmet: _fromRef == null,
-            label: 'Choose a source account',
+            label: AppLocalizations.of(context).qaBlockSourceAccount,
             flashId: 'from'),
         Blocker(
             unmet: _toRef == null,
-            label: 'Choose a destination',
+            label: AppLocalizations.of(context).qaBlockDestination,
             flashId: 'to'),
       ],
       trailing: _editingExtras(),
@@ -617,28 +622,28 @@ class _QuickAddScreenState extends State<QuickAddScreen>
     final diff = entered == null ? null : entered - current;
 
     return FormConfig(
-      typeName: 'Rebalance',
+      typeName: AppLocalizations.of(context).quickAddRebalance,
       accent: AppColors.rebalance,
       accentDim: AppColors.rebalanceDim,
       // The user types what the balance *is*, not what changed.
-      hero: _amountHero('New balance'),
+      hero: _amountHero(AppLocalizations.of(context).qaNewBalance),
       groups: [
-        FieldGroup('REQUIRED', [
+        FieldGroup(AppLocalizations.of(context).qaGroupRequired.toUpperCase(), [
           FieldSpec(
             icon: Icons.donut_large_rounded,
-            label: 'Account',
+            label: AppLocalizations.of(context).qaAccount,
             value: account?.name,
-            emptyText: 'Choose account',
+            emptyText: AppLocalizations.of(context).qaChooseAccount,
             onTap: () => _pickAccountInto(
               store,
               isFrom: false,
-              title: 'Revalue account',
+              title: AppLocalizations.of(context).qaRevalueAccount,
               alsoSetFrom: true,
             ),
           ),
           FieldSpec(
             icon: Icons.menu_book_rounded,
-            label: 'Current',
+            label: AppLocalizations.of(context).qaCurrent,
             value: account == null
                 ? null
                 : money(current, currency: account.currency),
@@ -647,7 +652,7 @@ class _QuickAddScreenState extends State<QuickAddScreen>
           ),
           FieldSpec(
             icon: Icons.swap_vert_rounded,
-            label: 'Difference',
+            label: AppLocalizations.of(context).qaDifference,
             value: diff == null
                 ? null
                 : money(diff, currency: _currency, showSign: true),
@@ -657,13 +662,13 @@ class _QuickAddScreenState extends State<QuickAddScreen>
                 : (diff >= 0 ? AppColors.positive : AppColors.negative),
           ),
         ]),
-        FieldGroup('OPTIONAL', [
+        FieldGroup(AppLocalizations.of(context).qaGroupOptional.toUpperCase(), [
           _dateField(),
           FieldSpec(
             icon: Icons.label_outline_rounded,
-            label: 'Reason',
+            label: AppLocalizations.of(context).qaReason,
             value: store.categoryById(_fromRef)?.name,
-            emptyText: 'Adjustment',
+            emptyText: AppLocalizations.of(context).qaAdjustment,
             onTap: () => _pickCategoryInto(CategoryType.expense, isFrom: true),
           ),
           _noteField(),
@@ -672,20 +677,20 @@ class _QuickAddScreenState extends State<QuickAddScreen>
       hint: diff == null || diff == 0
           ? null
           : HintSpec.parts([
-              'Books a ',
+              AppLocalizations.of(context).qaBooksPrefix,
               money(diff, currency: _currency, showSign: true),
-              ' adjustment dated today. Past reports are not rewritten.',
+              AppLocalizations.of(context).qaBooksSuffix,
             ]),
       // A correction is not recurring and cannot be split, so the row is
       // omitted rather than shown disabled.
       toggles: const [],
-      saveLabel: 'Save adjustment',
+      saveLabel: AppLocalizations.of(context).qaSaveAdjustment,
       blockers: [
-        Blocker(unmet: _toRef == null, label: 'Choose an account'),
-        Blocker(unmet: _raw.isEmpty, label: 'Enter the new balance'),
+        Blocker(unmet: _toRef == null, label: AppLocalizations.of(context).qaBlockAccount),
+        Blocker(unmet: _raw.isEmpty, label: AppLocalizations.of(context).qaEnterNewBalance),
         Blocker(
           unmet: _raw.isNotEmpty && diff == 0,
-          label: 'Balance unchanged',
+          label: AppLocalizations.of(context).qaBlockBalanceUnchanged,
         ),
       ],
       trailing: _editingExtras(),
@@ -703,22 +708,22 @@ class _QuickAddScreenState extends State<QuickAddScreen>
         months > 0 ? (target - _startingAmount) / months : null;
 
     return FormConfig(
-      typeName: 'New Goal',
+      typeName: AppLocalizations.of(context).quickAddNewGoal,
       // Violet, not brand purple: a goal amount in the Save colour would read
       // as an interactive control rather than data.
       accent: AppColors.goal,
       accentDim: AppColors.goalDim,
-      hero: _amountHero('Target'),
+      hero: _amountHero(AppLocalizations.of(context).qaTarget),
       groups: [
-        FieldGroup('REQUIRED', [
+        FieldGroup(AppLocalizations.of(context).qaGroupRequired.toUpperCase(), [
           FieldSpec(
             icon: Icons.flag_rounded,
-            label: 'Name',
+            label: AppLocalizations.of(context).qaName,
             value: _title.text.trim().isEmpty ? null : _title.text.trim(),
-            emptyText: 'Name your goal',
+            emptyText: AppLocalizations.of(context).qaNameYourGoal,
             onTap: () async {
               final v = await _promptText(
-                title: 'Goal name',
+                title: AppLocalizations.of(context).egGoalName,
                 initial: _title.text,
                 hint: 'e.g. MacBook Pro M4',
               );
@@ -728,9 +733,9 @@ class _QuickAddScreenState extends State<QuickAddScreen>
           ),
           FieldSpec(
             icon: Icons.event_rounded,
-            label: 'Target date',
+            label: AppLocalizations.of(context).egTargetDate,
             value: _targetDate == null ? null : monthYear(_targetDate!, AppLocalizations.of(context)),
-            emptyText: 'Set a date',
+            emptyText: AppLocalizations.of(context).qaSetDate,
             onTap: () async {
               final d = await showDatePicker(
                 context: context,
@@ -744,26 +749,26 @@ class _QuickAddScreenState extends State<QuickAddScreen>
           ),
           FieldSpec(
             icon: Icons.savings_rounded,
-            label: 'Funding account',
+            label: AppLocalizations.of(context).qaFundingAccount,
             value: linked?.name,
-            emptyText: 'Choose account',
+            emptyText: AppLocalizations.of(context).qaChooseAccount,
             onTap: () => _pickAccountInto(
               store,
               isFrom: false,
-              title: 'Money kept in',
+              title: AppLocalizations.of(context).egMoneyKeptIn,
               filter: (a) => a.isAsset,
             ),
           ),
         ]),
-        FieldGroup('OPTIONAL', [
+        FieldGroup(AppLocalizations.of(context).qaGroupOptional.toUpperCase(), [
           FieldSpec(
             icon: Icons.input_rounded,
-            label: 'Starting amount',
+            label: AppLocalizations.of(context).qaStartingAmount,
             value: _startingAmount == 0 ? null : money(_startingAmount),
-            emptyText: 'None',
+            emptyText: AppLocalizations.of(context).qaNone,
             onTap: () async {
               final v = await _promptText(
-                title: 'Starting amount',
+                title: AppLocalizations.of(context).qaStartingAmount,
                 initial: _startingAmount == 0 ? '' : '$_startingAmount',
                 hint: '0',
                 numeric: true,
@@ -774,8 +779,8 @@ class _QuickAddScreenState extends State<QuickAddScreen>
           ),
           FieldSpec(
             icon: _goalIcon,
-            label: 'Icon & colour',
-            value: 'Tap to change',
+            label: AppLocalizations.of(context).qaIconColour,
+            value: AppLocalizations.of(context).qaTapToChange,
             onTap: _pickGoalIcon,
           ),
           _noteField(),
@@ -784,32 +789,32 @@ class _QuickAddScreenState extends State<QuickAddScreen>
       hint: perMonth == null || perMonth <= 0
           ? null
           : HintSpec.parts([
-              'Put aside ',
-              '${money(perMonth)} / month',
-              ' for $months months to reach it on time.',
+              AppLocalizations.of(context).qaPutAsidePrefix,
+              AppLocalizations.of(context).qaPerMonth(money(perMonth)),
+              AppLocalizations.of(context).qaToReachMonths('$months'),
             ]),
       toggles: [
         FormToggle(
           icon: Icons.autorenew_rounded,
-          label: 'Auto-fund',
+          label: AppLocalizations.of(context).qaAutoFund,
           value: _autoFund,
           onTap: () => setState(() => _autoFund = !_autoFund),
         ),
         FormToggle(
           icon: Icons.alarm_rounded,
-          label: 'Remind',
+          label: AppLocalizations.of(context).qaRemind,
           value: _remind,
           onTap: () => setState(() => _remind = !_remind),
         ),
       ],
-      saveLabel: 'Create goal',
+      saveLabel: AppLocalizations.of(context).qaCreateGoal,
       blockers: [
-        Blocker(unmet: _title.text.trim().isEmpty, label: 'Name your goal'),
-        Blocker(unmet: target <= 0, label: 'Set a target'),
-        Blocker(unmet: _targetDate == null, label: 'Set a target date'),
+        Blocker(unmet: _title.text.trim().isEmpty, label: AppLocalizations.of(context).qaBlockNameGoal),
+        Blocker(unmet: target <= 0, label: AppLocalizations.of(context).qaBlockSetTarget),
+        Blocker(unmet: _targetDate == null, label: AppLocalizations.of(context).qaBlockSetTargetDate),
         // Not in the spec's list, but the store cannot create a goal without
         // somewhere to keep the money.
-        Blocker(unmet: _toRef == null, label: 'Choose a funding account'),
+        Blocker(unmet: _toRef == null, label: AppLocalizations.of(context).qaBlockFunding),
       ],
     );
   }
@@ -817,29 +822,29 @@ class _QuickAddScreenState extends State<QuickAddScreen>
   FormConfig _task(AppStore store) {
     final account = store.accountById(_toRef);
     return FormConfig(
-      typeName: 'New Task',
+      typeName: AppLocalizations.of(context).quickAddNewTask,
       accent: AppColors.task,
       accentDim: AppColors.taskDim,
       // The only type with no amount, so the hero is text.
       hero: TextHero(
-        caption: 'Task title',
-        placeholder: 'What needs doing?',
+        caption: AppLocalizations.of(context).etTaskTitle,
+        placeholder: AppLocalizations.of(context).qaTaskPlaceholder,
         controller: _title,
         focusNode: _titleFocus,
       ),
       groups: [
-        FieldGroup('REQUIRED', [_dateField(label: 'Due')]),
-        FieldGroup('OPTIONAL', [
+        FieldGroup(AppLocalizations.of(context).qaGroupRequired.toUpperCase(), [_dateField(label: AppLocalizations.of(context).qaDue)]),
+        FieldGroup(AppLocalizations.of(context).qaGroupOptional.toUpperCase(), [
           // Demoted from Required: most tasks have no amount. When set, the
           // task can later be turned into a transaction in one tap.
           FieldSpec(
             icon: Icons.attach_money_rounded,
-            label: 'Amount',
+            label: AppLocalizations.of(context).qaAmount,
             value: _raw.isEmpty ? null : money(_amount, currency: _currency),
-            emptyText: 'None',
+            emptyText: AppLocalizations.of(context).qaNone,
             onTap: () async {
               final v = await _promptText(
-                title: 'Amount',
+                title: AppLocalizations.of(context).qaAmount,
                 initial: _raw,
                 hint: '0',
                 numeric: true,
@@ -850,17 +855,17 @@ class _QuickAddScreenState extends State<QuickAddScreen>
           ),
           FieldSpec(
             icon: Icons.account_balance_wallet_rounded,
-            label: 'Account',
+            label: AppLocalizations.of(context).qaAccount,
             value: account?.name,
-            emptyText: 'None',
+            emptyText: AppLocalizations.of(context).qaNone,
             onTap: () =>
-                _pickAccountInto(store, isFrom: false, title: 'Linked account'),
+                _pickAccountInto(store, isFrom: false, title: AppLocalizations.of(context).etLinkedAccount),
           ),
           FieldSpec(
             icon: Icons.category_rounded,
-            label: 'Category',
+            label: AppLocalizations.of(context).fieldCategory,
             value: store.categoryById(_fromRef)?.name,
-            emptyText: 'None',
+            emptyText: AppLocalizations.of(context).qaNone,
             onTap: () => _pickCategoryInto(CategoryType.expense, isFrom: true),
           ),
           _noteField(),
@@ -870,15 +875,15 @@ class _QuickAddScreenState extends State<QuickAddScreen>
         _repeatToggle(),
         FormToggle(
           icon: Icons.alarm_rounded,
-          label: 'Remind',
+          label: AppLocalizations.of(context).qaRemind,
           value: _remind,
           onTap: () => setState(() => _remind = !_remind),
         ),
       ],
-      saveLabel: 'Create task',
+      saveLabel: AppLocalizations.of(context).qaCreateTask,
       blockers: [
-        Blocker(unmet: _title.text.trim().isEmpty, label: 'Name the task'),
-        Blocker(unmet: false, label: 'Set a due date'),
+        Blocker(unmet: _title.text.trim().isEmpty, label: AppLocalizations.of(context).qaBlockNameTask),
+        Blocker(unmet: false, label: AppLocalizations.of(context).qaBlockDueDate),
       ],
     );
   }
@@ -941,7 +946,7 @@ class _QuickAddScreenState extends State<QuickAddScreen>
 
   Future<void> _editRate(Account from, Account to, double current) async {
     final v = await _promptText(
-      title: 'Exchange rate',
+      title: AppLocalizations.of(context).qaExchangeRate,
       initial: current.toStringAsFixed(4),
       hint: '1 ${from.currency} = ? ${to.currency}',
       numeric: true,
@@ -972,7 +977,7 @@ class _QuickAddScreenState extends State<QuickAddScreen>
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Icon', style: AppText.rowTitle),
+              Text(AppLocalizations.of(context).qaIcon, style: AppText.rowTitle),
               const SizedBox(height: Insets.lg),
               Wrap(
                 spacing: Insets.md,
@@ -1034,7 +1039,7 @@ class _QuickAddScreenState extends State<QuickAddScreen>
     setState(() => _keypadOpen = false);
     showAppSheet<void>(
       context,
-      title: 'What are you adding?',
+      title: AppLocalizations.of(context).qaWhatAdding,
       initialSize: 0.55,
       builder: (sheetContext, controller) => ListView(
         controller: controller,
@@ -1111,8 +1116,8 @@ class _QuickAddScreenState extends State<QuickAddScreen>
         child: Text(
           // Never edited shows the created stamp alone rather than "never
           // edited" — the absence already says it.
-          'Created ${dateTimeLabel(txn.createdAt, AppLocalizations.of(context), now: AppStore.today)}'
-          '${edits == 0 ? '' : ' · edited ${edits == 1 ? 'once' : '$edits times'}'}',
+          '${AppLocalizations.of(context).qaCreated(dateTimeLabel(txn.createdAt, AppLocalizations.of(context), now: AppStore.today))}'
+          '${AppLocalizations.of(context).qaEditedTimes(edits)}',
           textAlign: TextAlign.center,
           style: const TextStyle(
             fontSize: 11.5,
@@ -1161,10 +1166,10 @@ class _QuickAddScreenState extends State<QuickAddScreen>
                 padding: const EdgeInsets.symmetric(horizontal: 15),
                 child: Row(
                   children: [
-                    const Expanded(
+                    Expanded(
                       child: Text(
-                        'Delete this entry',
-                        style: TextStyle(
+                        AppLocalizations.of(context).qaDeleteEntry,
+                        style: const TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w500,
                           height: 1.2,
@@ -1232,7 +1237,7 @@ class _QuickAddScreenState extends State<QuickAddScreen>
     final task = store.addTask(
       title: note.isNotEmpty
           ? note
-          : (store.categoryById(categoryId)?.name ?? 'Recurring'),
+          : (store.categoryById(categoryId)?.name ?? AppLocalizations.of(context).qaRecurring),
       linkedAccountId: accountId,
       expectedAmount: expected,
       dueDate: _nextDate(_date, _repeatFreq),
@@ -1316,10 +1321,10 @@ class _QuickAddScreenState extends State<QuickAddScreen>
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text('Delete split', style: AppText.rowTitle),
+              Text(AppLocalizations.of(context).qaDeleteSplit, style: AppText.rowTitle),
               const SizedBox(height: Insets.sm),
               Text(
-                'This is one of $count linked split transactions.',
+                AppLocalizations.of(context).qaLinkedSplit('$count'),
                 style: AppText.caption,
               ),
               const SizedBox(height: Insets.lg),
@@ -1330,12 +1335,12 @@ class _QuickAddScreenState extends State<QuickAddScreen>
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 13),
                 ),
-                child: Text('Delete all $count'),
+                child: Text(AppLocalizations.of(context).qaDeleteAll('$count')),
               ),
               const SizedBox(height: Insets.sm),
               TextButton(
                 onPressed: () => Navigator.of(sheetContext).pop(false),
-                child: const Text('Delete just this line',
+                child: Text(AppLocalizations.of(context).qaDeleteJustLine,
                     style: TextStyle(color: AppColors.accent)),
               ),
             ],
@@ -1422,7 +1427,7 @@ class _QuickAddScreenState extends State<QuickAddScreen>
           toRef: asset.id,
           date: _date,
           note: _note.text.trim().isEmpty
-              ? 'Balance adjustment'
+              ? AppLocalizations.of(context).qaBalanceAdjustment
               : _note.text.trim(),
         );
       case QuickAddType.newGoal:
@@ -1458,7 +1463,9 @@ class _QuickAddScreenState extends State<QuickAddScreen>
 
     Navigator.of(context).pop();
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('${_type.label(AppLocalizations.of(context))} saved')),
+      SnackBar(
+          content: Text(AppLocalizations.of(context)
+              .qaSaved(_type.label(AppLocalizations.of(context))))),
     );
   }
 }
@@ -1544,7 +1551,7 @@ class _TextPromptSheetState extends State<_TextPromptSheet> {
                       borderRadius: BorderRadius.circular(Radii.md),
                     ),
                   ),
-                  child: const Text('Done'),
+                  child: Text(AppLocalizations.of(context).actionDone),
                 ),
               ),
             ],

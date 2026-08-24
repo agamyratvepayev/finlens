@@ -1,3 +1,4 @@
+import '../../../l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 
 import '../../../theme/app_colors.dart';
@@ -304,7 +305,7 @@ class TransactionFormShell extends StatelessWidget {
               ),
           ],
         ),
-        if (config.hint != null && group.title == 'REQUIRED')
+        if (config.hint != null && group.title == AppLocalizations.of(context).qaGroupRequired.toUpperCase())
           HintStrip(spans: config.hint!.spans, accent: config.accent),
       ],
       FormToggleBar(toggles: config.toggles),

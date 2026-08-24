@@ -857,6 +857,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get plSavedTowardGoals => 'Накоплено на цели';
 
   @override
+  String get plPace => 'Темп';
+
+  @override
   String plPaymentsOverdue(int count, Object amount) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -1527,4 +1530,499 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get tdUnchanged => 'Без изменений';
+
+  @override
+  String get qaAmount => 'Сумма';
+
+  @override
+  String get qaDue => 'Срок';
+
+  @override
+  String get qaNewBalance => 'Новый баланс';
+
+  @override
+  String get qaTarget => 'Цель';
+
+  @override
+  String get qaDate => 'Дата';
+
+  @override
+  String get qaTag => 'Метка';
+
+  @override
+  String get qaNone => 'Нет';
+
+  @override
+  String get qaNote => 'Заметка';
+
+  @override
+  String get qaAddNote => 'Добавить заметку';
+
+  @override
+  String get qaOptional => 'Необязательно';
+
+  @override
+  String get qaSplit => 'Разбить';
+
+  @override
+  String qaSplitCategories(Object count) {
+    return '$count категорий';
+  }
+
+  @override
+  String get qaGroupRequired => 'Обязательно';
+
+  @override
+  String get qaGroupOptional => 'Необязательно';
+
+  @override
+  String get qaFrom => 'Откуда';
+
+  @override
+  String get qaTo => 'Куда';
+
+  @override
+  String get qaChooseAccount => 'Выберите счёт';
+
+  @override
+  String get qaChooseCategory => 'Выберите категорию';
+
+  @override
+  String get qaChooseSource => 'Выберите источник';
+
+  @override
+  String get qaPayFrom => 'Оплатить с';
+
+  @override
+  String get qaDepositInto => 'Зачислить на';
+
+  @override
+  String get qaTransferFrom => 'Перевод с';
+
+  @override
+  String get qaTransferTo => 'Перевод на';
+
+  @override
+  String get qaRate => 'Курс';
+
+  @override
+  String get qaReceives => 'Получит';
+
+  @override
+  String get qaFee => 'Комиссия';
+
+  @override
+  String get qaAccount => 'Счёт';
+
+  @override
+  String get qaRevalueAccount => 'Переоценить счёт';
+
+  @override
+  String get qaCurrent => 'Текущий';
+
+  @override
+  String get qaDifference => 'Разница';
+
+  @override
+  String get qaReason => 'Причина';
+
+  @override
+  String get qaAdjustment => 'Корректировка';
+
+  @override
+  String get qaBalanceUnchanged => 'Баланс без изменений';
+
+  @override
+  String get qaName => 'Название';
+
+  @override
+  String get qaNameYourGoal => 'Назовите цель';
+
+  @override
+  String get qaGoalNameHint => 'напр. MacBook Pro M4';
+
+  @override
+  String get qaSetDate => 'Задать дату';
+
+  @override
+  String get qaFundingAccount => 'Счёт пополнения';
+
+  @override
+  String get qaStartingAmount => 'Начальная сумма';
+
+  @override
+  String get qaIconColour => 'Значок и цвет';
+
+  @override
+  String get qaTapToChange => 'Нажмите, чтобы изменить';
+
+  @override
+  String get qaAutoFund => 'Автопополнение';
+
+  @override
+  String get qaRemind => 'Напоминание';
+
+  @override
+  String get qaTaskPlaceholder => 'Что нужно сделать?';
+
+  @override
+  String get qaExchangeRate => 'Обменный курс';
+
+  @override
+  String qaFxRate(Object from, Object to) {
+    return '1 $from = ? $to';
+  }
+
+  @override
+  String get qaWhatAdding => 'Что вы добавляете?';
+
+  @override
+  String get qaDeleteEntry => 'Удалить эту запись';
+
+  @override
+  String get qaBalanceAdjustment => 'Корректировка баланса';
+
+  @override
+  String get qaRecurring => 'Повторяющаяся';
+
+  @override
+  String qaLinkedSplit(Object count) {
+    return 'Это одна из $count связанных операций разбивки.';
+  }
+
+  @override
+  String qaDeleteAll(Object count) {
+    return 'Удалить все $count';
+  }
+
+  @override
+  String get qaDeleteJustLine => 'Удалить только эту строку';
+
+  @override
+  String get qaSaveExpense => 'Сохранить расход';
+
+  @override
+  String get qaSaveIncome => 'Сохранить доход';
+
+  @override
+  String get qaSaveTransfer => 'Сохранить перевод';
+
+  @override
+  String get qaSaveAdjustment => 'Сохранить корректировку';
+
+  @override
+  String get qaCreateGoal => 'Создать цель';
+
+  @override
+  String get qaCreateTask => 'Создать задачу';
+
+  @override
+  String qaSaved(Object type) {
+    return '$type: сохранено';
+  }
+
+  @override
+  String get qaBlockAmount => 'Введите сумму';
+
+  @override
+  String get qaBlockAccount => 'Выберите счёт';
+
+  @override
+  String get qaBlockCategory => 'Выберите категорию';
+
+  @override
+  String get qaBlockSource => 'Выберите источник';
+
+  @override
+  String get qaBlockSplit => 'Сведите разбивку';
+
+  @override
+  String get qaBlockSourceAccount => 'Выберите счёт списания';
+
+  @override
+  String get qaBlockDestination => 'Выберите счёт зачисления';
+
+  @override
+  String get qaBlockBalanceUnchanged => 'Баланс без изменений';
+
+  @override
+  String get qaBlockNameGoal => 'Назовите цель';
+
+  @override
+  String get qaBlockSetTarget => 'Задайте цель';
+
+  @override
+  String get qaBlockSetTargetDate => 'Задайте целевую дату';
+
+  @override
+  String get qaBlockFunding => 'Выберите счёт пополнения';
+
+  @override
+  String get qaBlockNameTask => 'Назовите задачу';
+
+  @override
+  String get qaBlockDueDate => 'Задайте срок';
+
+  @override
+  String get qaNewAccount => 'Новый счёт';
+
+  @override
+  String get qaNewCategory => 'Новая категория';
+
+  @override
+  String get qaNewShort => 'Новый';
+
+  @override
+  String get qaSelectAccount => 'Выберите счёт';
+
+  @override
+  String get qaSearchAccounts => 'Поиск по счетам';
+
+  @override
+  String get qaSearchCategories => 'Поиск по категориям';
+
+  @override
+  String qaNoAccountMatch(Object query) {
+    return 'Нет счёта по запросу «$query».';
+  }
+
+  @override
+  String qaNoCategoryMatch(Object query) {
+    return 'Нет категории по запросу «$query».';
+  }
+
+  @override
+  String get qaExpenseCategory => 'Категория расходов';
+
+  @override
+  String get qaIncomeCategory => 'Категория доходов';
+
+  @override
+  String get qaSearchCleared => 'Поиск очищен';
+
+  @override
+  String get qaClearSearch => 'Очистить поиск';
+
+  @override
+  String get qaCategoryName => 'Название категории';
+
+  @override
+  String get qaIcon => 'Значок';
+
+  @override
+  String get qaColour => 'Цвет';
+
+  @override
+  String get qaMonthlyBudget => 'Месячный бюджет (необязательно)';
+
+  @override
+  String get qaCategoryPlannerNote =>
+      'Эта категория также появится в Планировщик → Бюджет расходов, где можно отслеживать траты по ней.';
+
+  @override
+  String get qaCreateSelect => 'Создать и выбрать';
+
+  @override
+  String get qaAccountName => 'Название счёта';
+
+  @override
+  String get qaAccountExists => 'Счёт с таким названием уже существует';
+
+  @override
+  String get qaAssets => 'Активы';
+
+  @override
+  String get qaLiabilities => 'Обязательства';
+
+  @override
+  String get qaAmountOwed => 'Сумма долга';
+
+  @override
+  String get qaPaymentDay => 'День платежа';
+
+  @override
+  String get qaOwedHint =>
+      'Введите сумму долга положительным числом — она уменьшает капитал.';
+
+  @override
+  String get qaStartingBalanceHint =>
+      'Введите один раз. Дальше баланс рассчитывается по вашим операциям.';
+
+  @override
+  String get qaPaymentDayHint =>
+      'Для более коротких месяцев используется их последний день.';
+
+  @override
+  String get qaMoreIcons => 'Больше значков';
+
+  @override
+  String get qaChooseIcon => 'Выберите значок';
+
+  @override
+  String get qaSearchIcons => 'Поиск значков';
+
+  @override
+  String get qaResults => 'Результаты';
+
+  @override
+  String get qaNoIconsMatch => 'Нет подходящих значков';
+
+  @override
+  String get ssRemoveSplit => 'Убрать разбивку';
+
+  @override
+  String get ssSplitByCategory => 'Разбить по категориям';
+
+  @override
+  String ssTotalCovers(Object total, Object covered) {
+    return 'Всего $total · $covered';
+  }
+
+  @override
+  String get ssRemoveLine => 'Убрать строку';
+
+  @override
+  String get ssAddCategory => 'Добавить категорию';
+
+  @override
+  String get ssRemaining => 'Осталось';
+
+  @override
+  String get ssSplitEvenly => 'Поровну';
+
+  @override
+  String get ssRestToLast => 'Остаток в последнюю';
+
+  @override
+  String get ssApplySplit => 'Применить разбивку';
+
+  @override
+  String get ssApplySplitBlocked =>
+      'Применить разбивку можно, когда остаток равен нулю';
+
+  @override
+  String get rsRepeat => 'Повтор';
+
+  @override
+  String get rsHowOften => 'Как часто';
+
+  @override
+  String get rsEveryWeek => 'Каждую неделю';
+
+  @override
+  String get rsEveryMonth => 'Каждый месяц';
+
+  @override
+  String get rsEveryQuarter => 'Каждый квартал';
+
+  @override
+  String get rsEveryYear => 'Каждый год';
+
+  @override
+  String rsSummary(Object cadence, Object date) {
+    return 'Повтор: $cadence, с $date. Управляется в Планировщике.';
+  }
+
+  @override
+  String rsWeekly(Object weekday) {
+    return 'каждую неделю в $weekday';
+  }
+
+  @override
+  String rsMonthly(Object day) {
+    return '$day числа каждого месяца';
+  }
+
+  @override
+  String rsQuarterly(Object day) {
+    return '$day числа, каждые 3 месяца';
+  }
+
+  @override
+  String rsYearly(Object day, Object month) {
+    return 'каждый год $day $month';
+  }
+
+  @override
+  String get qaExchange => 'Обмен';
+
+  @override
+  String get qaEnterNewBalance => 'Введите новый баланс';
+
+  @override
+  String get qaDeleteSplit => 'Удалить разбивку';
+
+  @override
+  String get qaBooksPrefix => 'Записывает ';
+
+  @override
+  String get qaBooksSuffix =>
+      ' корректировку сегодняшней датой. Прошлые отчёты не переписываются.';
+
+  @override
+  String get qaPutAsidePrefix => 'Откладывайте ';
+
+  @override
+  String qaPerMonth(Object amount) {
+    return '$amount / месяц';
+  }
+
+  @override
+  String qaToReachMonths(Object months) {
+    return ' в течение $months мес., чтобы успеть в срок.';
+  }
+
+  @override
+  String qaCreated(Object date) {
+    return 'Создано $date';
+  }
+
+  @override
+  String qaEditedTimes(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: ' · изменено $count раза',
+      many: ' · изменено $count раз',
+      few: ' · изменено $count раза',
+      one: ' · изменено $count раз',
+      zero: '',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get a11yShown => 'показано';
+
+  @override
+  String get a11yPartiallyShown => 'частично показано';
+
+  @override
+  String get a11yHidden => 'скрыто';
+
+  @override
+  String get a11yDoubleTapShow => 'Двойное нажатие — показать все счета';
+
+  @override
+  String get a11yDoubleTapHide => 'Двойное нажатие — скрыть все счета';
+
+  @override
+  String get a11yInternalTransfer => 'внутренний перевод';
+
+  @override
+  String get a11yOfAssets => 'от активов';
+
+  @override
+  String get a11yOfLiabilities => 'от обязательств';
+
+  @override
+  String get a11yBalanceWord => 'баланс';
+
+  @override
+  String a11yAccountBalance(Object account, Object amount) {
+    return 'баланс $account $amount';
+  }
+
+  @override
+  String get qaUnavailableNoAmount => 'недоступно, пока не введена сумма';
 }

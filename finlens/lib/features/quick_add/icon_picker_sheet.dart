@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../theme/app_colors.dart';
 import 'account_icons.dart';
 
@@ -112,9 +113,9 @@ class _IconPickerSheetState extends State<_IconPickerSheet> {
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
               child: Row(
                 children: [
-                  const Expanded(
-                    child: Text('Choose icon',
-                        style: TextStyle(
+                  Expanded(
+                    child: Text(AppLocalizations.of(context).qaChooseIcon,
+                        style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
                           color: Colors.white,
@@ -123,7 +124,7 @@ class _IconPickerSheetState extends State<_IconPickerSheet> {
                   GestureDetector(
                     behavior: HitTestBehavior.opaque,
                     onTap: () => Navigator.of(context).pop(widget.selected),
-                    child: const Text('Done',
+                    child: Text(AppLocalizations.of(context).actionDone,
                         style: TextStyle(fontSize: 14, color: AppColors.accent)),
                   ),
                 ],
@@ -148,11 +149,11 @@ class _IconPickerSheetState extends State<_IconPickerSheet> {
                         cursorColor: AppColors.accent,
                         style: const TextStyle(
                             fontSize: 14, color: AppColors.textPrimary),
-                        decoration: const InputDecoration(
+                        decoration: InputDecoration(
                           isDense: true,
                           contentPadding: EdgeInsets.zero,
                           border: InputBorder.none,
-                          hintText: 'Search icons',
+                          hintText: AppLocalizations.of(context).qaSearchIcons,
                           hintStyle: TextStyle(color: AppColors.textTertiary),
                         ),
                       ),
@@ -163,7 +164,7 @@ class _IconPickerSheetState extends State<_IconPickerSheet> {
             ),
             Expanded(
               child: results != null
-                  ? _grid('Results', results)
+                  ? _grid(AppLocalizations.of(context).qaResults, results)
                   : ListView(
                       padding: const EdgeInsets.only(bottom: 24),
                       children: [
@@ -180,9 +181,9 @@ class _IconPickerSheetState extends State<_IconPickerSheet> {
 
   Widget _grid(String label, List<AccountIconEntry> entries) {
     if (entries.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.only(top: 40),
-        child: Text('No icons match',
+      return Padding(
+        padding: const EdgeInsets.only(top: 40),
+        child: Text(AppLocalizations.of(context).qaNoIconsMatch,
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 14, color: AppColors.textTertiary)),
       );

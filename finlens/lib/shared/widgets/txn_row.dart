@@ -143,7 +143,7 @@ class TxnRow extends StatelessWidget {
     // One secondary figure on line 2 (spec §4.3): a rebalance's "no cash · value"
     // caption, otherwise the remaining balance.
     final Widget? secondary = txn.type == TxnType.rebalance
-        ? _noCashValue(store, balance)
+        ? _noCashValue(l, store, balance)
         : (balance != null ? _balanceWidget(store, balance) : null);
 
     final hasLine2 =
@@ -241,7 +241,7 @@ class TxnRow extends StatelessWidget {
     }
 
     return Semantics(
-      label: _transferSemantics(store, parties, balance),
+      label: _transferSemantics(l, store, parties, balance),
       excludeSemantics: true,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -334,7 +334,7 @@ class TxnRow extends StatelessWidget {
     final hasLine2 = line2Left != null || line2Right != null;
 
     return Semantics(
-      label: _transferSemantics(store, parties, balance),
+      label: _transferSemantics(l, store, parties, balance),
       excludeSemantics: true,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -433,9 +433,9 @@ class TxnRow extends StatelessWidget {
 
   /// A rebalance carries no cash; its secondary is the caption plus the asset's
   /// new value as one muted run (spec §4.3).
-  Widget _noCashValue(AppStore store, double? value) {
+  Widget _noCashValue(AppLocalizations l, AppStore store, double? value) {
     final tail = value == null ? '' : ' · ${money(value, masked: store.masked)}';
-    return Text('no cash$tail',
+    return Text('${l.ldgNoCash.toLowerCase()}$tail',
         style: _balanceStyle.copyWith(color: AppColors.textTertiary));
   }
 
@@ -450,18 +450,17 @@ class TxnRow extends StatelessWidget {
     if (balance != null) {
       final where = account.isNotEmpty ? '$account ' : '';
       parts.add(
-          '${where}balance ${money(balance, currency: txn.currency, masked: store.masked)}');
+          '$where${l.a11yBalanceWord} ${money(balance, currency: txn.currency, masked: store.masked)}');
     }
     return parts.join(', ');
   }
 
-  String _transferSemantics(
-      AppStore store, ({String from, String to}) parties, double? balance) {
-    final base = 'Transfer from ${parties.from} to ${parties.to}, '
+  String _transferSemantics(AppLocalizations l, AppStore store,
+      ({String from, String to}) parties, double? balance) {
+    final base = '${l.transferFromTo(parties.from, parties.to)}, '
         '${money(txn.amount, currency: txn.currency, signless: true, masked: store.masked)}';
     if (balance == null) return base;
-    return '$base, ${parties.to} balance '
-        '${money(balance, currency: txn.currency, masked: store.masked)}';
+    return '$base, ${l.a11yAccountBalance(parties.to, money(balance, currency: txn.currency, masked: store.masked))}';
   }
 
   // ── Resolvers (unchanged semantics) ────────────────────────────────────────

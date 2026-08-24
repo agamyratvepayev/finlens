@@ -647,8 +647,8 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
       case GroupScope(:final group):
         final n = store.groupCount(group);
         return '${l.countAccounts(n)}  ·  '
-            '${percent(store.groupShare(group))} of '
-            '${group.isAsset ? 'assets' : 'liabilities'}';
+            '${percent(store.groupShare(group))} '
+            '${group.isAsset ? l.a11yOfAssets : l.a11yOfLiabilities}';
       case AccountScope(:final accountId):
         final a = store.accountById(accountId);
         return a == null ? '' : '${a.group.label(l)}  ·  ${a.currency}';

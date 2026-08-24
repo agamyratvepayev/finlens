@@ -81,7 +81,7 @@ class GroupRow extends StatelessWidget {
             expanded: isOpen,
             label: '${group.label(l)}, $countLabel, '
                 '${money(total, signless: true, masked: masked)}, '
-                '${percent(share)} of ${group.isAsset ? 'assets' : 'liabilities'}',
+                '${percent(share)} ${group.isAsset ? l.a11yOfAssets : l.a11yOfLiabilities}',
             child: PressZone(
               onTap: onToggle,
               onLongPress: onLongPress,

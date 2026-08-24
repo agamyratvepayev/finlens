@@ -310,12 +310,12 @@ class LedgerTxnRow extends StatelessWidget {
       money0,
       if (!isTransfer)
         switch (row.kind) {
-          FlowKind.inflow => 'income',
-          FlowKind.outflow => 'expense',
-          FlowKind.internal => 'internal transfer',
+          FlowKind.inflow => AppLocalizations.of(context).txnTypeIncome.toLowerCase(),
+          FlowKind.outflow => AppLocalizations.of(context).txnTypeExpense.toLowerCase(),
+          FlowKind.internal => AppLocalizations.of(context).a11yInternalTransfer,
         },
       if (descOpen) note,
-      if (showBalance) 'balance $balance0',
+      if (showBalance) '${AppLocalizations.of(context).a11yBalanceWord} $balance0',
       if (accountName.isNotEmpty) accountName,
       if (tag != null) 'tag $tag',
     ].join(', ');

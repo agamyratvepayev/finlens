@@ -73,6 +73,7 @@ class BudgetDetailScreen extends StatelessWidget {
                 children: [
                   _header(category, monthlyBudget),
                   _thisMonth(
+                    context,
                     store,
                     category,
                     spent: spent,
@@ -146,7 +147,7 @@ class BudgetDetailScreen extends StatelessWidget {
             ListTile(
               leading: const Icon(Icons.tune_rounded,
                   color: AppColors.textPrimary),
-              title: const Text('Edit budget', style: AppText.body),
+              title: Text(AppLocalizations.of(context).ebTitle, style: AppText.body),
               onTap: () {
                 Navigator.of(sheetContext).pop();
                 Navigator.of(context, rootNavigator: true).push(
@@ -206,6 +207,7 @@ class BudgetDetailScreen extends StatelessWidget {
   // ── This month ─────────────────────────────────────────────────────────────
 
   Widget _thisMonth(
+    BuildContext context,
     AppStore store,
     Category category, {
     required double spent,
@@ -267,7 +269,7 @@ class BudgetDetailScreen extends StatelessWidget {
                 const Spacer(),
                 Container(width: 2, height: 10, color: AppColors.textPrimary),
                 const SizedBox(width: 5),
-                Text('Pace', style: AppText.caption.copyWith(fontSize: 11.5)),
+                Text(AppLocalizations.of(context).plPace, style: AppText.caption.copyWith(fontSize: 11.5)),
               ],
             ],
           ),

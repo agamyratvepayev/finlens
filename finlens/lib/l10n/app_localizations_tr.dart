@@ -829,6 +829,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get plSavedTowardGoals => 'Hedeflere biriktirilen';
 
   @override
+  String get plPace => 'Tempo';
+
+  @override
   String plPaymentsOverdue(int count, Object amount) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -1488,4 +1491,496 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get tdUnchanged => 'Değişmedi';
+
+  @override
+  String get qaAmount => 'Tutar';
+
+  @override
+  String get qaDue => 'Vade';
+
+  @override
+  String get qaNewBalance => 'Yeni bakiye';
+
+  @override
+  String get qaTarget => 'Hedef';
+
+  @override
+  String get qaDate => 'Tarih';
+
+  @override
+  String get qaTag => 'Etiket';
+
+  @override
+  String get qaNone => 'Yok';
+
+  @override
+  String get qaNote => 'Not';
+
+  @override
+  String get qaAddNote => 'Not ekle';
+
+  @override
+  String get qaOptional => 'İsteğe bağlı';
+
+  @override
+  String get qaSplit => 'Böl';
+
+  @override
+  String qaSplitCategories(Object count) {
+    return '$count kategori';
+  }
+
+  @override
+  String get qaGroupRequired => 'Gerekli';
+
+  @override
+  String get qaGroupOptional => 'İsteğe bağlı';
+
+  @override
+  String get qaFrom => 'Kaynak';
+
+  @override
+  String get qaTo => 'Hedef';
+
+  @override
+  String get qaChooseAccount => 'Hesap seç';
+
+  @override
+  String get qaChooseCategory => 'Kategori seç';
+
+  @override
+  String get qaChooseSource => 'Kaynak seç';
+
+  @override
+  String get qaPayFrom => 'Şuradan öde';
+
+  @override
+  String get qaDepositInto => 'Şuraya yatır';
+
+  @override
+  String get qaTransferFrom => 'Şuradan transfer';
+
+  @override
+  String get qaTransferTo => 'Şuraya transfer';
+
+  @override
+  String get qaRate => 'Kur';
+
+  @override
+  String get qaReceives => 'Alır';
+
+  @override
+  String get qaFee => 'Ücret';
+
+  @override
+  String get qaAccount => 'Hesap';
+
+  @override
+  String get qaRevalueAccount => 'Hesabı yeniden değerle';
+
+  @override
+  String get qaCurrent => 'Mevcut';
+
+  @override
+  String get qaDifference => 'Fark';
+
+  @override
+  String get qaReason => 'Sebep';
+
+  @override
+  String get qaAdjustment => 'Düzeltme';
+
+  @override
+  String get qaBalanceUnchanged => 'Bakiye değişmedi';
+
+  @override
+  String get qaName => 'Ad';
+
+  @override
+  String get qaNameYourGoal => 'Hedefinizi adlandırın';
+
+  @override
+  String get qaGoalNameHint => 'örn. MacBook Pro M4';
+
+  @override
+  String get qaSetDate => 'Tarih belirle';
+
+  @override
+  String get qaFundingAccount => 'Fonlama hesabı';
+
+  @override
+  String get qaStartingAmount => 'Başlangıç tutarı';
+
+  @override
+  String get qaIconColour => 'Simge ve renk';
+
+  @override
+  String get qaTapToChange => 'Değiştirmek için dokunun';
+
+  @override
+  String get qaAutoFund => 'Otomatik fonla';
+
+  @override
+  String get qaRemind => 'Hatırlat';
+
+  @override
+  String get qaTaskPlaceholder => 'Ne yapılması gerekiyor?';
+
+  @override
+  String get qaExchangeRate => 'Döviz kuru';
+
+  @override
+  String qaFxRate(Object from, Object to) {
+    return '1 $from = ? $to';
+  }
+
+  @override
+  String get qaWhatAdding => 'Ne ekliyorsunuz?';
+
+  @override
+  String get qaDeleteEntry => 'Bu kaydı sil';
+
+  @override
+  String get qaBalanceAdjustment => 'Bakiye düzeltmesi';
+
+  @override
+  String get qaRecurring => 'Yinelenen';
+
+  @override
+  String qaLinkedSplit(Object count) {
+    return 'Bu, $count bağlı bölme işleminden biridir.';
+  }
+
+  @override
+  String qaDeleteAll(Object count) {
+    return 'Tümünü sil $count';
+  }
+
+  @override
+  String get qaDeleteJustLine => 'Yalnızca bu satırı sil';
+
+  @override
+  String get qaSaveExpense => 'Gideri kaydet';
+
+  @override
+  String get qaSaveIncome => 'Geliri kaydet';
+
+  @override
+  String get qaSaveTransfer => 'Transferi kaydet';
+
+  @override
+  String get qaSaveAdjustment => 'Düzeltmeyi kaydet';
+
+  @override
+  String get qaCreateGoal => 'Hedef oluştur';
+
+  @override
+  String get qaCreateTask => 'Görev oluştur';
+
+  @override
+  String qaSaved(Object type) {
+    return '$type kaydedildi';
+  }
+
+  @override
+  String get qaBlockAmount => 'Bir tutar girin';
+
+  @override
+  String get qaBlockAccount => 'Bir hesap seçin';
+
+  @override
+  String get qaBlockCategory => 'Bir kategori seçin';
+
+  @override
+  String get qaBlockSource => 'Bir kaynak seçin';
+
+  @override
+  String get qaBlockSplit => 'Bölmeyi dengeleyin';
+
+  @override
+  String get qaBlockSourceAccount => 'Bir kaynak hesap seçin';
+
+  @override
+  String get qaBlockDestination => 'Bir hedef seçin';
+
+  @override
+  String get qaBlockBalanceUnchanged => 'Bakiye değişmedi';
+
+  @override
+  String get qaBlockNameGoal => 'Hedefinizi adlandırın';
+
+  @override
+  String get qaBlockSetTarget => 'Bir hedef belirleyin';
+
+  @override
+  String get qaBlockSetTargetDate => 'Bir hedef tarih belirleyin';
+
+  @override
+  String get qaBlockFunding => 'Bir fonlama hesabı seçin';
+
+  @override
+  String get qaBlockNameTask => 'Görevi adlandırın';
+
+  @override
+  String get qaBlockDueDate => 'Bir vade belirleyin';
+
+  @override
+  String get qaNewAccount => 'Yeni hesap';
+
+  @override
+  String get qaNewCategory => 'Yeni kategori';
+
+  @override
+  String get qaNewShort => 'Yeni';
+
+  @override
+  String get qaSelectAccount => 'Hesap seçin';
+
+  @override
+  String get qaSearchAccounts => 'Hesap ara';
+
+  @override
+  String get qaSearchCategories => 'Kategori ara';
+
+  @override
+  String qaNoAccountMatch(Object query) {
+    return '\"$query\" ile eşleşen hesap yok.';
+  }
+
+  @override
+  String qaNoCategoryMatch(Object query) {
+    return '\"$query\" ile eşleşen kategori yok.';
+  }
+
+  @override
+  String get qaExpenseCategory => 'Gider kategorisi';
+
+  @override
+  String get qaIncomeCategory => 'Gelir kategorisi';
+
+  @override
+  String get qaSearchCleared => 'Arama temizlendi';
+
+  @override
+  String get qaClearSearch => 'Aramayı temizle';
+
+  @override
+  String get qaCategoryName => 'Kategori adı';
+
+  @override
+  String get qaIcon => 'Simge';
+
+  @override
+  String get qaColour => 'Renk';
+
+  @override
+  String get qaMonthlyBudget => 'Aylık bütçe (isteğe bağlı)';
+
+  @override
+  String get qaCategoryPlannerNote =>
+      'Bu kategori ayrıca Planlayıcı → Gider Bütçesi\'nde görünür, harcamayı ona göre izleyebilirsiniz.';
+
+  @override
+  String get qaCreateSelect => 'Oluştur ve seç';
+
+  @override
+  String get qaAccountName => 'Hesap adı';
+
+  @override
+  String get qaAccountExists => 'Bu adda bir hesap zaten var';
+
+  @override
+  String get qaAssets => 'Varlıklar';
+
+  @override
+  String get qaLiabilities => 'Yükümlülükler';
+
+  @override
+  String get qaAmountOwed => 'Borç tutarı';
+
+  @override
+  String get qaPaymentDay => 'Ödeme günü';
+
+  @override
+  String get qaOwedHint =>
+      'Borcunuzu pozitif bir sayı olarak girin — net değerinizden düşülür.';
+
+  @override
+  String get qaStartingBalanceHint =>
+      'Bunu bir kez girin. Bundan sonra bakiye işlemlerinizden hesaplanır.';
+
+  @override
+  String get qaPaymentDayHint => 'Bundan kısa aylar son günlerini kullanır.';
+
+  @override
+  String get qaMoreIcons => 'Daha fazla simge';
+
+  @override
+  String get qaChooseIcon => 'Simge seç';
+
+  @override
+  String get qaSearchIcons => 'Simge ara';
+
+  @override
+  String get qaResults => 'Sonuçlar';
+
+  @override
+  String get qaNoIconsMatch => 'Eşleşen simge yok';
+
+  @override
+  String get ssRemoveSplit => 'Bölmeyi kaldır';
+
+  @override
+  String get ssSplitByCategory => 'Kategoriye göre böl';
+
+  @override
+  String ssTotalCovers(Object total, Object covered) {
+    return 'Toplam $total · $covered';
+  }
+
+  @override
+  String get ssRemoveLine => 'Satırı kaldır';
+
+  @override
+  String get ssAddCategory => 'Kategori ekle';
+
+  @override
+  String get ssRemaining => 'Kalan';
+
+  @override
+  String get ssSplitEvenly => 'Eşit böl';
+
+  @override
+  String get ssRestToLast => 'Kalanı sona';
+
+  @override
+  String get ssApplySplit => 'Bölmeyi uygula';
+
+  @override
+  String get ssApplySplitBlocked =>
+      'Bölmeyi uygula, kalan sıfır olana kadar kullanılamaz';
+
+  @override
+  String get rsRepeat => 'Tekrar';
+
+  @override
+  String get rsHowOften => 'Ne sıklıkla';
+
+  @override
+  String get rsEveryWeek => 'Her hafta';
+
+  @override
+  String get rsEveryMonth => 'Her ay';
+
+  @override
+  String get rsEveryQuarter => 'Her üç ayda';
+
+  @override
+  String get rsEveryYear => 'Her yıl';
+
+  @override
+  String rsSummary(Object cadence, Object date) {
+    return '$cadence tekrarlar, $date tarihinden itibaren. Planlayıcı\'da yönetilir.';
+  }
+
+  @override
+  String rsWeekly(Object weekday) {
+    return 'her hafta $weekday';
+  }
+
+  @override
+  String rsMonthly(Object day) {
+    return 'her ayın $day';
+  }
+
+  @override
+  String rsQuarterly(Object day) {
+    return '$day, her 3 ayda bir';
+  }
+
+  @override
+  String rsYearly(Object day, Object month) {
+    return 'her yıl $day $month';
+  }
+
+  @override
+  String get qaExchange => 'Döviz';
+
+  @override
+  String get qaEnterNewBalance => 'Yeni bakiyeyi girin';
+
+  @override
+  String get qaDeleteSplit => 'Bölmeyi sil';
+
+  @override
+  String get qaBooksPrefix => 'Bugün tarihli ';
+
+  @override
+  String get qaBooksSuffix =>
+      ' düzeltme kaydeder. Geçmiş raporlar yeniden yazılmaz.';
+
+  @override
+  String get qaPutAsidePrefix => 'Ayırın: ';
+
+  @override
+  String qaPerMonth(Object amount) {
+    return '$amount / ay';
+  }
+
+  @override
+  String qaToReachMonths(Object months) {
+    return ' zamanında ulaşmak için $months ay boyunca.';
+  }
+
+  @override
+  String qaCreated(Object date) {
+    return 'Oluşturuldu $date';
+  }
+
+  @override
+  String qaEditedTimes(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: ' · $count kez düzenlendi',
+      one: ' · $count kez düzenlendi',
+      zero: '',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get a11yShown => 'gösteriliyor';
+
+  @override
+  String get a11yPartiallyShown => 'kısmen gösteriliyor';
+
+  @override
+  String get a11yHidden => 'gizli';
+
+  @override
+  String get a11yDoubleTapShow => 'Tüm hesapları göstermek için çift dokunun';
+
+  @override
+  String get a11yDoubleTapHide => 'Tüm hesapları gizlemek için çift dokunun';
+
+  @override
+  String get a11yInternalTransfer => 'iç transfer';
+
+  @override
+  String get a11yOfAssets => 'varlıkların';
+
+  @override
+  String get a11yOfLiabilities => 'yükümlülüklerin';
+
+  @override
+  String get a11yBalanceWord => 'bakiye';
+
+  @override
+  String a11yAccountBalance(Object account, Object amount) {
+    return '$account bakiyesi $amount';
+  }
+
+  @override
+  String get qaUnavailableNoAmount => 'tutar girilene kadar kullanılamaz';
 }

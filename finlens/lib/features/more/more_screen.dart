@@ -132,7 +132,7 @@ class MoreScreen extends StatelessWidget {
                   children: [
                     FormRow(
                       icon: Icons.inventory_2_rounded,
-                      label: 'Archive',
+                      label: l.moreArchive,
                       subtitle: l.countArchivedItems(store.archivedCount),
                       showChevron: true,
                       onTap: () => Navigator.of(context, rootNavigator: true)

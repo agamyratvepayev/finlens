@@ -1,19 +1,21 @@
 import 'package:flutter/material.dart';
 
 import '../../core/models/models.dart';
+import '../../core/utils/formatters.dart';
+import '../../l10n/app_localizations.dart';
 import '../../theme/app_colors.dart';
 
 /// The frequencies Planner's [RepeatFrequency] can actually persist (spec §1).
 /// "Every 2 weeks", "Custom…" and the whole ENDS section are intentionally
 /// omitted — Planner's Task model cannot represent a biweekly cadence, a custom
 /// rule, or an end condition, and the hard boundary forbids extending it.
-const _options = <(RepeatFrequency, String)>[
-  (RepeatFrequency.none, 'Never'),
-  (RepeatFrequency.weekly, 'Every week'),
-  (RepeatFrequency.monthly, 'Every month'),
-  (RepeatFrequency.quarterly, 'Every quarter'),
-  (RepeatFrequency.yearly, 'Every year'),
-];
+List<(RepeatFrequency, String)> _optionsFor(AppLocalizations l) => [
+      (RepeatFrequency.none, l.repeatNever),
+      (RepeatFrequency.weekly, l.rsEveryWeek),
+      (RepeatFrequency.monthly, l.rsEveryMonth),
+      (RepeatFrequency.quarterly, l.rsEveryQuarter),
+      (RepeatFrequency.yearly, l.rsEveryYear),
+    ];
 
 /// Opens the Repeat chooser and returns the selected frequency (Done), or null
 /// if dismissed without confirming (caller keeps the current value).
@@ -34,42 +36,25 @@ Future<RepeatFrequency?> showRepeatSheet(
 }
 
 /// Human summary of a repeat, derived from the transaction's own date.
-String repeatSummary(RepeatFrequency freq, DateTime date) {
+String repeatSummary(RepeatFrequency freq, DateTime date, AppLocalizations l) {
   if (freq == RepeatFrequency.none) return '';
   final cadence = switch (freq) {
     RepeatFrequency.none => '',
-    RepeatFrequency.weekly => 'every week on ${_weekday(date)}',
-    RepeatFrequency.monthly => 'on the ${_ordinal(date.day)} of every month',
-    RepeatFrequency.quarterly =>
-      'on the ${_ordinal(date.day)}, every 3 months',
-    RepeatFrequency.yearly => 'every year on ${date.day} ${_month(date)}',
+    RepeatFrequency.weekly => l.rsWeekly(weekdayLong(date, l)),
+    RepeatFrequency.monthly => l.rsMonthly(ordinalDay(date.day, l)),
+    RepeatFrequency.quarterly => l.rsQuarterly(ordinalDay(date.day, l)),
+    RepeatFrequency.yearly =>
+      l.rsYearly('${date.day}', monthShort(date.month, l)),
   };
-  return 'Repeats $cadence, starting ${date.day} ${_month(date)}. '
-      'Managed in Planner.';
+  return l.rsSummary(cadence, '${date.day} ${monthShort(date.month, l)}');
 }
 
 /// Short label for the button (e.g. "Every month"), or "Repeat" when off.
-String repeatButtonLabel(RepeatFrequency freq) {
-  for (final (f, label) in _options) {
-    if (f == freq) return f == RepeatFrequency.none ? 'Repeat' : label;
+String repeatButtonLabel(RepeatFrequency freq, AppLocalizations l) {
+  for (final (f, label) in _optionsFor(l)) {
+    if (f == freq) return f == RepeatFrequency.none ? l.rsRepeat : label;
   }
-  return 'Repeat';
-}
-
-const _months = [
-  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-];
-const _weekdays = [
-  'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday',
-];
-
-String _month(DateTime d) => _months[d.month - 1];
-String _weekday(DateTime d) => _weekdays[d.weekday - 1];
-
-String _ordinal(int n) {
-  if (n >= 11 && n <= 13) return '${n}th';
-  return switch (n % 10) { 1 => '${n}st', 2 => '${n}nd', 3 => '${n}rd', _ => '${n}th' };
+  return l.rsRepeat;
 }
 
 class _RepeatSheet extends StatefulWidget {
@@ -87,6 +72,8 @@ class _RepeatSheetState extends State<_RepeatSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final options = _optionsFor(l);
     return SafeArea(
       child: Padding(
         padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
@@ -107,9 +94,9 @@ class _RepeatSheetState extends State<_RepeatSheet> {
               child: Row(
                 children: [
                   const SizedBox(width: 16),
-                  const Expanded(
-                    child: Text('Repeat',
-                        style: TextStyle(
+                  Expanded(
+                    child: Text(l.rsRepeat,
+                        style: const TextStyle(
                           fontSize: 17,
                           fontWeight: FontWeight.w600,
                           color: Colors.white,
@@ -118,17 +105,18 @@ class _RepeatSheetState extends State<_RepeatSheet> {
                   GestureDetector(
                     behavior: HitTestBehavior.opaque,
                     onTap: () => Navigator.of(context).pop(_freq),
-                    child: const Text('Done',
-                        style: TextStyle(fontSize: 14.5, color: AppColors.accent)),
+                    child: Text(l.actionDone,
+                        style: const TextStyle(
+                            fontSize: 14.5, color: AppColors.accent)),
                   ),
                 ],
               ),
             ),
-            _sectionLabel('HOW OFTEN'),
+            _sectionLabel(l.rsHowOften.toUpperCase()),
             _card([
-              for (var i = 0; i < _options.length; i++) ...[
+              for (var i = 0; i < options.length; i++) ...[
                 if (i > 0) _hair(),
-                _row(_options[i].$1, _options[i].$2),
+                _row(options[i].$1, options[i].$2),
               ],
             ]),
             if (_freq != RepeatFrequency.none) _summary(),
@@ -208,7 +196,7 @@ class _RepeatSheetState extends State<_RepeatSheet> {
           borderRadius: BorderRadius.circular(10),
         ),
         child: Text(
-          repeatSummary(_freq, widget.date),
+          repeatSummary(_freq, widget.date, AppLocalizations.of(context)),
           style: const TextStyle(
             fontSize: 12.5,
             height: 1.45,

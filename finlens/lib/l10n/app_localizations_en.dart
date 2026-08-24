@@ -831,6 +831,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get plSavedTowardGoals => 'Saved toward goals';
 
   @override
+  String get plPace => 'Pace';
+
+  @override
   String plPaymentsOverdue(int count, Object amount) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -1491,4 +1494,496 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get tdUnchanged => 'Unchanged';
+
+  @override
+  String get qaAmount => 'Amount';
+
+  @override
+  String get qaDue => 'Due';
+
+  @override
+  String get qaNewBalance => 'New balance';
+
+  @override
+  String get qaTarget => 'Target';
+
+  @override
+  String get qaDate => 'Date';
+
+  @override
+  String get qaTag => 'Tag';
+
+  @override
+  String get qaNone => 'None';
+
+  @override
+  String get qaNote => 'Note';
+
+  @override
+  String get qaAddNote => 'Add a note';
+
+  @override
+  String get qaOptional => 'Optional';
+
+  @override
+  String get qaSplit => 'Split';
+
+  @override
+  String qaSplitCategories(Object count) {
+    return '$count categories';
+  }
+
+  @override
+  String get qaGroupRequired => 'Required';
+
+  @override
+  String get qaGroupOptional => 'Optional';
+
+  @override
+  String get qaFrom => 'From';
+
+  @override
+  String get qaTo => 'To';
+
+  @override
+  String get qaChooseAccount => 'Choose account';
+
+  @override
+  String get qaChooseCategory => 'Choose category';
+
+  @override
+  String get qaChooseSource => 'Choose source';
+
+  @override
+  String get qaPayFrom => 'Pay from';
+
+  @override
+  String get qaDepositInto => 'Deposit into';
+
+  @override
+  String get qaTransferFrom => 'Transfer from';
+
+  @override
+  String get qaTransferTo => 'Transfer to';
+
+  @override
+  String get qaRate => 'Rate';
+
+  @override
+  String get qaReceives => 'Receives';
+
+  @override
+  String get qaFee => 'Fee';
+
+  @override
+  String get qaAccount => 'Account';
+
+  @override
+  String get qaRevalueAccount => 'Revalue account';
+
+  @override
+  String get qaCurrent => 'Current';
+
+  @override
+  String get qaDifference => 'Difference';
+
+  @override
+  String get qaReason => 'Reason';
+
+  @override
+  String get qaAdjustment => 'Adjustment';
+
+  @override
+  String get qaBalanceUnchanged => 'Balance unchanged';
+
+  @override
+  String get qaName => 'Name';
+
+  @override
+  String get qaNameYourGoal => 'Name your goal';
+
+  @override
+  String get qaGoalNameHint => 'e.g. MacBook Pro M4';
+
+  @override
+  String get qaSetDate => 'Set a date';
+
+  @override
+  String get qaFundingAccount => 'Funding account';
+
+  @override
+  String get qaStartingAmount => 'Starting amount';
+
+  @override
+  String get qaIconColour => 'Icon & colour';
+
+  @override
+  String get qaTapToChange => 'Tap to change';
+
+  @override
+  String get qaAutoFund => 'Auto-fund';
+
+  @override
+  String get qaRemind => 'Remind';
+
+  @override
+  String get qaTaskPlaceholder => 'What needs doing?';
+
+  @override
+  String get qaExchangeRate => 'Exchange rate';
+
+  @override
+  String qaFxRate(Object from, Object to) {
+    return '1 $from = ? $to';
+  }
+
+  @override
+  String get qaWhatAdding => 'What are you adding?';
+
+  @override
+  String get qaDeleteEntry => 'Delete this entry';
+
+  @override
+  String get qaBalanceAdjustment => 'Balance adjustment';
+
+  @override
+  String get qaRecurring => 'Recurring';
+
+  @override
+  String qaLinkedSplit(Object count) {
+    return 'This is one of $count linked split transactions.';
+  }
+
+  @override
+  String qaDeleteAll(Object count) {
+    return 'Delete all $count';
+  }
+
+  @override
+  String get qaDeleteJustLine => 'Delete just this line';
+
+  @override
+  String get qaSaveExpense => 'Save expense';
+
+  @override
+  String get qaSaveIncome => 'Save income';
+
+  @override
+  String get qaSaveTransfer => 'Save transfer';
+
+  @override
+  String get qaSaveAdjustment => 'Save adjustment';
+
+  @override
+  String get qaCreateGoal => 'Create goal';
+
+  @override
+  String get qaCreateTask => 'Create task';
+
+  @override
+  String qaSaved(Object type) {
+    return '$type saved';
+  }
+
+  @override
+  String get qaBlockAmount => 'Enter an amount';
+
+  @override
+  String get qaBlockAccount => 'Choose an account';
+
+  @override
+  String get qaBlockCategory => 'Choose a category';
+
+  @override
+  String get qaBlockSource => 'Choose a source';
+
+  @override
+  String get qaBlockSplit => 'Balance the split';
+
+  @override
+  String get qaBlockSourceAccount => 'Choose a source account';
+
+  @override
+  String get qaBlockDestination => 'Choose a destination';
+
+  @override
+  String get qaBlockBalanceUnchanged => 'Balance unchanged';
+
+  @override
+  String get qaBlockNameGoal => 'Name your goal';
+
+  @override
+  String get qaBlockSetTarget => 'Set a target';
+
+  @override
+  String get qaBlockSetTargetDate => 'Set a target date';
+
+  @override
+  String get qaBlockFunding => 'Choose a funding account';
+
+  @override
+  String get qaBlockNameTask => 'Name the task';
+
+  @override
+  String get qaBlockDueDate => 'Set a due date';
+
+  @override
+  String get qaNewAccount => 'New account';
+
+  @override
+  String get qaNewCategory => 'New category';
+
+  @override
+  String get qaNewShort => 'New';
+
+  @override
+  String get qaSelectAccount => 'Select account';
+
+  @override
+  String get qaSearchAccounts => 'Search accounts';
+
+  @override
+  String get qaSearchCategories => 'Search categories';
+
+  @override
+  String qaNoAccountMatch(Object query) {
+    return 'No account matches \"$query\".';
+  }
+
+  @override
+  String qaNoCategoryMatch(Object query) {
+    return 'No category matches \"$query\".';
+  }
+
+  @override
+  String get qaExpenseCategory => 'Expense category';
+
+  @override
+  String get qaIncomeCategory => 'Income category';
+
+  @override
+  String get qaSearchCleared => 'Search cleared';
+
+  @override
+  String get qaClearSearch => 'Clear search';
+
+  @override
+  String get qaCategoryName => 'Category name';
+
+  @override
+  String get qaIcon => 'Icon';
+
+  @override
+  String get qaColour => 'Colour';
+
+  @override
+  String get qaMonthlyBudget => 'Monthly budget (optional)';
+
+  @override
+  String get qaCategoryPlannerNote =>
+      'This category will also appear in Planner → Expense Budget, where you can track spending against it.';
+
+  @override
+  String get qaCreateSelect => 'Create & select';
+
+  @override
+  String get qaAccountName => 'Account name';
+
+  @override
+  String get qaAccountExists => 'An account with this name already exists';
+
+  @override
+  String get qaAssets => 'Assets';
+
+  @override
+  String get qaLiabilities => 'Liabilities';
+
+  @override
+  String get qaAmountOwed => 'Amount owed';
+
+  @override
+  String get qaPaymentDay => 'Payment day';
+
+  @override
+  String get qaOwedHint =>
+      'Enter what you owe as a positive number — it counts against your net worth.';
+
+  @override
+  String get qaStartingBalanceHint =>
+      'Enter this once. From now on the balance is calculated from your transactions.';
+
+  @override
+  String get qaPaymentDayHint => 'Months shorter than this use their last day.';
+
+  @override
+  String get qaMoreIcons => 'More icons';
+
+  @override
+  String get qaChooseIcon => 'Choose icon';
+
+  @override
+  String get qaSearchIcons => 'Search icons';
+
+  @override
+  String get qaResults => 'Results';
+
+  @override
+  String get qaNoIconsMatch => 'No icons match';
+
+  @override
+  String get ssRemoveSplit => 'Remove split';
+
+  @override
+  String get ssSplitByCategory => 'Split by category';
+
+  @override
+  String ssTotalCovers(Object total, Object covered) {
+    return 'Total $total · $covered';
+  }
+
+  @override
+  String get ssRemoveLine => 'Remove line';
+
+  @override
+  String get ssAddCategory => 'Add category';
+
+  @override
+  String get ssRemaining => 'Remaining';
+
+  @override
+  String get ssSplitEvenly => 'Split evenly';
+
+  @override
+  String get ssRestToLast => 'Rest to last';
+
+  @override
+  String get ssApplySplit => 'Apply split';
+
+  @override
+  String get ssApplySplitBlocked =>
+      'Apply split, unavailable until the remaining is zero';
+
+  @override
+  String get rsRepeat => 'Repeat';
+
+  @override
+  String get rsHowOften => 'How often';
+
+  @override
+  String get rsEveryWeek => 'Every week';
+
+  @override
+  String get rsEveryMonth => 'Every month';
+
+  @override
+  String get rsEveryQuarter => 'Every quarter';
+
+  @override
+  String get rsEveryYear => 'Every year';
+
+  @override
+  String rsSummary(Object cadence, Object date) {
+    return 'Repeats $cadence, starting $date. Managed in Planner.';
+  }
+
+  @override
+  String rsWeekly(Object weekday) {
+    return 'every week on $weekday';
+  }
+
+  @override
+  String rsMonthly(Object day) {
+    return 'on the $day of every month';
+  }
+
+  @override
+  String rsQuarterly(Object day) {
+    return 'on the $day, every 3 months';
+  }
+
+  @override
+  String rsYearly(Object day, Object month) {
+    return 'every year on $day $month';
+  }
+
+  @override
+  String get qaExchange => 'Exchange';
+
+  @override
+  String get qaEnterNewBalance => 'Enter the new balance';
+
+  @override
+  String get qaDeleteSplit => 'Delete split';
+
+  @override
+  String get qaBooksPrefix => 'Books a ';
+
+  @override
+  String get qaBooksSuffix =>
+      ' adjustment dated today. Past reports are not rewritten.';
+
+  @override
+  String get qaPutAsidePrefix => 'Put aside ';
+
+  @override
+  String qaPerMonth(Object amount) {
+    return '$amount / month';
+  }
+
+  @override
+  String qaToReachMonths(Object months) {
+    return ' for $months months to reach it on time.';
+  }
+
+  @override
+  String qaCreated(Object date) {
+    return 'Created $date';
+  }
+
+  @override
+  String qaEditedTimes(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: ' · edited $count times',
+      one: ' · edited once',
+      zero: '',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get a11yShown => 'shown';
+
+  @override
+  String get a11yPartiallyShown => 'partially shown';
+
+  @override
+  String get a11yHidden => 'hidden';
+
+  @override
+  String get a11yDoubleTapShow => 'Double tap to show all accounts';
+
+  @override
+  String get a11yDoubleTapHide => 'Double tap to hide all accounts';
+
+  @override
+  String get a11yInternalTransfer => 'internal transfer';
+
+  @override
+  String get a11yOfAssets => 'of assets';
+
+  @override
+  String get a11yOfLiabilities => 'of liabilities';
+
+  @override
+  String get a11yBalanceWord => 'balance';
+
+  @override
+  String a11yAccountBalance(Object account, Object amount) {
+    return '$account balance $amount';
+  }
+
+  @override
+  String get qaUnavailableNoAmount => 'unavailable until an amount is entered';
 }

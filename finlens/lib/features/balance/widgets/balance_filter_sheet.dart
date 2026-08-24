@@ -341,9 +341,9 @@ class _BalanceFilterSheetState extends State<_BalanceFilterSheet> {
                   width: 45,
                   height: 27,
                   knob: 23,
-                  semanticLabel: '${group.label(l)}, ${_stateWord(state)}',
+                  semanticLabel: '${group.label(l)}, ${_stateWord(state, l)}',
                   semanticHint:
-                      'Double tap to ${off ? 'show' : 'hide'} all accounts',
+                      off ? l.a11yDoubleTapShow : l.a11yDoubleTapHide,
                   onTap: () => _apply(filter.toggleGroup(store, group)),
                 ),
               ],
@@ -443,10 +443,10 @@ class _BalanceFilterSheetState extends State<_BalanceFilterSheet> {
     );
   }
 
-  static String _stateWord(ToggleState s) => switch (s) {
-        ToggleState.on => 'shown',
-        ToggleState.mixed => 'partially shown',
-        ToggleState.off => 'hidden',
+  static String _stateWord(ToggleState s, AppLocalizations l) => switch (s) {
+        ToggleState.on => l.a11yShown,
+        ToggleState.mixed => l.a11yPartiallyShown,
+        ToggleState.off => l.a11yHidden,
       };
 }
 

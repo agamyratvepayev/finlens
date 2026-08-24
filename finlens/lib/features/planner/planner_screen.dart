@@ -292,7 +292,7 @@ class _BudgetSummary extends StatelessWidget {
                 const Spacer(),
                 Container(width: 2, height: 10, color: AppColors.textPrimary),
                 const SizedBox(width: 5),
-                Text('Pace', style: AppText.caption.copyWith(fontSize: 11.5)),
+                Text(AppLocalizations.of(context).plPace, style: AppText.caption.copyWith(fontSize: 11.5)),
               ],
             ],
           ),

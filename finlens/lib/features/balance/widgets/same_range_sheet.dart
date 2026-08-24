@@ -129,15 +129,17 @@ class _PresetList extends StatelessWidget {
         // Custom range… — an accent row that opens the calendar.
         InkWell(
           onTap: onCustom,
-          child: const Padding(
-            padding: EdgeInsets.symmetric(horizontal: Insets.gutter, vertical: 11),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+                horizontal: Insets.gutter, vertical: 11),
             child: Row(
               children: [
-                Icon(Icons.calendar_today_rounded,
+                const Icon(Icons.calendar_today_rounded,
                     size: 16, color: AppColors.accentLight),
-                SizedBox(width: 10),
-                Text('Custom range…',
-                    style: TextStyle(fontSize: 15, color: AppColors.accentLight)),
+                const SizedBox(width: 10),
+                Text('${AppLocalizations.of(context).ldgCustomRange}…',
+                    style: const TextStyle(
+                        fontSize: 15, color: AppColors.accentLight)),
               ],
             ),
           ),

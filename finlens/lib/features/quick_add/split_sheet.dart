@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../../core/models/models.dart';
 import '../../core/store/app_store.dart';
 import '../../core/utils/formatters.dart';
+import '../../l10n/app_localizations.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import 'pickers.dart';
@@ -144,11 +145,11 @@ class _SplitSheetState extends State<_SplitSheet> {
                 child: GestureDetector(
                   behavior: HitTestBehavior.opaque,
                   onTap: () => Navigator.of(context).pop(<SplitLine>[]),
-                  child: const Padding(
-                    padding: EdgeInsets.all(8),
-                    child: Text('Remove split',
-                        style:
-                            TextStyle(fontSize: 13, color: AppColors.negative)),
+                  child: Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: Text(AppLocalizations.of(context).ssRemoveSplit,
+                        style: const TextStyle(
+                            fontSize: 13, color: AppColors.negative)),
                   ),
                 ),
               ),
@@ -168,7 +169,7 @@ class _SplitSheetState extends State<_SplitSheet> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Split by category',
+                  Text(AppLocalizations.of(context).ssSplitByCategory,
                       style: TextStyle(
                         fontSize: 17,
                         fontWeight: FontWeight.w600,
@@ -176,8 +177,9 @@ class _SplitSheetState extends State<_SplitSheet> {
                       )),
                   const SizedBox(height: 3),
                   Text(
-                    'Total ${money(widget.total, currency: widget.currency)} · '
-                    '${widget.accountName}',
+                    AppLocalizations.of(context).ssTotalCovers(
+                        money(widget.total, currency: widget.currency),
+                        widget.accountName),
                     style: const TextStyle(
                         fontSize: 12, color: AppColors.textSecondary),
                   ),
@@ -187,7 +189,7 @@ class _SplitSheetState extends State<_SplitSheet> {
             GestureDetector(
               behavior: HitTestBehavior.opaque,
               onTap: () => Navigator.of(context).pop(),
-              child: const Text('Done',
+              child: Text(AppLocalizations.of(context).actionDone,
                   style: TextStyle(fontSize: 14.5, color: AppColors.accent)),
             ),
           ],
@@ -247,7 +249,7 @@ class _SplitSheetState extends State<_SplitSheet> {
                 }
               },
               child: Text(
-                category?.name ?? 'Choose category',
+                category?.name ?? AppLocalizations.of(context).qaChooseCategory,
                 style: TextStyle(
                   fontSize: 14.5,
                   color: category == null
@@ -280,7 +282,7 @@ class _SplitSheetState extends State<_SplitSheet> {
               color: AppColors.textTertiary,
               icon: const Icon(Icons.close_rounded),
               onPressed: () => setState(() => _lines.removeAt(index)),
-              tooltip: 'Remove line',
+              tooltip: AppLocalizations.of(context).ssRemoveLine,
             ),
           ),
         ],
@@ -301,7 +303,7 @@ class _SplitSheetState extends State<_SplitSheet> {
                     size: 16, color: AppColors.accentLight),
               ),
               const SizedBox(width: 10),
-              const Text('Add category',
+              Text(AppLocalizations.of(context).ssAddCategory,
                   style: TextStyle(fontSize: 14.5, color: AppColors.accentLight)),
             ],
           ),
@@ -312,7 +314,7 @@ class _SplitSheetState extends State<_SplitSheet> {
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
         child: Row(
           children: [
-            const Text('Remaining',
+            Text(AppLocalizations.of(context).ssRemaining,
                 style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
             const Spacer(),
             Semantics(
@@ -335,9 +337,9 @@ class _SplitSheetState extends State<_SplitSheet> {
         padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
         child: Row(
           children: [
-            Expanded(child: _helper('Split evenly', _splitEvenly)),
+            Expanded(child: _helper(AppLocalizations.of(context).ssSplitEvenly, _splitEvenly)),
             const SizedBox(width: 8),
-            Expanded(child: _helper('Rest to last', _restToLast)),
+            Expanded(child: _helper(AppLocalizations.of(context).ssRestToLast, _restToLast)),
           ],
         ),
       );
@@ -370,8 +372,8 @@ class _SplitSheetState extends State<_SplitSheet> {
               button: true,
               enabled: enabled,
               label: enabled
-                  ? 'Apply split'
-                  : 'Apply split, unavailable until the remaining is zero',
+                  ? AppLocalizations.of(context).ssApplySplit
+                  : AppLocalizations.of(context).ssApplySplitBlocked,
               child: FilledButton(
                 onPressed:
                     enabled ? () => Navigator.of(context).pop(_lines) : null,
@@ -383,7 +385,7 @@ class _SplitSheetState extends State<_SplitSheet> {
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(13)),
                 ),
-                child: const Text('Apply split',
+                child: Text(AppLocalizations.of(context).ssApplySplit,
                     style:
                         TextStyle(fontSize: 15.5, fontWeight: FontWeight.w600)),
               ),
@@ -427,7 +429,7 @@ class _SplitSheetState extends State<_SplitSheet> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Amount', style: AppText.rowTitle),
+                Text(AppLocalizations.of(context).qaAmount, style: AppText.rowTitle),
                 const SizedBox(height: 12),
                 TextField(
                   controller: controller,
@@ -461,7 +463,7 @@ class _SplitSheetState extends State<_SplitSheet> {
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
-                    child: const Text('Done'),
+                    child: Text(AppLocalizations.of(context).actionDone),
                   ),
                 ),
               ],

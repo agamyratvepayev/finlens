@@ -101,16 +101,16 @@ Future<T?> showAppSheet<T>(
 /// a search is active — no longer buried at the end of the list.
 Future<Account?> pickAccount(
   BuildContext context, {
-  String title = 'Select account',
+  String? title,
   bool Function(Account)? filter,
   String? excludeId,
 }) {
   return showAppSheet<Account>(
     context,
-    title: title,
+    title: title ?? AppLocalizations.of(context).qaSelectAccount,
     actions: [
       _HeaderCreateAction<Account>(
-        label: 'New account',
+        label: AppLocalizations.of(context).qaNewAccount,
         // Do not prefill the name from the picker's search query (spec §3).
         onCreate: (ctx) => showNewAccountSheet(ctx),
       ),
@@ -159,7 +159,7 @@ class _AccountPickerBodyState extends State<_AccountPickerBody> {
     return Column(
       children: [
         _SearchBar(
-          hint: 'Search accounts',
+          hint: AppLocalizations.of(context).qaSearchAccounts,
           onChanged: (v) {
             setState(() => _query = v);
             // The now-unfiltered list is longer; the old offset belonged to a
@@ -183,7 +183,7 @@ class _AccountPickerBodyState extends State<_AccountPickerBody> {
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: Insets.xl),
                   child: Text(
-                    'No account matches "$_query".',
+                    AppLocalizations.of(context).qaNoAccountMatch(_query),
                     textAlign: TextAlign.center,
                     style: AppText.caption,
                   ),
@@ -242,8 +242,8 @@ Future<Category?> pickCategory(
     context,
     title: title ??
         (type == CategoryType.expense
-            ? 'Expense category'
-            : 'Income category'),
+            ? AppLocalizations.of(context).qaExpenseCategory
+            : AppLocalizations.of(context).qaIncomeCategory),
     builder: (context, controller) => _CategoryPickerBody(
         controller: controller, type: type, selectedId: selectedId),
   );
@@ -281,7 +281,7 @@ class _CategoryPickerBodyState extends State<_CategoryPickerBody> {
     return Column(
       children: [
         _SearchBar(
-          hint: 'Search categories',
+          hint: AppLocalizations.of(context).qaSearchCategories,
           onChanged: (v) {
             setState(() => _query = v);
             // The now-unfiltered grid is taller; drop back to the top when the
@@ -313,7 +313,7 @@ class _CategoryPickerBodyState extends State<_CategoryPickerBody> {
                         child: SizedBox(
                           width: double.infinity,
                           child: Text(
-                            'No category matches "$_query".',
+                            AppLocalizations.of(context).qaNoCategoryMatch(_query),
                             textAlign: TextAlign.center,
                             style: AppText.caption,
                           ),
@@ -435,7 +435,7 @@ class _NewCategoryCell extends StatelessWidget {
   Widget build(BuildContext context) {
     return Semantics(
       button: true,
-      label: 'New category',
+      label: AppLocalizations.of(context).qaNewCategory,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
@@ -460,8 +460,8 @@ class _NewCategoryCell extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 6),
-            const Text(
-              'New',
+            Text(
+              AppLocalizations.of(context).qaNewShort,
               textAlign: TextAlign.center,
               maxLines: 1,
               style: TextStyle(
@@ -637,7 +637,7 @@ class _SearchBarState extends State<_SearchBar> {
     widget.onChanged('');
     SemanticsService.sendAnnouncement(
       View.of(context),
-      'Search cleared',
+      AppLocalizations.of(context).qaSearchCleared,
       Directionality.of(context),
     );
   }
@@ -685,7 +685,7 @@ class _SearchBarState extends State<_SearchBar> {
                 if (value.text.isEmpty) return const SizedBox.shrink();
                 return Semantics(
                   button: true,
-                  label: 'Clear search',
+                  label: AppLocalizations.of(context).qaClearSearch,
                   child: GestureDetector(
                     behavior: HitTestBehavior.opaque,
                     onTap: _clear,
@@ -735,7 +735,7 @@ Future<Category?> showNewCategorySheet(
 }) {
   return showAppSheet<Category>(
     context,
-    title: 'New category',
+    title: AppLocalizations.of(context).qaNewCategory,
     initialSize: 0.85,
     builder: (context, controller) => _NewCategoryForm(
       controller: controller,
@@ -790,14 +790,14 @@ class _NewCategoryFormState extends State<_NewCategoryForm> {
                 children: [
                   TextFieldRow(
                     icon: Icons.label_rounded,
-                    label: 'Category name',
+                    label: AppLocalizations.of(context).qaCategoryName,
                     controller: _name,
                     hint: 'e.g. Groceries',
                     autofocus: widget.initialName.isEmpty,
                   ),
                 ],
               ),
-              const SectionLabelSmall('Icon'),
+              SectionLabelSmall(AppLocalizations.of(context).qaIcon),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: Insets.gutter),
                 child: AppCard(
@@ -834,7 +834,7 @@ class _NewCategoryFormState extends State<_NewCategoryForm> {
                   ),
                 ),
               ),
-              const SectionLabelSmall('Colour'),
+              SectionLabelSmall(AppLocalizations.of(context).qaColour),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: Insets.gutter),
                 child: AppCard(
@@ -877,21 +877,20 @@ class _NewCategoryFormState extends State<_NewCategoryForm> {
                   children: [
                     TextFieldRow(
                       icon: Icons.attach_money_rounded,
-                      label: 'Monthly budget (optional)',
+                      label: AppLocalizations.of(context).qaMonthlyBudget,
                       controller: _budget,
                       hint: '0',
                     ),
                   ],
                 ),
-              const InfoNote(
-                'This category will also appear in Planner → Expense Budget, '
-                'because the budget is a field on the category itself.',
+              InfoNote(
+                AppLocalizations.of(context).qaCategoryPlannerNote,
               ),
             ],
           ),
         ),
         _SheetFooter(
-          label: 'Create & select',
+          label: AppLocalizations.of(context).qaCreateSelect,
           enabled: _valid,
           onPressed: () {
             final created = store.addCategory(
@@ -917,7 +916,7 @@ Future<Account?> showNewAccountSheet(
 }) {
   return showAppSheet<Account>(
     context,
-    title: 'New account',
+    title: AppLocalizations.of(context).qaNewAccount,
     initialSize: 0.85,
     builder: (context, controller) =>
         _NewAccountForm(controller: controller, initialGroup: initialGroup),
@@ -1029,7 +1028,7 @@ class _NewAccountFormState extends State<_NewAccountForm> {
                 children: [
                   TextFieldRow(
                     icon: Icons.drive_file_rename_outline_rounded,
-                    label: 'Account name',
+                    label: AppLocalizations.of(context).qaAccountName,
                     controller: _name,
                     hint: 'e.g. Main Checking',
                     autofocus: true,
@@ -1040,9 +1039,9 @@ class _NewAccountFormState extends State<_NewAccountForm> {
                 Padding(
                   padding: const EdgeInsets.fromLTRB(
                       Insets.gutter + Insets.xs, 0, Insets.gutter, Insets.md),
-                  child: const Text(
-                    'An account with this name already exists',
-                    style: TextStyle(fontSize: 12, color: AppColors.negative),
+                  child: Text(
+                    AppLocalizations.of(context).qaAccountExists,
+                    style: const TextStyle(fontSize: 12, color: AppColors.negative),
                   ),
                 ),
               _groupList('ASSETS', AccountGroup.assets),
@@ -1062,7 +1061,7 @@ class _NewAccountFormState extends State<_NewAccountForm> {
           ),
         ),
         _SheetFooter(
-          label: 'Create & select',
+          label: AppLocalizations.of(context).qaCreateSelect,
           enabled: _valid(store),
           onPressed: () {
             final magnitude = double.tryParse(_balance.text.trim()) ?? 0;
@@ -1189,7 +1188,7 @@ class _NewAccountFormState extends State<_NewAccountForm> {
           child: Column(
             children: [
               FormRow(
-                label: 'Currency',
+                label: AppLocalizations.of(context).eaCurrency,
                 value: _currency,
                 showChevron: true,
                 onTap: () async {
@@ -1199,7 +1198,7 @@ class _NewAccountFormState extends State<_NewAccountForm> {
               ),
               _hair(),
               _amountRow(
-                label: _isLiability ? 'Amount owed' : 'Starting balance',
+                label: _isLiability ? AppLocalizations.of(context).qaAmountOwed : AppLocalizations.of(context).eaStartingBalance,
                 controller: _balance,
                 valueColor:
                     _isLiability ? AppColors.negative : AppColors.textPrimary,
@@ -1207,7 +1206,7 @@ class _NewAccountFormState extends State<_NewAccountForm> {
               if (group == AccountGroup.creditCards) ...[
                 _hair(),
                 _amountRow(
-                  label: 'Credit limit',
+                  label: AppLocalizations.of(context).eaCreditLimit,
                   controller: _limit,
                   valueColor: AppColors.textPrimary,
                   error: !_limitValid,
@@ -1216,7 +1215,7 @@ class _NewAccountFormState extends State<_NewAccountForm> {
               if (group == AccountGroup.bankLoans) ...[
                 _hair(),
                 _amountRow(
-                  label: 'Payment day',
+                  label: AppLocalizations.of(context).qaPaymentDay,
                   controller: _paymentDay,
                   valueColor: AppColors.textPrimary,
                   showSymbol: false,
@@ -1232,28 +1231,26 @@ class _NewAccountFormState extends State<_NewAccountForm> {
           padding: const EdgeInsets.fromLTRB(18, 7, 18, 0),
           child: Text(
             _isLiability
-                ? 'Enter what you owe as a positive number — it counts '
-                    'against your net worth.'
-                : 'Enter this once. From now on the balance is calculated '
-                    'from your transactions.',
+                ? AppLocalizations.of(context).qaOwedHint
+                : AppLocalizations.of(context).qaStartingBalanceHint,
             style: const TextStyle(
                 fontSize: 11, height: 1.45, color: AppColors.textTertiary),
           ),
         ),
         if (group == AccountGroup.bankLoans)
-          const Padding(
-            padding: EdgeInsets.fromLTRB(18, 4, 18, 0),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(18, 4, 18, 0),
             child: Text(
-              'Months shorter than this use their last day.',
-              style: TextStyle(
+              AppLocalizations.of(context).qaPaymentDayHint,
+              style: const TextStyle(
                   fontSize: 11, height: 1.45, color: AppColors.textTertiary),
             ),
           ),
-        const Padding(
-          padding: EdgeInsets.fromLTRB(16, 14, 16, 6),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
           child: Text(
-            'ICON',
-            style: TextStyle(
+            AppLocalizations.of(context).qaIcon.toUpperCase(),
+            style: const TextStyle(
               fontSize: 10.5,
               fontWeight: FontWeight.w600,
               letterSpacing: 0.07 * 10.5,
@@ -1291,7 +1288,7 @@ class _NewAccountFormState extends State<_NewAccountForm> {
   Widget _gridButton(AccountGroup group) {
     return Semantics(
       button: true,
-      label: 'More icons',
+      label: AppLocalizations.of(context).qaMoreIcons,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: () async {
@@ -1380,7 +1377,7 @@ Future<String?> pickCurrency(BuildContext context, String current) {
   const codes = ['USD', 'EUR', 'TRY', 'TMT', 'GBP', 'JPY'];
   return showAppSheet<String>(
     context,
-    title: 'Currency',
+    title: AppLocalizations.of(context).eaCurrency,
     initialSize: 0.5,
     builder: (context, controller) => ListView(
       controller: controller,

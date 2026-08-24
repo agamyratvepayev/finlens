@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_colors.dart';
 
 /// Everything on the transaction form is authored for a 390pt-wide screen and
@@ -420,7 +421,7 @@ class FormNavBar extends StatelessWidget {
               behavior: HitTestBehavior.opaque,
               onTap: onCancel,
               child: Text(
-                'Cancel',
+                AppLocalizations.of(context).actionCancel,
                 style: TextStyle(
                   fontSize: 15 * s * t,
                   fontWeight: FontWeight.w400,
@@ -490,7 +491,7 @@ class FormNavBar extends StatelessWidget {
               behavior: HitTestBehavior.opaque,
               onTap: canSave ? onSave : null,
               child: Text(
-                'Save',
+                AppLocalizations.of(context).actionSave,
                 style: TextStyle(
                   fontSize: 15 * s * t,
                   fontWeight: FontWeight.w600,

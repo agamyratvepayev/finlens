@@ -1380,6 +1380,12 @@ abstract class AppLocalizations {
   /// **'Saved toward goals'**
   String get plSavedTowardGoals;
 
+  /// No description provided for @plPace.
+  ///
+  /// In en, this message translates to:
+  /// **'Pace'**
+  String get plPace;
+
   /// No description provided for @plPaymentsOverdue.
   ///
   /// In en, this message translates to:
@@ -2441,6 +2447,894 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Unchanged'**
   String get tdUnchanged;
+
+  /// No description provided for @qaAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Amount'**
+  String get qaAmount;
+
+  /// No description provided for @qaDue.
+  ///
+  /// In en, this message translates to:
+  /// **'Due'**
+  String get qaDue;
+
+  /// No description provided for @qaNewBalance.
+  ///
+  /// In en, this message translates to:
+  /// **'New balance'**
+  String get qaNewBalance;
+
+  /// No description provided for @qaTarget.
+  ///
+  /// In en, this message translates to:
+  /// **'Target'**
+  String get qaTarget;
+
+  /// No description provided for @qaDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Date'**
+  String get qaDate;
+
+  /// No description provided for @qaTag.
+  ///
+  /// In en, this message translates to:
+  /// **'Tag'**
+  String get qaTag;
+
+  /// No description provided for @qaNone.
+  ///
+  /// In en, this message translates to:
+  /// **'None'**
+  String get qaNone;
+
+  /// No description provided for @qaNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Note'**
+  String get qaNote;
+
+  /// No description provided for @qaAddNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a note'**
+  String get qaAddNote;
+
+  /// No description provided for @qaOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Optional'**
+  String get qaOptional;
+
+  /// No description provided for @qaSplit.
+  ///
+  /// In en, this message translates to:
+  /// **'Split'**
+  String get qaSplit;
+
+  /// No description provided for @qaSplitCategories.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} categories'**
+  String qaSplitCategories(Object count);
+
+  /// No description provided for @qaGroupRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Required'**
+  String get qaGroupRequired;
+
+  /// No description provided for @qaGroupOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Optional'**
+  String get qaGroupOptional;
+
+  /// No description provided for @qaFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'From'**
+  String get qaFrom;
+
+  /// No description provided for @qaTo.
+  ///
+  /// In en, this message translates to:
+  /// **'To'**
+  String get qaTo;
+
+  /// No description provided for @qaChooseAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose account'**
+  String get qaChooseAccount;
+
+  /// No description provided for @qaChooseCategory.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose category'**
+  String get qaChooseCategory;
+
+  /// No description provided for @qaChooseSource.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose source'**
+  String get qaChooseSource;
+
+  /// No description provided for @qaPayFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'Pay from'**
+  String get qaPayFrom;
+
+  /// No description provided for @qaDepositInto.
+  ///
+  /// In en, this message translates to:
+  /// **'Deposit into'**
+  String get qaDepositInto;
+
+  /// No description provided for @qaTransferFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'Transfer from'**
+  String get qaTransferFrom;
+
+  /// No description provided for @qaTransferTo.
+  ///
+  /// In en, this message translates to:
+  /// **'Transfer to'**
+  String get qaTransferTo;
+
+  /// No description provided for @qaRate.
+  ///
+  /// In en, this message translates to:
+  /// **'Rate'**
+  String get qaRate;
+
+  /// No description provided for @qaReceives.
+  ///
+  /// In en, this message translates to:
+  /// **'Receives'**
+  String get qaReceives;
+
+  /// No description provided for @qaFee.
+  ///
+  /// In en, this message translates to:
+  /// **'Fee'**
+  String get qaFee;
+
+  /// No description provided for @qaAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Account'**
+  String get qaAccount;
+
+  /// No description provided for @qaRevalueAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Revalue account'**
+  String get qaRevalueAccount;
+
+  /// No description provided for @qaCurrent.
+  ///
+  /// In en, this message translates to:
+  /// **'Current'**
+  String get qaCurrent;
+
+  /// No description provided for @qaDifference.
+  ///
+  /// In en, this message translates to:
+  /// **'Difference'**
+  String get qaDifference;
+
+  /// No description provided for @qaReason.
+  ///
+  /// In en, this message translates to:
+  /// **'Reason'**
+  String get qaReason;
+
+  /// No description provided for @qaAdjustment.
+  ///
+  /// In en, this message translates to:
+  /// **'Adjustment'**
+  String get qaAdjustment;
+
+  /// No description provided for @qaBalanceUnchanged.
+  ///
+  /// In en, this message translates to:
+  /// **'Balance unchanged'**
+  String get qaBalanceUnchanged;
+
+  /// No description provided for @qaName.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get qaName;
+
+  /// No description provided for @qaNameYourGoal.
+  ///
+  /// In en, this message translates to:
+  /// **'Name your goal'**
+  String get qaNameYourGoal;
+
+  /// No description provided for @qaGoalNameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. MacBook Pro M4'**
+  String get qaGoalNameHint;
+
+  /// No description provided for @qaSetDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Set a date'**
+  String get qaSetDate;
+
+  /// No description provided for @qaFundingAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Funding account'**
+  String get qaFundingAccount;
+
+  /// No description provided for @qaStartingAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Starting amount'**
+  String get qaStartingAmount;
+
+  /// No description provided for @qaIconColour.
+  ///
+  /// In en, this message translates to:
+  /// **'Icon & colour'**
+  String get qaIconColour;
+
+  /// No description provided for @qaTapToChange.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to change'**
+  String get qaTapToChange;
+
+  /// No description provided for @qaAutoFund.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto-fund'**
+  String get qaAutoFund;
+
+  /// No description provided for @qaRemind.
+  ///
+  /// In en, this message translates to:
+  /// **'Remind'**
+  String get qaRemind;
+
+  /// No description provided for @qaTaskPlaceholder.
+  ///
+  /// In en, this message translates to:
+  /// **'What needs doing?'**
+  String get qaTaskPlaceholder;
+
+  /// No description provided for @qaExchangeRate.
+  ///
+  /// In en, this message translates to:
+  /// **'Exchange rate'**
+  String get qaExchangeRate;
+
+  /// No description provided for @qaFxRate.
+  ///
+  /// In en, this message translates to:
+  /// **'1 {from} = ? {to}'**
+  String qaFxRate(Object from, Object to);
+
+  /// No description provided for @qaWhatAdding.
+  ///
+  /// In en, this message translates to:
+  /// **'What are you adding?'**
+  String get qaWhatAdding;
+
+  /// No description provided for @qaDeleteEntry.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete this entry'**
+  String get qaDeleteEntry;
+
+  /// No description provided for @qaBalanceAdjustment.
+  ///
+  /// In en, this message translates to:
+  /// **'Balance adjustment'**
+  String get qaBalanceAdjustment;
+
+  /// No description provided for @qaRecurring.
+  ///
+  /// In en, this message translates to:
+  /// **'Recurring'**
+  String get qaRecurring;
+
+  /// No description provided for @qaLinkedSplit.
+  ///
+  /// In en, this message translates to:
+  /// **'This is one of {count} linked split transactions.'**
+  String qaLinkedSplit(Object count);
+
+  /// No description provided for @qaDeleteAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete all {count}'**
+  String qaDeleteAll(Object count);
+
+  /// No description provided for @qaDeleteJustLine.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete just this line'**
+  String get qaDeleteJustLine;
+
+  /// No description provided for @qaSaveExpense.
+  ///
+  /// In en, this message translates to:
+  /// **'Save expense'**
+  String get qaSaveExpense;
+
+  /// No description provided for @qaSaveIncome.
+  ///
+  /// In en, this message translates to:
+  /// **'Save income'**
+  String get qaSaveIncome;
+
+  /// No description provided for @qaSaveTransfer.
+  ///
+  /// In en, this message translates to:
+  /// **'Save transfer'**
+  String get qaSaveTransfer;
+
+  /// No description provided for @qaSaveAdjustment.
+  ///
+  /// In en, this message translates to:
+  /// **'Save adjustment'**
+  String get qaSaveAdjustment;
+
+  /// No description provided for @qaCreateGoal.
+  ///
+  /// In en, this message translates to:
+  /// **'Create goal'**
+  String get qaCreateGoal;
+
+  /// No description provided for @qaCreateTask.
+  ///
+  /// In en, this message translates to:
+  /// **'Create task'**
+  String get qaCreateTask;
+
+  /// No description provided for @qaSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'{type} saved'**
+  String qaSaved(Object type);
+
+  /// No description provided for @qaBlockAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter an amount'**
+  String get qaBlockAmount;
+
+  /// No description provided for @qaBlockAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose an account'**
+  String get qaBlockAccount;
+
+  /// No description provided for @qaBlockCategory.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a category'**
+  String get qaBlockCategory;
+
+  /// No description provided for @qaBlockSource.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a source'**
+  String get qaBlockSource;
+
+  /// No description provided for @qaBlockSplit.
+  ///
+  /// In en, this message translates to:
+  /// **'Balance the split'**
+  String get qaBlockSplit;
+
+  /// No description provided for @qaBlockSourceAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a source account'**
+  String get qaBlockSourceAccount;
+
+  /// No description provided for @qaBlockDestination.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a destination'**
+  String get qaBlockDestination;
+
+  /// No description provided for @qaBlockBalanceUnchanged.
+  ///
+  /// In en, this message translates to:
+  /// **'Balance unchanged'**
+  String get qaBlockBalanceUnchanged;
+
+  /// No description provided for @qaBlockNameGoal.
+  ///
+  /// In en, this message translates to:
+  /// **'Name your goal'**
+  String get qaBlockNameGoal;
+
+  /// No description provided for @qaBlockSetTarget.
+  ///
+  /// In en, this message translates to:
+  /// **'Set a target'**
+  String get qaBlockSetTarget;
+
+  /// No description provided for @qaBlockSetTargetDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Set a target date'**
+  String get qaBlockSetTargetDate;
+
+  /// No description provided for @qaBlockFunding.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a funding account'**
+  String get qaBlockFunding;
+
+  /// No description provided for @qaBlockNameTask.
+  ///
+  /// In en, this message translates to:
+  /// **'Name the task'**
+  String get qaBlockNameTask;
+
+  /// No description provided for @qaBlockDueDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Set a due date'**
+  String get qaBlockDueDate;
+
+  /// No description provided for @qaNewAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'New account'**
+  String get qaNewAccount;
+
+  /// No description provided for @qaNewCategory.
+  ///
+  /// In en, this message translates to:
+  /// **'New category'**
+  String get qaNewCategory;
+
+  /// No description provided for @qaNewShort.
+  ///
+  /// In en, this message translates to:
+  /// **'New'**
+  String get qaNewShort;
+
+  /// No description provided for @qaSelectAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Select account'**
+  String get qaSelectAccount;
+
+  /// No description provided for @qaSearchAccounts.
+  ///
+  /// In en, this message translates to:
+  /// **'Search accounts'**
+  String get qaSearchAccounts;
+
+  /// No description provided for @qaSearchCategories.
+  ///
+  /// In en, this message translates to:
+  /// **'Search categories'**
+  String get qaSearchCategories;
+
+  /// No description provided for @qaNoAccountMatch.
+  ///
+  /// In en, this message translates to:
+  /// **'No account matches \"{query}\".'**
+  String qaNoAccountMatch(Object query);
+
+  /// No description provided for @qaNoCategoryMatch.
+  ///
+  /// In en, this message translates to:
+  /// **'No category matches \"{query}\".'**
+  String qaNoCategoryMatch(Object query);
+
+  /// No description provided for @qaExpenseCategory.
+  ///
+  /// In en, this message translates to:
+  /// **'Expense category'**
+  String get qaExpenseCategory;
+
+  /// No description provided for @qaIncomeCategory.
+  ///
+  /// In en, this message translates to:
+  /// **'Income category'**
+  String get qaIncomeCategory;
+
+  /// No description provided for @qaSearchCleared.
+  ///
+  /// In en, this message translates to:
+  /// **'Search cleared'**
+  String get qaSearchCleared;
+
+  /// No description provided for @qaClearSearch.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear search'**
+  String get qaClearSearch;
+
+  /// No description provided for @qaCategoryName.
+  ///
+  /// In en, this message translates to:
+  /// **'Category name'**
+  String get qaCategoryName;
+
+  /// No description provided for @qaIcon.
+  ///
+  /// In en, this message translates to:
+  /// **'Icon'**
+  String get qaIcon;
+
+  /// No description provided for @qaColour.
+  ///
+  /// In en, this message translates to:
+  /// **'Colour'**
+  String get qaColour;
+
+  /// No description provided for @qaMonthlyBudget.
+  ///
+  /// In en, this message translates to:
+  /// **'Monthly budget (optional)'**
+  String get qaMonthlyBudget;
+
+  /// No description provided for @qaCategoryPlannerNote.
+  ///
+  /// In en, this message translates to:
+  /// **'This category will also appear in Planner → Expense Budget, where you can track spending against it.'**
+  String get qaCategoryPlannerNote;
+
+  /// No description provided for @qaCreateSelect.
+  ///
+  /// In en, this message translates to:
+  /// **'Create & select'**
+  String get qaCreateSelect;
+
+  /// No description provided for @qaAccountName.
+  ///
+  /// In en, this message translates to:
+  /// **'Account name'**
+  String get qaAccountName;
+
+  /// No description provided for @qaAccountExists.
+  ///
+  /// In en, this message translates to:
+  /// **'An account with this name already exists'**
+  String get qaAccountExists;
+
+  /// No description provided for @qaAssets.
+  ///
+  /// In en, this message translates to:
+  /// **'Assets'**
+  String get qaAssets;
+
+  /// No description provided for @qaLiabilities.
+  ///
+  /// In en, this message translates to:
+  /// **'Liabilities'**
+  String get qaLiabilities;
+
+  /// No description provided for @qaAmountOwed.
+  ///
+  /// In en, this message translates to:
+  /// **'Amount owed'**
+  String get qaAmountOwed;
+
+  /// No description provided for @qaPaymentDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment day'**
+  String get qaPaymentDay;
+
+  /// No description provided for @qaOwedHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter what you owe as a positive number — it counts against your net worth.'**
+  String get qaOwedHint;
+
+  /// No description provided for @qaStartingBalanceHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter this once. From now on the balance is calculated from your transactions.'**
+  String get qaStartingBalanceHint;
+
+  /// No description provided for @qaPaymentDayHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Months shorter than this use their last day.'**
+  String get qaPaymentDayHint;
+
+  /// No description provided for @qaMoreIcons.
+  ///
+  /// In en, this message translates to:
+  /// **'More icons'**
+  String get qaMoreIcons;
+
+  /// No description provided for @qaChooseIcon.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose icon'**
+  String get qaChooseIcon;
+
+  /// No description provided for @qaSearchIcons.
+  ///
+  /// In en, this message translates to:
+  /// **'Search icons'**
+  String get qaSearchIcons;
+
+  /// No description provided for @qaResults.
+  ///
+  /// In en, this message translates to:
+  /// **'Results'**
+  String get qaResults;
+
+  /// No description provided for @qaNoIconsMatch.
+  ///
+  /// In en, this message translates to:
+  /// **'No icons match'**
+  String get qaNoIconsMatch;
+
+  /// No description provided for @ssRemoveSplit.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove split'**
+  String get ssRemoveSplit;
+
+  /// No description provided for @ssSplitByCategory.
+  ///
+  /// In en, this message translates to:
+  /// **'Split by category'**
+  String get ssSplitByCategory;
+
+  /// No description provided for @ssTotalCovers.
+  ///
+  /// In en, this message translates to:
+  /// **'Total {total} · {covered}'**
+  String ssTotalCovers(Object total, Object covered);
+
+  /// No description provided for @ssRemoveLine.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove line'**
+  String get ssRemoveLine;
+
+  /// No description provided for @ssAddCategory.
+  ///
+  /// In en, this message translates to:
+  /// **'Add category'**
+  String get ssAddCategory;
+
+  /// No description provided for @ssRemaining.
+  ///
+  /// In en, this message translates to:
+  /// **'Remaining'**
+  String get ssRemaining;
+
+  /// No description provided for @ssSplitEvenly.
+  ///
+  /// In en, this message translates to:
+  /// **'Split evenly'**
+  String get ssSplitEvenly;
+
+  /// No description provided for @ssRestToLast.
+  ///
+  /// In en, this message translates to:
+  /// **'Rest to last'**
+  String get ssRestToLast;
+
+  /// No description provided for @ssApplySplit.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply split'**
+  String get ssApplySplit;
+
+  /// No description provided for @ssApplySplitBlocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply split, unavailable until the remaining is zero'**
+  String get ssApplySplitBlocked;
+
+  /// No description provided for @rsRepeat.
+  ///
+  /// In en, this message translates to:
+  /// **'Repeat'**
+  String get rsRepeat;
+
+  /// No description provided for @rsHowOften.
+  ///
+  /// In en, this message translates to:
+  /// **'How often'**
+  String get rsHowOften;
+
+  /// No description provided for @rsEveryWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'Every week'**
+  String get rsEveryWeek;
+
+  /// No description provided for @rsEveryMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Every month'**
+  String get rsEveryMonth;
+
+  /// No description provided for @rsEveryQuarter.
+  ///
+  /// In en, this message translates to:
+  /// **'Every quarter'**
+  String get rsEveryQuarter;
+
+  /// No description provided for @rsEveryYear.
+  ///
+  /// In en, this message translates to:
+  /// **'Every year'**
+  String get rsEveryYear;
+
+  /// No description provided for @rsSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Repeats {cadence}, starting {date}. Managed in Planner.'**
+  String rsSummary(Object cadence, Object date);
+
+  /// No description provided for @rsWeekly.
+  ///
+  /// In en, this message translates to:
+  /// **'every week on {weekday}'**
+  String rsWeekly(Object weekday);
+
+  /// No description provided for @rsMonthly.
+  ///
+  /// In en, this message translates to:
+  /// **'on the {day} of every month'**
+  String rsMonthly(Object day);
+
+  /// No description provided for @rsQuarterly.
+  ///
+  /// In en, this message translates to:
+  /// **'on the {day}, every 3 months'**
+  String rsQuarterly(Object day);
+
+  /// No description provided for @rsYearly.
+  ///
+  /// In en, this message translates to:
+  /// **'every year on {day} {month}'**
+  String rsYearly(Object day, Object month);
+
+  /// No description provided for @qaExchange.
+  ///
+  /// In en, this message translates to:
+  /// **'Exchange'**
+  String get qaExchange;
+
+  /// No description provided for @qaEnterNewBalance.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the new balance'**
+  String get qaEnterNewBalance;
+
+  /// No description provided for @qaDeleteSplit.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete split'**
+  String get qaDeleteSplit;
+
+  /// No description provided for @qaBooksPrefix.
+  ///
+  /// In en, this message translates to:
+  /// **'Books a '**
+  String get qaBooksPrefix;
+
+  /// No description provided for @qaBooksSuffix.
+  ///
+  /// In en, this message translates to:
+  /// **' adjustment dated today. Past reports are not rewritten.'**
+  String get qaBooksSuffix;
+
+  /// No description provided for @qaPutAsidePrefix.
+  ///
+  /// In en, this message translates to:
+  /// **'Put aside '**
+  String get qaPutAsidePrefix;
+
+  /// No description provided for @qaPerMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'{amount} / month'**
+  String qaPerMonth(Object amount);
+
+  /// No description provided for @qaToReachMonths.
+  ///
+  /// In en, this message translates to:
+  /// **' for {months} months to reach it on time.'**
+  String qaToReachMonths(Object months);
+
+  /// No description provided for @qaCreated.
+  ///
+  /// In en, this message translates to:
+  /// **'Created {date}'**
+  String qaCreated(Object date);
+
+  /// No description provided for @qaEditedTimes.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{} one{ · edited once} other{ · edited {count} times}}'**
+  String qaEditedTimes(int count);
+
+  /// No description provided for @a11yShown.
+  ///
+  /// In en, this message translates to:
+  /// **'shown'**
+  String get a11yShown;
+
+  /// No description provided for @a11yPartiallyShown.
+  ///
+  /// In en, this message translates to:
+  /// **'partially shown'**
+  String get a11yPartiallyShown;
+
+  /// No description provided for @a11yHidden.
+  ///
+  /// In en, this message translates to:
+  /// **'hidden'**
+  String get a11yHidden;
+
+  /// No description provided for @a11yDoubleTapShow.
+  ///
+  /// In en, this message translates to:
+  /// **'Double tap to show all accounts'**
+  String get a11yDoubleTapShow;
+
+  /// No description provided for @a11yDoubleTapHide.
+  ///
+  /// In en, this message translates to:
+  /// **'Double tap to hide all accounts'**
+  String get a11yDoubleTapHide;
+
+  /// No description provided for @a11yInternalTransfer.
+  ///
+  /// In en, this message translates to:
+  /// **'internal transfer'**
+  String get a11yInternalTransfer;
+
+  /// No description provided for @a11yOfAssets.
+  ///
+  /// In en, this message translates to:
+  /// **'of assets'**
+  String get a11yOfAssets;
+
+  /// No description provided for @a11yOfLiabilities.
+  ///
+  /// In en, this message translates to:
+  /// **'of liabilities'**
+  String get a11yOfLiabilities;
+
+  /// No description provided for @a11yBalanceWord.
+  ///
+  /// In en, this message translates to:
+  /// **'balance'**
+  String get a11yBalanceWord;
+
+  /// No description provided for @a11yAccountBalance.
+  ///
+  /// In en, this message translates to:
+  /// **'{account} balance {amount}'**
+  String a11yAccountBalance(Object account, Object amount);
+
+  /// No description provided for @qaUnavailableNoAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'unavailable until an amount is entered'**
+  String get qaUnavailableNoAmount;
 }
 
 class _AppLocalizationsDelegate
