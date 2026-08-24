@@ -4,8 +4,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:finlens/core/data/seed_data.dart';
 import 'package:finlens/core/models/models.dart';
 import 'package:finlens/core/store/app_store.dart';
+import 'package:finlens/core/utils/formatters.dart';
 import 'package:finlens/features/planner/budget_detail_screen.dart';
 import 'package:finlens/features/planner/planner_screen.dart';
+import 'package:finlens/shared/widgets/amount_text.dart';
+import 'package:finlens/shared/widgets/app_card.dart';
 
 /// Planner Budgets tab + budget detail screen (spec 5.1 rework).
 ///
@@ -174,5 +177,104 @@ void main() {
     await tester.pump();
     expect(find.text('AGAINST THE LIMIT'), findsOneWidget);
     expect(find.textContaining('Averaging'), findsOneWidget);
+  });
+
+  // ── The dense budget row (spec §3/§4) ────────────────────────────────────────
+
+  testWidgets('a budget row is dense (≤52pt) and its 4pt bar starts at the '
+      'text column', (tester) async {
+    bigScreen(tester);
+    final store = buildSeedStore();
+    await tester.pumpWidget(wrap(store, const PlannerScreen()));
+
+    // The InkWell wrapping Groceries' row, and the icon + bar inside it.
+    final row = find
+        .ancestor(of: find.text('Groceries'), matching: find.byType(InkWell))
+        .first;
+    final icon = find.descendant(of: row, matching: find.byType(IconTile));
+    final bar = find.descendant(of: row, matching: find.byType(ProgressBar));
+
+    final rowRect = tester.getRect(row);
+    final iconRect = tester.getRect(icon);
+    final barRect = tester.getRect(bar);
+
+    // 48pt of pitch — the bar costs no row height (spec §3).
+    expect(rowRect.height, lessThanOrEqualTo(52));
+    // The bar is 4pt and spans the text column: its left edge sits at the
+    // icon's right edge plus the 12pt gap, not under the icon.
+    expect(barRect.height, closeTo(4, 0.6));
+    expect(barRect.left, greaterThanOrEqualTo(iconRect.right - 0.5));
+    expect(barRect.left, lessThanOrEqualTo(iconRect.right + 14));
+  });
+
+  testWidgets('the over glyph renders only above the effective limit',
+      (tester) async {
+    bigScreen(tester);
+    final store = buildSeedStore();
+    await tester.pumpWidget(wrap(store, const PlannerScreen()));
+
+    final overCount = store.budgetedCategories
+        .where((c) =>
+            store.spentInCategory(c.id, aug) > (c.effectiveLimit ?? 0))
+        .length;
+    // The seed has exactly one over-limit budget (Entertainment); no warn-level
+    // glyph exists, so the count of triangles equals the over-limit count.
+    expect(overCount, greaterThan(0));
+    expect(find.byIcon(Icons.warning_amber_rounded), findsNWidgets(overCount));
+  });
+
+  testWidgets('every budget row announces its state in a single semantics label',
+      (tester) async {
+    bigScreen(tester);
+    final handle = tester.ensureSemantics();
+    final store = buildSeedStore();
+    await tester.pumpWidget(wrap(store, const PlannerScreen()));
+
+    var sawOver = false;
+    for (final c in store.budgetedCategories) {
+      final spent = store.spentInCategory(c.id, aug);
+      final limit = c.effectiveLimit ?? 0;
+      final ratio = limit <= 0 ? 0.0 : spent / limit;
+      final s = money(spent), lim = money(limit);
+      final String expected;
+      if (ratio > 1) {
+        expected = '${c.name}, over budget, $s of $lim';
+        sawOver = true;
+      } else if (ratio >= c.warnThreshold) {
+        expected = '${c.name}, near the limit, $s of $lim';
+      } else {
+        expected = '${c.name}, $s of $lim';
+      }
+      expect(find.bySemanticsLabel(expected), findsOneWidget, reason: c.name);
+    }
+    // The three-state coverage is only meaningful if an over-budget row exists.
+    expect(sawOver, isTrue);
+    handle.dispose();
+  });
+
+  testWidgets('the NO BUDGET SET section is collapsed by default and expands '
+      'on tap', (tester) async {
+    bigScreen(tester);
+    final store = buildSeedStore();
+    await tester.pumpWidget(wrap(store, const PlannerScreen()));
+
+    final cats = store.unbudgetedSpendingCategories(aug);
+    expect(cats.length, greaterThanOrEqualTo(2));
+    final firstName = cats.first.name; // highest spend — Eating out
+    final countLabel =
+        cats.length == 1 ? '1 category' : '${cats.length} categories';
+
+    // Collapsed: the header shows the count · total, but the member rows and
+    // their Set buttons are hidden.
+    expect(find.text('NO BUDGET SET'), findsOneWidget);
+    expect(find.text(countLabel), findsOneWidget);
+    expect(find.text('Set'), findsNothing);
+    expect(find.text(firstName), findsNothing);
+
+    await tester.tap(find.text('NO BUDGET SET'));
+    await tester.pumpAndSettle();
+
+    expect(find.text(firstName), findsOneWidget);
+    expect(find.text('Set'), findsWidgets);
   });
 }

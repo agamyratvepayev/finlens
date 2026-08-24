@@ -1428,6 +1428,54 @@ abstract class AppLocalizations {
   /// **'Pace'**
   String get plPace;
 
+  /// No description provided for @plLeftOfAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'left of {amount}'**
+  String plLeftOfAmount(Object amount);
+
+  /// No description provided for @plOverAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'over {amount}'**
+  String plOverAmount(Object amount);
+
+  /// No description provided for @plPctSpent.
+  ///
+  /// In en, this message translates to:
+  /// **'{pct} spent'**
+  String plPctSpent(Object pct);
+
+  /// No description provided for @plPctMonthGone.
+  ///
+  /// In en, this message translates to:
+  /// **'{pct} of the month gone'**
+  String plPctMonthGone(Object pct);
+
+  /// No description provided for @plCategoriesCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{{count} category} other{{count} categories}}'**
+  String plCategoriesCount(int count);
+
+  /// No description provided for @plSemRowOver.
+  ///
+  /// In en, this message translates to:
+  /// **'{name}, over budget, {spent} of {limit}'**
+  String plSemRowOver(Object name, Object spent, Object limit);
+
+  /// No description provided for @plSemRowNear.
+  ///
+  /// In en, this message translates to:
+  /// **'{name}, near the limit, {spent} of {limit}'**
+  String plSemRowNear(Object name, Object spent, Object limit);
+
+  /// No description provided for @plSemRowNormal.
+  ///
+  /// In en, this message translates to:
+  /// **'{name}, {spent} of {limit}'**
+  String plSemRowNormal(Object name, Object spent, Object limit);
+
   /// No description provided for @plPaymentsOverdue.
   ///
   /// In en, this message translates to:

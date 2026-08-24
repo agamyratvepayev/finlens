@@ -805,8 +805,7 @@ holds everywhere.
 | `RowDivider` | app_card.dart | Indented list divider |
 | `ScreenHeader` | [screen_header.dart](lib/shared/widgets/screen_header.dart) | Title + eye + `+` + `trailing`; `showBack`/`showEye`/`showAdd` |
 | `SectionLabel` | screen_header.dart | Uppercase section label |
-| `UnderlineTabs` | screen_header.dart | Planner's 3 tabs |
-| `SegmentedPicker<T>` | screen_header.dart | Generic segmented control |
+| `SegmentedPicker<T>` | screen_header.dart | Generic segmented control (New/Edit Goal type picker) |
 | **`SectionIndicator`** | [section_header.dart](lib/shared/widgets/section_header.dart) | Label + page dots, tap advances/wraps (Balance's section switcher) |
 | **`ToolCluster` / `Tool`** | section_header.dart | **The 3-button tool row.** 30×28, radius `Radii.sm`, 5px gaps, `showDot` for non-default state, `filled` for on-toggles |
 | `HorizontalSectionSwipe` | section_header.dart | Horizontal swipe that won't steal vertical scroll (55px threshold, 1.6× dominance) |
@@ -1007,9 +1006,12 @@ stays one level deep.
 **File** [planner_screen.dart](lib/features/planner/planner_screen.dart) ·
 **Widget** `PlannerScreen`
 
-`ScreenHeader` (its `+` is type-aware per tab; `•••` → `ArchiveScreen`) → a
-month bar → a per-tab summary → `UnderlineTabs` **Budgets / Goals / Schedule** →
-the tab body. Budgets read `store.budgetedCategories` with burn-rate bars and a
+Header row 1 (`ScreenHeader`, its `+` type-aware per tab; `•••` → `ArchiveScreen`;
+month control on Budgets only, empty on Goals/Schedule — row 1 is the tab's scope
+control) → row 2 a raised-chip **segmented control** (`_SegmentedTabs`, Budgets /
+Goals / Schedule) → row 3 the per-tab summary → the tab body. The Planner owns its
+own `_month`; it never reads or writes `store.period`, so its arrows leave Ledger
+and Insight untouched. Budgets read `store.budgetedCategories` with burn-rate bars and a
 projected-overspend banner; Goals read `store.goalsOfType(...)`; Schedule reads
 `store.overdueTasks` / `thisWeekTasks` / `laterTasks` with mark-paid and skip.
 Editors: [edit_budget_screen.dart](lib/features/planner/edit_budget_screen.dart),

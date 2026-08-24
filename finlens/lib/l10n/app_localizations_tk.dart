@@ -861,6 +861,52 @@ class AppLocalizationsTk extends AppLocalizations {
   String get plPace => 'Depgin';
 
   @override
+  String plLeftOfAmount(Object amount) {
+    return '$amount býujetden galan';
+  }
+
+  @override
+  String plOverAmount(Object amount) {
+    return '$amount býujetden aşdy';
+  }
+
+  @override
+  String plPctSpent(Object pct) {
+    return '$pct sarp edildi';
+  }
+
+  @override
+  String plPctMonthGone(Object pct) {
+    return 'aýyň $pct bölegi geçdi';
+  }
+
+  @override
+  String plCategoriesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count kategoriýa',
+      one: '$count kategoriýa',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String plSemRowOver(Object name, Object spent, Object limit) {
+    return '$name, býujet aşyldy, $spent / $limit';
+  }
+
+  @override
+  String plSemRowNear(Object name, Object spent, Object limit) {
+    return '$name, çäge ýakyn, $spent / $limit';
+  }
+
+  @override
+  String plSemRowNormal(Object name, Object spent, Object limit) {
+    return '$name, $spent / $limit';
+  }
+
+  @override
   String plPaymentsOverdue(int count, Object amount) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

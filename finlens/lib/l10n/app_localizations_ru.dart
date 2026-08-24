@@ -889,6 +889,54 @@ class AppLocalizationsRu extends AppLocalizations {
   String get plPace => 'Темп';
 
   @override
+  String plLeftOfAmount(Object amount) {
+    return 'осталось из $amount';
+  }
+
+  @override
+  String plOverAmount(Object amount) {
+    return 'сверх $amount';
+  }
+
+  @override
+  String plPctSpent(Object pct) {
+    return '$pct потрачено';
+  }
+
+  @override
+  String plPctMonthGone(Object pct) {
+    return 'прошло $pct месяца';
+  }
+
+  @override
+  String plCategoriesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count категории',
+      many: '$count категорий',
+      few: '$count категории',
+      one: '$count категория',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String plSemRowOver(Object name, Object spent, Object limit) {
+    return '$name, превышен бюджет, $spent из $limit';
+  }
+
+  @override
+  String plSemRowNear(Object name, Object spent, Object limit) {
+    return '$name, близко к лимиту, $spent из $limit';
+  }
+
+  @override
+  String plSemRowNormal(Object name, Object spent, Object limit) {
+    return '$name, $spent из $limit';
+  }
+
+  @override
   String plPaymentsOverdue(int count, Object amount) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

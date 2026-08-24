@@ -47,6 +47,7 @@ class _PlannerScreenState extends State<PlannerScreen> {
   @override
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
+    final l = AppLocalizations.of(context);
 
     return SafeArea(
       bottom: false,
@@ -93,16 +94,12 @@ class _PlannerScreenState extends State<PlannerScreen> {
               ),
             ),
           ),
-          // Row 2 — full-width tabs, now above the summary.
+          // Row 2 — a segmented control, above the summary (spec §1). Margin 14
+          // each side (not the 20 gutter) per the container spec.
           Padding(
-            padding: const EdgeInsets.fromLTRB(
-              Insets.gutter,
-              0,
-              Insets.gutter,
-              Insets.md,
-            ),
-            child: UnderlineTabs(
-              labels: [AppLocalizations.of(context).plTabBudgets, AppLocalizations.of(context).plTabGoals, AppLocalizations.of(context).plTabSchedule],
+            padding: const EdgeInsets.fromLTRB(14, 0, 14, Insets.md),
+            child: _SegmentedTabs(
+              labels: [l.plTabBudgets, l.plTabGoals, l.plTabSchedule],
               index: _tab,
               onChanged: (i) => setState(() => _tab = i),
             ),
@@ -192,6 +189,79 @@ class _MonthControl extends StatelessWidget {
   }
 }
 
+/// Row 2 — the tab selector, a raised-chip segmented control (spec §1). The
+/// container sits **darker** than the page so the contrast lives between the
+/// container and the chip, not the chip and the page; the active chip is a
+/// neutral grey, never accent-tinted — six coloured budget bars sit directly
+/// below and a purple selection would compete with them.
+class _SegmentedTabs extends StatelessWidget {
+  const _SegmentedTabs({
+    required this.labels,
+    required this.index,
+    required this.onChanged,
+  });
+
+  final List<String> labels;
+  final int index;
+  final ValueChanged<int> onChanged;
+
+  static const _container = Color(0xFF141416);
+  static const _activeSegment = Color(0xFF43434A);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        color: _container,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        children: [
+          for (var i = 0; i < labels.length; i++)
+            Expanded(
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => onChanged(i),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 160),
+                  padding: const EdgeInsets.symmetric(vertical: 7),
+                  decoration: BoxDecoration(
+                    color: i == index ? _activeSegment : Colors.transparent,
+                    borderRadius: BorderRadius.circular(8),
+                    boxShadow: i == index
+                        ? const [
+                            BoxShadow(
+                              color: Color(0x99000000),
+                              blurRadius: 3,
+                              offset: Offset(0, 1),
+                            ),
+                          ]
+                        : null,
+                  ),
+                  child: Text(
+                    labels[i],
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 13.5,
+                      fontWeight:
+                          i == index ? FontWeight.w600 : FontWeight.w400,
+                      color: i == index
+                          ? AppColors.textPrimary
+                          : AppColors.textSecondary,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
 // ── 5.1 Budgets ─────────────────────────────────────────────────────────────
 
 class _BudgetSummary extends StatelessWidget {
@@ -202,19 +272,38 @@ class _BudgetSummary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final budget = store.totalBudget;
     final hasBudget = budget > 0;
     final budgeted = store.budgetedSpend(month);
     final unbudgeted = store.unbudgetedSpend(month);
     final spent = budgeted + unbudgeted;
-    // Left = budget − all spend (budgeted + unbudgeted). Negative keeps its
-    // minus sign: that sign means "below zero", not "money out" (spec 5.2).
+    // Left = budget − all spend (budgeted + unbudgeted). Over budget the hero
+    // shows the *overage* with the word "over", not a negative figure (spec §2).
     final left = store.leftThisMonth(month);
+    final over = hasBudget && left < 0;
     final ratio = hasBudget ? spent / budget : 0.0;
     final solidFrac = hasBudget ? budgeted / budget : 0.0;
     final hatchFrac = hasBudget ? unbudgeted / budget : 0.0;
     final isCurrent = store.isCurrentMonth(month);
+    final monthGone = store.monthProgressFor(month);
     final showUnbudgeted = hasBudget && unbudgeted > 0;
+
+    // The hero bar colours by PACE, not the spent ratio (spec §2): a blend of
+    // lump-sum and spread spending sitting far past an even burn is a real
+    // signal, unlike a single lump-sum category. Over budget → red; ahead of
+    // pace → amber; on or behind pace → green.
+    final barColor = over
+        ? AppColors.negative
+        : (ratio > monthGone ? AppColors.warning : AppColors.positive);
+
+    // "left of $3,800" / "over $3,800" as one localized run so it masks with the
+    // privacy eye and stays grammatical; the word carries the meaning the bare
+    // figure can't (spec §2).
+    final budgetStr = money(budget, masked: store.masked);
+    final phrase =
+        over ? l.plOverAmount(budgetStr) : l.plLeftOfAmount(budgetStr);
+    final phraseColor = over ? AppColors.negative : AppColors.textSecondary;
 
     const noteStyle =
         TextStyle(fontSize: 11, color: AppColors.textSecondary);
@@ -229,14 +318,39 @@ class _BudgetSummary extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // One line: figure · inline label, then the unbudgeted note far right.
+          // No caps label row — the segmented control above already says
+          // "Budgets" (spec §2). The figure+phrase scale together in a FittedBox
+          // so "left of $3,800" can never truncate; the note sits at the edge.
           Row(
             children: [
-              Text(AppLocalizations.of(context).plLeftThisMonth.toUpperCase(),
-                  style: AppText.label),
-              const Spacer(),
+              Expanded(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.baseline,
+                    textBaseline: TextBaseline.alphabetic,
+                    children: [
+                      AmountText(
+                        hasBudget ? (over ? -left : left) : 0,
+                        style: AppText.hero.copyWith(fontSize: 32, height: 1.0),
+                        color: over ? AppColors.negative : null,
+                      ),
+                      const SizedBox(width: Insets.sm),
+                      Text(
+                        phrase,
+                        style: AppText.caption.copyWith(color: phraseColor),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
               // Neutral grey, never amber: spending outside a budget is a fact,
-              // not a warning (spec 5.2).
-              if (showUnbudgeted)
+              // not a warning, and is unrelated to any overage (spec §2).
+              if (showUnbudgeted) ...[
+                const SizedBox(width: Insets.sm),
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -245,67 +359,50 @@ class _BudgetSummary extends StatelessWidget {
                       style: noteStyle,
                       color: AppColors.textSecondary,
                     ),
-                    Text(' ${AppLocalizations.of(context).plUnbudgeted}',
-                        style: noteStyle),
+                    Text(' ${l.plUnbudgeted}', style: noteStyle),
                   ],
                 ),
+              ],
             ],
           ),
-          const SizedBox(height: Insets.xs),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
-            children: [
-              Flexible(
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.centerLeft,
-                  child: AmountText(
-                    hasBudget ? left : 0,
-                    style: AppText.hero.copyWith(fontSize: 32),
-                    color:
-                        (hasBudget && left < 0) ? AppColors.negative : null,
-                  ),
-                ),
-              ),
-              const SizedBox(width: Insets.sm),
-              Text(' ${AppLocalizations.of(context).plOf} ', style: AppText.caption),
-              AmountText(budget, style: AppText.caption),
-              Text(' ${AppLocalizations.of(context).plBudgetWord}',
-                  style: AppText.caption),
-            ],
-          ),
-          const SizedBox(height: Insets.md),
+          // Fix the gap at the box, not the margin (spec §2): a 32pt figure's
+          // line box carries ~9px of empty descender space; height:1.0 above
+          // removes it, and a 9px top margin lands the visual gap at 10–12px.
+          const SizedBox(height: 9),
           // Solid = budgeted share; hatch = unbudgeted share, drawn right after
-          // it. Both clamp inside 100 % (spec 5.2); over-budget is announced by
-          // the figure going negative, not by the bar.
+          // it. Both clamp inside 100 %; over-budget is announced by the figure
+          // and the word, not by the bar (spec §2).
           ProgressBar(
             value: solidFrac,
             hatchValue: showUnbudgeted ? hatchFrac : null,
-            color: ratio > 1
-                ? AppColors.negative
-                : (ratio > 0.8 ? AppColors.warning : AppColors.positive),
-            paceMarker: isCurrent ? store.monthProgressFor(month) : null,
+            color: barColor,
+            paceMarker: isCurrent ? monthGone : null,
             height: 8,
           ),
           const SizedBox(height: Insets.sm),
           Row(
             children: [
-              Text(
-                isCurrent
-                    ? '${percent(ratio, decimals: 0)} spent · day '
-                        '${store.dayOfMonthFor(month)} of '
-                        '${store.daysInMonthOf(month)}'
-                    : '${percent(ratio, decimals: 0)} spent',
-                style: AppText.caption.copyWith(fontSize: 11.5),
+              // Both halves in the same unit — "87% spent · 71% of the month
+              // gone" — so no arithmetic is needed to compare them (spec §2).
+              Flexible(
+                child: Text(
+                  isCurrent
+                      ? '${l.plPctSpent(percent(ratio, decimals: 0))} · '
+                          '${l.plPctMonthGone(percent(monthGone, decimals: 0))}'
+                      : l.plPctSpent(percent(ratio, decimals: 0)),
+                  style: AppText.caption.copyWith(fontSize: 11.5),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
               // Pace marker legend — only the summary bar is labelled; a closed
-              // or future month has no pace to keep, so it is hidden (spec 5.2).
+              // or future month has no pace to keep, so it is hidden (spec §2).
               if (isCurrent) ...[
                 const Spacer(),
                 Container(width: 2, height: 10, color: AppColors.textPrimary),
                 const SizedBox(width: 5),
-                Text(AppLocalizations.of(context).plPace, style: AppText.caption.copyWith(fontSize: 11.5)),
+                Text(l.plPace,
+                    style: AppText.caption.copyWith(fontSize: 11.5)),
               ],
             ],
           ),
@@ -363,8 +460,23 @@ class _BudgetsTab extends StatelessWidget {
               ],
             ),
           ),
-          for (final c in ordered)
-            _BudgetRow(store: store, category: c, month: month),
+          // One card holding every budgeted category, split by the standard 1pt
+          // rule (the pattern the Balance list and Ledger day cards use) — no
+          // per-budget card, no inter-card gap (spec §3). The divider indents
+          // past the icon column (13 pad + 30 icon + 12 gap).
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: Insets.gutter),
+            child: AppCard(
+              child: Column(
+                children: [
+                  for (var i = 0; i < ordered.length; i++) ...[
+                    if (i > 0) const RowDivider(indent: 55),
+                    _BudgetRow(store: store, category: ordered[i], month: month),
+                  ],
+                ],
+              ),
+            ),
+          ),
         ],
         if (unbudgeted.isNotEmpty)
           _NoBudgetSection(store: store, month: month, categories: unbudgeted),
@@ -386,12 +498,14 @@ class _BudgetRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final spent = store.spentInCategory(category.id, month);
     final limit = category.effectiveLimit ?? 0;
     final ratio = limit <= 0 ? 0.0 : spent / limit;
 
-    // Spec 5.1 — <80% green, 80–100% amber with ⚠, >100% red plus an
-    // "$X over budget" line. The bar itself never exceeds 100%.
+    // <80% green, 80–100% amber, >100% red — against effectiveLimit, byte
+    // identical thresholds to before (spec §4). Colour states the fact; the
+    // glyph names the one state geometry can't; the marker gives context.
     final over = ratio > 1;
     final warn = !over && ratio >= category.warnThreshold;
     final color = over
@@ -399,34 +513,45 @@ class _BudgetRow extends StatelessWidget {
         : (warn ? AppColors.warning : AppColors.positive);
     final isCurrent = store.isCurrentMonth(month);
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        Insets.gutter,
-        0,
-        Insets.gutter,
-        Insets.md,
-      ),
-      child: AppCard(
+    // One sentence per row for the screen reader (spec §4): near-limit has no
+    // glyph, only colour + bar length, so the state must survive in semantics.
+    // Masked amounts make fragmented per-widget semantics unreadable, so the
+    // whole row reads as a single composed label.
+    final spentStr = money(spent, masked: store.masked);
+    final limitStr = money(limit, masked: store.masked);
+    final semantics = over
+        ? l.plSemRowOver(category.name, spentStr, limitStr)
+        : warn
+            ? l.plSemRowNear(category.name, spentStr, limitStr)
+            : l.plSemRowNormal(category.name, spentStr, limitStr);
+
+    return Semantics(
+      container: true,
+      button: true,
+      label: semantics,
+      child: ExcludeSemantics(
         child: InkWell(
-          borderRadius: BorderRadius.circular(Radii.card),
-          // Spec 5.6 — a tap opens the budget screen ("where did this go?"), not
-          // the editor. A stray tap must not land on financial editing.
+          // A tap opens the budget screen ("where did this go?"), never the
+          // editor — a stray tap must not land on financial editing (spec §6).
           onTap: () => Navigator.of(context, rootNavigator: true).push(
             MaterialPageRoute(
               builder: (_) =>
-                BudgetDetailScreen(categoryId: category.id, month: month),
+                  BudgetDetailScreen(categoryId: category.id, month: month),
             ),
           ),
+          // padding 9 / 13; the bar lives in the text column's second line, so
+          // it costs no extra row height — 48pt of pitch, not 80 (spec §3).
           child: Padding(
-            padding: const EdgeInsets.all(Insets.md),
-            child: Column(
+            padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 13),
+            child: Row(
               children: [
-                Row(
-                  children: [
-                    IconTile(category.icon, color: category.color, size: 34),
-                    const SizedBox(width: Insets.md),
-                    Expanded(
-                      child: Row(
+                IconTile(category.icon, color: category.color, size: 30),
+                const SizedBox(width: Insets.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(
                         children: [
                           Flexible(
                             child: Text(
@@ -436,70 +561,47 @@ class _BudgetRow extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          if (warn)
+                          // The one glyph: a red triangle, only over budget.
+                          // Near-limit's signal is the bar's length; it needs
+                          // none, and a second glyph would clutter the list
+                          // (spec §4).
+                          if (over)
                             const Padding(
                               padding: EdgeInsets.only(left: 5),
                               child: Icon(
                                 Icons.warning_amber_rounded,
                                 size: 15,
-                                color: AppColors.warning,
+                                color: AppColors.negative,
                               ),
                             ),
+                          const Spacer(),
+                          const SizedBox(width: Insets.sm),
+                          // $560 /$500 — the amount pair sits on the name line,
+                          // freeing the second line for a full-width bar. Prints
+                          // the effectiveLimit the maths uses, so a rollover row
+                          // shows $742 /$1,080 and needs no caption (spec §4b).
+                          AmountText(spent, color: color),
+                          Text(
+                            ' /$limitStr',
+                            style: AppText.amount.copyWith(
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
                         ],
                       ),
-                    ),
-                    const SizedBox(width: Insets.sm),
-                    Row(
-                      children: [
-                        AmountText(spent, color: color),
-                        Text(
-                          ' / ${money(limit)}',
-                          style: AppText.amount.copyWith(
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-                const SizedBox(height: Insets.md),
-                // The same unlabelled pace marker as the summary bar — only the
-                // summary is labelled (spec 5.1 §3).
-                ProgressBar(
-                  value: ratio,
-                  color: color,
-                  paceMarker:
-                      isCurrent ? store.monthProgressFor(month) : null,
-                ),
-                if (over) ...[
-                  const SizedBox(height: 6),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      '${money(spent - limit)} over budget',
-                      style: AppText.caption.copyWith(
-                        fontSize: 11.5,
-                        color: AppColors.negative,
+                      const SizedBox(height: 7),
+                      // 4pt so the fill reads clear of the 2pt pace marker; the
+                      // same unlabelled marker as the summary bar (spec §3).
+                      ProgressBar(
+                        value: ratio,
+                        color: color,
+                        height: 4,
+                        paceMarker:
+                            isCurrent ? store.monthProgressFor(month) : null,
                       ),
-                    ),
+                    ],
                   ),
-                ],
-                // Spec 5.1 §4 — the row already prints the effective limit
-                // ($1,080), so the caption states the rollover, not a second
-                // figure to double-count.
-                if (category.budgetRollover && category.rolloverAmount > 0) ...[
-                  const SizedBox(height: 6),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      'includes ${money(category.rolloverAmount)} rolled over',
-                      style: AppText.caption.copyWith(
-                        fontSize: 11.5,
-                        color: AppColors.info,
-                      ),
-                    ),
-                  ),
-                ],
+                ),
               ],
             ),
           ),
@@ -509,10 +611,12 @@ class _BudgetRow extends StatelessWidget {
   }
 }
 
-/// Spec 5.1 §5 — expense categories with spending but no budget this month,
-/// amount descending. Rendered only when non-empty: a category with nothing
-/// spent has nothing uncovered.
-class _NoBudgetSection extends StatelessWidget {
+/// Spec §5 — expense categories with spending but no budget this month, amount
+/// descending. Rendered only when non-empty: a category with nothing spent has
+/// nothing uncovered. Collapsed by default, so it is noticed afresh each month
+/// (next month's uncovered categories differ). The header carries the count and
+/// total; the tap reveals *which* categories and the `Set` action.
+class _NoBudgetSection extends StatefulWidget {
   const _NoBudgetSection({
     required this.store,
     required this.month,
@@ -524,38 +628,78 @@ class _NoBudgetSection extends StatelessWidget {
   final List<Category> categories;
 
   @override
+  State<_NoBudgetSection> createState() => _NoBudgetSectionState();
+}
+
+class _NoBudgetSectionState extends State<_NoBudgetSection> {
+  // Never persisted (spec §5): the section opens collapsed every time, and
+  // switching tabs disposes it, so returning shows it collapsed again.
+  bool _expanded = false;
+
+  @override
   Widget build(BuildContext context) {
-    final total = categories.fold(
+    final l = AppLocalizations.of(context);
+    final total = widget.categories.fold(
       0.0,
-      (sum, c) => sum + store.spentInCategory(c.id, month),
+      (sum, c) => sum + widget.store.spentInCategory(c.id, widget.month),
     );
+    final headerStyle = AppText.label.copyWith(color: AppColors.textSecondary);
 
     return Column(
       children: [
-        SectionLabel(
-          AppLocalizations.of(context).plNoBudgetSet,
-          trailing: AmountText(
-            total,
-            style: AppText.label.copyWith(color: AppColors.textSecondary),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: Insets.gutter),
-          child: AppCard(
-            child: Column(
+        // Header row — like a SectionLabel but tappable, with a rotating
+        // chevron and the count · total. The count is information while the
+        // rows are hidden (Balance shows "4 accounts" for the same reason);
+        // redundant but harmless once expanded, so the header keeps its shape.
+        InkWell(
+          onTap: () => setState(() => _expanded = !_expanded),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(
+              Insets.gutter,
+              Insets.lg,
+              Insets.gutter,
+              Insets.sm,
+            ),
+            child: Row(
               children: [
-                for (var i = 0; i < categories.length; i++) ...[
-                  if (i > 0) const RowDivider(indent: Insets.md),
-                  _NoBudgetRow(
-                    store: store,
-                    category: categories[i],
-                    month: month,
+                Text(l.plNoBudgetSet.toUpperCase(), style: AppText.label),
+                const SizedBox(width: Insets.xs),
+                AnimatedRotation(
+                  turns: _expanded ? 0.25 : 0.0,
+                  duration: const Duration(milliseconds: 160),
+                  child: const Icon(
+                    Icons.chevron_right_rounded,
+                    size: 18,
+                    color: AppColors.textSecondary,
                   ),
-                ],
+                ),
+                const Spacer(),
+                Text(l.plCategoriesCount(widget.categories.length),
+                    style: headerStyle),
+                Text(' · ', style: headerStyle),
+                AmountText(total, style: headerStyle),
               ],
             ),
           ),
         ),
+        if (_expanded)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: Insets.gutter),
+            child: AppCard(
+              child: Column(
+                children: [
+                  for (var i = 0; i < widget.categories.length; i++) ...[
+                    if (i > 0) const RowDivider(indent: Insets.md),
+                    _NoBudgetRow(
+                      store: widget.store,
+                      category: widget.categories[i],
+                      month: widget.month,
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
       ],
     );
   }

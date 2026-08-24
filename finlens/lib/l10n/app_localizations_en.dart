@@ -863,6 +863,52 @@ class AppLocalizationsEn extends AppLocalizations {
   String get plPace => 'Pace';
 
   @override
+  String plLeftOfAmount(Object amount) {
+    return 'left of $amount';
+  }
+
+  @override
+  String plOverAmount(Object amount) {
+    return 'over $amount';
+  }
+
+  @override
+  String plPctSpent(Object pct) {
+    return '$pct spent';
+  }
+
+  @override
+  String plPctMonthGone(Object pct) {
+    return '$pct of the month gone';
+  }
+
+  @override
+  String plCategoriesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count categories',
+      one: '$count category',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String plSemRowOver(Object name, Object spent, Object limit) {
+    return '$name, over budget, $spent of $limit';
+  }
+
+  @override
+  String plSemRowNear(Object name, Object spent, Object limit) {
+    return '$name, near the limit, $spent of $limit';
+  }
+
+  @override
+  String plSemRowNormal(Object name, Object spent, Object limit) {
+    return '$name, $spent of $limit';
+  }
+
+  @override
   String plPaymentsOverdue(int count, Object amount) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
