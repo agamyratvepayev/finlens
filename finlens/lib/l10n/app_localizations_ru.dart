@@ -868,4 +868,463 @@ class AppLocalizationsRu extends AppLocalizations {
     );
     return '$_temp0 · $amount';
   }
+
+  @override
+  String get fieldCategory => 'Категория';
+
+  @override
+  String get fieldSelectAccount => 'Выберите счёт';
+
+  @override
+  String get fieldDirection => 'Направление';
+
+  @override
+  String get actionUse => 'Взять';
+
+  @override
+  String get actionRestore => 'Восстановить';
+
+  @override
+  String countMonths(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count месяца',
+      many: '$count месяцев',
+      few: '$count месяца',
+      one: '$count месяц',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get ebTitle => 'Изменить бюджет';
+
+  @override
+  String get ebMonthlyLimit => 'Месячный лимит';
+
+  @override
+  String get ebRollOver => 'Переносить остаток';
+
+  @override
+  String get ebRollOverDesc => 'Добавлять остаток к следующему месяцу';
+
+  @override
+  String get ebWarnAt => 'Предупредить при';
+
+  @override
+  String get ebRemoveBudget => 'Удалить бюджет';
+
+  @override
+  String ebAverage(Object average, Object suggestion) {
+    return 'В среднем $average. Попробуйте $suggestion?';
+  }
+
+  @override
+  String ebRemoveTitle(Object name) {
+    return 'Удалить бюджет «$name»?';
+  }
+
+  @override
+  String get ebRemoveMsg =>
+      'Вы перестанете отслеживать лимит для этой категории.';
+
+  @override
+  String ebCategoryStays(Object name, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Ваши $count операции не тронуты.',
+      many: 'Ваши $count операций не тронуты.',
+      few: 'Ваши $count операции не тронуты.',
+      one: 'Ваша $count операция не тронута.',
+    );
+    return 'Категория «$name» остаётся. $_temp0';
+  }
+
+  @override
+  String get ebWarningsDisappear =>
+      'Предупреждения и полосы прогресса для этой категории исчезнут.';
+
+  @override
+  String ebTotalDrops(Object from, Object to) {
+    return 'Общий месячный бюджет уменьшится с $from до $to.';
+  }
+
+  @override
+  String get egTitle => 'Изменить цель';
+
+  @override
+  String get egGoalName => 'Название цели';
+
+  @override
+  String get egType => 'Тип';
+
+  @override
+  String get egTargetAmount => 'Целевая сумма';
+
+  @override
+  String get egTargetDate => 'Целевая дата';
+
+  @override
+  String get egMoneyKeptIn => 'Деньги хранятся на';
+
+  @override
+  String get egAutoContribute => 'Автопополнение';
+
+  @override
+  String get egAutoContributeDesc => 'Создаёт ежемесячный перевод в эту цель';
+
+  @override
+  String get egMonthlyContribution => 'Ежемесячный взнос';
+
+  @override
+  String get egMarkReached => 'Отметить достигнутой';
+
+  @override
+  String get egMarkReachedDesc => 'Деньги потрачены, цель выполнена';
+
+  @override
+  String get egGiveUp => 'Пока отказаться';
+
+  @override
+  String get egDeleteGoal => 'Удалить цель';
+
+  @override
+  String get egDeleteGoalDesc => 'Как будто её не было';
+
+  @override
+  String egMarkReachedTitle(Object name) {
+    return 'Отметить «$name» достигнутой?';
+  }
+
+  @override
+  String get egMarkReachedMsg =>
+      'Поздравляем — цель перемещается в архив как успешная.';
+
+  @override
+  String egReachedAfter(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count месяца',
+      many: '$count месяцев',
+      few: '$count месяца',
+      one: '$count месяц',
+    );
+    return 'Записано как достигнутое за $_temp0, учитывается в статистике целей.';
+  }
+
+  @override
+  String get egPastTxnStay => 'Прошлые операции остаются в журнале.';
+
+  @override
+  String get egLeavesStops => 'Цель покидает список и перестаёт отслеживаться.';
+
+  @override
+  String get egAutoStops => 'Ежемесячное автопополнение прекращается.';
+
+  @override
+  String get egNotYet => 'Ещё нет';
+
+  @override
+  String egGiveUpTitle(Object name) {
+    return 'Отказаться от «$name»?';
+  }
+
+  @override
+  String get egGiveUpMsg =>
+      'Отслеживание прекращается, но отложенные деньги остаются на месте.';
+
+  @override
+  String egSavedStaysIn(Object amount, Object account) {
+    return '$amount остаются на $account.';
+  }
+
+  @override
+  String get egYourAccount => 'вашем счёте';
+
+  @override
+  String get egRestoreLater => 'Позже можно восстановить из архива.';
+
+  @override
+  String get egLeavesList => 'Цель покидает список.';
+
+  @override
+  String egDeleteTitle(Object name) {
+    return 'Удалить «$name»?';
+  }
+
+  @override
+  String get egDeleteMsg =>
+      'Используйте только если цель создана по ошибке — она не оставит следа в истории.';
+
+  @override
+  String get egBalancesUnchanged => 'Балансы ваших счетов не меняются.';
+
+  @override
+  String get egNotInArchive => 'Она не появится в архиве.';
+
+  @override
+  String get egExcludedStats => 'Она исключена из статистики достижения целей.';
+
+  @override
+  String get egRecurringCancelled => 'Правило регулярного перевода отменяется.';
+
+  @override
+  String egPerMonthTrack(Object amount) {
+    return '$amount/мес, чтобы успеть в срок';
+  }
+
+  @override
+  String egAutoContributeOn(Object amount, Object day) {
+    return '$amount $day';
+  }
+
+  @override
+  String egKeepsStops(Object amount) {
+    return 'Сохраняет $amount, прекращает отслеживание';
+  }
+
+  @override
+  String get egSaved => 'накоплено';
+
+  @override
+  String get egToGo => 'осталось';
+
+  @override
+  String get ebWhatSpent => 'Сколько вы реально потратили';
+
+  @override
+  String get ebSpent => 'потрачено';
+
+  @override
+  String get etTitle => 'Изменить задачу';
+
+  @override
+  String get etTaskTitle => 'Название задачи';
+
+  @override
+  String get etPaidFrom => 'Оплата с';
+
+  @override
+  String get etPaidInto => 'Оплата на';
+
+  @override
+  String get etLinkedAccount => 'Связанный счёт';
+
+  @override
+  String get etPayOut => 'Списание −';
+
+  @override
+  String get etPayIn => 'Поступление +';
+
+  @override
+  String get etExpectedAmount => 'Ожидаемая сумма';
+
+  @override
+  String get etCategoryHint => 'Куда «Отметить оплаченным» запишет операцию';
+
+  @override
+  String get etNextDue => 'Следующий срок';
+
+  @override
+  String get etRepeats => 'Повтор';
+
+  @override
+  String get etOneOff => 'Разовая задача';
+
+  @override
+  String get etRemindMe => 'Напомнить';
+
+  @override
+  String etRemindBefore(Object days, Object time) {
+    return 'за $days дн., $time';
+  }
+
+  @override
+  String get etMarkPaid => 'Отметить оплаченным';
+
+  @override
+  String get etMarkPaidExpense => 'Создаёт расход в журнале';
+
+  @override
+  String get etMarkPaidIncome => 'Создаёт доход в журнале';
+
+  @override
+  String get etSkipThisMonth => 'Пропустить этот месяц';
+
+  @override
+  String etSeriesContinues(Object month) {
+    return 'Серия продолжится в $month';
+  }
+
+  @override
+  String get etDeleteWholeSeries => 'Удалить всю серию';
+
+  @override
+  String etAllFutureReminders(Object title) {
+    return 'Все будущие напоминания «$title»';
+  }
+
+  @override
+  String etSkippedNext(Object date) {
+    return 'Пропущено · следующее $date';
+  }
+
+  @override
+  String etDeleteOnly(Object date) {
+    return 'Удалить только $date';
+  }
+
+  @override
+  String etDeleteOnlyTitle(Object date) {
+    return 'Удалить только $date?';
+  }
+
+  @override
+  String get etJustThisOne => 'Удаляется только это повторение.';
+
+  @override
+  String get etOneOffRemoved => 'Эта разовая задача удаляется.';
+
+  @override
+  String etSeriesContinuesOn(Object date) {
+    return 'Серия продолжится $date.';
+  }
+
+  @override
+  String get etNoLedgerEntry => 'Запись в журнале не создаётся и не удаляется.';
+
+  @override
+  String get etLedgerUntouched => 'Ваш журнал не затрагивается.';
+
+  @override
+  String etDisappears(Object date) {
+    return '$date исчезает из вашего графика.';
+  }
+
+  @override
+  String etDeleteDate(Object date) {
+    return 'Удалить $date';
+  }
+
+  @override
+  String etDeleteSeriesTitle(Object title) {
+    return 'Удалить всю серию «$title»?';
+  }
+
+  @override
+  String get etDeleteSeriesMsg =>
+      'Удаляются все будущие повторения, а не только следующее.';
+
+  @override
+  String get etPaymentsStay => 'Уже записанные платежи остаются в журнале.';
+
+  @override
+  String get etAllRemindersCancelled => 'Все будущие напоминания отменяются.';
+
+  @override
+  String etOutgoingsDrop(Object amount) {
+    return 'Ваши месячные списания уменьшатся на $amount.';
+  }
+
+  @override
+  String get etDeleteSeries => 'Удалить серию';
+
+  @override
+  String etRecordedInLedger(Object title) {
+    return '$title записано в журнал';
+  }
+
+  @override
+  String etRepeatsCadence(Object cadence) {
+    return 'Повтор: $cadence';
+  }
+
+  @override
+  String bdAveraging(Object avg, Object limit, Object count) {
+    return 'В среднем $avg · превышение лимита $limit в $count из 6';
+  }
+
+  @override
+  String get bdNothingSpent => 'В этом месяце здесь ничего не потрачено.';
+
+  @override
+  String get arEmpty => 'Архив пуст';
+
+  @override
+  String get arEmptyMsg =>
+      'Достигнутые и заброшенные цели, а также удалённые бюджеты хранятся здесь.';
+
+  @override
+  String get arFootnote =>
+      'Архивные элементы не показываются в Планировщике и не влияют на итоги. Их прошлые операции остаются в журнале.';
+
+  @override
+  String get arReachedGoals => 'Достигнутые цели';
+
+  @override
+  String arReachedLine(Object date, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count месяца',
+      many: '$count месяцев',
+      few: '$count месяца',
+      one: '$count месяц',
+    );
+    return 'Достигнуто $date · за $_temp0';
+  }
+
+  @override
+  String get arGaveUp => 'Заброшено';
+
+  @override
+  String arStoppedLine(Object date, Object saved, Object target) {
+    return 'Остановлено $date · $saved из $target';
+  }
+
+  @override
+  String get arRemovedBudgets => 'Удалённые бюджеты';
+
+  @override
+  String arRemovedLine(Object date) {
+    return 'Удалено $date';
+  }
+
+  @override
+  String get arClearPermanently => 'Очистить архив навсегда';
+
+  @override
+  String get arClearTitle => 'Очистить архив?';
+
+  @override
+  String arClearMsg(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count архивных элемента удаляются навсегда.',
+      many: '$count архивных элементов удаляются навсегда.',
+      few: '$count архивных элемента удаляются навсегда.',
+      one: '$count архивный элемент удаляется навсегда.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get arTxnStay => 'Все связанные операции остаются в журнале.';
+
+  @override
+  String get arBalancesUnaffected => 'Балансы счетов не затрагиваются.';
+
+  @override
+  String get arRestoreImpossible => 'Восстановление больше невозможно.';
+
+  @override
+  String get arStatsDisappear =>
+      'История достигнутых целей исчезает из статистики.';
+
+  @override
+  String get arClearArchive => 'Очистить архив';
 }

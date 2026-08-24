@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/app_typography.dart';
@@ -45,7 +46,7 @@ class EditScaffold extends StatelessWidget {
                     style: TextButton.styleFrom(
                       foregroundColor: AppColors.textSecondary,
                     ),
-                    child: const Text('Cancel'),
+                    child: Text(AppLocalizations.of(context).actionCancel),
                   ),
                   Expanded(
                     child: Center(
@@ -59,7 +60,7 @@ class EditScaffold extends StatelessWidget {
                       disabledForegroundColor: AppColors.textTertiary,
                       textStyle: AppText.button,
                     ),
-                    child: const Text('Save'),
+                    child: Text(AppLocalizations.of(context).actionSave),
                   ),
                 ],
               ),

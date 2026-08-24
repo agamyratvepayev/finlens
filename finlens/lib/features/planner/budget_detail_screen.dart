@@ -105,15 +105,15 @@ class BudgetDetailScreen extends StatelessWidget {
           children: [
             InkWell(
               onTap: () => Navigator.of(context).pop(),
-              child: const Row(
+              child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  SizedBox(width: 8),
-                  Icon(Icons.chevron_left_rounded,
+                  const SizedBox(width: 8),
+                  const Icon(Icons.chevron_left_rounded,
                       size: 20, color: AppColors.accentLight),
                   Text(
-                    'Budgets',
-                    style: TextStyle(
+                    AppLocalizations.of(context).plTabBudgets,
+                    style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w400,
                       color: AppColors.accentLight,
@@ -336,8 +336,8 @@ class BudgetDetailScreen extends StatelessWidget {
             const Divider(height: 1, thickness: 1, color: AppColors.hairline),
             const SizedBox(height: Insets.sm),
             Text(
-              'Averaging ${money(average.roundToDouble())} · '
-              'over the ${money(monthlyBudget)} limit in $overLimitCount of 6',
+              l.bdAveraging(money(average.roundToDouble()),
+                  money(monthlyBudget), '$overLimitCount'),
               style: AppText.caption.copyWith(fontSize: 12),
             ),
           ],
@@ -418,7 +418,7 @@ class BudgetDetailScreen extends StatelessWidget {
               vertical: Insets.sm,
             ),
             child: Text(
-              'Nothing spent here this month.',
+              AppLocalizations.of(context).bdNothingSpent,
               style: AppText.caption.copyWith(fontSize: 12.5),
             ),
           )
@@ -460,7 +460,7 @@ class BudgetDetailScreen extends StatelessWidget {
               child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 10),
                 child: Text(
-                  'See all ${txns.length}  ›',
+                  AppLocalizations.of(context).balSeeAll(txns.length),
                   textAlign: TextAlign.center,
                   style: const TextStyle(
                     fontSize: 14,

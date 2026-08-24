@@ -838,4 +838,454 @@ class AppLocalizationsTk extends AppLocalizations {
     );
     return '$_temp0 · $amount';
   }
+
+  @override
+  String get fieldCategory => 'Kategoriýa';
+
+  @override
+  String get fieldSelectAccount => 'Hasap saýlaň';
+
+  @override
+  String get fieldDirection => 'Ugry';
+
+  @override
+  String get actionUse => 'Ulan';
+
+  @override
+  String get actionRestore => 'Dikelt';
+
+  @override
+  String countMonths(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count aý',
+      one: '$count aý',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get ebTitle => 'Býujeti üýtget';
+
+  @override
+  String get ebMonthlyLimit => 'Aýlyk çäk';
+
+  @override
+  String get ebRollOver => 'Galanyny geçir';
+
+  @override
+  String get ebRollOverDesc => 'Galanyny indiki aýa goş';
+
+  @override
+  String get ebWarnAt => 'Şu ýerde duýdur';
+
+  @override
+  String get ebRemoveBudget => 'Býujeti aýyr';
+
+  @override
+  String ebAverage(Object average, Object suggestion) {
+    return 'Ortaça $average. $suggestion synanyşyňmy?';
+  }
+
+  @override
+  String ebRemoveTitle(Object name) {
+    return '$name býujeti aýyrylsynmy?';
+  }
+
+  @override
+  String get ebRemoveMsg => 'Bu kategoriýa üçin çäk yzarlamany bes edersiňiz.';
+
+  @override
+  String ebCategoryStays(Object name, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count amalyňyz üýtgewsiz galýar.',
+      one: '$count amalyňyz üýtgewsiz galýar.',
+    );
+    return '$name kategoriýasy galýar. $_temp0';
+  }
+
+  @override
+  String get ebWarningsDisappear =>
+      'Bu kategoriýa üçin duýduryşlar we öňegidiş zolaklary ýitýär.';
+
+  @override
+  String ebTotalDrops(Object from, Object to) {
+    return 'Umumy aýlyk býujet $from bahadan $to baha çenli azalýar.';
+  }
+
+  @override
+  String get egTitle => 'Maksady üýtget';
+
+  @override
+  String get egGoalName => 'Maksadyň ady';
+
+  @override
+  String get egType => 'Görnüşi';
+
+  @override
+  String get egTargetAmount => 'Maksat mukdary';
+
+  @override
+  String get egTargetDate => 'Maksat senesi';
+
+  @override
+  String get egMoneyKeptIn => 'Pul saklanýan ýer';
+
+  @override
+  String get egAutoContribute => 'Awtomatiki goşant';
+
+  @override
+  String get egAutoContributeDesc => 'Bu maksada aýlyk geçirim döredýär';
+
+  @override
+  String get egMonthlyContribution => 'Aýlyk goşant';
+
+  @override
+  String get egMarkReached => 'Ýetildi diýip belle';
+
+  @override
+  String get egMarkReachedDesc => 'Pul harçlandy, maksat tamamlandy';
+
+  @override
+  String get egGiveUp => 'Häzirlikçe ýüz öwür';
+
+  @override
+  String get egDeleteGoal => 'Maksady poz';
+
+  @override
+  String get egDeleteGoalDesc => 'Asla bolmadyk ýaly';
+
+  @override
+  String egMarkReachedTitle(Object name) {
+    return '$name ýetildi diýip bellensinmi?';
+  }
+
+  @override
+  String get egMarkReachedMsg =>
+      'Gutlaýarys — maksat üstünlikli hökmünde arhiwe geçýär.';
+
+  @override
+  String egReachedAfter(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count aý',
+      one: '$count aý',
+    );
+    return '$_temp0 soň ýetildi diýip bellendi, maksat statistikaňyza goşulýar.';
+  }
+
+  @override
+  String get egPastTxnStay => 'Geçmiş amallar Hasapda galýar.';
+
+  @override
+  String get egLeavesStops =>
+      'Maksatlar sanawyndan çykýar we yzarlama bes edilýär.';
+
+  @override
+  String get egAutoStops => 'Aýlyk awtomatiki goşant bes edilýär.';
+
+  @override
+  String get egNotYet => 'Entek däl';
+
+  @override
+  String egGiveUpTitle(Object name) {
+    return '$name maksadyndan ýüz öwrülsinmi?';
+  }
+
+  @override
+  String get egGiveUpMsg =>
+      'Yzarlama bes edilýär, ýöne aýyran puluňyz ýerinde galýar.';
+
+  @override
+  String egSavedStaysIn(Object amount, Object account) {
+    return '$amount $account hasabynda galýar.';
+  }
+
+  @override
+  String get egYourAccount => 'hasabyňyzda';
+
+  @override
+  String get egRestoreLater => 'Soň Arhiwden dikeldip bilersiňiz.';
+
+  @override
+  String get egLeavesList => 'Maksatlar sanawyndan çykýar.';
+
+  @override
+  String egDeleteTitle(Object name) {
+    return '$name pozulsynmy?';
+  }
+
+  @override
+  String get egDeleteMsg =>
+      'Muny diňe maksat ýalňyşlyk bilen döredilen bolsa ulanyň — taryhyňyzda yz galdyrmaýar.';
+
+  @override
+  String get egBalancesUnchanged => 'Hasap balanslaryňyz üýtgemeýär.';
+
+  @override
+  String get egNotInArchive => 'Ol Arhiwde görünmeýär.';
+
+  @override
+  String get egExcludedStats =>
+      'Ol maksat netijelilik statistikasyndan aýrylýar.';
+
+  @override
+  String get egRecurringCancelled => 'Gaýtalanýan geçirim düzgüni ýatyrylýar.';
+
+  @override
+  String egPerMonthTrack(Object amount) {
+    return 'wagtynda ýetişmek üçin $amount/aýda';
+  }
+
+  @override
+  String egAutoContributeOn(Object amount, Object day) {
+    return 'her aýyň $day $amount';
+  }
+
+  @override
+  String egKeepsStops(Object amount) {
+    return '$amount saklanýar, yzarlama bes edilýär';
+  }
+
+  @override
+  String get egSaved => 'toplandy';
+
+  @override
+  String get egToGo => 'galdy';
+
+  @override
+  String get ebWhatSpent => 'Hakykatda näçe harçladyňyz';
+
+  @override
+  String get ebSpent => 'harçlandy';
+
+  @override
+  String get etTitle => 'Tabşyrygy üýtget';
+
+  @override
+  String get etTaskTitle => 'Tabşyrygyň ady';
+
+  @override
+  String get etPaidFrom => 'Töleg çeşmesi';
+
+  @override
+  String get etPaidInto => 'Töleg nyşany';
+
+  @override
+  String get etLinkedAccount => 'Baglanan hasap';
+
+  @override
+  String get etPayOut => 'Çykdajy −';
+
+  @override
+  String get etPayIn => 'Girdeji +';
+
+  @override
+  String get etExpectedAmount => 'Garaşylýan mukdar';
+
+  @override
+  String get etCategoryHint => '\"Tölenen diýip belle\" nirä ýazýar';
+
+  @override
+  String get etNextDue => 'Indiki möhlet';
+
+  @override
+  String get etRepeats => 'Gaýtalama';
+
+  @override
+  String get etOneOff => 'Bir gezeklik tabşyryk';
+
+  @override
+  String get etRemindMe => 'Ýatladyň';
+
+  @override
+  String etRemindBefore(Object days, Object time) {
+    return '$days gün öň, $time';
+  }
+
+  @override
+  String get etMarkPaid => 'Tölenen diýip belle';
+
+  @override
+  String get etMarkPaidExpense => 'Hasapda çykdajy döredýär';
+
+  @override
+  String get etMarkPaidIncome => 'Hasapda girdeji döredýär';
+
+  @override
+  String get etSkipThisMonth => 'Bu aýy geç';
+
+  @override
+  String etSeriesContinues(Object month) {
+    return 'Seriýa $month aýynda dowam eder';
+  }
+
+  @override
+  String get etDeleteWholeSeries => 'Ähli seriýany poz';
+
+  @override
+  String etAllFutureReminders(Object title) {
+    return 'Geljekki ähli $title ýatladyşlary';
+  }
+
+  @override
+  String etSkippedNext(Object date) {
+    return 'Geçildi · indiki $date';
+  }
+
+  @override
+  String etDeleteOnly(Object date) {
+    return 'Diňe $date poz';
+  }
+
+  @override
+  String etDeleteOnlyTitle(Object date) {
+    return 'Diňe $date pozulsynmy?';
+  }
+
+  @override
+  String get etJustThisOne => 'Diňe bu gaýtalanma aýrylýar.';
+
+  @override
+  String get etOneOffRemoved => 'Bu bir gezeklik tabşyryk aýrylýar.';
+
+  @override
+  String etSeriesContinuesOn(Object date) {
+    return 'Seriýa $date dowam eder.';
+  }
+
+  @override
+  String get etNoLedgerEntry => 'Hasap ýazgysy döredilmeýär we aýrylmaýar.';
+
+  @override
+  String get etLedgerUntouched => 'Hasabyňyz üýtgemeýär.';
+
+  @override
+  String etDisappears(Object date) {
+    return '$date meýilnamaňyzdan ýitýär.';
+  }
+
+  @override
+  String etDeleteDate(Object date) {
+    return '$date poz';
+  }
+
+  @override
+  String etDeleteSeriesTitle(Object title) {
+    return 'Ähli $title seriýasy pozulsynmy?';
+  }
+
+  @override
+  String get etDeleteSeriesMsg =>
+      'Diňe indiki däl, geljekki ähli gaýtalanmalar aýrylýar.';
+
+  @override
+  String get etPaymentsStay => 'Eýýäm ýazan tölegleriňiz Hasapda galýar.';
+
+  @override
+  String get etAllRemindersCancelled => 'Geljekki ähli ýatladyşlar ýatyrylýar.';
+
+  @override
+  String etOutgoingsDrop(Object amount) {
+    return 'Aýlyk çykdajylaryňyz $amount azalýar.';
+  }
+
+  @override
+  String get etDeleteSeries => 'Seriýany poz';
+
+  @override
+  String etRecordedInLedger(Object title) {
+    return '$title Hasaba ýazyldy';
+  }
+
+  @override
+  String etRepeatsCadence(Object cadence) {
+    return 'Gaýtalama: $cadence';
+  }
+
+  @override
+  String bdAveraging(Object avg, Object limit, Object count) {
+    return 'Ortaça $avg · 6 aýyň $count aýynda $limit çäginden ýokary';
+  }
+
+  @override
+  String get bdNothingSpent => 'Bu aý bu ýerde hiç zat harçlanmady.';
+
+  @override
+  String get arEmpty => 'Arhiw boş';
+
+  @override
+  String get arEmptyMsg =>
+      'Ýeten ýa-da ýüz öwren maksatlaryňyz we aýran býujetleriňiz şu ýerde saklanýar.';
+
+  @override
+  String get arFootnote =>
+      'Arhiwlenen elementler Meýilnamada görünmeýär we jemleriňize täsir etmeýär. Geçmiş amallary Hasapda galýar.';
+
+  @override
+  String get arReachedGoals => 'Ýetilen maksatlar';
+
+  @override
+  String arReachedLine(Object date, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count aý',
+      one: '$count aý',
+    );
+    return 'Ýetildi $date · $_temp0 gerek boldy';
+  }
+
+  @override
+  String get arGaveUp => 'Ýüz öwrüldi';
+
+  @override
+  String arStoppedLine(Object date, Object saved, Object target) {
+    return 'Duruzyldy $date · $target maksadyň $saved';
+  }
+
+  @override
+  String get arRemovedBudgets => 'Aýrylan býujetler';
+
+  @override
+  String arRemovedLine(Object date) {
+    return 'Aýryldy $date';
+  }
+
+  @override
+  String get arClearPermanently => 'Arhiwi hemişelik arassala';
+
+  @override
+  String get arClearTitle => 'Arhiw arassalansynmy?';
+
+  @override
+  String arClearMsg(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count arhiw elementi hemişelik pozulýar.',
+      one: '$count arhiw elementi hemişelik pozulýar.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get arTxnStay => 'Ähli degişli amallar Hasapda galýar.';
+
+  @override
+  String get arBalancesUnaffected => 'Hasap balanslaryna täsir etmeýär.';
+
+  @override
+  String get arRestoreImpossible => 'Dikeltmek indi mümkin däl.';
+
+  @override
+  String get arStatsDisappear =>
+      'Ýetilen maksat taryhy statistikaňyzdan ýitýär.';
+
+  @override
+  String get arClearArchive => 'Arhiwi arassala';
 }

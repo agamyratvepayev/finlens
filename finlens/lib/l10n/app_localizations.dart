@@ -1385,6 +1385,702 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count, plural, one{{count} payment overdue} other{{count} payments overdue}} · {amount}'**
   String plPaymentsOverdue(int count, Object amount);
+
+  /// No description provided for @fieldCategory.
+  ///
+  /// In en, this message translates to:
+  /// **'Category'**
+  String get fieldCategory;
+
+  /// No description provided for @fieldSelectAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Select account'**
+  String get fieldSelectAccount;
+
+  /// No description provided for @fieldDirection.
+  ///
+  /// In en, this message translates to:
+  /// **'Direction'**
+  String get fieldDirection;
+
+  /// No description provided for @actionUse.
+  ///
+  /// In en, this message translates to:
+  /// **'Use'**
+  String get actionUse;
+
+  /// No description provided for @actionRestore.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore'**
+  String get actionRestore;
+
+  /// No description provided for @countMonths.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{{count} month} other{{count} months}}'**
+  String countMonths(int count);
+
+  /// No description provided for @ebTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit budget'**
+  String get ebTitle;
+
+  /// No description provided for @ebMonthlyLimit.
+  ///
+  /// In en, this message translates to:
+  /// **'Monthly limit'**
+  String get ebMonthlyLimit;
+
+  /// No description provided for @ebRollOver.
+  ///
+  /// In en, this message translates to:
+  /// **'Roll over unspent'**
+  String get ebRollOver;
+
+  /// No description provided for @ebRollOverDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Add leftovers to next month'**
+  String get ebRollOverDesc;
+
+  /// No description provided for @ebWarnAt.
+  ///
+  /// In en, this message translates to:
+  /// **'Warn me at'**
+  String get ebWarnAt;
+
+  /// No description provided for @ebRemoveBudget.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove budget'**
+  String get ebRemoveBudget;
+
+  /// No description provided for @ebAverage.
+  ///
+  /// In en, this message translates to:
+  /// **'You average {average}. Try {suggestion}?'**
+  String ebAverage(Object average, Object suggestion);
+
+  /// No description provided for @ebRemoveTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove {name} budget?'**
+  String ebRemoveTitle(Object name);
+
+  /// No description provided for @ebRemoveMsg.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'ll stop tracking a limit for this category.'**
+  String get ebRemoveMsg;
+
+  /// No description provided for @ebCategoryStays.
+  ///
+  /// In en, this message translates to:
+  /// **'The {name} category stays. {count, plural, one{Your {count} transaction is untouched.} other{Your {count} transactions are untouched.}}'**
+  String ebCategoryStays(Object name, int count);
+
+  /// No description provided for @ebWarningsDisappear.
+  ///
+  /// In en, this message translates to:
+  /// **'Warnings and progress bars for this category disappear.'**
+  String get ebWarningsDisappear;
+
+  /// No description provided for @ebTotalDrops.
+  ///
+  /// In en, this message translates to:
+  /// **'Total monthly budget drops from {from} to {to}.'**
+  String ebTotalDrops(Object from, Object to);
+
+  /// No description provided for @egTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit goal'**
+  String get egTitle;
+
+  /// No description provided for @egGoalName.
+  ///
+  /// In en, this message translates to:
+  /// **'Goal name'**
+  String get egGoalName;
+
+  /// No description provided for @egType.
+  ///
+  /// In en, this message translates to:
+  /// **'Type'**
+  String get egType;
+
+  /// No description provided for @egTargetAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Target amount'**
+  String get egTargetAmount;
+
+  /// No description provided for @egTargetDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Target date'**
+  String get egTargetDate;
+
+  /// No description provided for @egMoneyKeptIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Money kept in'**
+  String get egMoneyKeptIn;
+
+  /// No description provided for @egAutoContribute.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto contribute'**
+  String get egAutoContribute;
+
+  /// No description provided for @egAutoContributeDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Creates a monthly transfer into this goal'**
+  String get egAutoContributeDesc;
+
+  /// No description provided for @egMonthlyContribution.
+  ///
+  /// In en, this message translates to:
+  /// **'Monthly contribution'**
+  String get egMonthlyContribution;
+
+  /// No description provided for @egMarkReached.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark as reached'**
+  String get egMarkReached;
+
+  /// No description provided for @egMarkReachedDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Money is spent, goal is done'**
+  String get egMarkReachedDesc;
+
+  /// No description provided for @egGiveUp.
+  ///
+  /// In en, this message translates to:
+  /// **'Give up for now'**
+  String get egGiveUp;
+
+  /// No description provided for @egDeleteGoal.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete goal'**
+  String get egDeleteGoal;
+
+  /// No description provided for @egDeleteGoalDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'As if it never existed'**
+  String get egDeleteGoalDesc;
+
+  /// No description provided for @egMarkReachedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark {name} as reached?'**
+  String egMarkReachedTitle(Object name);
+
+  /// No description provided for @egMarkReachedMsg.
+  ///
+  /// In en, this message translates to:
+  /// **'Congratulations — this moves the goal into your archive as a success.'**
+  String get egMarkReachedMsg;
+
+  /// No description provided for @egReachedAfter.
+  ///
+  /// In en, this message translates to:
+  /// **'Recorded as reached after {count, plural, one{{count} month} other{{count} months}}, feeding your goal-performance stats.'**
+  String egReachedAfter(int count);
+
+  /// No description provided for @egPastTxnStay.
+  ///
+  /// In en, this message translates to:
+  /// **'Past transactions stay in your Ledger.'**
+  String get egPastTxnStay;
+
+  /// No description provided for @egLeavesStops.
+  ///
+  /// In en, this message translates to:
+  /// **'It leaves the Goals list and stops tracking.'**
+  String get egLeavesStops;
+
+  /// No description provided for @egAutoStops.
+  ///
+  /// In en, this message translates to:
+  /// **'The monthly auto-contribution stops.'**
+  String get egAutoStops;
+
+  /// No description provided for @egNotYet.
+  ///
+  /// In en, this message translates to:
+  /// **'Not yet'**
+  String get egNotYet;
+
+  /// No description provided for @egGiveUpTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Give up on {name}?'**
+  String egGiveUpTitle(Object name);
+
+  /// No description provided for @egGiveUpMsg.
+  ///
+  /// In en, this message translates to:
+  /// **'Tracking stops, but the money you already put aside stays exactly where it is.'**
+  String get egGiveUpMsg;
+
+  /// No description provided for @egSavedStaysIn.
+  ///
+  /// In en, this message translates to:
+  /// **'The {amount} stays in {account}.'**
+  String egSavedStaysIn(Object amount, Object account);
+
+  /// No description provided for @egYourAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'your account'**
+  String get egYourAccount;
+
+  /// No description provided for @egRestoreLater.
+  ///
+  /// In en, this message translates to:
+  /// **'You can restore it later from the Archive.'**
+  String get egRestoreLater;
+
+  /// No description provided for @egLeavesList.
+  ///
+  /// In en, this message translates to:
+  /// **'It leaves the Goals list.'**
+  String get egLeavesList;
+
+  /// No description provided for @egDeleteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete {name}?'**
+  String egDeleteTitle(Object name);
+
+  /// No description provided for @egDeleteMsg.
+  ///
+  /// In en, this message translates to:
+  /// **'Use this only when the goal was created by mistake — it leaves no trace in your history.'**
+  String get egDeleteMsg;
+
+  /// No description provided for @egBalancesUnchanged.
+  ///
+  /// In en, this message translates to:
+  /// **'Your account balances do not change.'**
+  String get egBalancesUnchanged;
+
+  /// No description provided for @egNotInArchive.
+  ///
+  /// In en, this message translates to:
+  /// **'It will not appear in the Archive.'**
+  String get egNotInArchive;
+
+  /// No description provided for @egExcludedStats.
+  ///
+  /// In en, this message translates to:
+  /// **'It is excluded from goal-performance stats.'**
+  String get egExcludedStats;
+
+  /// No description provided for @egRecurringCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'The recurring transfer rule is cancelled.'**
+  String get egRecurringCancelled;
+
+  /// No description provided for @egPerMonthTrack.
+  ///
+  /// In en, this message translates to:
+  /// **'{amount}/mo to stay on track'**
+  String egPerMonthTrack(Object amount);
+
+  /// No description provided for @egAutoContributeOn.
+  ///
+  /// In en, this message translates to:
+  /// **'{amount} on the {day}'**
+  String egAutoContributeOn(Object amount, Object day);
+
+  /// No description provided for @egKeepsStops.
+  ///
+  /// In en, this message translates to:
+  /// **'Keeps the {amount}, stops tracking'**
+  String egKeepsStops(Object amount);
+
+  /// No description provided for @egSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'saved'**
+  String get egSaved;
+
+  /// No description provided for @egToGo.
+  ///
+  /// In en, this message translates to:
+  /// **'to go'**
+  String get egToGo;
+
+  /// No description provided for @ebWhatSpent.
+  ///
+  /// In en, this message translates to:
+  /// **'What you actually spent'**
+  String get ebWhatSpent;
+
+  /// No description provided for @ebSpent.
+  ///
+  /// In en, this message translates to:
+  /// **'spent'**
+  String get ebSpent;
+
+  /// No description provided for @etTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit task'**
+  String get etTitle;
+
+  /// No description provided for @etTaskTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Task title'**
+  String get etTaskTitle;
+
+  /// No description provided for @etPaidFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'Paid from'**
+  String get etPaidFrom;
+
+  /// No description provided for @etPaidInto.
+  ///
+  /// In en, this message translates to:
+  /// **'Paid into'**
+  String get etPaidInto;
+
+  /// No description provided for @etLinkedAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Linked account'**
+  String get etLinkedAccount;
+
+  /// No description provided for @etPayOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Pay out −'**
+  String get etPayOut;
+
+  /// No description provided for @etPayIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Pay in +'**
+  String get etPayIn;
+
+  /// No description provided for @etExpectedAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Expected amount'**
+  String get etExpectedAmount;
+
+  /// No description provided for @etCategoryHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Where \"Mark as paid\" books it'**
+  String get etCategoryHint;
+
+  /// No description provided for @etNextDue.
+  ///
+  /// In en, this message translates to:
+  /// **'Next due'**
+  String get etNextDue;
+
+  /// No description provided for @etRepeats.
+  ///
+  /// In en, this message translates to:
+  /// **'Repeats'**
+  String get etRepeats;
+
+  /// No description provided for @etOneOff.
+  ///
+  /// In en, this message translates to:
+  /// **'One-off task'**
+  String get etOneOff;
+
+  /// No description provided for @etRemindMe.
+  ///
+  /// In en, this message translates to:
+  /// **'Remind me'**
+  String get etRemindMe;
+
+  /// No description provided for @etRemindBefore.
+  ///
+  /// In en, this message translates to:
+  /// **'{days} days before, {time}'**
+  String etRemindBefore(Object days, Object time);
+
+  /// No description provided for @etMarkPaid.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark as paid'**
+  String get etMarkPaid;
+
+  /// No description provided for @etMarkPaidExpense.
+  ///
+  /// In en, this message translates to:
+  /// **'Creates the expense in Ledger'**
+  String get etMarkPaidExpense;
+
+  /// No description provided for @etMarkPaidIncome.
+  ///
+  /// In en, this message translates to:
+  /// **'Creates the income in Ledger'**
+  String get etMarkPaidIncome;
+
+  /// No description provided for @etSkipThisMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip this month'**
+  String get etSkipThisMonth;
+
+  /// No description provided for @etSeriesContinues.
+  ///
+  /// In en, this message translates to:
+  /// **'Series continues in {month}'**
+  String etSeriesContinues(Object month);
+
+  /// No description provided for @etDeleteWholeSeries.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete the whole series'**
+  String get etDeleteWholeSeries;
+
+  /// No description provided for @etAllFutureReminders.
+  ///
+  /// In en, this message translates to:
+  /// **'All future {title} reminders'**
+  String etAllFutureReminders(Object title);
+
+  /// No description provided for @etSkippedNext.
+  ///
+  /// In en, this message translates to:
+  /// **'Skipped · next on {date}'**
+  String etSkippedNext(Object date);
+
+  /// No description provided for @etDeleteOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete only {date}'**
+  String etDeleteOnly(Object date);
+
+  /// No description provided for @etDeleteOnlyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete only {date}?'**
+  String etDeleteOnlyTitle(Object date);
+
+  /// No description provided for @etJustThisOne.
+  ///
+  /// In en, this message translates to:
+  /// **'Just this one occurrence is removed.'**
+  String get etJustThisOne;
+
+  /// No description provided for @etOneOffRemoved.
+  ///
+  /// In en, this message translates to:
+  /// **'This one-off task is removed.'**
+  String get etOneOffRemoved;
+
+  /// No description provided for @etSeriesContinuesOn.
+  ///
+  /// In en, this message translates to:
+  /// **'The series continues on {date}.'**
+  String etSeriesContinuesOn(Object date);
+
+  /// No description provided for @etNoLedgerEntry.
+  ///
+  /// In en, this message translates to:
+  /// **'No Ledger entry is created or removed.'**
+  String get etNoLedgerEntry;
+
+  /// No description provided for @etLedgerUntouched.
+  ///
+  /// In en, this message translates to:
+  /// **'Your Ledger is untouched.'**
+  String get etLedgerUntouched;
+
+  /// No description provided for @etDisappears.
+  ///
+  /// In en, this message translates to:
+  /// **'{date} disappears from your Schedule.'**
+  String etDisappears(Object date);
+
+  /// No description provided for @etDeleteDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete {date}'**
+  String etDeleteDate(Object date);
+
+  /// No description provided for @etDeleteSeriesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete the whole {title} series?'**
+  String etDeleteSeriesTitle(Object title);
+
+  /// No description provided for @etDeleteSeriesMsg.
+  ///
+  /// In en, this message translates to:
+  /// **'Every future occurrence is removed, not just the next one.'**
+  String get etDeleteSeriesMsg;
+
+  /// No description provided for @etPaymentsStay.
+  ///
+  /// In en, this message translates to:
+  /// **'Payments you already recorded stay in your Ledger.'**
+  String get etPaymentsStay;
+
+  /// No description provided for @etAllRemindersCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'All future reminders are cancelled.'**
+  String get etAllRemindersCancelled;
+
+  /// No description provided for @etOutgoingsDrop.
+  ///
+  /// In en, this message translates to:
+  /// **'Your monthly outgoings drop by {amount}.'**
+  String etOutgoingsDrop(Object amount);
+
+  /// No description provided for @etDeleteSeries.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete series'**
+  String get etDeleteSeries;
+
+  /// No description provided for @etRecordedInLedger.
+  ///
+  /// In en, this message translates to:
+  /// **'{title} recorded in your Ledger'**
+  String etRecordedInLedger(Object title);
+
+  /// No description provided for @etRepeatsCadence.
+  ///
+  /// In en, this message translates to:
+  /// **'Repeats {cadence}'**
+  String etRepeatsCadence(Object cadence);
+
+  /// No description provided for @bdAveraging.
+  ///
+  /// In en, this message translates to:
+  /// **'Averaging {avg} · over the {limit} limit in {count} of 6'**
+  String bdAveraging(Object avg, Object limit, Object count);
+
+  /// No description provided for @bdNothingSpent.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing spent here this month.'**
+  String get bdNothingSpent;
+
+  /// No description provided for @arEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Archive is empty'**
+  String get arEmpty;
+
+  /// No description provided for @arEmptyMsg.
+  ///
+  /// In en, this message translates to:
+  /// **'Goals you reach or give up on, and budgets you remove, are kept here.'**
+  String get arEmptyMsg;
+
+  /// No description provided for @arFootnote.
+  ///
+  /// In en, this message translates to:
+  /// **'Archived items don\'t appear in Planner and don\'t affect your totals. Their past transactions stay in Ledger.'**
+  String get arFootnote;
+
+  /// No description provided for @arReachedGoals.
+  ///
+  /// In en, this message translates to:
+  /// **'Reached goals'**
+  String get arReachedGoals;
+
+  /// No description provided for @arReachedLine.
+  ///
+  /// In en, this message translates to:
+  /// **'Reached {date} · took {count, plural, one{{count} month} other{{count} months}}'**
+  String arReachedLine(Object date, int count);
+
+  /// No description provided for @arGaveUp.
+  ///
+  /// In en, this message translates to:
+  /// **'Gave up'**
+  String get arGaveUp;
+
+  /// No description provided for @arStoppedLine.
+  ///
+  /// In en, this message translates to:
+  /// **'Stopped {date} · {saved} of {target}'**
+  String arStoppedLine(Object date, Object saved, Object target);
+
+  /// No description provided for @arRemovedBudgets.
+  ///
+  /// In en, this message translates to:
+  /// **'Removed budgets'**
+  String get arRemovedBudgets;
+
+  /// No description provided for @arRemovedLine.
+  ///
+  /// In en, this message translates to:
+  /// **'Removed {date}'**
+  String arRemovedLine(Object date);
+
+  /// No description provided for @arClearPermanently.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear archive permanently'**
+  String get arClearPermanently;
+
+  /// No description provided for @arClearTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear the archive?'**
+  String get arClearTitle;
+
+  /// No description provided for @arClearMsg.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{All {count} archived item is erased for good.} other{All {count} archived items are erased for good.}}'**
+  String arClearMsg(int count);
+
+  /// No description provided for @arTxnStay.
+  ///
+  /// In en, this message translates to:
+  /// **'Every related transaction stays in your Ledger.'**
+  String get arTxnStay;
+
+  /// No description provided for @arBalancesUnaffected.
+  ///
+  /// In en, this message translates to:
+  /// **'Account balances are unaffected.'**
+  String get arBalancesUnaffected;
+
+  /// No description provided for @arRestoreImpossible.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore is no longer possible.'**
+  String get arRestoreImpossible;
+
+  /// No description provided for @arStatsDisappear.
+  ///
+  /// In en, this message translates to:
+  /// **'Reached-goal history disappears from your stats.'**
+  String get arStatsDisappear;
+
+  /// No description provided for @arClearArchive.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear archive'**
+  String get arClearArchive;
 }
 
 class _AppLocalizationsDelegate

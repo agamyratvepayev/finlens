@@ -838,4 +838,454 @@ class AppLocalizationsTr extends AppLocalizations {
     );
     return '$_temp0 · $amount';
   }
+
+  @override
+  String get fieldCategory => 'Kategori';
+
+  @override
+  String get fieldSelectAccount => 'Hesap seçin';
+
+  @override
+  String get fieldDirection => 'Yön';
+
+  @override
+  String get actionUse => 'Kullan';
+
+  @override
+  String get actionRestore => 'Geri yükle';
+
+  @override
+  String countMonths(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ay',
+      one: '$count ay',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get ebTitle => 'Bütçeyi düzenle';
+
+  @override
+  String get ebMonthlyLimit => 'Aylık limit';
+
+  @override
+  String get ebRollOver => 'Kalanı devret';
+
+  @override
+  String get ebRollOverDesc => 'Kalanı gelecek aya ekle';
+
+  @override
+  String get ebWarnAt => 'Şurada uyar';
+
+  @override
+  String get ebRemoveBudget => 'Bütçeyi kaldır';
+
+  @override
+  String ebAverage(Object average, Object suggestion) {
+    return 'Ortalama $average. $suggestion deneyin mi?';
+  }
+
+  @override
+  String ebRemoveTitle(Object name) {
+    return '$name bütçesi kaldırılsın mı?';
+  }
+
+  @override
+  String get ebRemoveMsg => 'Bu kategori için limit takibini bırakacaksınız.';
+
+  @override
+  String ebCategoryStays(Object name, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count işleminiz dokunulmadan kalır.',
+      one: '$count işleminiz dokunulmadan kalır.',
+    );
+    return '$name kategorisi kalır. $_temp0';
+  }
+
+  @override
+  String get ebWarningsDisappear =>
+      'Bu kategori için uyarılar ve ilerleme çubukları kaybolur.';
+
+  @override
+  String ebTotalDrops(Object from, Object to) {
+    return 'Toplam aylık bütçe $from değerinden $to değerine düşer.';
+  }
+
+  @override
+  String get egTitle => 'Hedefi düzenle';
+
+  @override
+  String get egGoalName => 'Hedef adı';
+
+  @override
+  String get egType => 'Tür';
+
+  @override
+  String get egTargetAmount => 'Hedef tutar';
+
+  @override
+  String get egTargetDate => 'Hedef tarih';
+
+  @override
+  String get egMoneyKeptIn => 'Paranın tutulduğu yer';
+
+  @override
+  String get egAutoContribute => 'Otomatik katkı';
+
+  @override
+  String get egAutoContributeDesc => 'Bu hedefe aylık transfer oluşturur';
+
+  @override
+  String get egMonthlyContribution => 'Aylık katkı';
+
+  @override
+  String get egMarkReached => 'Ulaşıldı olarak işaretle';
+
+  @override
+  String get egMarkReachedDesc => 'Para harcandı, hedef tamamlandı';
+
+  @override
+  String get egGiveUp => 'Şimdilik vazgeç';
+
+  @override
+  String get egDeleteGoal => 'Hedefi sil';
+
+  @override
+  String get egDeleteGoalDesc => 'Hiç var olmamış gibi';
+
+  @override
+  String egMarkReachedTitle(Object name) {
+    return '$name ulaşıldı olarak işaretlensin mi?';
+  }
+
+  @override
+  String get egMarkReachedMsg =>
+      'Tebrikler — hedef başarılı olarak arşive taşınır.';
+
+  @override
+  String egReachedAfter(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ay',
+      one: '$count ay',
+    );
+    return '$_temp0 sonra ulaşıldı olarak kaydedildi, hedef istatistiklerinize eklenir.';
+  }
+
+  @override
+  String get egPastTxnStay => 'Geçmiş işlemler Defter\'de kalır.';
+
+  @override
+  String get egLeavesStops => 'Hedeflerden çıkar ve takip durur.';
+
+  @override
+  String get egAutoStops => 'Aylık otomatik katkı durur.';
+
+  @override
+  String get egNotYet => 'Henüz değil';
+
+  @override
+  String egGiveUpTitle(Object name) {
+    return '$name hedefinden vazgeçilsin mi?';
+  }
+
+  @override
+  String get egGiveUpMsg =>
+      'Takip durur, ancak ayırdığınız para olduğu yerde kalır.';
+
+  @override
+  String egSavedStaysIn(Object amount, Object account) {
+    return '$amount $account hesabında kalır.';
+  }
+
+  @override
+  String get egYourAccount => 'hesabınızda';
+
+  @override
+  String get egRestoreLater => 'Daha sonra Arşiv\'den geri yükleyebilirsiniz.';
+
+  @override
+  String get egLeavesList => 'Hedefler listesinden çıkar.';
+
+  @override
+  String egDeleteTitle(Object name) {
+    return '$name silinsin mi?';
+  }
+
+  @override
+  String get egDeleteMsg =>
+      'Bunu yalnızca hedef yanlışlıkla oluşturulduysa kullanın — geçmişinizde iz bırakmaz.';
+
+  @override
+  String get egBalancesUnchanged => 'Hesap bakiyeleriniz değişmez.';
+
+  @override
+  String get egNotInArchive => 'Arşiv\'de görünmez.';
+
+  @override
+  String get egExcludedStats =>
+      'Hedef performans istatistiklerinden hariç tutulur.';
+
+  @override
+  String get egRecurringCancelled => 'Yinelenen transfer kuralı iptal edilir.';
+
+  @override
+  String egPerMonthTrack(Object amount) {
+    return 'hedefte kalmak için $amount/ay';
+  }
+
+  @override
+  String egAutoContributeOn(Object amount, Object day) {
+    return 'her ayın $day $amount';
+  }
+
+  @override
+  String egKeepsStops(Object amount) {
+    return '$amount tutulur, takip durur';
+  }
+
+  @override
+  String get egSaved => 'biriktirildi';
+
+  @override
+  String get egToGo => 'kaldı';
+
+  @override
+  String get ebWhatSpent => 'Gerçekte ne harcadınız';
+
+  @override
+  String get ebSpent => 'harcandı';
+
+  @override
+  String get etTitle => 'Görevi düzenle';
+
+  @override
+  String get etTaskTitle => 'Görev başlığı';
+
+  @override
+  String get etPaidFrom => 'Ödeme kaynağı';
+
+  @override
+  String get etPaidInto => 'Ödeme hedefi';
+
+  @override
+  String get etLinkedAccount => 'Bağlı hesap';
+
+  @override
+  String get etPayOut => 'Ödeme −';
+
+  @override
+  String get etPayIn => 'Tahsilat +';
+
+  @override
+  String get etExpectedAmount => 'Beklenen tutar';
+
+  @override
+  String get etCategoryHint => '\"Ödendi olarak işaretle\" nereye kaydeder';
+
+  @override
+  String get etNextDue => 'Sonraki vade';
+
+  @override
+  String get etRepeats => 'Tekrar';
+
+  @override
+  String get etOneOff => 'Tek seferlik görev';
+
+  @override
+  String get etRemindMe => 'Hatırlat';
+
+  @override
+  String etRemindBefore(Object days, Object time) {
+    return '$days gün önce, $time';
+  }
+
+  @override
+  String get etMarkPaid => 'Ödendi olarak işaretle';
+
+  @override
+  String get etMarkPaidExpense => 'Defter\'de gider oluşturur';
+
+  @override
+  String get etMarkPaidIncome => 'Defter\'de gelir oluşturur';
+
+  @override
+  String get etSkipThisMonth => 'Bu ayı atla';
+
+  @override
+  String etSeriesContinues(Object month) {
+    return 'Seri $month ayında devam eder';
+  }
+
+  @override
+  String get etDeleteWholeSeries => 'Tüm seriyi sil';
+
+  @override
+  String etAllFutureReminders(Object title) {
+    return 'Gelecekteki tüm $title hatırlatıcıları';
+  }
+
+  @override
+  String etSkippedNext(Object date) {
+    return 'Atlandı · sonraki $date';
+  }
+
+  @override
+  String etDeleteOnly(Object date) {
+    return 'Yalnızca $date sil';
+  }
+
+  @override
+  String etDeleteOnlyTitle(Object date) {
+    return 'Yalnızca $date silinsin mi?';
+  }
+
+  @override
+  String get etJustThisOne => 'Yalnızca bu tekrar kaldırılır.';
+
+  @override
+  String get etOneOffRemoved => 'Bu tek seferlik görev kaldırılır.';
+
+  @override
+  String etSeriesContinuesOn(Object date) {
+    return 'Seri $date tarihinde devam eder.';
+  }
+
+  @override
+  String get etNoLedgerEntry => 'Defter kaydı oluşturulmaz veya kaldırılmaz.';
+
+  @override
+  String get etLedgerUntouched => 'Defteriniz değişmez.';
+
+  @override
+  String etDisappears(Object date) {
+    return '$date Takviminizden kaybolur.';
+  }
+
+  @override
+  String etDeleteDate(Object date) {
+    return '$date sil';
+  }
+
+  @override
+  String etDeleteSeriesTitle(Object title) {
+    return 'Tüm $title serisi silinsin mi?';
+  }
+
+  @override
+  String get etDeleteSeriesMsg =>
+      'Yalnızca sonraki değil, gelecekteki tüm tekrarlar kaldırılır.';
+
+  @override
+  String get etPaymentsStay => 'Zaten kaydettiğiniz ödemeler Defter\'de kalır.';
+
+  @override
+  String get etAllRemindersCancelled =>
+      'Gelecekteki tüm hatırlatıcılar iptal edilir.';
+
+  @override
+  String etOutgoingsDrop(Object amount) {
+    return 'Aylık giderleriniz $amount azalır.';
+  }
+
+  @override
+  String get etDeleteSeries => 'Seriyi sil';
+
+  @override
+  String etRecordedInLedger(Object title) {
+    return '$title Defter\'e kaydedildi';
+  }
+
+  @override
+  String etRepeatsCadence(Object cadence) {
+    return 'Tekrar: $cadence';
+  }
+
+  @override
+  String bdAveraging(Object avg, Object limit, Object count) {
+    return 'Ortalama $avg · 6 ayın $count ayında $limit limitin üzerinde';
+  }
+
+  @override
+  String get bdNothingSpent => 'Bu ay burada harcama yok.';
+
+  @override
+  String get arEmpty => 'Arşiv boş';
+
+  @override
+  String get arEmptyMsg =>
+      'Ulaştığınız veya vazgeçtiğiniz hedefler ve kaldırdığınız bütçeler burada saklanır.';
+
+  @override
+  String get arFootnote =>
+      'Arşivlenen öğeler Planlayıcı\'da görünmez ve toplamlarınızı etkilemez. Geçmiş işlemleri Defter\'de kalır.';
+
+  @override
+  String get arReachedGoals => 'Ulaşılan hedefler';
+
+  @override
+  String arReachedLine(Object date, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ay',
+      one: '$count ay',
+    );
+    return 'Ulaşıldı $date · $_temp0 sürdü';
+  }
+
+  @override
+  String get arGaveUp => 'Vazgeçildi';
+
+  @override
+  String arStoppedLine(Object date, Object saved, Object target) {
+    return 'Durduruldu $date · $target hedefin $saved kadarı';
+  }
+
+  @override
+  String get arRemovedBudgets => 'Kaldırılan bütçeler';
+
+  @override
+  String arRemovedLine(Object date) {
+    return 'Kaldırıldı $date';
+  }
+
+  @override
+  String get arClearPermanently => 'Arşivi kalıcı olarak temizle';
+
+  @override
+  String get arClearTitle => 'Arşiv temizlensin mi?';
+
+  @override
+  String arClearMsg(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count arşivlenmiş öğe kalıcı olarak silinir.',
+      one: '$count arşivlenmiş öğe kalıcı olarak silinir.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get arTxnStay => 'İlgili tüm işlemler Defter\'de kalır.';
+
+  @override
+  String get arBalancesUnaffected => 'Hesap bakiyeleri etkilenmez.';
+
+  @override
+  String get arRestoreImpossible => 'Geri yükleme artık mümkün değil.';
+
+  @override
+  String get arStatsDisappear =>
+      'Ulaşılan hedef geçmişi istatistiklerinizden kaybolur.';
+
+  @override
+  String get arClearArchive => 'Arşivi temizle';
 }

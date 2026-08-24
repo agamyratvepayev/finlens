@@ -840,4 +840,455 @@ class AppLocalizationsEn extends AppLocalizations {
     );
     return '$_temp0 · $amount';
   }
+
+  @override
+  String get fieldCategory => 'Category';
+
+  @override
+  String get fieldSelectAccount => 'Select account';
+
+  @override
+  String get fieldDirection => 'Direction';
+
+  @override
+  String get actionUse => 'Use';
+
+  @override
+  String get actionRestore => 'Restore';
+
+  @override
+  String countMonths(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count months',
+      one: '$count month',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get ebTitle => 'Edit budget';
+
+  @override
+  String get ebMonthlyLimit => 'Monthly limit';
+
+  @override
+  String get ebRollOver => 'Roll over unspent';
+
+  @override
+  String get ebRollOverDesc => 'Add leftovers to next month';
+
+  @override
+  String get ebWarnAt => 'Warn me at';
+
+  @override
+  String get ebRemoveBudget => 'Remove budget';
+
+  @override
+  String ebAverage(Object average, Object suggestion) {
+    return 'You average $average. Try $suggestion?';
+  }
+
+  @override
+  String ebRemoveTitle(Object name) {
+    return 'Remove $name budget?';
+  }
+
+  @override
+  String get ebRemoveMsg => 'You\'ll stop tracking a limit for this category.';
+
+  @override
+  String ebCategoryStays(Object name, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Your $count transactions are untouched.',
+      one: 'Your $count transaction is untouched.',
+    );
+    return 'The $name category stays. $_temp0';
+  }
+
+  @override
+  String get ebWarningsDisappear =>
+      'Warnings and progress bars for this category disappear.';
+
+  @override
+  String ebTotalDrops(Object from, Object to) {
+    return 'Total monthly budget drops from $from to $to.';
+  }
+
+  @override
+  String get egTitle => 'Edit goal';
+
+  @override
+  String get egGoalName => 'Goal name';
+
+  @override
+  String get egType => 'Type';
+
+  @override
+  String get egTargetAmount => 'Target amount';
+
+  @override
+  String get egTargetDate => 'Target date';
+
+  @override
+  String get egMoneyKeptIn => 'Money kept in';
+
+  @override
+  String get egAutoContribute => 'Auto contribute';
+
+  @override
+  String get egAutoContributeDesc =>
+      'Creates a monthly transfer into this goal';
+
+  @override
+  String get egMonthlyContribution => 'Monthly contribution';
+
+  @override
+  String get egMarkReached => 'Mark as reached';
+
+  @override
+  String get egMarkReachedDesc => 'Money is spent, goal is done';
+
+  @override
+  String get egGiveUp => 'Give up for now';
+
+  @override
+  String get egDeleteGoal => 'Delete goal';
+
+  @override
+  String get egDeleteGoalDesc => 'As if it never existed';
+
+  @override
+  String egMarkReachedTitle(Object name) {
+    return 'Mark $name as reached?';
+  }
+
+  @override
+  String get egMarkReachedMsg =>
+      'Congratulations — this moves the goal into your archive as a success.';
+
+  @override
+  String egReachedAfter(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count months',
+      one: '$count month',
+    );
+    return 'Recorded as reached after $_temp0, feeding your goal-performance stats.';
+  }
+
+  @override
+  String get egPastTxnStay => 'Past transactions stay in your Ledger.';
+
+  @override
+  String get egLeavesStops => 'It leaves the Goals list and stops tracking.';
+
+  @override
+  String get egAutoStops => 'The monthly auto-contribution stops.';
+
+  @override
+  String get egNotYet => 'Not yet';
+
+  @override
+  String egGiveUpTitle(Object name) {
+    return 'Give up on $name?';
+  }
+
+  @override
+  String get egGiveUpMsg =>
+      'Tracking stops, but the money you already put aside stays exactly where it is.';
+
+  @override
+  String egSavedStaysIn(Object amount, Object account) {
+    return 'The $amount stays in $account.';
+  }
+
+  @override
+  String get egYourAccount => 'your account';
+
+  @override
+  String get egRestoreLater => 'You can restore it later from the Archive.';
+
+  @override
+  String get egLeavesList => 'It leaves the Goals list.';
+
+  @override
+  String egDeleteTitle(Object name) {
+    return 'Delete $name?';
+  }
+
+  @override
+  String get egDeleteMsg =>
+      'Use this only when the goal was created by mistake — it leaves no trace in your history.';
+
+  @override
+  String get egBalancesUnchanged => 'Your account balances do not change.';
+
+  @override
+  String get egNotInArchive => 'It will not appear in the Archive.';
+
+  @override
+  String get egExcludedStats => 'It is excluded from goal-performance stats.';
+
+  @override
+  String get egRecurringCancelled =>
+      'The recurring transfer rule is cancelled.';
+
+  @override
+  String egPerMonthTrack(Object amount) {
+    return '$amount/mo to stay on track';
+  }
+
+  @override
+  String egAutoContributeOn(Object amount, Object day) {
+    return '$amount on the $day';
+  }
+
+  @override
+  String egKeepsStops(Object amount) {
+    return 'Keeps the $amount, stops tracking';
+  }
+
+  @override
+  String get egSaved => 'saved';
+
+  @override
+  String get egToGo => 'to go';
+
+  @override
+  String get ebWhatSpent => 'What you actually spent';
+
+  @override
+  String get ebSpent => 'spent';
+
+  @override
+  String get etTitle => 'Edit task';
+
+  @override
+  String get etTaskTitle => 'Task title';
+
+  @override
+  String get etPaidFrom => 'Paid from';
+
+  @override
+  String get etPaidInto => 'Paid into';
+
+  @override
+  String get etLinkedAccount => 'Linked account';
+
+  @override
+  String get etPayOut => 'Pay out −';
+
+  @override
+  String get etPayIn => 'Pay in +';
+
+  @override
+  String get etExpectedAmount => 'Expected amount';
+
+  @override
+  String get etCategoryHint => 'Where \"Mark as paid\" books it';
+
+  @override
+  String get etNextDue => 'Next due';
+
+  @override
+  String get etRepeats => 'Repeats';
+
+  @override
+  String get etOneOff => 'One-off task';
+
+  @override
+  String get etRemindMe => 'Remind me';
+
+  @override
+  String etRemindBefore(Object days, Object time) {
+    return '$days days before, $time';
+  }
+
+  @override
+  String get etMarkPaid => 'Mark as paid';
+
+  @override
+  String get etMarkPaidExpense => 'Creates the expense in Ledger';
+
+  @override
+  String get etMarkPaidIncome => 'Creates the income in Ledger';
+
+  @override
+  String get etSkipThisMonth => 'Skip this month';
+
+  @override
+  String etSeriesContinues(Object month) {
+    return 'Series continues in $month';
+  }
+
+  @override
+  String get etDeleteWholeSeries => 'Delete the whole series';
+
+  @override
+  String etAllFutureReminders(Object title) {
+    return 'All future $title reminders';
+  }
+
+  @override
+  String etSkippedNext(Object date) {
+    return 'Skipped · next on $date';
+  }
+
+  @override
+  String etDeleteOnly(Object date) {
+    return 'Delete only $date';
+  }
+
+  @override
+  String etDeleteOnlyTitle(Object date) {
+    return 'Delete only $date?';
+  }
+
+  @override
+  String get etJustThisOne => 'Just this one occurrence is removed.';
+
+  @override
+  String get etOneOffRemoved => 'This one-off task is removed.';
+
+  @override
+  String etSeriesContinuesOn(Object date) {
+    return 'The series continues on $date.';
+  }
+
+  @override
+  String get etNoLedgerEntry => 'No Ledger entry is created or removed.';
+
+  @override
+  String get etLedgerUntouched => 'Your Ledger is untouched.';
+
+  @override
+  String etDisappears(Object date) {
+    return '$date disappears from your Schedule.';
+  }
+
+  @override
+  String etDeleteDate(Object date) {
+    return 'Delete $date';
+  }
+
+  @override
+  String etDeleteSeriesTitle(Object title) {
+    return 'Delete the whole $title series?';
+  }
+
+  @override
+  String get etDeleteSeriesMsg =>
+      'Every future occurrence is removed, not just the next one.';
+
+  @override
+  String get etPaymentsStay =>
+      'Payments you already recorded stay in your Ledger.';
+
+  @override
+  String get etAllRemindersCancelled => 'All future reminders are cancelled.';
+
+  @override
+  String etOutgoingsDrop(Object amount) {
+    return 'Your monthly outgoings drop by $amount.';
+  }
+
+  @override
+  String get etDeleteSeries => 'Delete series';
+
+  @override
+  String etRecordedInLedger(Object title) {
+    return '$title recorded in your Ledger';
+  }
+
+  @override
+  String etRepeatsCadence(Object cadence) {
+    return 'Repeats $cadence';
+  }
+
+  @override
+  String bdAveraging(Object avg, Object limit, Object count) {
+    return 'Averaging $avg · over the $limit limit in $count of 6';
+  }
+
+  @override
+  String get bdNothingSpent => 'Nothing spent here this month.';
+
+  @override
+  String get arEmpty => 'Archive is empty';
+
+  @override
+  String get arEmptyMsg =>
+      'Goals you reach or give up on, and budgets you remove, are kept here.';
+
+  @override
+  String get arFootnote =>
+      'Archived items don\'t appear in Planner and don\'t affect your totals. Their past transactions stay in Ledger.';
+
+  @override
+  String get arReachedGoals => 'Reached goals';
+
+  @override
+  String arReachedLine(Object date, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count months',
+      one: '$count month',
+    );
+    return 'Reached $date · took $_temp0';
+  }
+
+  @override
+  String get arGaveUp => 'Gave up';
+
+  @override
+  String arStoppedLine(Object date, Object saved, Object target) {
+    return 'Stopped $date · $saved of $target';
+  }
+
+  @override
+  String get arRemovedBudgets => 'Removed budgets';
+
+  @override
+  String arRemovedLine(Object date) {
+    return 'Removed $date';
+  }
+
+  @override
+  String get arClearPermanently => 'Clear archive permanently';
+
+  @override
+  String get arClearTitle => 'Clear the archive?';
+
+  @override
+  String arClearMsg(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'All $count archived items are erased for good.',
+      one: 'All $count archived item is erased for good.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get arTxnStay => 'Every related transaction stays in your Ledger.';
+
+  @override
+  String get arBalancesUnaffected => 'Account balances are unaffected.';
+
+  @override
+  String get arRestoreImpossible => 'Restore is no longer possible.';
+
+  @override
+  String get arStatsDisappear =>
+      'Reached-goal history disappears from your stats.';
+
+  @override
+  String get arClearArchive => 'Clear archive';
 }

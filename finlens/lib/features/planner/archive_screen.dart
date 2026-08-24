@@ -23,6 +23,7 @@ class ArchiveScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
+    final l = AppLocalizations.of(context);
     final reached = store.archivedGoals
         .where((g) => g.status == GoalStatus.reached)
         .toList();
@@ -37,21 +38,20 @@ class ArchiveScreen extends StatelessWidget {
         bottom: false,
         child: Column(
           children: [
-            const ScreenHeader(
-              title: 'Archive',
+            ScreenHeader(
+              title: l.moreArchive,
               showBack: true,
               showEye: false,
               showAdd: false,
             ),
             Expanded(
               child: total == 0
-                  ? const Padding(
-                      padding: EdgeInsets.only(top: 64),
+                  ? Padding(
+                      padding: const EdgeInsets.only(top: 64),
                       child: EmptyState(
                         icon: Icons.inventory_2_rounded,
-                        title: 'Archive is empty',
-                        message: 'Goals you reach or give up on, and budgets '
-                            'you remove, are kept here.',
+                        title: l.arEmpty,
+                        message: l.arEmptyMsg,
                       ),
                     )
                   : ListView(
@@ -65,23 +65,21 @@ class ArchiveScreen extends StatelessWidget {
                             Insets.md,
                           ),
                           child: Text(
-                            'Archived items don\'t appear in Planner and don\'t '
-                            'affect your totals. Their past transactions stay '
-                            'in Ledger.',
+                            l.arFootnote,
                             style: AppText.caption.copyWith(fontSize: 12.5),
                           ),
                         ),
                         if (reached.isNotEmpty) ...[
-                          const SectionLabel('Reached goals'),
+                          SectionLabel(l.arReachedGoals),
                           _card([
                             for (final g in reached)
                               _ArchiveRow(
                                 icon: Icons.check_rounded,
                                 color: AppColors.positive,
                                 title: g.name,
-                                subtitle: 'Reached '
-                                    '${dayMonthYear(g.completedAt!, AppLocalizations.of(context))} · took '
-                                    '${g.durationMonths ?? 0} months',
+                                subtitle: l.arReachedLine(
+                                    dayMonthYear(g.completedAt!, l),
+                                    g.durationMonths ?? 0),
                                 trailing: AmountText(
                                   g.targetAmount,
                                   style: AppText.amountLarge,
@@ -90,17 +88,17 @@ class ArchiveScreen extends StatelessWidget {
                           ]),
                         ],
                         if (gaveUp.isNotEmpty) ...[
-                          const SectionLabel('Gave up'),
+                          SectionLabel(l.arGaveUp),
                           _card([
                             for (final g in gaveUp)
                               _ArchiveRow(
                                 icon: g.icon,
                                 color: AppColors.textSecondary,
                                 title: g.name,
-                                subtitle:
-                                    'Stopped ${dayMonth(g.stoppedAt!, AppLocalizations.of(context))} · '
-                                    '${money(g.saved)} of '
-                                    '${money(g.targetAmount)}',
+                                subtitle: l.arStoppedLine(
+                                    dayMonth(g.stoppedAt!, l),
+                                    money(g.saved),
+                                    money(g.targetAmount)),
                                 trailing: _RestoreButton(
                                   onTap: () => store.restoreGoal(g),
                                 ),
@@ -108,15 +106,15 @@ class ArchiveScreen extends StatelessWidget {
                           ]),
                         ],
                         if (budgets.isNotEmpty) ...[
-                          const SectionLabel('Removed budgets'),
+                          SectionLabel(l.arRemovedBudgets),
                           _card([
                             for (final c in budgets)
                               _ArchiveRow(
                                 icon: c.icon,
                                 color: c.color,
                                 title: c.name,
-                                subtitle:
-                                    'Removed ${dayMonth(c.removedOn!, AppLocalizations.of(context))}',
+                                subtitle: l.arRemovedLine(
+                                    dayMonth(c.removedOn!, l)),
                                 trailing: _RestoreButton(
                                   // The old limit is not retained once cleared,
                                   // so restoring seeds a sensible default from
@@ -143,7 +141,7 @@ class ArchiveScreen extends StatelessWidget {
                             style: TextButton.styleFrom(
                               foregroundColor: AppColors.negative,
                             ),
-                            child: const Text('Clear archive permanently'),
+                            child: Text(l.arClearPermanently),
                           ),
                         ),
                       ],
@@ -180,21 +178,18 @@ class ArchiveScreen extends StatelessWidget {
   }
 
   Future<void> _clear(BuildContext context, AppStore store, int total) async {
+    final l = AppLocalizations.of(context);
     final ok = await showDestructiveConfirm(
       context,
-      title: 'Clear the archive?',
-      message: 'All $total archived items are erased for good.',
+      title: l.arClearTitle,
+      message: l.arClearMsg(total),
       impact: [
-        const ImpactLine.kept(
-          'Every related transaction stays in your Ledger.',
-        ),
-        const ImpactLine.kept('Account balances are unaffected.'),
-        const ImpactLine.lost('Restore is no longer possible.'),
-        const ImpactLine.lost(
-          'Reached-goal history disappears from your stats.',
-        ),
+        ImpactLine.kept(l.arTxnStay),
+        ImpactLine.kept(l.arBalancesUnaffected),
+        ImpactLine.lost(l.arRestoreImpossible),
+        ImpactLine.lost(l.arStatsDisappear),
       ],
-      confirmLabel: 'Clear archive',
+      confirmLabel: l.arClearArchive,
     );
     if (!ok || !context.mounted) return;
     store.clearArchive();
@@ -269,7 +264,7 @@ class _RestoreButton extends StatelessWidget {
         visualDensity: VisualDensity.compact,
         textStyle: AppText.button.copyWith(fontSize: 13.5),
       ),
-      child: const Text('Restore'),
+      child: Text(AppLocalizations.of(context).actionRestore),
     );
   }
 }

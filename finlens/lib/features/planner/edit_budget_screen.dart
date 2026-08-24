@@ -63,10 +63,11 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
   @override
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
+    final l = AppLocalizations.of(context);
     final spent = store.spentInCategory(_category.id, store.period);
 
     return EditScaffold(
-      title: 'Edit budget',
+      title: l.ebTitle,
       onSave: _limitValue > 0 ? _save : null,
       children: [
         FormSection(
@@ -75,12 +76,12 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
             FormRow(
               icon: _category.icon,
               label: _category.name,
-              subtitle: 'Category',
+              subtitle: l.fieldCategory,
               locked: true,
             ),
             TextFieldRow(
               icon: Icons.attach_money_rounded,
-              label: 'Monthly limit',
+              label: l.ebMonthlyLimit,
               controller: _limit,
               hint: '0',
               trailing: Text(
@@ -90,15 +91,15 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
             ),
             ToggleRow(
               icon: Icons.repeat_rounded,
-              label: 'Roll over unspent',
-              subtitle: 'Add leftovers to next month',
+              label: l.ebRollOver,
+              subtitle: l.ebRollOverDesc,
               value: _rollover,
               onChanged: (v) => setState(() => _rollover = v),
             ),
             FormRow(
               icon: Icons.notifications_active_rounded,
-              label: 'Warn me at',
-              subtitle: '${money(_limitValue * _warn)} spent',
+              label: l.ebWarnAt,
+              subtitle: '${money(_limitValue * _warn)} ${l.ebSpent}',
               value: percent(_warn, decimals: 0),
               showChevron: true,
               onTap: _pickThreshold,
@@ -106,12 +107,13 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
           ],
         ),
         _historyCard(spent),
-        DestructiveRow(label: 'Remove budget', onTap: _confirmRemove),
+        DestructiveRow(label: l.ebRemoveBudget, onTap: _confirmRemove),
       ],
     );
   }
 
   Widget _historyCard(double currentSpend) {
+    final l = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         Insets.gutter,
@@ -124,7 +126,7 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(4, 0, 0, Insets.sm),
-            child: Text('WHAT YOU ACTUALLY SPENT', style: AppText.label),
+            child: Text(l.ebWhatSpent.toUpperCase(), style: AppText.label),
           ),
           AppCard(
             padding: const EdgeInsets.symmetric(
@@ -165,8 +167,8 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
                           child: Text(
                             // Rounded: the point is a graspable figure to
                             // base a limit on, not accounting precision.
-                            'You average ${money(_average.roundToDouble())}. '
-                            'Try ${money(_suggestion)}?',
+                            l.ebAverage(money(_average.roundToDouble()),
+                                money(_suggestion)),
                             style: AppText.caption.copyWith(fontSize: 12.5),
                           ),
                         ),
@@ -178,7 +180,7 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
                             foregroundColor: AppColors.accentSoft,
                             visualDensity: VisualDensity.compact,
                           ),
-                          child: const Text('Use'),
+                          child: Text(l.actionUse),
                         ),
                       ],
                     ),
@@ -201,7 +203,8 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             const SizedBox(height: Insets.lg),
-            const Text('Warn me at', style: AppText.rowTitle),
+            Text(AppLocalizations.of(context).ebWarnAt,
+                style: AppText.rowTitle),
             const SizedBox(height: Insets.md),
             for (final t in const [0.5, 0.7, 0.8, 0.9, 1.0])
               ListTile(
@@ -238,24 +241,18 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
     final count = _store.txnCountForCategory(_category.id);
     final newTotal = _store.totalBudget - (_category.effectiveLimit ?? 0);
 
+    final l = AppLocalizations.of(context);
     final ok = await showDestructiveConfirm(
       context,
-      title: 'Remove ${_category.name} budget?',
-      message: 'You\'ll stop tracking a limit for this category.',
+      title: l.ebRemoveTitle(_category.name),
+      message: l.ebRemoveMsg,
       impact: [
-        ImpactLine.kept(
-          'The ${_category.name} category stays. Your $count '
-          '${count == 1 ? 'transaction is' : 'transactions are'} untouched.',
-        ),
-        const ImpactLine.lost(
-          'Warnings and progress bars for this category disappear.',
-        ),
-        ImpactLine.lost(
-          'Total monthly budget drops from ${money(_store.totalBudget)} '
-          'to ${money(newTotal)}.',
-        ),
+        ImpactLine.kept(l.ebCategoryStays(_category.name, count)),
+        ImpactLine.lost(l.ebWarningsDisappear),
+        ImpactLine.lost(l.ebTotalDrops(
+            money(_store.totalBudget), money(newTotal))),
       ],
-      confirmLabel: 'Remove budget',
+      confirmLabel: l.ebRemoveBudget,
     );
 
     if (!ok || !mounted) return;

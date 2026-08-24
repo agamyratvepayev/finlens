@@ -82,10 +82,11 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
   @override
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
+    final l = AppLocalizations.of(context);
     final account = store.accountById(_accountId);
 
     return EditScaffold(
-      title: 'Edit task',
+      title: l.etTitle,
       onSave:
           _title.text.trim().isNotEmpty && _amountValue > 0 ? _save : null,
       children: [
@@ -93,7 +94,7 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
           children: [
             TextFieldRow(
               icon: _task.icon,
-              label: 'Task title',
+              label: l.etTaskTitle,
               controller: _title,
               trailing: const Icon(
                 Icons.edit_rounded,
@@ -107,27 +108,27 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
           children: [
             FormRow(
               icon: Icons.account_balance_wallet_rounded,
-              label: _payOut ? 'Paid from' : 'Paid into',
-              subtitle: account?.name ?? 'Select account',
+              label: _payOut ? l.etPaidFrom : l.etPaidInto,
+              subtitle: account?.name ?? l.fieldSelectAccount,
               showChevron: true,
               onTap: () async {
-                final a = await pickAccount(context, title: 'Linked account');
+                final a = await pickAccount(context, title: l.etLinkedAccount);
                 if (a != null) setState(() => _accountId = a.id);
               },
             ),
             FormRow(
               icon: Icons.swap_vert_rounded,
-              label: 'Direction',
+              label: l.fieldDirection,
               trailing: SegmentedPicker<bool>(
                 values: const [true, false],
-                labelOf: (v) => v ? 'Pay out −' : 'Pay in +',
+                labelOf: (v) => v ? l.etPayOut : l.etPayIn,
                 selected: _payOut,
                 onChanged: (v) => setState(() => _payOut = v),
               ),
             ),
             TextFieldRow(
               icon: Icons.attach_money_rounded,
-              label: 'Expected amount',
+              label: l.etExpectedAmount,
               controller: _amount,
               hint: '0',
               trailing: Text(
@@ -137,9 +138,9 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
             ),
             FormRow(
               icon: Icons.category_rounded,
-              label: 'Category',
+              label: l.fieldCategory,
               subtitle: store.categoryById(_categoryId)?.name ??
-                  'Where "Mark as paid" books it',
+                  l.etCategoryHint,
               showChevron: true,
               onTap: () async {
                 final c = await pickCategory(
@@ -151,7 +152,7 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
             ),
             FormRow(
               icon: Icons.event_rounded,
-              label: 'Next due',
+              label: l.etNextDue,
               value: dayMonth(_due, AppLocalizations.of(context)),
               showChevron: true,
               onTap: _pickDue,
@@ -159,11 +160,11 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
             FormRow(
               icon: Icons.repeat_rounded,
               label: _repeats == RepeatFrequency.none
-                  ? 'Repeats'
-                  : 'Repeats ${_repeats.label(AppLocalizations.of(context)).toLowerCase()}',
+                  ? l.etRepeats
+                  : l.etRepeatsCadence(_repeats.label(l).toLowerCase()),
               // Spec 5.7 — the preview is what makes a series comprehensible.
               subtitle: _preview.isEmpty
-                  ? 'One-off task'
+                  ? l.etOneOff
                   : '${_preview.map((d) => dayMonth(d, AppLocalizations.of(context))).join(' · ')} …',
               value:
                   _preview.isEmpty ? _repeats.label(AppLocalizations.of(context)) : null,
@@ -172,9 +173,9 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
             ),
             ToggleRow(
               icon: Icons.alarm_rounded,
-              label: 'Remind me',
+              label: l.etRemindMe,
               subtitle: _remind
-                  ? '$_remindDays days before, ${_remindTime.format(context)}'
+                  ? l.etRemindBefore('$_remindDays', _remindTime.format(context))
                   : null,
               value: _remind,
               onChanged: (v) => setState(() => _remind = v),
@@ -185,18 +186,17 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
           children: [
             FormRow(
               icon: Icons.check_circle_rounded,
-              label: 'Mark as paid',
-              subtitle: 'Creates the ${_payOut ? 'expense' : 'income'} '
-                  'in Ledger',
+              label: l.etMarkPaid,
+              subtitle: _payOut ? l.etMarkPaidExpense : l.etMarkPaidIncome,
               showChevron: true,
               onTap: _markPaid,
             ),
             if (_task.isRecurring)
               FormRow(
                 icon: Icons.skip_next_rounded,
-                label: 'Skip this month',
-                subtitle: 'Series continues in '
-                    '${monthShort(_task.nextOccurrence(_due).month, AppLocalizations.of(context))}',
+                label: l.etSkipThisMonth,
+                subtitle: l.etSeriesContinues(
+                    monthShort(_task.nextOccurrence(_due).month, l)),
                 showChevron: true,
                 onTap: _skip,
               ),
@@ -204,13 +204,13 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
         ),
         // Spec 5.7 — two distinct deletions, the first named by its date.
         DestructiveRow(
-          label: 'Delete only ${dayMonth(_due, AppLocalizations.of(context))}',
+          label: l.etDeleteOnly(dayMonth(_due, l)),
           onTap: _deleteOccurrence,
         ),
         if (_task.isRecurring)
           DestructiveRow(
-            label: 'Delete the whole series',
-            subtitle: 'All future ${_task.title} reminders',
+            label: l.etDeleteWholeSeries,
+            subtitle: l.etAllFutureReminders(_task.title),
             onTap: _deleteSeries,
           ),
       ],
@@ -243,7 +243,7 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
   Future<void> _pickRepeat() async {
     final picked = await showAppSheet<RepeatFrequency>(
       context,
-      title: 'Repeats',
+      title: AppLocalizations.of(context).etRepeats,
       initialSize: 0.5,
       builder: (context, controller) => ListView(
         controller: controller,
@@ -304,7 +304,9 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
     _store.markTaskPaid(_task);
     Navigator.of(context).pop();
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('${_task.title} recorded in your Ledger')),
+      SnackBar(
+          content: Text(
+              AppLocalizations.of(context).etRecordedInLedger(_task.title))),
     );
   }
 
@@ -314,28 +316,28 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
     Navigator.of(context).pop();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Skipped · next on ${dayMonth(_task.dueDate, AppLocalizations.of(context))}'),
+        content: Text(AppLocalizations.of(context)
+            .etSkippedNext(dayMonth(_task.dueDate, AppLocalizations.of(context)))),
       ),
     );
   }
 
   Future<void> _deleteOccurrence() async {
+    final l = AppLocalizations.of(context);
     final next = _task.nextOccurrence(_due);
     final ok = await showDestructiveConfirm(
       context,
-      title: 'Delete only ${dayMonth(_due, AppLocalizations.of(context))}?',
-      message: _task.isRecurring
-          ? 'Just this one occurrence is removed.'
-          : 'This one-off task is removed.',
+      title: l.etDeleteOnlyTitle(dayMonth(_due, l)),
+      message: _task.isRecurring ? l.etJustThisOne : l.etOneOffRemoved,
       impact: [
         if (_task.isRecurring) ...[
-          ImpactLine.kept('The series continues on ${dayMonth(next, AppLocalizations.of(context))}.'),
-          const ImpactLine.kept('No Ledger entry is created or removed.'),
+          ImpactLine.kept(l.etSeriesContinuesOn(dayMonth(next, l))),
+          ImpactLine.kept(l.etNoLedgerEntry),
         ] else
-          const ImpactLine.kept('Your Ledger is untouched.'),
-        ImpactLine.lost('${dayMonth(_due, AppLocalizations.of(context))} disappears from your Schedule.'),
+          ImpactLine.kept(l.etLedgerUntouched),
+        ImpactLine.lost(l.etDisappears(dayMonth(_due, l))),
       ],
-      confirmLabel: 'Delete ${dayMonth(_due, AppLocalizations.of(context))}',
+      confirmLabel: l.etDeleteDate(dayMonth(_due, l)),
     );
     if (!ok || !mounted) return;
     _store.deleteTaskOccurrence(_task);
@@ -343,21 +345,17 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
   }
 
   Future<void> _deleteSeries() async {
+    final l = AppLocalizations.of(context);
     final ok = await showDestructiveConfirm(
       context,
-      title: 'Delete the whole ${_task.title} series?',
-      message: 'Every future occurrence is removed, not just the next one.',
+      title: l.etDeleteSeriesTitle(_task.title),
+      message: l.etDeleteSeriesMsg,
       impact: [
-        const ImpactLine.kept(
-          'Payments you already recorded stay in your Ledger.',
-        ),
-        const ImpactLine.lost('All future reminders are cancelled.'),
-        ImpactLine.lost(
-          'Your monthly outgoings drop by '
-          '${money(_task.expectedAmount.abs())}.',
-        ),
+        ImpactLine.kept(l.etPaymentsStay),
+        ImpactLine.lost(l.etAllRemindersCancelled),
+        ImpactLine.lost(l.etOutgoingsDrop(money(_task.expectedAmount.abs()))),
       ],
-      confirmLabel: 'Delete series',
+      confirmLabel: l.etDeleteSeries,
     );
     if (!ok || !mounted) return;
     _store.deleteTaskSeries(_task);

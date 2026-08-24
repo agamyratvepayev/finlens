@@ -71,10 +71,11 @@ class _EditGoalScreenState extends State<EditGoalScreen> {
   @override
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
+    final l = AppLocalizations.of(context);
     final linked = store.accountById(_linkedAccountId);
 
     return EditScaffold(
-      title: 'Edit goal',
+      title: l.egTitle,
       onSave: _name.text.trim().isNotEmpty && _targetValue > 0 ? _save : null,
       header: _progressHeader(),
       children: [
@@ -82,7 +83,7 @@ class _EditGoalScreenState extends State<EditGoalScreen> {
           children: [
             TextFieldRow(
               icon: _goal.icon,
-              label: 'Goal name',
+              label: l.egGoalName,
               controller: _name,
               trailing: const Icon(
                 Icons.edit_rounded,
@@ -92,7 +93,7 @@ class _EditGoalScreenState extends State<EditGoalScreen> {
             ),
           ],
         ),
-        const SectionLabelSmall('Type'),
+        SectionLabelSmall(l.egType),
         Padding(
           padding: const EdgeInsets.fromLTRB(
             Insets.gutter,
@@ -111,33 +112,33 @@ class _EditGoalScreenState extends State<EditGoalScreen> {
           children: [
             TextFieldRow(
               icon: Icons.attach_money_rounded,
-              label: 'Target amount',
+              label: l.egTargetAmount,
               controller: _target,
               hint: '0',
             ),
             FormRow(
               icon: Icons.event_rounded,
-              label: 'Target date',
+              label: l.egTargetDate,
               // Spec 5.6 — the monthly figure recalculates the moment either
               // the amount or the date changes.
               subtitle: _perMonth == null
-                  ? 'No target date set'
-                  : '${money(_perMonth!)}/mo to stay on track',
+                  ? l.plNoTargetDate
+                  : l.egPerMonthTrack(money(_perMonth!)),
               value: _targetDate == null
-                  ? 'Not set'
+                  ? l.eaNotSet
                   : monthYear(_targetDate!, AppLocalizations.of(context)),
               showChevron: true,
               onTap: _pickTargetDate,
             ),
             FormRow(
               icon: Icons.savings_rounded,
-              label: 'Money kept in',
-              subtitle: linked?.name ?? 'Select account',
+              label: l.egMoneyKeptIn,
+              subtitle: linked?.name ?? l.fieldSelectAccount,
               showChevron: true,
               onTap: () async {
                 final a = await pickAccount(
                   context,
-                  title: 'Money kept in',
+                  title: l.egMoneyKeptIn,
                   filter: (a) => a.isAsset,
                 );
                 if (a != null) setState(() => _linkedAccountId = a.id);
@@ -145,18 +146,19 @@ class _EditGoalScreenState extends State<EditGoalScreen> {
             ),
             ToggleRow(
               icon: Icons.repeat_rounded,
-              label: 'Auto contribute',
+              label: l.egAutoContribute,
               subtitle: _autoContribute
-                  ? '${money(double.tryParse(_contribution.text) ?? 0)} '
-                      'on the ${ordinalDay(_contributeDay, AppLocalizations.of(context))}'
-                  : 'Creates a monthly transfer into this goal',
+                  ? l.egAutoContributeOn(
+                      money(double.tryParse(_contribution.text) ?? 0),
+                      ordinalDay(_contributeDay, l))
+                  : l.egAutoContributeDesc,
               value: _autoContribute,
               onChanged: (v) => setState(() => _autoContribute = v),
             ),
             if (_autoContribute)
               TextFieldRow(
                 icon: Icons.attach_money_rounded,
-                label: 'Monthly contribution',
+                label: l.egMonthlyContribution,
                 controller: _contribution,
                 hint: '0',
               ),
@@ -167,23 +169,23 @@ class _EditGoalScreenState extends State<EditGoalScreen> {
           children: [
             FormRow(
               icon: Icons.flag_rounded,
-              label: 'Mark as reached',
-              subtitle: 'Money is spent, goal is done',
+              label: l.egMarkReached,
+              subtitle: l.egMarkReachedDesc,
               showChevron: true,
               onTap: _markReached,
             ),
             FormRow(
               icon: Icons.pause_circle_rounded,
-              label: 'Give up for now',
-              subtitle: 'Keeps the ${money(_goal.saved)}, stops tracking',
+              label: l.egGiveUp,
+              subtitle: l.egKeepsStops(money(_goal.saved)),
               showChevron: true,
               onTap: _giveUp,
             ),
           ],
         ),
         DestructiveRow(
-          label: 'Delete goal',
-          subtitle: 'As if it never existed',
+          label: l.egDeleteGoal,
+          subtitle: l.egDeleteGoalDesc,
           onTap: _delete,
         ),
       ],
@@ -191,6 +193,7 @@ class _EditGoalScreenState extends State<EditGoalScreen> {
   }
 
   Widget _progressHeader() {
+    final l = AppLocalizations.of(context);
     final remaining = (_targetValue - _goal.saved).clamp(0, double.infinity);
     return Padding(
       padding: const EdgeInsets.fromLTRB(
@@ -208,13 +211,13 @@ class _EditGoalScreenState extends State<EditGoalScreen> {
                 style: AppText.amountLarge.copyWith(fontSize: 18),
                 color: AppColors.positive,
               ),
-              Text(' saved', style: AppText.caption),
+              Text(' ${l.egSaved}', style: AppText.caption),
               const Spacer(),
               AmountText(
                 remaining.toDouble(),
                 style: AppText.amountLarge.copyWith(fontSize: 18),
               ),
-              Text(' to go', style: AppText.caption),
+              Text(' ${l.egToGo}', style: AppText.caption),
             ],
           ),
           const SizedBox(height: Insets.sm),
@@ -254,23 +257,20 @@ class _EditGoalScreenState extends State<EditGoalScreen> {
   }
 
   Future<void> _markReached() async {
+    final l = AppLocalizations.of(context);
     final ok = await showDestructiveConfirm(
       context,
-      title: 'Mark ${_goal.name} as reached?',
-      message: 'Congratulations — this moves the goal into your archive as a '
-          'success.',
+      title: l.egMarkReachedTitle(_goal.name),
+      message: l.egMarkReachedMsg,
       impact: [
-        ImpactLine.kept(
-          'Recorded as reached after ${_goal.durationMonths ?? _monthsSinceCreated} '
-          'months, feeding your goal-performance stats.',
-        ),
-        const ImpactLine.kept('Past transactions stay in your Ledger.'),
-        const ImpactLine.lost('It leaves the Goals list and stops tracking.'),
-        if (_goal.autoContribute)
-          const ImpactLine.lost('The monthly auto-contribution stops.'),
+        ImpactLine.kept(l.egReachedAfter(
+            _goal.durationMonths ?? _monthsSinceCreated)),
+        ImpactLine.kept(l.egPastTxnStay),
+        ImpactLine.lost(l.egLeavesStops),
+        if (_goal.autoContribute) ImpactLine.lost(l.egAutoStops),
       ],
-      confirmLabel: 'Mark as reached',
-      cancelLabel: 'Not yet',
+      confirmLabel: l.egMarkReached,
+      cancelLabel: l.egNotYet,
     );
     if (!ok || !mounted) return;
     _store.markGoalReached(_goal);
@@ -282,22 +282,21 @@ class _EditGoalScreenState extends State<EditGoalScreen> {
       (AppStore.today.month - _goal.createdAt.month);
 
   Future<void> _giveUp() async {
+    final l = AppLocalizations.of(context);
     final ok = await showDestructiveConfirm(
       context,
-      title: 'Give up on ${_goal.name}?',
-      message: 'Tracking stops, but the money you already put aside stays '
-          'exactly where it is.',
+      title: l.egGiveUpTitle(_goal.name),
+      message: l.egGiveUpMsg,
       impact: [
-        ImpactLine.kept(
-          'The ${money(_goal.saved)} stays in '
-          '${_store.accountById(_linkedAccountId)?.name ?? 'your account'}.',
-        ),
-        const ImpactLine.kept('You can restore it later from the Archive.'),
-        const ImpactLine.lost('It leaves the Goals list.'),
-        if (_goal.autoContribute)
-          const ImpactLine.lost('The monthly auto-contribution stops.'),
+        ImpactLine.kept(l.egSavedStaysIn(
+          money(_goal.saved),
+          _store.accountById(_linkedAccountId)?.name ?? l.egYourAccount,
+        )),
+        ImpactLine.kept(l.egRestoreLater),
+        ImpactLine.lost(l.egLeavesList),
+        if (_goal.autoContribute) ImpactLine.lost(l.egAutoStops),
       ],
-      confirmLabel: 'Give up for now',
+      confirmLabel: l.egGiveUp,
     );
     if (!ok || !mounted) return;
     _store.abandonGoal(_goal);
@@ -305,19 +304,18 @@ class _EditGoalScreenState extends State<EditGoalScreen> {
   }
 
   Future<void> _delete() async {
+    final l = AppLocalizations.of(context);
     final ok = await showDestructiveConfirm(
       context,
-      title: 'Delete ${_goal.name}?',
-      message: 'Use this only when the goal was created by mistake — it leaves '
-          'no trace in your history.',
+      title: l.egDeleteTitle(_goal.name),
+      message: l.egDeleteMsg,
       impact: [
-        const ImpactLine.kept('Your account balances do not change.'),
-        const ImpactLine.lost('It will not appear in the Archive.'),
-        const ImpactLine.lost('It is excluded from goal-performance stats.'),
-        if (_goal.autoContribute)
-          const ImpactLine.lost('The recurring transfer rule is cancelled.'),
+        ImpactLine.kept(l.egBalancesUnchanged),
+        ImpactLine.lost(l.egNotInArchive),
+        ImpactLine.lost(l.egExcludedStats),
+        if (_goal.autoContribute) ImpactLine.lost(l.egRecurringCancelled),
       ],
-      confirmLabel: 'Delete goal',
+      confirmLabel: l.egDeleteGoal,
     );
     if (!ok || !mounted) return;
     _store.deleteGoal(_goal);
