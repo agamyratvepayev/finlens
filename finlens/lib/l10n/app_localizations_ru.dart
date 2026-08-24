@@ -547,9 +547,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get balSortTooltip => 'Сортировка';
 
   @override
-  String get balHoldToArrange => 'Удерживайте счёт, чтобы упорядочить';
-
-  @override
   String get balPressHoldMove =>
       'Нажмите и удерживайте счёт, чтобы переместить';
 

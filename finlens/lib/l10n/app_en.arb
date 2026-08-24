@@ -197,7 +197,6 @@
   "balNoAccountsMessage": "Add your accounts and FinLens works out your net worth from the transactions you record.",
   "balAdjustFilter": "Adjust filter",
   "balSortTooltip": "Sort",
-  "balHoldToArrange": "Hold an account to arrange",
   "balPressHoldMove": "Press and hold an account to move it",
   "balFilterCategories": "Filter categories",
   "balNoVisibleCategories": "No visible categories",

@@ -529,9 +529,6 @@ class AppLocalizationsTk extends AppLocalizations {
   String get balSortTooltip => 'Tertiple';
 
   @override
-  String get balHoldToArrange => 'Tertiplemek üçin hasaby basyp saklaň';
-
-  @override
   String get balPressHoldMove => 'Süýşürmek üçin hasaby basyp saklaň';
 
   @override

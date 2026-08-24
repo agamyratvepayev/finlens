@@ -528,9 +528,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String get balSortTooltip => 'Sırala';
 
   @override
-  String get balHoldToArrange => 'Düzenlemek için bir hesabı basılı tutun';
-
-  @override
   String get balPressHoldMove => 'Taşımak için bir hesaba basılı tutun';
 
   @override

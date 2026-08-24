@@ -152,7 +152,6 @@
   "balNoAccountsMessage": "Добавьте счета, и FinLens сам рассчитает капитал по вашим операциям.",
   "balAdjustFilter": "Настроить фильтр",
   "balSortTooltip": "Сортировка",
-  "balHoldToArrange": "Удерживайте счёт, чтобы упорядочить",
   "balPressHoldMove": "Нажмите и удерживайте счёт, чтобы переместить",
   "balFilterCategories": "Фильтр категорий",
   "balNoVisibleCategories": "Нет видимых категорий",

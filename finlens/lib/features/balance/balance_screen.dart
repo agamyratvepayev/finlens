@@ -675,10 +675,6 @@ class _BalanceScreenState extends State<BalanceScreen> {
               label,
               filter.sectionTotal(store, assets: assets),
               assets: assets,
-              // The hint advertises account dragging until the first successful
-              // drop dismisses it forever, and hides while searching (the
-              // affordance it points at is off then).
-              showHint: !store.balanceReorderHintDone && !_searching,
             ),
           ),
         if (groups.isEmpty)
@@ -966,8 +962,7 @@ class _BalanceScreenState extends State<BalanceScreen> {
 
   /// Commits a completed move: the new order, and a silent flip to Custom (so
   /// the automatic comparator can't snap the row back). Records what Undo would
-  /// restore, dismisses the discoverability hint forever (this is a successful
-  /// drop that changed the order), then offers the labeled bar.
+  /// restore, then offers the labeled bar.
   void _applyDrag(AppStore store, CustomOrder next) {
     // True when this drag flips an automatic sort to Custom — the bar names
     // that, so the changed sort is not a silent surprise.
@@ -975,7 +970,6 @@ class _BalanceScreenState extends State<BalanceScreen> {
     _pendingMove =
         _PendingMove(order: store.balanceOrder, sort: store.balanceSort);
     store.setBalanceOrder(next, sort: AccountSort.custom);
-    store.markBalanceReorderHintDone();
     _showUndoBar(store, flipped: flipped);
   }
 
@@ -1092,7 +1086,6 @@ class _ListSectionHeader extends StatelessWidget {
     this.label,
     this.total, {
     required this.assets,
-    this.showHint = false,
   });
 
   final String label;
@@ -1102,9 +1095,6 @@ class _ListSectionHeader extends StatelessWidget {
   /// duplicate label row gone, this header is the section total's only home.
   final bool assets;
 
-  /// Renders the trailing "Hold an account to arrange" discoverability hint.
-  final bool showHint;
-
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -1112,62 +1102,14 @@ class _ListSectionHeader extends StatelessWidget {
       child: Row(
         children: [
           Text(label.toUpperCase(), style: AppText.listSectionLabel),
-          // The flexible middle carries the right-aligned hint and is what
-          // yields first at narrow widths: the hint truncates (ellipsis) inside
-          // this Expanded while the total — outside it — always keeps its full
-          // width. The hint sits to the left of the total with an 8px gap, and
-          // its line box is kept under the label's, so the row height never
-          // changes whether the hint shows or not.
-          Expanded(
-            child: showHint
-                ? const Padding(
-                    padding: EdgeInsets.only(right: Insets.sm),
-                    child: _ReorderHint(),
-                  )
-                : const SizedBox.shrink(),
-          ),
+          // The flexible middle pushes the total to the right edge and is what
+          // yields first at narrow widths, so the total always keeps its full
+          // width.
+          const Spacer(),
           AmountText.balance(
             total,
             style: AppText.sectionTotal,
             color: assets ? AppColors.positive : AppColors.negative,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// The trailing section-header affordance: a press glyph and "Hold an account
-/// to arrange", right-aligned. Decorative — excluded from semantics so it adds
-/// no screen-reader noise; the rows' rotor Move up/down actions are the
-/// accessible path.
-class _ReorderHint extends StatelessWidget {
-  const _ReorderHint();
-
-  @override
-  Widget build(BuildContext context) {
-    return ExcludeSemantics(
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          const Icon(
-            Icons.touch_app_outlined,
-            size: 13,
-            color: AppColors.textTertiary,
-          ),
-          const SizedBox(width: 4),
-          Flexible(
-            child: Text(
-              AppLocalizations.of(context).balHoldToArrange,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontSize: 11,
-                height: 1.1,
-                color: AppColors.textTertiary,
-              ),
-            ),
           ),
         ],
       ),

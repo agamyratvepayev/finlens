@@ -882,12 +882,6 @@ abstract class AppLocalizations {
   /// **'Sort'**
   String get balSortTooltip;
 
-  /// No description provided for @balHoldToArrange.
-  ///
-  /// In en, this message translates to:
-  /// **'Hold an account to arrange'**
-  String get balHoldToArrange;
-
   /// No description provided for @balPressHoldMove.
   ///
   /// In en, this message translates to:

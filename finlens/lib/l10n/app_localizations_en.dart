@@ -528,9 +528,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get balSortTooltip => 'Sort';
 
   @override
-  String get balHoldToArrange => 'Hold an account to arrange';
-
-  @override
   String get balPressHoldMove => 'Press and hold an account to move it';
 
   @override
