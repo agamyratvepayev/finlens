@@ -178,70 +178,193 @@ class Txn {
   bool get movesCash => type != TxnType.rebalance;
 }
 
-/// Spec 6.1 — Goal. One template, three sub-types (spec 3.6).
+/// What a goal watches — an account or an income category. `linkedAccountId`
+/// of the old model is promoted here and is now required: a goal is a *lens*
+/// over one real source, and the source decides the section, the direction and
+/// the default target (§1). Locked after creation — changing it would
+/// invalidate `startAmount`, every rate, the projection and the whole history.
+class GoalSource {
+  const GoalSource.account(this.id) : kind = GoalSourceKind.account;
+  const GoalSource.category(this.id) : kind = GoalSourceKind.category;
+
+  final GoalSourceKind kind;
+  final String id;
+
+  bool get isAccount => kind == GoalSourceKind.account;
+  bool get isCategory => kind == GoalSourceKind.category;
+
+  @override
+  bool operator ==(Object other) =>
+      other is GoalSource && other.kind == kind && other.id == id;
+
+  @override
+  int get hashCode => Object.hash(kind, id);
+}
+
+/// One entry in a goal's change log (§7). Records only `targetAmount` and
+/// `targetDate` moves, plus a `created` seed — because the verdict judges the
+/// user against a target and a date the user sets, and without a record the app
+/// would have amnesia and always report that things are fine.
+class GoalEdit {
+  const GoalEdit({
+    required this.at,
+    required this.field,
+    required this.from,
+    required this.to,
+    this.amber = false,
+  });
+
+  final DateTime at;
+  final String field; // 'created' | 'target' | 'targetDate'
+  final String from; // formatted
+  final String to; // formatted
+
+  /// §7 — a pushed-out deadline is coloured amber; everything else is neutral.
+  /// Colour states a fact; the reader forms the opinion.
+  final bool amber;
+}
+
+/// Spec 6.1 — Goal, rebuilt on real balances (§1).
+///
+/// **A goal watches one source climb to a target by a date. Progress is read,
+/// never stored.** There is no `saved` field: every figure — start, current,
+/// progress, the rates, the projection — is derived from the ledger by
+/// [AppStore], so nothing can drift when a past transaction is edited.
 class Goal {
   Goal({
     required this.id,
     required this.name,
-    required this.type,
+    required this.source,
     required this.targetAmount,
-    required this.linkedAccountId,
-    required this.icon,
+    required this.createdAt,
     this.targetDate,
-    this.saved = 0,
-    this.autoContribute = false,
-    this.autoContributeAmount,
-    this.autoContributeDay = 1,
+    this.endsWhenReached = true,
     this.status = GoalStatus.active,
+    this.note = '',
     this.completedAt,
     this.stoppedAt,
-    this.note = '',
-    DateTime? createdAt,
-  }) : createdAt = createdAt ?? DateTime.now();
+    List<GoalEdit>? history,
+  }) : history = history ?? <GoalEdit>[];
 
   final String id;
   String name;
-  GoalType type;
+
+  /// The account or income category this goal watches. Required and locked
+  /// after creation (§3).
+  GoalSource source;
+
+  /// The balance or income total to reach. A liability source defaults this to
+  /// zero (§3).
   double targetAmount;
-  String linkedAccountId;
-  IconData icon;
   DateTime? targetDate;
-  double saved;
-  bool autoContribute;
-  double? autoContributeAmount;
-  int autoContributeDay;
+
+  /// §4 — when true, the goal latches to "reached" the moment `current` first
+  /// meets `target` and never un-reaches. When false (the emergency-fund case)
+  /// it never latches: below target it reads "Refill", at/above it reads
+  /// "Funded".
+  bool endsWhenReached;
+
   GoalStatus status;
+  String note;
+
+  /// The reached date. Set by the latch (§4) while the goal stays *active* and
+  /// keeps rendering on the Goals tab; archiving flips [status] to `reached`.
+  /// Not progress storage — an audit timestamp, like `Txn.createdAt`.
   DateTime? completedAt;
   DateTime? stoppedAt;
-  String note;
+
   final DateTime createdAt;
 
-  double get remaining => (targetAmount - saved).clamp(0, double.infinity);
-  double get progress =>
-      targetAmount <= 0 ? 0 : (saved / targetAmount).clamp(0.0, 1.0);
-  bool get isComplete => saved >= targetAmount;
+  /// §7 — target/date change history, seeded with a `created` entry.
+  List<GoalEdit> history;
 
-  /// Spec 5.2 — (target − saved) / months left. Null when no target date, in
-  /// which case the row shows "No target date set" instead.
-  double? get monthlyNeeded {
-    if (targetDate == null || isComplete) return null;
-    final months = monthsLeft;
-    if (months <= 0) return remaining;
-    return remaining / months;
-  }
+  /// True once the target was met at some point (§4). Persisted through
+  /// [completedAt] so later movement cannot un-reach a latched goal.
+  bool get isLatched => completedAt != null;
 
-  int get monthsLeft {
-    if (targetDate == null) return 0;
-    final now = DateTime.now();
-    return (targetDate!.year - now.year) * 12 + (targetDate!.month - now.month);
-  }
-
-  /// How long a reached goal took — feeds Insight > Goal Performance (spec 5.6).
   int? get durationMonths {
     if (completedAt == null) return null;
     return (completedAt!.year - createdAt.year) * 12 +
         (completedAt!.month - createdAt.month);
   }
+}
+
+/// Everything a goal's card and detail screen need, derived from the ledger by
+/// [AppStore.goalMetrics] (§1). The Goal itself stores none of this.
+class GoalMetrics {
+  const GoalMetrics({
+    required this.section,
+    required this.start,
+    required this.current,
+    required this.target,
+    required this.targetDate,
+    required this.progress,
+    required this.reached,
+    required this.atTarget,
+    required this.sourceAvailable,
+    required this.monthsElapsed,
+    required this.monthsRemaining,
+    required this.requiredRate,
+    required this.actualRate,
+    required this.projectedEnd,
+    required this.daysElapsed,
+    required this.daysTotal,
+  });
+
+  final GoalSection section;
+  final double start;
+  final double current;
+  final double target;
+  final DateTime? targetDate;
+
+  /// 0..1 — `((current - start).abs() / (target - start).abs()).clamp(0,1)`.
+  final double progress;
+
+  /// current has met target *and* the goal latches (endsWhenReached). Drives the
+  /// green check and "Reached" verdict.
+  final bool reached;
+
+  /// current is at or past target in the goal's direction, regardless of
+  /// endsWhenReached — the Funded/Refill decision for a refillable fund (§4).
+  final bool atTarget;
+
+  /// false when the watched account was archived or deleted elsewhere; the
+  /// card keeps rendering from the last balance and offers "Stop tracking".
+  final bool sourceAvailable;
+
+  final int monthsElapsed;
+  final int monthsRemaining;
+
+  /// |target − current| / months remaining. Null when there is no target date.
+  final double? requiredRate;
+
+  /// |current − start| / months elapsed. Null when no month has elapsed or the
+  /// source has not moved forward (`AT THIS RATE` then shows `—`).
+  final double? actualRate;
+
+  /// now + |target − current| / actualRate months. Null when `actualRate <= 0`.
+  final DateTime? projectedEnd;
+
+  final int daysElapsed;
+  final int daysTotal;
+
+  double get gap => (target - current).abs();
+
+  /// Below target, the amount still needed — used by the "Refill \$X" verdict.
+  double get remaining => (target - current).abs();
+
+  /// Behind schedule: the projection lands after the target date. Drives the
+  /// amber "needs attention" sort and the behind/ahead verdict split. A goal
+  /// that has not moved at all (`projectedEnd == null`) but has a date to miss
+  /// counts as behind.
+  bool get behind =>
+      !reached &&
+      targetDate != null &&
+      monthsElapsed > 0 &&
+      (projectedEnd == null || projectedEnd!.isAfter(targetDate!));
+
+  /// The one figure the card leads with: needs attention first, then by date.
+  bool get needsAttention => sourceAvailable ? behind : true;
 }
 
 /// Spec 6.1 — Task. A recurring obligation is ONE record plus a repeat rule;

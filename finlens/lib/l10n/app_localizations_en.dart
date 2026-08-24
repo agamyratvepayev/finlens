@@ -2053,4 +2053,266 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get qaExampleGoal => 'e.g. MacBook Pro M4';
+
+  @override
+  String get goalSecSaving => 'Saving';
+
+  @override
+  String get goalSecPayingOff => 'Paying off';
+
+  @override
+  String get goalSecWaitingOn => 'Waiting on';
+
+  @override
+  String get goalSecEarning => 'Earning';
+
+  @override
+  String goalOfTotal(Object current, Object target) {
+    return '$current of $target';
+  }
+
+  @override
+  String goalLeftTotal(Object amount) {
+    return '$amount left';
+  }
+
+  @override
+  String goalOwedTotal(Object amount) {
+    return '$amount owed';
+  }
+
+  @override
+  String get goalSourceUnavailable => 'Source unavailable';
+
+  @override
+  String get goalReached => 'Reached';
+
+  @override
+  String goalReachedEarly(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: 'Reached $days days early',
+      one: 'Reached 1 day early',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get goalNothingYet => 'nothing yet';
+
+  @override
+  String goalAmountIn(Object amount) {
+    return '$amount in';
+  }
+
+  @override
+  String goalDueLine(Object date, Object tail) {
+    return 'Due $date · $tail';
+  }
+
+  @override
+  String get goalFunded => 'Funded';
+
+  @override
+  String goalRefill(Object amount) {
+    return 'Refill $amount';
+  }
+
+  @override
+  String goalBehind(Object rate) {
+    return 'Behind · $rate/mo needed';
+  }
+
+  @override
+  String goalAhead(Object rate) {
+    return 'Ahead · $rate/mo left';
+  }
+
+  @override
+  String goalOnTrack(Object rate) {
+    return 'On track · $rate/mo';
+  }
+
+  @override
+  String goalPerMonth(Object amount) {
+    return '$amount a month';
+  }
+
+  @override
+  String get goalNewTitle => 'New goal';
+
+  @override
+  String get goalWatching => 'Watching';
+
+  @override
+  String get goalSource => 'Source';
+
+  @override
+  String get goalSourceLocked => 'Changing the account means a new goal.';
+
+  @override
+  String get goalSetDateHint => 'Set a date, or a monthly amount';
+
+  @override
+  String get goalMonthly => 'Monthly';
+
+  @override
+  String get goalEnterRate => 'Set a monthly amount';
+
+  @override
+  String get goalNoteLabel => 'Note';
+
+  @override
+  String get goalNoteHint => 'Optional';
+
+  @override
+  String get goalDoneOnceReached => 'Done once reached';
+
+  @override
+  String get goalDoneOnceReachedDesc => 'Off for funds you refill';
+
+  @override
+  String get goalDeleteRowDesc => 'Removes the goal, keeps the money';
+
+  @override
+  String get goalOfWord => 'of';
+
+  @override
+  String goalNewAccountNamed(Object name) {
+    return 'New · $name';
+  }
+
+  @override
+  String get goalUntitled => 'New goal';
+
+  @override
+  String get goalChooseSource => 'Choose what to watch';
+
+  @override
+  String get goalTwoOnAccount =>
+      'Another goal already watches this account. That\'s allowed — both read the same balance.';
+
+  @override
+  String get goalMonthlyPromptTitle => 'Monthly amount';
+
+  @override
+  String get goalNewAccountOption => 'New account';
+
+  @override
+  String get goalNewAccountOptionDesc =>
+      'A set-aside account, named from the goal';
+
+  @override
+  String get goalIncomeCategories => 'Income categories';
+
+  @override
+  String goalDeleteTitle(Object name) {
+    return 'Delete \"$name\"?';
+  }
+
+  @override
+  String get goalDeleteBody =>
+      'The goal and its history go. Nothing else moves.';
+
+  @override
+  String goalDeleteAccountStays(Object name, Object balance) {
+    return 'Account \"$name\" stays · $balance';
+  }
+
+  @override
+  String goalDeleteTxnStay(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Its $count transactions stay',
+      one: 'Its 1 transaction stays',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get goalDeleteCategoryStays =>
+      'The income category and its transactions stay';
+
+  @override
+  String goalOfToGo(Object target, Object remaining) {
+    return 'of $target · $remaining to go';
+  }
+
+  @override
+  String goalDaysCaption(Object pct, int elapsed, int total) {
+    return '$pct · $elapsed of $total days';
+  }
+
+  @override
+  String get goalColStarted => 'Started';
+
+  @override
+  String get goalColTarget => 'Target';
+
+  @override
+  String get goalColAtThisRate => 'At this rate';
+
+  @override
+  String get goalReachedSummary => 'Reached — nothing more to do';
+
+  @override
+  String get goalNotMovingYet => 'Not moving yet';
+
+  @override
+  String goalAveragingOnly(Object rate) {
+    return 'Averaging $rate a month';
+  }
+
+  @override
+  String goalAveraging(Object actual, Object needs) {
+    return 'Averaging $actual a month · needs $needs to land on time';
+  }
+
+  @override
+  String goalCategoryWindow(Object from, Object to) {
+    return '$from – $to';
+  }
+
+  @override
+  String get goalMovements => 'Movements';
+
+  @override
+  String goalSeeAll(int count) {
+    return 'See all $count';
+  }
+
+  @override
+  String get goalNoteSection => 'Note';
+
+  @override
+  String get goalChanges => 'Changes';
+
+  @override
+  String get goalChangeCreated => 'Created';
+
+  @override
+  String get goalChangeTarget => 'Target';
+
+  @override
+  String get goalChangeDate => 'Target date';
+
+  @override
+  String get goalMenuEdit => 'Edit goal';
+
+  @override
+  String get goalStopTracking => 'Stop tracking';
+
+  @override
+  String get goalStopTrackingDesc => 'Keeps the record in Archive';
+
+  @override
+  String get goalReachedAtZero => 'Reached, and the account is empty.';
+
+  @override
+  String get goalKeepAccount => 'Keep account';
+
+  @override
+  String get goalArchiveBoth => 'Archive both';
 }

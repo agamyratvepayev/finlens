@@ -3449,6 +3449,414 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'e.g. MacBook Pro M4'**
   String get qaExampleGoal;
+
+  /// No description provided for @goalSecSaving.
+  ///
+  /// In en, this message translates to:
+  /// **'Saving'**
+  String get goalSecSaving;
+
+  /// No description provided for @goalSecPayingOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Paying off'**
+  String get goalSecPayingOff;
+
+  /// No description provided for @goalSecWaitingOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting on'**
+  String get goalSecWaitingOn;
+
+  /// No description provided for @goalSecEarning.
+  ///
+  /// In en, this message translates to:
+  /// **'Earning'**
+  String get goalSecEarning;
+
+  /// No description provided for @goalOfTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'{current} of {target}'**
+  String goalOfTotal(Object current, Object target);
+
+  /// No description provided for @goalLeftTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'{amount} left'**
+  String goalLeftTotal(Object amount);
+
+  /// No description provided for @goalOwedTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'{amount} owed'**
+  String goalOwedTotal(Object amount);
+
+  /// No description provided for @goalSourceUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Source unavailable'**
+  String get goalSourceUnavailable;
+
+  /// No description provided for @goalReached.
+  ///
+  /// In en, this message translates to:
+  /// **'Reached'**
+  String get goalReached;
+
+  /// No description provided for @goalReachedEarly.
+  ///
+  /// In en, this message translates to:
+  /// **'{days, plural, one{Reached 1 day early} other{Reached {days} days early}}'**
+  String goalReachedEarly(int days);
+
+  /// No description provided for @goalNothingYet.
+  ///
+  /// In en, this message translates to:
+  /// **'nothing yet'**
+  String get goalNothingYet;
+
+  /// No description provided for @goalAmountIn.
+  ///
+  /// In en, this message translates to:
+  /// **'{amount} in'**
+  String goalAmountIn(Object amount);
+
+  /// No description provided for @goalDueLine.
+  ///
+  /// In en, this message translates to:
+  /// **'Due {date} · {tail}'**
+  String goalDueLine(Object date, Object tail);
+
+  /// No description provided for @goalFunded.
+  ///
+  /// In en, this message translates to:
+  /// **'Funded'**
+  String get goalFunded;
+
+  /// No description provided for @goalRefill.
+  ///
+  /// In en, this message translates to:
+  /// **'Refill {amount}'**
+  String goalRefill(Object amount);
+
+  /// No description provided for @goalBehind.
+  ///
+  /// In en, this message translates to:
+  /// **'Behind · {rate}/mo needed'**
+  String goalBehind(Object rate);
+
+  /// No description provided for @goalAhead.
+  ///
+  /// In en, this message translates to:
+  /// **'Ahead · {rate}/mo left'**
+  String goalAhead(Object rate);
+
+  /// No description provided for @goalOnTrack.
+  ///
+  /// In en, this message translates to:
+  /// **'On track · {rate}/mo'**
+  String goalOnTrack(Object rate);
+
+  /// No description provided for @goalPerMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'{amount} a month'**
+  String goalPerMonth(Object amount);
+
+  /// No description provided for @goalNewTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'New goal'**
+  String get goalNewTitle;
+
+  /// No description provided for @goalWatching.
+  ///
+  /// In en, this message translates to:
+  /// **'Watching'**
+  String get goalWatching;
+
+  /// No description provided for @goalSource.
+  ///
+  /// In en, this message translates to:
+  /// **'Source'**
+  String get goalSource;
+
+  /// No description provided for @goalSourceLocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Changing the account means a new goal.'**
+  String get goalSourceLocked;
+
+  /// No description provided for @goalSetDateHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Set a date, or a monthly amount'**
+  String get goalSetDateHint;
+
+  /// No description provided for @goalMonthly.
+  ///
+  /// In en, this message translates to:
+  /// **'Monthly'**
+  String get goalMonthly;
+
+  /// No description provided for @goalEnterRate.
+  ///
+  /// In en, this message translates to:
+  /// **'Set a monthly amount'**
+  String get goalEnterRate;
+
+  /// No description provided for @goalNoteLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Note'**
+  String get goalNoteLabel;
+
+  /// No description provided for @goalNoteHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Optional'**
+  String get goalNoteHint;
+
+  /// No description provided for @goalDoneOnceReached.
+  ///
+  /// In en, this message translates to:
+  /// **'Done once reached'**
+  String get goalDoneOnceReached;
+
+  /// No description provided for @goalDoneOnceReachedDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Off for funds you refill'**
+  String get goalDoneOnceReachedDesc;
+
+  /// No description provided for @goalDeleteRowDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Removes the goal, keeps the money'**
+  String get goalDeleteRowDesc;
+
+  /// No description provided for @goalOfWord.
+  ///
+  /// In en, this message translates to:
+  /// **'of'**
+  String get goalOfWord;
+
+  /// No description provided for @goalNewAccountNamed.
+  ///
+  /// In en, this message translates to:
+  /// **'New · {name}'**
+  String goalNewAccountNamed(Object name);
+
+  /// No description provided for @goalUntitled.
+  ///
+  /// In en, this message translates to:
+  /// **'New goal'**
+  String get goalUntitled;
+
+  /// No description provided for @goalChooseSource.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose what to watch'**
+  String get goalChooseSource;
+
+  /// No description provided for @goalTwoOnAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Another goal already watches this account. That\'s allowed — both read the same balance.'**
+  String get goalTwoOnAccount;
+
+  /// No description provided for @goalMonthlyPromptTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Monthly amount'**
+  String get goalMonthlyPromptTitle;
+
+  /// No description provided for @goalNewAccountOption.
+  ///
+  /// In en, this message translates to:
+  /// **'New account'**
+  String get goalNewAccountOption;
+
+  /// No description provided for @goalNewAccountOptionDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'A set-aside account, named from the goal'**
+  String get goalNewAccountOptionDesc;
+
+  /// No description provided for @goalIncomeCategories.
+  ///
+  /// In en, this message translates to:
+  /// **'Income categories'**
+  String get goalIncomeCategories;
+
+  /// No description provided for @goalDeleteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete \"{name}\"?'**
+  String goalDeleteTitle(Object name);
+
+  /// No description provided for @goalDeleteBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The goal and its history go. Nothing else moves.'**
+  String get goalDeleteBody;
+
+  /// No description provided for @goalDeleteAccountStays.
+  ///
+  /// In en, this message translates to:
+  /// **'Account \"{name}\" stays · {balance}'**
+  String goalDeleteAccountStays(Object name, Object balance);
+
+  /// No description provided for @goalDeleteTxnStay.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{Its 1 transaction stays} other{Its {count} transactions stay}}'**
+  String goalDeleteTxnStay(int count);
+
+  /// No description provided for @goalDeleteCategoryStays.
+  ///
+  /// In en, this message translates to:
+  /// **'The income category and its transactions stay'**
+  String get goalDeleteCategoryStays;
+
+  /// No description provided for @goalOfToGo.
+  ///
+  /// In en, this message translates to:
+  /// **'of {target} · {remaining} to go'**
+  String goalOfToGo(Object target, Object remaining);
+
+  /// No description provided for @goalDaysCaption.
+  ///
+  /// In en, this message translates to:
+  /// **'{pct} · {elapsed} of {total} days'**
+  String goalDaysCaption(Object pct, int elapsed, int total);
+
+  /// No description provided for @goalColStarted.
+  ///
+  /// In en, this message translates to:
+  /// **'Started'**
+  String get goalColStarted;
+
+  /// No description provided for @goalColTarget.
+  ///
+  /// In en, this message translates to:
+  /// **'Target'**
+  String get goalColTarget;
+
+  /// No description provided for @goalColAtThisRate.
+  ///
+  /// In en, this message translates to:
+  /// **'At this rate'**
+  String get goalColAtThisRate;
+
+  /// No description provided for @goalReachedSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Reached — nothing more to do'**
+  String get goalReachedSummary;
+
+  /// No description provided for @goalNotMovingYet.
+  ///
+  /// In en, this message translates to:
+  /// **'Not moving yet'**
+  String get goalNotMovingYet;
+
+  /// No description provided for @goalAveragingOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Averaging {rate} a month'**
+  String goalAveragingOnly(Object rate);
+
+  /// No description provided for @goalAveraging.
+  ///
+  /// In en, this message translates to:
+  /// **'Averaging {actual} a month · needs {needs} to land on time'**
+  String goalAveraging(Object actual, Object needs);
+
+  /// No description provided for @goalCategoryWindow.
+  ///
+  /// In en, this message translates to:
+  /// **'{from} – {to}'**
+  String goalCategoryWindow(Object from, Object to);
+
+  /// No description provided for @goalMovements.
+  ///
+  /// In en, this message translates to:
+  /// **'Movements'**
+  String get goalMovements;
+
+  /// No description provided for @goalSeeAll.
+  ///
+  /// In en, this message translates to:
+  /// **'See all {count}'**
+  String goalSeeAll(int count);
+
+  /// No description provided for @goalNoteSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Note'**
+  String get goalNoteSection;
+
+  /// No description provided for @goalChanges.
+  ///
+  /// In en, this message translates to:
+  /// **'Changes'**
+  String get goalChanges;
+
+  /// No description provided for @goalChangeCreated.
+  ///
+  /// In en, this message translates to:
+  /// **'Created'**
+  String get goalChangeCreated;
+
+  /// No description provided for @goalChangeTarget.
+  ///
+  /// In en, this message translates to:
+  /// **'Target'**
+  String get goalChangeTarget;
+
+  /// No description provided for @goalChangeDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Target date'**
+  String get goalChangeDate;
+
+  /// No description provided for @goalMenuEdit.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit goal'**
+  String get goalMenuEdit;
+
+  /// No description provided for @goalStopTracking.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop tracking'**
+  String get goalStopTracking;
+
+  /// No description provided for @goalStopTrackingDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Keeps the record in Archive'**
+  String get goalStopTrackingDesc;
+
+  /// No description provided for @goalReachedAtZero.
+  ///
+  /// In en, this message translates to:
+  /// **'Reached, and the account is empty.'**
+  String get goalReachedAtZero;
+
+  /// No description provided for @goalKeepAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep account'**
+  String get goalKeepAccount;
+
+  /// No description provided for @goalArchiveBoth.
+  ///
+  /// In en, this message translates to:
+  /// **'Archive both'**
+  String get goalArchiveBoth;
 }
 
 class _AppLocalizationsDelegate

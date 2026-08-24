@@ -11,6 +11,7 @@ import '../../shared/widgets/txn_row.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/app_typography.dart';
+import '../planner/edit_goal_screen.dart';
 import 'pickers.dart';
 import 'repeat_sheet.dart';
 import 'split_sheet.dart';
@@ -32,6 +33,11 @@ Future<void> showQuickAdd(
   Txn? editing,
   Txn? copyOf,
 }) {
+  // A goal is created and edited on its own full-screen form (§3), not in the
+  // numeric-hero sheet — the WATCHING picker and target↔date pair don't fit here.
+  if (type == QuickAddType.newGoal && editing == null && copyOf == null) {
+    return openGoalEditor(context);
+  }
   return Navigator.of(context, rootNavigator: true).push<void>(
     MaterialPageRoute(
       fullscreenDialog: true,
@@ -100,17 +106,11 @@ class _QuickAddScreenState extends State<QuickAddScreen>
   // Transfer
   double? _rateOverride;
 
-  // Goal
-  DateTime? _targetDate;
-  double _startingAmount = 0;
-  IconData _goalIcon = Icons.savings_rounded;
-
   // Toggles, shared across types that use them.
   RepeatFrequency _repeatFreq = RepeatFrequency.none;
   String? _recurrenceTaskId; // the Planner Task backing an existing repeat
   List<SplitLine>? _splitLines; // non-null once a split is applied
   bool _hasFee = false;
-  bool _autoFund = false;
   bool _remind = false;
 
   /// The field flagged as missing after an incomplete Save (§3), and the pulse
@@ -283,7 +283,10 @@ class _QuickAddScreenState extends State<QuickAddScreen>
         QuickAddType.income => _income(store),
         QuickAddType.transfer => _transfer(store),
         QuickAddType.rebalance => _rebalance(store),
-        QuickAddType.newGoal => _goal(store),
+        // newGoal never renders in the sheet — it is intercepted at entry and
+        // in the type menu, routing to the full-screen goal form. This branch
+        // is unreachable and only keeps the switch exhaustive.
+        QuickAddType.newGoal => _expense(store),
         QuickAddType.newTask => _task(store),
       };
 
@@ -699,128 +702,6 @@ class _QuickAddScreenState extends State<QuickAddScreen>
     );
   }
 
-  FormConfig _goal(AppStore store) {
-    final target = _amount;
-    final linked = store.accountById(_toRef);
-    final months = _targetDate == null
-        ? 0
-        : (_targetDate!.year - AppStore.today.year) * 12 +
-            (_targetDate!.month - AppStore.today.month);
-    final perMonth =
-        months > 0 ? (target - _startingAmount) / months : null;
-
-    return FormConfig(
-      typeName: AppLocalizations.of(context).quickAddNewGoal,
-      // Violet, not brand purple: a goal amount in the Save colour would read
-      // as an interactive control rather than data.
-      accent: AppColors.goal,
-      accentDim: AppColors.goalDim,
-      hero: _amountHero(AppLocalizations.of(context).qaTarget),
-      groups: [
-        FieldGroup(AppLocalizations.of(context).qaGroupRequired.toUpperCase(), [
-          FieldSpec(
-            icon: Icons.flag_rounded,
-            label: AppLocalizations.of(context).qaName,
-            value: _title.text.trim().isEmpty ? null : _title.text.trim(),
-            emptyText: AppLocalizations.of(context).qaNameYourGoal,
-            onTap: () async {
-              final v = await _promptText(
-                title: AppLocalizations.of(context).egGoalName,
-                initial: _title.text,
-                hint: AppLocalizations.of(context).qaExampleGoal,
-              );
-              if (v == null || !mounted) return;
-              setState(() => _title.text = v);
-            },
-          ),
-          FieldSpec(
-            icon: Icons.event_rounded,
-            label: AppLocalizations.of(context).egTargetDate,
-            value: _targetDate == null ? null : monthYear(_targetDate!, AppLocalizations.of(context)),
-            emptyText: AppLocalizations.of(context).qaSetDate,
-            onTap: () async {
-              final d = await showDatePicker(
-                context: context,
-                initialDate: _targetDate ??
-                    DateTime(AppStore.today.year + 1, AppStore.today.month),
-                firstDate: AppStore.today,
-                lastDate: DateTime(2035),
-              );
-              if (d != null && mounted) setState(() => _targetDate = d);
-            },
-          ),
-          FieldSpec(
-            icon: Icons.savings_rounded,
-            label: AppLocalizations.of(context).qaFundingAccount,
-            value: linked?.name,
-            emptyText: AppLocalizations.of(context).qaChooseAccount,
-            onTap: () => _pickAccountInto(
-              store,
-              isFrom: false,
-              title: AppLocalizations.of(context).egMoneyKeptIn,
-              filter: (a) => a.isAsset,
-            ),
-          ),
-        ]),
-        FieldGroup(AppLocalizations.of(context).qaGroupOptional.toUpperCase(), [
-          FieldSpec(
-            icon: Icons.input_rounded,
-            label: AppLocalizations.of(context).qaStartingAmount,
-            value: _startingAmount == 0 ? null : money(_startingAmount),
-            emptyText: AppLocalizations.of(context).qaNone,
-            onTap: () async {
-              final v = await _promptText(
-                title: AppLocalizations.of(context).qaStartingAmount,
-                initial: _startingAmount == 0 ? '' : '$_startingAmount',
-                hint: '0',
-                numeric: true,
-              );
-              if (v == null || !mounted) return;
-              setState(() => _startingAmount = double.tryParse(v) ?? 0);
-            },
-          ),
-          FieldSpec(
-            icon: _goalIcon,
-            label: AppLocalizations.of(context).qaIconColour,
-            value: AppLocalizations.of(context).qaTapToChange,
-            onTap: _pickGoalIcon,
-          ),
-          _noteField(),
-        ]),
-      ],
-      hint: perMonth == null || perMonth <= 0
-          ? null
-          : HintSpec.parts([
-              AppLocalizations.of(context).qaPutAsidePrefix,
-              AppLocalizations.of(context).qaPerMonth(money(perMonth)),
-              AppLocalizations.of(context).qaToReachMonths('$months'),
-            ]),
-      toggles: [
-        FormToggle(
-          icon: Icons.autorenew_rounded,
-          label: AppLocalizations.of(context).qaAutoFund,
-          value: _autoFund,
-          onTap: () => setState(() => _autoFund = !_autoFund),
-        ),
-        FormToggle(
-          icon: Icons.alarm_rounded,
-          label: AppLocalizations.of(context).qaRemind,
-          value: _remind,
-          onTap: () => setState(() => _remind = !_remind),
-        ),
-      ],
-      saveLabel: AppLocalizations.of(context).qaCreateGoal,
-      blockers: [
-        Blocker(unmet: _title.text.trim().isEmpty, label: AppLocalizations.of(context).qaBlockNameGoal),
-        Blocker(unmet: target <= 0, label: AppLocalizations.of(context).qaBlockSetTarget),
-        Blocker(unmet: _targetDate == null, label: AppLocalizations.of(context).qaBlockSetTargetDate),
-        // Not in the spec's list, but the store cannot create a goal without
-        // somewhere to keep the money.
-        Blocker(unmet: _toRef == null, label: AppLocalizations.of(context).qaBlockFunding),
-      ],
-    );
-  }
-
   FormConfig _task(AppStore store) {
     final account = store.accountById(_toRef);
     return FormConfig(
@@ -957,64 +838,6 @@ class _QuickAddScreenState extends State<QuickAddScreen>
     setState(() => _rateOverride = double.tryParse(v));
   }
 
-  Future<void> _pickGoalIcon() async {
-    setState(() => _keypadOpen = false);
-    const icons = [
-      Icons.savings_rounded,
-      Icons.flag_rounded,
-      Icons.shopping_bag_rounded,
-      Icons.flight_rounded,
-      Icons.home_rounded,
-      Icons.directions_car_rounded,
-      Icons.school_rounded,
-      Icons.favorite_rounded,
-    ];
-    final picked = await showModalBottomSheet<IconData>(
-      context: context,
-      backgroundColor: AppColors.surfaceAlt,
-      builder: (sheetContext) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(Insets.gutter),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(AppLocalizations.of(context).qaIcon, style: AppText.rowTitle),
-              const SizedBox(height: Insets.lg),
-              Wrap(
-                spacing: Insets.md,
-                runSpacing: Insets.md,
-                children: [
-                  for (final i in icons)
-                    GestureDetector(
-                      onTap: () => Navigator.of(sheetContext).pop(i),
-                      child: Container(
-                        width: 52,
-                        height: 52,
-                        decoration: BoxDecoration(
-                          color: i == _goalIcon
-                              ? AppColors.tint(AppColors.goal, 0.2)
-                              : AppColors.surfaceHigh,
-                          borderRadius: BorderRadius.circular(Radii.md),
-                        ),
-                        child: Icon(
-                          i,
-                          color: i == _goalIcon
-                              ? AppColors.goal
-                              : AppColors.textSecondary,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-    if (picked != null && mounted) setState(() => _goalIcon = picked);
-  }
-
   /// Free-text entry on a sheet, so Note and Tag keep the system keyboard
   /// while the amount keeps the keypad.
   Future<String?> _promptText({
@@ -1071,6 +894,14 @@ class _QuickAddScreenState extends State<QuickAddScreen>
     return InkWell(
       onTap: () {
         Navigator.of(sheetContext).pop();
+        // Goals live on their own full-screen form — close the sheet and the
+        // Quick Add screen, then open the goal editor.
+        if (type == QuickAddType.newGoal) {
+          final nav = Navigator.of(context, rootNavigator: true);
+          nav.pop();
+          nav.push(MaterialPageRoute(builder: (_) => const EditGoalScreen()));
+          return;
+        }
         _switchType(type);
       },
       child: Padding(
@@ -1433,17 +1264,9 @@ class _QuickAddScreenState extends State<QuickAddScreen>
               : _note.text.trim(),
         );
       case QuickAddType.newGoal:
-        store.addGoal(
-          name: _title.text.trim(),
-          type: GoalType.saving,
-          targetAmount: _amount,
-          linkedAccountId: _toRef!,
-          icon: _goalIcon,
-          targetDate: _targetDate,
-          initialDeposit: _startingAmount,
-          depositFromAccountId: _startingAmount > 0 ? _toRef : null,
-          note: _note.text.trim(),
-        );
+        // Unreachable: goals are created on their own full-screen form and are
+        // intercepted before the sheet ever saves one.
+        return;
       case QuickAddType.newTask:
         // Account is optional on a task, but the store needs somewhere to
         // hang it — fall back to the first account when none was chosen.

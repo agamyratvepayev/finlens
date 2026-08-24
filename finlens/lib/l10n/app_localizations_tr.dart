@@ -2050,4 +2050,266 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get qaExampleGoal => 'örn. MacBook Pro M4';
+
+  @override
+  String get goalSecSaving => 'Biriktirme';
+
+  @override
+  String get goalSecPayingOff => 'Ödeme';
+
+  @override
+  String get goalSecWaitingOn => 'Bekleniyor';
+
+  @override
+  String get goalSecEarning => 'Kazanç';
+
+  @override
+  String goalOfTotal(Object current, Object target) {
+    return '$target / $current';
+  }
+
+  @override
+  String goalLeftTotal(Object amount) {
+    return '$amount kaldı';
+  }
+
+  @override
+  String goalOwedTotal(Object amount) {
+    return '$amount alacak';
+  }
+
+  @override
+  String get goalSourceUnavailable => 'Kaynak kullanılamıyor';
+
+  @override
+  String get goalReached => 'Ulaşıldı';
+
+  @override
+  String goalReachedEarly(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days gün erken ulaşıldı',
+      one: '1 gün erken ulaşıldı',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get goalNothingYet => 'henüz yok';
+
+  @override
+  String goalAmountIn(Object amount) {
+    return '$amount geldi';
+  }
+
+  @override
+  String goalDueLine(Object date, Object tail) {
+    return 'Son $date · $tail';
+  }
+
+  @override
+  String get goalFunded => 'Karşılandı';
+
+  @override
+  String goalRefill(Object amount) {
+    return '$amount ekle';
+  }
+
+  @override
+  String goalBehind(Object rate) {
+    return 'Geride · aylık $rate gerek';
+  }
+
+  @override
+  String goalAhead(Object rate) {
+    return 'Önde · aylık $rate';
+  }
+
+  @override
+  String goalOnTrack(Object rate) {
+    return 'Yolunda · aylık $rate';
+  }
+
+  @override
+  String goalPerMonth(Object amount) {
+    return 'aylık $amount';
+  }
+
+  @override
+  String get goalNewTitle => 'Yeni hedef';
+
+  @override
+  String get goalWatching => 'İzleniyor';
+
+  @override
+  String get goalSource => 'Kaynak';
+
+  @override
+  String get goalSourceLocked => 'Hesabı değiştirmek yeni bir hedef demektir.';
+
+  @override
+  String get goalSetDateHint => 'Bir tarih ya da aylık tutar girin';
+
+  @override
+  String get goalMonthly => 'Aylık';
+
+  @override
+  String get goalEnterRate => 'Aylık tutar girin';
+
+  @override
+  String get goalNoteLabel => 'Not';
+
+  @override
+  String get goalNoteHint => 'İsteğe bağlı';
+
+  @override
+  String get goalDoneOnceReached => 'Ulaşınca tamamlanır';
+
+  @override
+  String get goalDoneOnceReachedDesc =>
+      'Yeniden dolduracağın fonlar için kapat';
+
+  @override
+  String get goalDeleteRowDesc => 'Hedefi siler, para kalır';
+
+  @override
+  String get goalOfWord => '/';
+
+  @override
+  String goalNewAccountNamed(Object name) {
+    return 'Yeni · $name';
+  }
+
+  @override
+  String get goalUntitled => 'Yeni hedef';
+
+  @override
+  String get goalChooseSource => 'Neyi izleyeceğini seç';
+
+  @override
+  String get goalTwoOnAccount =>
+      'Bu hesabı izleyen başka bir hedef var. Sorun değil — ikisi de aynı bakiyeyi okur.';
+
+  @override
+  String get goalMonthlyPromptTitle => 'Aylık tutar';
+
+  @override
+  String get goalNewAccountOption => 'Yeni hesap';
+
+  @override
+  String get goalNewAccountOptionDesc =>
+      'Hedeften adlandırılan bir ayrılmış hesap';
+
+  @override
+  String get goalIncomeCategories => 'Gelir kategorileri';
+
+  @override
+  String goalDeleteTitle(Object name) {
+    return '\"$name\" silinsin mi?';
+  }
+
+  @override
+  String get goalDeleteBody =>
+      'Hedef ve geçmişi gider. Başka hiçbir şey değişmez.';
+
+  @override
+  String goalDeleteAccountStays(Object name, Object balance) {
+    return '\"$name\" hesabı kalır · $balance';
+  }
+
+  @override
+  String goalDeleteTxnStay(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count işlemi kalır',
+      one: '1 işlemi kalır',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get goalDeleteCategoryStays => 'Gelir kategorisi ve işlemleri kalır';
+
+  @override
+  String goalOfToGo(Object target, Object remaining) {
+    return '/ $target · $remaining kaldı';
+  }
+
+  @override
+  String goalDaysCaption(Object pct, int elapsed, int total) {
+    return '$pct · $total günün $elapsed günü';
+  }
+
+  @override
+  String get goalColStarted => 'Başlangıç';
+
+  @override
+  String get goalColTarget => 'Hedef';
+
+  @override
+  String get goalColAtThisRate => 'Bu hızla';
+
+  @override
+  String get goalReachedSummary => 'Ulaşıldı — yapılacak başka şey yok';
+
+  @override
+  String get goalNotMovingYet => 'Henüz hareket yok';
+
+  @override
+  String goalAveragingOnly(Object rate) {
+    return 'Ayda ortalama $rate';
+  }
+
+  @override
+  String goalAveraging(Object actual, Object needs) {
+    return 'Ayda ortalama $actual · zamanında bitirmek için $needs gerek';
+  }
+
+  @override
+  String goalCategoryWindow(Object from, Object to) {
+    return '$from – $to';
+  }
+
+  @override
+  String get goalMovements => 'Hareketler';
+
+  @override
+  String goalSeeAll(int count) {
+    return 'Tümünü gör ($count)';
+  }
+
+  @override
+  String get goalNoteSection => 'Not';
+
+  @override
+  String get goalChanges => 'Değişiklikler';
+
+  @override
+  String get goalChangeCreated => 'Oluşturuldu';
+
+  @override
+  String get goalChangeTarget => 'Hedef';
+
+  @override
+  String get goalChangeDate => 'Hedef tarihi';
+
+  @override
+  String get goalMenuEdit => 'Hedefi düzenle';
+
+  @override
+  String get goalStopTracking => 'İzlemeyi bırak';
+
+  @override
+  String get goalStopTrackingDesc => 'Kayıt Arşivde kalır';
+
+  @override
+  String get goalReachedAtZero => 'Ulaşıldı ve hesap boş.';
+
+  @override
+  String get goalKeepAccount => 'Hesabı tut';
+
+  @override
+  String get goalArchiveBoth => 'İkisini de arşivle';
 }

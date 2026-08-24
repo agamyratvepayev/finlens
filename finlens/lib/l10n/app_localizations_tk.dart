@@ -2052,4 +2052,265 @@ class AppLocalizationsTk extends AppLocalizations {
 
   @override
   String get qaExampleGoal => 'mysal: MacBook Pro M4';
+
+  @override
+  String get goalSecSaving => 'Ýygnamak';
+
+  @override
+  String get goalSecPayingOff => 'Töleg';
+
+  @override
+  String get goalSecWaitingOn => 'Garaşylýan';
+
+  @override
+  String get goalSecEarning => 'Girdeji';
+
+  @override
+  String goalOfTotal(Object current, Object target) {
+    return '$target / $current';
+  }
+
+  @override
+  String goalLeftTotal(Object amount) {
+    return '$amount galdy';
+  }
+
+  @override
+  String goalOwedTotal(Object amount) {
+    return '$amount almaly';
+  }
+
+  @override
+  String get goalSourceUnavailable => 'Çeşme elýeterli däl';
+
+  @override
+  String get goalReached => 'Ýetildi';
+
+  @override
+  String goalReachedEarly(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days gün ir ýetildi',
+      one: '1 gün ir ýetildi',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get goalNothingYet => 'häzirlikçe ýok';
+
+  @override
+  String goalAmountIn(Object amount) {
+    return '$amount geldi';
+  }
+
+  @override
+  String goalDueLine(Object date, Object tail) {
+    return 'Möhlet $date · $tail';
+  }
+
+  @override
+  String get goalFunded => 'Üpjün edildi';
+
+  @override
+  String goalRefill(Object amount) {
+    return '$amount goş';
+  }
+
+  @override
+  String goalBehind(Object rate) {
+    return 'Yza galýar · aýda $rate gerek';
+  }
+
+  @override
+  String goalAhead(Object rate) {
+    return 'Öňde · aýda $rate';
+  }
+
+  @override
+  String goalOnTrack(Object rate) {
+    return 'Meýilnamada · aýda $rate';
+  }
+
+  @override
+  String goalPerMonth(Object amount) {
+    return 'aýda $amount';
+  }
+
+  @override
+  String get goalNewTitle => 'Täze maksat';
+
+  @override
+  String get goalWatching => 'Yzarlanýar';
+
+  @override
+  String get goalSource => 'Çeşme';
+
+  @override
+  String get goalSourceLocked => 'Hasaby üýtgetmek täze maksat diýmekdir.';
+
+  @override
+  String get goalSetDateHint => 'Sene ýa-da aýlyk mukdar giriziň';
+
+  @override
+  String get goalMonthly => 'Aýlyk';
+
+  @override
+  String get goalEnterRate => 'Aýlyk mukdar giriziň';
+
+  @override
+  String get goalNoteLabel => 'Bellik';
+
+  @override
+  String get goalNoteHint => 'Islege görä';
+
+  @override
+  String get goalDoneOnceReached => 'Ýetilende tamamlansyn';
+
+  @override
+  String get goalDoneOnceReachedDesc => 'Doldurylýan gaznalar üçin öçüriň';
+
+  @override
+  String get goalDeleteRowDesc => 'Maksady öçürýär, pul galýar';
+
+  @override
+  String get goalOfWord => '/';
+
+  @override
+  String goalNewAccountNamed(Object name) {
+    return 'Täze · $name';
+  }
+
+  @override
+  String get goalUntitled => 'Täze maksat';
+
+  @override
+  String get goalChooseSource => 'Nämäni yzarlajagyňyzy saýlaň';
+
+  @override
+  String get goalTwoOnAccount =>
+      'Bu hasaby yzarlaýan başga maksat bar. Rugsat berilýär — ikisi hem bir balansy okaýar.';
+
+  @override
+  String get goalMonthlyPromptTitle => 'Aýlyk mukdar';
+
+  @override
+  String get goalNewAccountOption => 'Täze hasap';
+
+  @override
+  String get goalNewAccountOptionDesc => 'Maksatdan atlandyrylan aýrylan hasap';
+
+  @override
+  String get goalIncomeCategories => 'Girdeji kategoriýalary';
+
+  @override
+  String goalDeleteTitle(Object name) {
+    return '\"$name\" pozulsynmy?';
+  }
+
+  @override
+  String get goalDeleteBody =>
+      'Maksat we onuň taryhy ýitýär. Başga hiç zat üýtgemeýär.';
+
+  @override
+  String goalDeleteAccountStays(Object name, Object balance) {
+    return '\"$name\" hasaby galýar · $balance';
+  }
+
+  @override
+  String goalDeleteTxnStay(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count amaly galýar',
+      one: '1 amaly galýar',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get goalDeleteCategoryStays =>
+      'Girdeji kategoriýasy we amallary galýar';
+
+  @override
+  String goalOfToGo(Object target, Object remaining) {
+    return '/ $target · $remaining galdy';
+  }
+
+  @override
+  String goalDaysCaption(Object pct, int elapsed, int total) {
+    return '$pct · $total günüň $elapsed güni';
+  }
+
+  @override
+  String get goalColStarted => 'Başlandy';
+
+  @override
+  String get goalColTarget => 'Maksat';
+
+  @override
+  String get goalColAtThisRate => 'Şu depginde';
+
+  @override
+  String get goalReachedSummary => 'Ýetildi — başga edere zat ýok';
+
+  @override
+  String get goalNotMovingYet => 'Heniz hereket ýok';
+
+  @override
+  String goalAveragingOnly(Object rate) {
+    return 'Aýda ortaça $rate';
+  }
+
+  @override
+  String goalAveraging(Object actual, Object needs) {
+    return 'Aýda ortaça $actual · wagtynda ýetmek üçin $needs gerek';
+  }
+
+  @override
+  String goalCategoryWindow(Object from, Object to) {
+    return '$from – $to';
+  }
+
+  @override
+  String get goalMovements => 'Hereketler';
+
+  @override
+  String goalSeeAll(int count) {
+    return 'Ählisini gör ($count)';
+  }
+
+  @override
+  String get goalNoteSection => 'Bellik';
+
+  @override
+  String get goalChanges => 'Üýtgeşmeler';
+
+  @override
+  String get goalChangeCreated => 'Döredildi';
+
+  @override
+  String get goalChangeTarget => 'Maksat';
+
+  @override
+  String get goalChangeDate => 'Maksat senesi';
+
+  @override
+  String get goalMenuEdit => 'Maksady üýtget';
+
+  @override
+  String get goalStopTracking => 'Yzarlamany bes et';
+
+  @override
+  String get goalStopTrackingDesc => 'Ýazgy Arhiwde galýar';
+
+  @override
+  String get goalReachedAtZero => 'Ýetildi we hasap boş.';
+
+  @override
+  String get goalKeepAccount => 'Hasaby sakla';
+
+  @override
+  String get goalArchiveBoth => 'Ikisini hem arhiwle';
 }

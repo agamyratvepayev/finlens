@@ -2092,4 +2092,269 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get qaExampleGoal => 'напр. MacBook Pro M4';
+
+  @override
+  String get goalSecSaving => 'Накопление';
+
+  @override
+  String get goalSecPayingOff => 'Погашение';
+
+  @override
+  String get goalSecWaitingOn => 'Ожидание';
+
+  @override
+  String get goalSecEarning => 'Заработок';
+
+  @override
+  String goalOfTotal(Object current, Object target) {
+    return '$current из $target';
+  }
+
+  @override
+  String goalLeftTotal(Object amount) {
+    return 'осталось $amount';
+  }
+
+  @override
+  String goalOwedTotal(Object amount) {
+    return '$amount к получению';
+  }
+
+  @override
+  String get goalSourceUnavailable => 'Источник недоступен';
+
+  @override
+  String get goalReached => 'Достигнуто';
+
+  @override
+  String goalReachedEarly(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: 'Достигнуто на $days дней раньше',
+      many: 'Достигнуто на $days дней раньше',
+      few: 'Достигнуто на $days дня раньше',
+      one: 'Достигнуто на $days день раньше',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get goalNothingYet => 'пока ничего';
+
+  @override
+  String goalAmountIn(Object amount) {
+    return 'получено $amount';
+  }
+
+  @override
+  String goalDueLine(Object date, Object tail) {
+    return 'Срок $date · $tail';
+  }
+
+  @override
+  String get goalFunded => 'Обеспечено';
+
+  @override
+  String goalRefill(Object amount) {
+    return 'Пополнить $amount';
+  }
+
+  @override
+  String goalBehind(Object rate) {
+    return 'Отставание · нужно $rate/мес';
+  }
+
+  @override
+  String goalAhead(Object rate) {
+    return 'Опережение · $rate/мес';
+  }
+
+  @override
+  String goalOnTrack(Object rate) {
+    return 'В графике · $rate/мес';
+  }
+
+  @override
+  String goalPerMonth(Object amount) {
+    return '$amount в месяц';
+  }
+
+  @override
+  String get goalNewTitle => 'Новая цель';
+
+  @override
+  String get goalWatching => 'Отслеживает';
+
+  @override
+  String get goalSource => 'Источник';
+
+  @override
+  String get goalSourceLocked => 'Смена счёта — это новая цель.';
+
+  @override
+  String get goalSetDateHint => 'Укажите дату или сумму в месяц';
+
+  @override
+  String get goalMonthly => 'В месяц';
+
+  @override
+  String get goalEnterRate => 'Укажите сумму в месяц';
+
+  @override
+  String get goalNoteLabel => 'Заметка';
+
+  @override
+  String get goalNoteHint => 'Необязательно';
+
+  @override
+  String get goalDoneOnceReached => 'Завершить по достижении';
+
+  @override
+  String get goalDoneOnceReachedDesc => 'Выключите для пополняемых фондов';
+
+  @override
+  String get goalDeleteRowDesc => 'Удаляет цель, деньги остаются';
+
+  @override
+  String get goalOfWord => 'из';
+
+  @override
+  String goalNewAccountNamed(Object name) {
+    return 'Новый · $name';
+  }
+
+  @override
+  String get goalUntitled => 'Новая цель';
+
+  @override
+  String get goalChooseSource => 'Выберите, что отслеживать';
+
+  @override
+  String get goalTwoOnAccount =>
+      'Этот счёт уже отслеживает другая цель. Это допустимо — обе читают один баланс.';
+
+  @override
+  String get goalMonthlyPromptTitle => 'Сумма в месяц';
+
+  @override
+  String get goalNewAccountOption => 'Новый счёт';
+
+  @override
+  String get goalNewAccountOptionDesc => 'Отложенный счёт, названный по цели';
+
+  @override
+  String get goalIncomeCategories => 'Категории доходов';
+
+  @override
+  String goalDeleteTitle(Object name) {
+    return 'Удалить «$name»?';
+  }
+
+  @override
+  String get goalDeleteBody =>
+      'Цель и её история исчезнут. Больше ничего не изменится.';
+
+  @override
+  String goalDeleteAccountStays(Object name, Object balance) {
+    return 'Счёт «$name» остаётся · $balance';
+  }
+
+  @override
+  String goalDeleteTxnStay(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Остаются $count транзакций',
+      many: 'Остаются $count транзакций',
+      few: 'Остаются $count транзакции',
+      one: 'Остаётся 1 транзакция',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get goalDeleteCategoryStays =>
+      'Категория дохода и её транзакции остаются';
+
+  @override
+  String goalOfToGo(Object target, Object remaining) {
+    return 'из $target · осталось $remaining';
+  }
+
+  @override
+  String goalDaysCaption(Object pct, int elapsed, int total) {
+    return '$pct · $elapsed из $total дней';
+  }
+
+  @override
+  String get goalColStarted => 'Начато';
+
+  @override
+  String get goalColTarget => 'Цель';
+
+  @override
+  String get goalColAtThisRate => 'При этом темпе';
+
+  @override
+  String get goalReachedSummary => 'Достигнуто — делать больше нечего';
+
+  @override
+  String get goalNotMovingYet => 'Пока без движения';
+
+  @override
+  String goalAveragingOnly(Object rate) {
+    return 'В среднем $rate в месяц';
+  }
+
+  @override
+  String goalAveraging(Object actual, Object needs) {
+    return 'В среднем $actual в месяц · нужно $needs, чтобы успеть в срок';
+  }
+
+  @override
+  String goalCategoryWindow(Object from, Object to) {
+    return '$from – $to';
+  }
+
+  @override
+  String get goalMovements => 'Движения';
+
+  @override
+  String goalSeeAll(int count) {
+    return 'Показать все $count';
+  }
+
+  @override
+  String get goalNoteSection => 'Заметка';
+
+  @override
+  String get goalChanges => 'Изменения';
+
+  @override
+  String get goalChangeCreated => 'Создано';
+
+  @override
+  String get goalChangeTarget => 'Цель';
+
+  @override
+  String get goalChangeDate => 'Дата цели';
+
+  @override
+  String get goalMenuEdit => 'Изменить цель';
+
+  @override
+  String get goalStopTracking => 'Прекратить отслеживание';
+
+  @override
+  String get goalStopTrackingDesc => 'Запись остаётся в архиве';
+
+  @override
+  String get goalReachedAtZero => 'Достигнуто, и счёт пуст.';
+
+  @override
+  String get goalKeepAccount => 'Оставить счёт';
+
+  @override
+  String get goalArchiveBoth => 'Архивировать оба';
 }

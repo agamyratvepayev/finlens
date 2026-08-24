@@ -76,9 +76,16 @@ enum TxnType {
 
 enum CategoryType { expense, income }
 
-/// Goal sub-types share one template + a type parameter (spec 3.6 / 5.2).
-/// Labels + section titles localized — see `GoalTypeL10n`.
-enum GoalType { saving, milestone, purchase }
+/// What a goal watches: an account (its balance climbs to — or falls to zero
+/// against — a target) or an income category (income summed over the window).
+/// Progress is always *read* from the ledger, never stored on the goal.
+enum GoalSourceKind { account, category }
+
+/// The Goals-tab section a goal appears under. It is derived from the source,
+/// never asked: an asset account climbs (SAVING), a liability falls to zero
+/// (PAYING OFF), a receivable is collected by someone else (WAITING ON), an
+/// income category accrues (EARNING). Labels localized — see `GoalSectionL10n`.
+enum GoalSection { saving, payingOff, waitingOn, earning }
 
 /// Spec 6.2 — nothing with history is truly deleted; it is archived.
 enum GoalStatus { active, reached, abandoned }

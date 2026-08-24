@@ -9,6 +9,7 @@ import '../../features/balance/same_transactions.dart';
 import '../../features/ledger/trans_filter.dart';
 import '../utils/date_range.dart';
 import '../models/models.dart';
+import '../utils/formatters.dart';
 import '../utils/fx.dart';
 
 /// Single source of truth for the whole app (spec 6.1/6.2).
@@ -27,7 +28,29 @@ class AppStore extends ChangeNotifier {
         _categories = List.of(categories),
         _txns = List.of(txns),
         _goals = List.of(goals),
-        _tasks = List.of(tasks);
+        _tasks = List.of(tasks) {
+    // On load: drop goals whose source no longer resolves to anything (§9),
+    // seed a `created` history entry for any goal that lacks one (so CHANGES is
+    // never empty — §7), then latch any goal already sitting at or past its
+    // target (a seed goal, or a target met before the app started).
+    _pruneOrphanGoals();
+    _seedGoalHistory();
+    _syncGoalLatches();
+  }
+
+  void _seedGoalHistory() {
+    for (final g in _goals) {
+      if (g.history.isNotEmpty) continue;
+      g.history.add(GoalEdit(
+        at: g.createdAt,
+        field: 'created',
+        from: '',
+        to: g.targetDate == null
+            ? money(g.targetAmount)
+            : '${money(g.targetAmount)} · ${_histDate(g.targetDate)}',
+      ));
+    }
+  }
 
   // Copied on the way in so the seed lists can be const-ish literals and no
   // caller can mutate the store's collections behind its back.
@@ -641,6 +664,11 @@ class AppStore extends ChangeNotifier {
     return balance;
   }
 
+  /// Signed effect of [t] on [accountId] — public read-only wrapper for the
+  /// goal MOVEMENTS preview, which shows each entry's effect on the watched
+  /// account without opening the full ledger.
+  double effectOfTxnOn(Txn t, String accountId) => _effectOn(t, accountId);
+
   /// Signed effect of [t] on [accountId] — the one place the ledger rules live.
   double _effectOn(Txn t, String accountId) {
     switch (t.type) {
@@ -682,6 +710,28 @@ class AppStore extends ChangeNotifier {
   /// across accounts (spec 3.4 FX rule).
   double balanceInBase(String accountId) => Fx.toBase(
         balanceOf(accountId),
+        accountById(accountId)?.currency ?? Fx.baseCurrency,
+      );
+
+  /// Balance as it stood at the end of [date], ignoring the `asOf` cutoff — the
+  /// account balance a goal reads for its starting figure (§1). Unlike
+  /// [balanceOf] this is anchored to a calendar date, not a reporting lens.
+  double balanceOn(String accountId, DateTime date) {
+    final account = accountById(accountId);
+    if (account == null) return 0;
+    final cutoff = DateTime(date.year, date.month, date.day, 23, 59, 59, 999);
+    var balance = account.startingBalance;
+    for (final t in _txns) {
+      if (t.date.isAfter(cutoff)) continue;
+      balance += _effectOn(t, accountId);
+    }
+    return balance;
+  }
+
+  /// [balanceOn] converted to base currency — a goal's `startAmount` for an
+  /// account source.
+  double balanceOnInBase(String accountId, DateTime date) => Fx.toBase(
+        balanceOn(accountId, date),
         accountById(accountId)?.currency ?? Fx.baseCurrency,
       );
 
@@ -891,6 +941,17 @@ class AppStore extends ChangeNotifier {
           .where((t) => t.type == TxnType.income && t.fromRef == categoryId)
           .fold(0.0, (sum, t) => sum + Fx.toBase(t.amount, t.currency));
 
+  /// Income booked against [categoryId] over an arbitrary window (inclusive),
+  /// in base currency — an `EARNING` goal's `current` figure (§1/§6). The
+  /// windowed twin of [earnedInCategory], which is locked to one calendar month.
+  double earnedInWindow(String categoryId, DateTime from, DateTime to) => _txns
+      .where((t) =>
+          t.type == TxnType.income &&
+          t.fromRef == categoryId &&
+          !t.date.isBefore(from) &&
+          !t.date.isAfter(to))
+      .fold(0.0, (sum, t) => sum + Fx.toBase(t.amount, t.currency));
+
   int txnCountForCategory(String categoryId) => _txns
       .where((t) => t.fromRef == categoryId || t.toRef == categoryId)
       .length;
@@ -967,16 +1028,185 @@ class AppStore extends ChangeNotifier {
     return projected - totalBudget;
   }
 
-  // ── Goals (spec 5.2) ──────────────────────────────────────────────────────
+  // ── Goals, rebuilt on real balances (§1) ──────────────────────────────────
+  //
+  // A goal stores nothing derived. `start`, `current`, `progress`, the rates,
+  // the projection and the section are all *read* from the ledger here, so a
+  // transfer into a goal's account moves its bar with no write to the Goal.
 
-  List<Goal> goalsOfType(GoalType type) =>
-      goals.where((g) => g.type == type).toList(growable: false);
+  /// The section a goal appears under — derived from its source, never asked
+  /// (§1). Asset accounts climb (SAVING), liabilities fall to zero (PAYING
+  /// OFF), a receivable is collected by someone else (WAITING ON), an income
+  /// category accrues (EARNING).
+  GoalSection goalSection(Goal g) {
+    if (g.source.isCategory) return GoalSection.earning;
+    final acc = accountById(g.source.id);
+    if (acc == null) return GoalSection.saving;
+    if (acc.group == AccountGroup.receivables) return GoalSection.waitingOn;
+    if (acc.isLiability) return GoalSection.payingOff;
+    return GoalSection.saving;
+  }
 
-  double get totalSaved => goals.fold(0.0, (sum, g) => sum + g.saved);
-  double get totalGoalTarget =>
-      goals.fold(0.0, (sum, g) => sum + g.targetAmount);
-  double get goalRemaining =>
-      (totalGoalTarget - totalSaved).clamp(0, double.infinity);
+  static int _monthsBetween(DateTime a, DateTime b) =>
+      (b.year - a.year) * 12 + (b.month - a.month);
+
+  static DateTime _addMonths(DateTime d, int months) =>
+      DateTime(d.year, d.month + months, d.day);
+
+  /// Everything a goal's card and detail screen read (§1). Pure over the
+  /// current ledger; nothing here mutates the goal.
+  GoalMetrics goalMetrics(Goal g) {
+    final section = goalSection(g);
+    final now = today;
+
+    final double start;
+    final double current;
+    final bool sourceAvailable;
+    if (g.source.isAccount) {
+      final acc = accountById(g.source.id);
+      sourceAvailable = acc != null && !acc.archived;
+      start = balanceOnInBase(g.source.id, g.createdAt);
+      current = balanceInBase(g.source.id);
+    } else {
+      final cat = categoryById(g.source.id);
+      sourceAvailable = cat != null && !cat.archived;
+      start = 0;
+      current = earnedInWindow(g.source.id, g.createdAt, g.targetDate ?? now);
+    }
+
+    final target = g.targetAmount;
+    final span = (target - start).abs();
+    final progress =
+        span == 0 ? 1.0 : ((current - start).abs() / span).clamp(0.0, 1.0);
+
+    // Direction is set by the section, not by start-vs-target: saving, earning
+    // and paying-off all climb in signed value toward the target; only a
+    // receivable falls. This is what lets a goal created on an account already
+    // past its target latch immediately (§9), which the abs `progress` cannot
+    // express.
+    final up = section != GoalSection.waitingOn;
+    final atTarget = up ? current >= target : current <= target;
+
+    // Only endsWhenReached goals can read "reached"; a refillable goal reads
+    // Funded/Refill instead and never latches (§4).
+    final reached = g.endsWhenReached && (g.isLatched || atTarget);
+
+    final monthsElapsed = _monthsBetween(g.createdAt, now).clamp(0, 100000);
+    final monthsRemaining =
+        g.targetDate == null ? 0 : _monthsBetween(now, g.targetDate!);
+    final gap = (target - current).abs();
+
+    // Every division is guarded: both spans can be zero (§1).
+    double? requiredRate;
+    if (g.targetDate != null) {
+      requiredRate = monthsRemaining > 0 ? gap / monthsRemaining : gap;
+    }
+
+    final moved = (current - start).abs();
+    final actualRate =
+        (monthsElapsed > 0 && moved > 0) ? moved / monthsElapsed : null;
+
+    DateTime? projectedEnd;
+    if (actualRate != null && actualRate > 0) {
+      final monthsNeeded = (gap / actualRate).round();
+      projectedEnd = _addMonths(now, monthsNeeded);
+    }
+
+    final daysTotal =
+        g.targetDate == null ? 0 : g.targetDate!.difference(g.createdAt).inDays;
+    final daysElapsed = now.difference(g.createdAt).inDays;
+
+    return GoalMetrics(
+      section: section,
+      start: start,
+      current: current,
+      target: target,
+      targetDate: g.targetDate,
+      progress: progress,
+      reached: reached,
+      atTarget: atTarget,
+      sourceAvailable: sourceAvailable,
+      monthsElapsed: monthsElapsed,
+      monthsRemaining: monthsRemaining,
+      requiredRate: requiredRate,
+      actualRate: actualRate,
+      projectedEnd: projectedEnd,
+      daysElapsed: daysElapsed,
+      daysTotal: daysTotal,
+    );
+  }
+
+  /// Active goals in [section], unsorted.
+  List<Goal> goalsInSection(GoalSection section) =>
+      goals.where((g) => goalSection(g) == section).toList(growable: false);
+
+  /// Active goals in [section], needs-attention first, then by target date
+  /// (§2). A goal with no date sorts last within its group.
+  List<Goal> sortedGoalsInSection(GoalSection section) {
+    final list = goalsInSection(section).toList();
+    list.sort((a, b) {
+      final ma = goalMetrics(a);
+      final mb = goalMetrics(b);
+      if (ma.needsAttention != mb.needsAttention) {
+        return ma.needsAttention ? -1 : 1;
+      }
+      final da = a.targetDate;
+      final db = b.targetDate;
+      if (da == null && db == null) return 0;
+      if (da == null) return 1;
+      if (db == null) return -1;
+      return da.compareTo(db);
+    });
+    return list;
+  }
+
+  /// The current/target sums a section header shows on the right (§2). The
+  /// header formats them per section (`of`, `left`, `owed`).
+  ({double current, double target}) goalSectionSums(GoalSection section) {
+    var c = 0.0;
+    var t = 0.0;
+    for (final g in goalsInSection(section)) {
+      final m = goalMetrics(g);
+      c += m.current;
+      t += m.target;
+    }
+    return (current: c, target: t);
+  }
+
+  /// The sections that have at least one goal, in display order (§2).
+  List<GoalSection> get activeGoalSections => GoalSection.values
+      .where((s) => goalsInSection(s).isNotEmpty)
+      .toList(growable: false);
+
+  /// The account or category id backing the goal, for name/icon/colour lookups.
+  IconData goalIcon(Goal g) => refIcon(g.source.id);
+
+  /// §4 — the reached-but-at-\$0 card offers "Archive both" / "Keep account".
+  /// True only for an account-backed, latched goal whose balance is now zero.
+  bool goalOffersArchive(Goal g) {
+    if (!g.isLatched || !g.source.isAccount) return false;
+    return balanceOf(g.source.id).abs() < 0.005;
+  }
+
+  /// Latches any active, endsWhenReached goal that has met its target (§4).
+  /// Records only the reached *date*; progress is never stored. Called after
+  /// every ledger mutation and at load.
+  void _syncGoalLatches() {
+    for (final g in _goals) {
+      if (g.status != GoalStatus.active) continue;
+      if (!g.endsWhenReached || g.completedAt != null) continue;
+      if (goalMetrics(g).atTarget) g.completedAt = today;
+    }
+  }
+
+  /// Drops goals whose source id resolves to nothing (§9). Archived accounts
+  /// still resolve — those keep rendering; only a truly deleted source is
+  /// pruned.
+  void _pruneOrphanGoals() {
+    _goals.removeWhere((g) => g.source.isAccount
+        ? accountById(g.source.id) == null
+        : categoryById(g.source.id) == null);
+  }
 
   // ── Schedule (spec 5.3) ───────────────────────────────────────────────────
 
@@ -1047,6 +1277,9 @@ class AppStore extends ChangeNotifier {
     _txns.add(txn);
     _sameIndex = null;
     _accountIndex = null;
+    // A moved balance can newly meet a goal's target; latch any that reached
+    // (§4). Progress itself is never stored — only the reached *date* is.
+    _syncGoalLatches();
     notifyListeners();
     return txn;
   }
@@ -1083,6 +1316,9 @@ class AppStore extends ChangeNotifier {
     // An edit can change fromRef/toRef/date, so the same-key index is stale.
     _sameIndex = null;
     _accountIndex = null;
+    // A moved balance can newly meet a goal's target; latch any that reached
+    // (§4). Progress itself is never stored — only the reached *date* is.
+    _syncGoalLatches();
     notifyListeners();
   }
 
@@ -1090,6 +1326,9 @@ class AppStore extends ChangeNotifier {
     _txns.removeWhere((t) => t.id == txn.id);
     _sameIndex = null;
     _accountIndex = null;
+    // A moved balance can newly meet a goal's target; latch any that reached
+    // (§4). Progress itself is never stored — only the reached *date* is.
+    _syncGoalLatches();
     notifyListeners();
   }
 
@@ -1117,6 +1356,9 @@ class AppStore extends ChangeNotifier {
       ..addAll(source._tasks);
     _sameIndex = null;
     _accountIndex = null;
+    // A moved balance can newly meet a goal's target; latch any that reached
+    // (§4). Progress itself is never stored — only the reached *date* is.
+    _syncGoalLatches();
     notifyListeners();
   }
 
@@ -1250,93 +1492,119 @@ class AppStore extends ChangeNotifier {
 
   // ── Mutations: goals ──────────────────────────────────────────────────────
 
+  static String _histDate(DateTime? d) =>
+      d == null ? '—' : '${d.day}.${d.month}.${d.year}';
+
+  /// §1/§3 — a goal is created watching a real source. No money moves: the goal
+  /// is a lens, and its `startAmount` is read from the source's balance at
+  /// creation, not deposited. The history is seeded with a `created` entry (§7).
   Goal addGoal({
     required String name,
-    required GoalType type,
+    required GoalSource source,
     required double targetAmount,
-    required String linkedAccountId,
-    required IconData icon,
     DateTime? targetDate,
-    double initialDeposit = 0,
-    String? depositFromAccountId,
+    bool endsWhenReached = true,
     String note = '',
   }) {
+    final createdTo = targetDate == null
+        ? money(targetAmount)
+        : '${money(targetAmount)} · ${_histDate(targetDate)}';
     final goal = Goal(
       id: _nextId('g'),
       name: name,
-      type: type,
+      source: source,
       targetAmount: targetAmount,
-      linkedAccountId: linkedAccountId,
-      icon: icon,
       targetDate: targetDate,
-      saved: initialDeposit,
+      endsWhenReached: endsWhenReached,
       note: note,
       createdAt: today,
+      history: [
+        GoalEdit(at: today, field: 'created', from: '', to: createdTo),
+      ],
     );
     _goals.add(goal);
-    // Spec 3.6 — the initial deposit physically moves money into the goal's
-    // account, so it is a real Transfer, not a bookkeeping-only number.
-    if (initialDeposit > 0 && depositFromAccountId != null) {
-      addTxn(
-        type: TxnType.transfer,
-        amount: initialDeposit,
-        currency: accountById(depositFromAccountId)?.currency ?? 'USD',
-        fromRef: depositFromAccountId,
-        toRef: linkedAccountId,
-        date: today,
-        note: 'Initial deposit · $name',
-        goalId: goal.id,
-      );
-    }
+    // A target already met at creation latches immediately (§9).
+    _syncGoalLatches();
     notifyListeners();
     return goal;
   }
 
+  /// §3/§7 — the source is **not** editable (locked after creation). Target and
+  /// date changes are logged to [Goal.history]; name and note changes are not.
   void updateGoal(
     Goal goal, {
     String? name,
-    GoalType? type,
     double? targetAmount,
     DateTime? targetDate,
     bool clearTargetDate = false,
-    String? linkedAccountId,
-    bool? autoContribute,
-    double? autoContributeAmount,
-    int? autoContributeDay,
+    bool? endsWhenReached,
+    String? note,
   }) {
+    if (targetAmount != null && targetAmount != goal.targetAmount) {
+      goal.history.add(GoalEdit(
+        at: today,
+        field: 'target',
+        from: money(goal.targetAmount),
+        to: money(targetAmount),
+      ));
+    }
+    final newDate = clearTargetDate ? null : (targetDate ?? goal.targetDate);
+    if (newDate != goal.targetDate) {
+      // A pushed-out deadline (later than before) is flagged amber (§7).
+      final pushedOut = newDate != null &&
+          goal.targetDate != null &&
+          newDate.isAfter(goal.targetDate!);
+      goal.history.add(GoalEdit(
+        at: today,
+        field: 'targetDate',
+        from: _histDate(goal.targetDate),
+        to: _histDate(newDate),
+        amber: pushedOut,
+      ));
+    }
     goal
       ..name = name ?? goal.name
-      ..type = type ?? goal.type
       ..targetAmount = targetAmount ?? goal.targetAmount
-      ..targetDate = clearTargetDate ? null : (targetDate ?? goal.targetDate)
-      ..linkedAccountId = linkedAccountId ?? goal.linkedAccountId
-      ..autoContribute = autoContribute ?? goal.autoContribute
-      ..autoContributeAmount =
-          autoContributeAmount ?? goal.autoContributeAmount
-      ..autoContributeDay = autoContributeDay ?? goal.autoContributeDay;
+      ..targetDate = newDate
+      ..endsWhenReached = endsWhenReached ?? goal.endsWhenReached
+      ..note = note ?? goal.note;
+    _syncGoalLatches();
     notifyListeners();
   }
 
-  /// Spec 5.6 — three distinct exits, because the fate of the saved money and
-  /// the goal-success metric differ in each case.
+  /// §5 — retire a goal into the Archive as reached. Keeps the reached date if
+  /// the goal already latched.
   void markGoalReached(Goal goal) {
     goal
       ..status = GoalStatus.reached
-      ..completedAt = today;
-    _cancelAutoContribute(goal);
+      ..completedAt = goal.completedAt ?? today;
     notifyListeners();
   }
 
+  /// §4 "Archive both" — retire the goal *and* archive its account. The goal is
+  /// the only object allowed to archive an account, and only through this path.
+  void reachGoalAndArchiveAccount(Goal goal) {
+    goal
+      ..status = GoalStatus.reached
+      ..completedAt = goal.completedAt ?? today;
+    if (goal.source.isAccount) {
+      final acc = accountById(goal.source.id);
+      if (acc != null) acc.archived = true;
+    }
+    notifyListeners();
+  }
+
+  /// §5 — "Stop tracking": the everyday exit. Leaves the record in Archive.
   void abandonGoal(Goal goal) {
     goal
       ..status = GoalStatus.abandoned
       ..stoppedAt = today;
-    _cancelAutoContribute(goal);
     notifyListeners();
   }
 
+  /// §5/§8 — a goal is a lens, never a container. Deleting it touches neither
+  /// the account nor its money nor its transactions.
   void deleteGoal(Goal goal) {
-    _cancelAutoContribute(goal);
     _goals.removeWhere((g) => g.id == goal.id);
     notifyListeners();
   }
@@ -1346,13 +1614,8 @@ class AppStore extends ChangeNotifier {
       ..status = GoalStatus.active
       ..stoppedAt = null
       ..completedAt = null;
+    _syncGoalLatches();
     notifyListeners();
-  }
-
-  /// Spec 5.6 — never leave an orphaned recurring Transfer behind.
-  void _cancelAutoContribute(Goal goal) {
-    goal.autoContribute = false;
-    _tasks.removeWhere((t) => t.id == 'auto-${goal.id}');
   }
 
   void clearArchive() {

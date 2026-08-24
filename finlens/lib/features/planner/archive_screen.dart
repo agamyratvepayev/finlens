@@ -92,12 +92,14 @@ class ArchiveScreen extends StatelessWidget {
                           _card([
                             for (final g in gaveUp)
                               _ArchiveRow(
-                                icon: g.icon,
+                                icon: store.goalIcon(g),
                                 color: AppColors.textSecondary,
                                 title: g.name,
                                 subtitle: l.arStoppedLine(
                                     dayMonth(g.stoppedAt!, l),
-                                    money(g.saved),
+                                    // `saved` is gone — the figure a stopped
+                                    // goal reached is derived from the ledger.
+                                    money(store.goalMetrics(g).current),
                                     money(g.targetAmount)),
                                 trailing: _RestoreButton(
                                   onTap: () => store.restoreGoal(g),

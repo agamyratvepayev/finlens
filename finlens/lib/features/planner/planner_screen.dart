@@ -20,6 +20,8 @@ import 'budget_detail_screen.dart';
 import 'edit_budget_screen.dart';
 import 'edit_goal_screen.dart';
 import 'edit_task_screen.dart';
+import 'goal_detail_screen.dart';
+import 'goal_presentation.dart';
 import 'widgets/month_picker_sheet.dart';
 
 /// Spec 5 — the forward-looking module. Three tabs, each answering its own
@@ -63,14 +65,21 @@ class _PlannerScreenState extends State<PlannerScreen> {
                     ),
                   )
                 : const SizedBox.shrink(),
-            onAdd: () => showQuickAdd(
-              context,
-              type: switch (_tab) {
-                1 => QuickAddType.newGoal,
-                2 => QuickAddType.newTask,
-                _ => QuickAddType.expense,
-              },
-            ),
+            onAdd: () {
+              // Goals use their own full-screen form (the WATCHING picker and
+              // target↔date pair don't fit the numeric-hero sheet); the other
+              // types stay on Quick Add.
+              if (_tab == 1) {
+                openGoalEditor(context);
+                return;
+              }
+              showQuickAdd(
+                context,
+                type: _tab == 2
+                    ? QuickAddType.newTask
+                    : QuickAddType.expense,
+              );
+            },
             trailing: IconButton(
               visualDensity: VisualDensity.compact,
               padding: EdgeInsets.zero,
@@ -117,7 +126,11 @@ class _PlannerScreenState extends State<PlannerScreen> {
   }
 
   Widget _summary(AppStore store) => switch (_tab) {
-        1 => _GoalsSummary(store: store),
+        // No summary block above the Goals sections (§2): goals of mixed
+        // direction have no meaningful sum, and a "1 needs attention" count is
+        // answered by the first card. The cards are sections → cards, nothing
+        // else.
+        1 => const SizedBox.shrink(),
         2 => _ScheduleSummary(store: store),
         _ => _BudgetSummary(store: store, month: _month),
       };
@@ -602,74 +615,11 @@ class _NoBudgetRow extends StatelessWidget {
   }
 }
 
-// ── 5.2 Goals ───────────────────────────────────────────────────────────────
-
-class _GoalsSummary extends StatelessWidget {
-  const _GoalsSummary({required this.store});
-
-  final AppStore store;
-
-  @override
-  Widget build(BuildContext context) {
-    final saved = store.totalSaved;
-    final target = store.totalGoalTarget;
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        Insets.gutter,
-        0,
-        Insets.gutter,
-        Insets.md,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(AppLocalizations.of(context).plSavedTowardGoals, style: AppText.label),
-          const SizedBox(height: Insets.xs),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
-            children: [
-              Flexible(
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.centerLeft,
-                  child: AmountText(
-                    saved,
-                    style: AppText.hero.copyWith(fontSize: 32),
-                  ),
-                ),
-              ),
-              const SizedBox(width: Insets.sm),
-              Text(AppLocalizations.of(context).plOfTarget(money(target)),
-                  style: AppText.caption),
-            ],
-          ),
-          const SizedBox(height: Insets.md),
-          ProgressBar(
-            value: target <= 0 ? 0 : saved / target,
-            color: AppColors.goal,
-            height: 8,
-          ),
-          const SizedBox(height: Insets.sm),
-          Row(
-            children: [
-              Text(
-                '${store.goals.length} active goals',
-                style: AppText.caption.copyWith(fontSize: 11.5),
-              ),
-              const Spacer(),
-              Text(
-                '${money(store.goalRemaining)} to go',
-                style: AppText.caption.copyWith(fontSize: 11.5),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
+// ── 5.2 Goals, rebuilt on real balances (§1/§2) ─────────────────────────────
+//
+// Sections → cards, nothing else. Each section is derived from a goal's source
+// (SAVING / PAYING OFF / WAITING ON / EARNING), renders only when non-empty,
+// and carries its own total on the right — no goal count, no summary block.
 
 class _GoalsTab extends StatelessWidget {
   const _GoalsTab({required this.store});
@@ -678,18 +628,20 @@ class _GoalsTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (store.goals.isEmpty) {
+    final l = AppLocalizations.of(context);
+    final sections = store.activeGoalSections;
+
+    if (sections.isEmpty) {
       return Padding(
         padding: const EdgeInsets.only(top: 56),
         child: EmptyState(
           icon: Icons.flag_rounded,
-          title: AppLocalizations.of(context).plNoGoalsYet,
-          message: AppLocalizations.of(context).plNoGoalsMsg,
+          title: l.plNoGoalsYet,
+          message: l.plNoGoalsMsg,
           action: FilledButton.icon(
-            onPressed: () =>
-                showQuickAdd(context, type: QuickAddType.newGoal),
+            onPressed: () => openGoalEditor(context),
             icon: const Icon(Icons.add_rounded, size: 18),
-            label: Text(AppLocalizations.of(context).plNewGoal),
+            label: Text(l.plNewGoal),
             style: FilledButton.styleFrom(
               backgroundColor: AppColors.accent,
               foregroundColor: Colors.white,
@@ -702,39 +654,52 @@ class _GoalsTab extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.only(bottom: Insets.xxl),
       children: [
-        // Spec 5.2 — the three sections are derived from Goal.type, not from
-        // three separate entities.
-        for (final type in GoalType.values)
-          if (store.goalsOfType(type).isNotEmpty) ...[
-            SectionLabel(type.sectionTitle(AppLocalizations.of(context))),
-            for (final g in store.goalsOfType(type))
-              _GoalRow(store: store, goal: g),
-          ],
+        for (final section in sections) ...[
+          SectionLabel(
+            section.label(l),
+            trailing: Text(
+              _sectionTotal(l, store, section),
+              style: AppText.label.copyWith(color: AppColors.textSecondary),
+            ),
+          ),
+          for (final g in store.sortedGoalsInSection(section))
+            _GoalCard(store: store, goal: g),
+        ],
       ],
     );
   }
+
+  /// Each header carries its own total, formatted per section — `$2,000 of
+  /// $3,700`, `$3,877 left`, `$3,000 owed` (§2).
+  String _sectionTotal(AppLocalizations l, AppStore store, GoalSection s) {
+    final sums = store.goalSectionSums(s);
+    switch (s) {
+      case GoalSection.saving:
+      case GoalSection.earning:
+        return l.goalOfTotal(money(sums.current), money(sums.target));
+      case GoalSection.payingOff:
+        return l.goalLeftTotal(money(sums.current.abs()));
+      case GoalSection.waitingOn:
+        return l.goalOwedTotal(money(sums.current));
+    }
+  }
 }
 
-class _GoalRow extends StatelessWidget {
-  const _GoalRow({required this.store, required this.goal});
+/// A goal card: icon · name (no verb) · verdict · `current/target` · bar. The
+/// name carries no verb — the section header already says PAYING OFF — which is
+/// what keeps both lines from wrapping at 375 pt. Tapping opens the detail
+/// screen; it is never an edit affordance (§2).
+class _GoalCard extends StatelessWidget {
+  const _GoalCard({required this.store, required this.goal});
 
   final AppStore store;
   final Goal goal;
 
   @override
   Widget build(BuildContext context) {
-    final monthly = goal.monthlyNeeded;
-    // Spec 5.2 — an unrealistic monthly requirement turns amber, an early
-    // signal that the target date will not hold.
-    final tooFast = monthly != null &&
-        monthly > store.monthIncome(store.period) - store.monthExpense(store.period);
-
     final l = AppLocalizations.of(context);
-    final subtitle = goal.isComplete
-        ? l.plCompleteReady
-        : goal.targetDate == null
-            ? l.plNoTargetDate
-            : '${monthYear(goal.targetDate!, l)} · ${money(monthly ?? 0)}${l.plMoNeeded}';
+    final m = store.goalMetrics(goal);
+    final verdict = goalVerdict(l, goal, m);
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(
@@ -748,7 +713,7 @@ class _GoalRow extends StatelessWidget {
           borderRadius: BorderRadius.circular(Radii.card),
           onTap: () => Navigator.of(context, rootNavigator: true).push(
             MaterialPageRoute(
-              builder: (_) => EditGoalScreen(goalId: goal.id),
+              builder: (_) => GoalDetailScreen(goalId: goal.id),
             ),
           ),
           child: Padding(
@@ -758,11 +723,9 @@ class _GoalRow extends StatelessWidget {
                 Row(
                   children: [
                     IconTile(
-                      goal.isComplete ? Icons.check_rounded : goal.icon,
-                      color: goal.isComplete
-                          ? AppColors.positive
-                          : AppColors.goal,
-                      size: 34,
+                      m.reached ? Icons.check_rounded : store.goalIcon(goal),
+                      color: m.reached ? AppColors.positive : AppColors.goal,
+                      size: 30,
                     ),
                     const SizedBox(width: Insets.md),
                     Expanded(
@@ -777,13 +740,13 @@ class _GoalRow extends StatelessWidget {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            subtitle,
+                            verdict.text,
                             style: AppText.rowSubtitle.copyWith(
                               fontSize: 11.5,
-                              color: tooFast
-                                  ? AppColors.warning
-                                  : AppColors.textSecondary,
+                              color: goalVerdictColor(m, verdict.attention),
                             ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ],
                       ),
@@ -791,12 +754,12 @@ class _GoalRow extends StatelessWidget {
                     const SizedBox(width: Insets.sm),
                     Row(
                       children: [
-                        AmountText(
-                          goal.saved,
-                          color: goal.isComplete ? AppColors.positive : null,
+                        AmountText.balance(
+                          m.current,
+                          color: m.reached ? AppColors.positive : null,
                         ),
                         Text(
-                          ' / ${money(goal.targetAmount)}',
+                          ' / ${money(m.target)}',
                           style: AppText.amount.copyWith(
                             color: AppColors.textSecondary,
                           ),
@@ -807,8 +770,9 @@ class _GoalRow extends StatelessWidget {
                 ),
                 const SizedBox(height: Insets.md),
                 ProgressBar(
-                  value: goal.progress,
-                  color: goal.isComplete ? AppColors.positive : AppColors.goal,
+                  value: m.progress,
+                  color: goalBarColor(m),
+                  paceMarker: goalPaceFraction(m),
                 ),
               ],
             ),

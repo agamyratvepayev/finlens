@@ -41,17 +41,13 @@ extension TxnTypeL10n on TxnType {
       };
 }
 
-extension GoalTypeL10n on GoalType {
+extension GoalSectionL10n on GoalSection {
+  /// The section header on the Goals tab — derived from the source, never asked.
   String label(AppLocalizations l) => switch (this) {
-        GoalType.saving => l.goalTypeSaving,
-        GoalType.milestone => l.goalTypeMilestone,
-        GoalType.purchase => l.goalTypePurchasing,
-      };
-
-  String sectionTitle(AppLocalizations l) => switch (this) {
-        GoalType.saving => l.goalSectionSaving,
-        GoalType.milestone => l.goalSectionMilestone,
-        GoalType.purchase => l.goalSectionPurchasing,
+        GoalSection.saving => l.goalSecSaving,
+        GoalSection.payingOff => l.goalSecPayingOff,
+        GoalSection.waitingOn => l.goalSecWaitingOn,
+        GoalSection.earning => l.goalSecEarning,
       };
 }
 
