@@ -657,6 +657,32 @@ class AppLocalizationsRu extends AppLocalizations {
   String get eaRemoveAccount => 'Удалить счёт';
 
   @override
+  String get eaArchiveThisAccount => 'Archive this account';
+
+  @override
+  String eaMoveOutTitle(String amount) {
+    return 'Move the $amount out first';
+  }
+
+  @override
+  String eaMoveOutMsg(String amount) {
+    return 'Archiving now would drop $amount from your net worth with nothing in the Ledger to explain where it went. A closed account holds nothing.';
+  }
+
+  @override
+  String eaSettleTitle(String amount) {
+    return 'Settle the $amount first';
+  }
+
+  @override
+  String eaSettleMsg(String amount) {
+    return 'Archiving now would drop $amount from your net worth with nothing in the Ledger to explain where it went. A closed account holds nothing.';
+  }
+
+  @override
+  String get eaMoveMoney => 'Move money';
+
+  @override
   String get eaEditAccount => 'Изменить счёт';
 
   @override
@@ -955,6 +981,54 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String ebTotalDrops(Object from, Object to) {
     return 'Общий месячный бюджет уменьшится с $from до $to.';
+  }
+
+  @override
+  String get ctArchiveCategory => 'Archive category';
+
+  @override
+  String ctArchiveTitle(String name) {
+    return 'Archive \"$name\"?';
+  }
+
+  @override
+  String get ctArchiveMsg =>
+      'It stops appearing when you add a transaction. Nothing already recorded changes.';
+
+  @override
+  String ctTxnStay(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Your $count transactions stay in the Ledger, with this name and icon.',
+      one:
+          'Your $count transaction stays in the Ledger, with this name and icon.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String ctPastMonths(String name) {
+    return 'Past months keep their $name figures.';
+  }
+
+  @override
+  String ctBudgetRemoved(String amount) {
+    return 'Its $amount monthly budget is removed — a budget with nothing to track would sit empty forever. You can restore it from Archive.';
+  }
+
+  @override
+  String get ctDisappearsPicker => 'It disappears from every category picker.';
+
+  @override
+  String ctBlockedTitle(String name) {
+    return 'Can\'t archive \"$name\" yet';
+  }
+
+  @override
+  String ctBlockedMsg(String task) {
+    return 'The scheduled item \"$task\" still books into it. Change or remove that item first.';
   }
 
   @override
@@ -1293,6 +1367,23 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get arRemovedBudgets => 'Удалённые бюджеты';
+
+  @override
+  String get arAccounts => 'Accounts';
+
+  @override
+  String get arCategories => 'Categories';
+
+  @override
+  String arAccountLine(String group, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count transactions',
+      one: '$count transaction',
+    );
+    return '$group · $_temp0';
+  }
 
   @override
   String arRemovedLine(Object date) {

@@ -12,6 +12,7 @@ import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/app_typography.dart';
 import '../quick_add/pickers.dart';
+import '../quick_add/quick_add_sheet.dart';
 
 /// Spec 1.5 — identity & credit details on top, visibility & removal below.
 class EditAccountScreen extends StatefulWidget {
@@ -195,8 +196,14 @@ class _EditAccountScreenState extends State<EditAccountScreen> {
                       ),
                     ],
                   ),
+                  // The label follows the case, as the sub-label already does:
+                  // an account with history is archived (reversible), one
+                  // without is deleted outright. "Archive" is the honest word
+                  // for the common case (spec 6.2 / §3).
                   DestructiveRow(
-                    label: l.eaRemoveThisAccount,
+                    label: store.txnsForAccount(_account.id).isEmpty
+                        ? l.eaRemoveThisAccount
+                        : l.eaArchiveThisAccount,
                     subtitle: store.txnsForAccount(_account.id).isEmpty
                         ? l.eaRemovePermanent
                         : l.eaRemoveHasHistory,
@@ -301,23 +308,32 @@ class _EditAccountScreenState extends State<EditAccountScreen> {
     Navigator.of(context).pop();
   }
 
-  /// Spec 1.5 / 6.2 — Hide vs Remove, spelled out in concrete terms.
+  /// Spec 1.5 / 6.2 / §3 — Hide vs Archive vs Delete, spelled out in concrete
+  /// terms. A closed account holds nothing: a non-zero balance must be moved
+  /// out first, so archiving never drops money from net worth unexplained.
   Future<void> _confirmRemove() async {
     final count = _store.txnsForAccount(_account.id).length;
     final balance = _store.balanceOf(_account.id);
     final archiving = count > 0;
-
     final l = AppLocalizations.of(context);
+
+    // §3 — the guard: an account being archived (it has history) with anything
+    // still in it is blocked; Move money is offered instead of the impact list.
+    // != 0 covers a debt as well as cash. A no-history account is a true
+    // delete, not an archive, so it is exempt.
+    if (archiving && balance.abs() >= 0.005) {
+      await _promptMoveMoney(balance);
+      return;
+    }
+
     final ok = await showDestructiveConfirm(
       context,
       title: l.eaRemoveTitle(_account.name),
       message: archiving ? l.eaArchivedMsg : l.eaDeleteMsg,
       impact: [
+        // The "{group} drops by {balance}" line is gone: that state is now
+        // unreachable — archiving is only permitted at a zero balance (§3).
         if (archiving) ImpactLine.kept(l.eaTxnStays(count)),
-        ImpactLine.lost(l.eaGroupDropsBy(
-          _account.group.label(l),
-          money(balance.abs(), currency: _currency),
-        )),
         ImpactLine.lost(l.eaDisappearsPicker),
         if (!archiving) ImpactLine.lost(l.eaCannotUndo),
       ],
@@ -330,5 +346,119 @@ class _EditAccountScreenState extends State<EditAccountScreen> {
     Navigator.of(context)
       ..pop()
       ..pop();
+  }
+
+  /// §3 — the "move it out first" sheet, shown instead of the archive impact
+  /// list when the account still holds a balance. Move money opens the ordinary
+  /// transfer flow with this account pre-filled as the source; the figure is in
+  /// the account's own currency and masks with the privacy eye. A debt reads
+  /// "settle" rather than "move out".
+  Future<void> _promptMoveMoney(double balance) async {
+    final l = AppLocalizations.of(context);
+    final isDebt = balance < 0;
+    final figure =
+        money(balance.abs(), currency: _currency, masked: _store.masked);
+
+    final move = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surfaceAlt,
+      builder: (sheetContext) => SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+              Insets.xl, Insets.lg, Insets.xl, Insets.lg),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceHigh,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: Insets.xl),
+              Text(
+                isDebt ? l.eaSettleTitle(figure) : l.eaMoveOutTitle(figure),
+                style: AppText.title.copyWith(fontSize: 20),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: Insets.sm),
+              Text(
+                isDebt ? l.eaSettleMsg(figure) : l.eaMoveOutMsg(figure),
+                style: AppText.caption.copyWith(fontSize: 13),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: Insets.xl),
+              // The account and its balance, echoed like an impact row.
+              Row(
+                children: [
+                  IconTile(_account.displayIcon,
+                      color: _account.color, size: 34),
+                  const SizedBox(width: Insets.md),
+                  Expanded(
+                    child: Text(
+                      _account.name,
+                      style: AppText.body.copyWith(fontSize: 14),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  const SizedBox(width: Insets.sm),
+                  Text(
+                    figure,
+                    style: AppText.amount.copyWith(
+                      color: isDebt
+                          ? AppColors.negative
+                          : AppColors.textPrimary,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: Insets.xl),
+              FilledButton(
+                onPressed: () => Navigator.of(sheetContext).pop(true),
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.accent,
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size.fromHeight(50),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(Radii.md),
+                  ),
+                  textStyle: AppText.button,
+                ),
+                child: Text(l.eaMoveMoney),
+              ),
+              const SizedBox(height: Insets.sm),
+              TextButton(
+                onPressed: () => Navigator.of(sheetContext).pop(false),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.textSecondary,
+                  minimumSize: const Size.fromHeight(46),
+                  textStyle: AppText.button,
+                ),
+                child: Text(l.actionCancel),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (move != true || !mounted) return;
+    // The ordinary transfer flow, this account pre-filled as the source. The
+    // move is a real transaction the user performs and can see in the Ledger —
+    // archiving never moves money as a side effect. When they return at $0, the
+    // same action shows the normal impact list and proceeds.
+    showQuickAdd(
+      context,
+      type: QuickAddType.transfer,
+      fixedFromAccountId: _account.id,
+    );
   }
 }

@@ -554,8 +554,19 @@ class AppStore extends ChangeNotifier {
   List<Account> get visibleAccounts =>
       accounts.where((a) => !a.hidden).toList(growable: false);
 
+  /// Archived accounts — read from the PRIVATE list on purpose: [accounts]
+  /// filters `archived` out, so the Archive screen is the only place these
+  /// resolve. Restoring one returns it to every list, picker and total.
+  List<Account> get archivedAccounts =>
+      _accounts.where((a) => a.archived).toList(growable: false);
+
   List<Category> get categories =>
       _categories.where((c) => !c.archived).toList(growable: false);
+
+  /// Archived categories — read from the PRIVATE list for the same reason as
+  /// [archivedAccounts]: the public [categories] getter hides them.
+  List<Category> get archivedCategories =>
+      _categories.where((c) => c.archived).toList(growable: false);
 
   List<Category> categoriesOfType(CategoryType type) =>
       categories.where((c) => c.type == type).toList(growable: false);
@@ -586,7 +597,21 @@ class AppStore extends ChangeNotifier {
       .where((c) => c.removedOn != null && c.monthlyBudget == null)
       .toList(growable: false);
 
-  int get archivedCount => archivedGoals.length + removedBudgets.length;
+  /// The Archive screen's row count. A budgeted category that was archived
+  /// intentionally counts twice — it shows one row under Removed budgets (to
+  /// restore the budget) and one under Categories (to restore the category),
+  /// two independently restorable things.
+  int get archivedCount =>
+      archivedGoals.length +
+      removedBudgets.length +
+      archivedAccounts.length +
+      archivedCategories.length;
+
+  /// Open tasks that book into [categoryId] — a scheduled item whose
+  /// "Mark as paid" would otherwise write a fresh Ledger entry against an
+  /// archived category (§6). Archiving is blocked while this is non-empty.
+  List<Task> tasksUsingCategory(String categoryId) =>
+      tasks.where((t) => t.categoryId == categoryId).toList(growable: false);
 
   // ── Lookups ───────────────────────────────────────────────────────────────
   Account? accountById(String? id) {
@@ -1439,6 +1464,14 @@ class AppStore extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// The reversal of [removeAccount]'s archive: the account returns to its
+  /// group with its balance and full history. No transaction is created — the
+  /// money was never removed from the ledger, only hidden from the lists.
+  void restoreAccount(Account account) {
+    account.archived = false;
+    notifyListeners();
+  }
+
   // ── Mutations: categories & budgets ───────────────────────────────────────
 
   Category addCategory({
@@ -1487,6 +1520,26 @@ class AppStore extends ChangeNotifier {
     category
       ..monthlyBudget = limit
       ..removedOn = null;
+    notifyListeners();
+  }
+
+  /// Retire a category from every picker while leaving its history intact.
+  /// Nothing already filed changes: past transactions keep rendering with this
+  /// category's name and icon. A budget on it would sit at $0/limit forever
+  /// with nothing left to file, so it is removed through [removeBudget] (which
+  /// sets `removedOn`, landing it in the Archive's own removed-budgets section
+  /// to be restored independently). Direction/type are untouched.
+  void archiveCategory(Category category) {
+    if (category.monthlyBudget != null) removeBudget(category);
+    category.archived = true;
+    notifyListeners();
+  }
+
+  /// The reversal of [archiveCategory]: the category reappears in every picker.
+  /// Its old budget does not come back automatically — that has its own Restore
+  /// in the removed-budgets section.
+  void restoreCategory(Category category) {
+    category.archived = false;
     notifyListeners();
   }
 
@@ -1618,6 +1671,11 @@ class AppStore extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// "Clear permanently" empties only the goal and budget sections: it deletes
+  /// archived goals and forgets every category's `removedOn` (so removed
+  /// budgets leave that section). It deliberately does NOT hard-delete archived
+  /// accounts or categories, nor un-archive them — those carry transactions and
+  /// a hard delete would strand history (§1). They keep their Restore.
   void clearArchive() {
     _goals.removeWhere((g) => g.status != GoalStatus.active);
     for (final c in _categories) {

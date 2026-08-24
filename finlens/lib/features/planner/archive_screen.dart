@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/l10n/enum_labels.dart';
 import '../../core/models/models.dart';
 import '../../core/store/app_store.dart';
 import '../../core/utils/formatters.dart';
@@ -31,7 +32,13 @@ class ArchiveScreen extends StatelessWidget {
         .where((g) => g.status == GoalStatus.abandoned)
         .toList();
     final budgets = store.removedBudgets;
-    final total = reached.length + gaveUp.length + budgets.length;
+    final accounts = store.archivedAccounts;
+    final cats = store.archivedCategories;
+    final total = reached.length +
+        gaveUp.length +
+        budgets.length +
+        accounts.length +
+        cats.length;
 
     return Scaffold(
       body: SafeArea(
@@ -125,6 +132,46 @@ class ArchiveScreen extends StatelessWidget {
                                     c,
                                     _suggestLimit(store, c),
                                   ),
+                                ),
+                              ),
+                          ]),
+                        ],
+                        // Archived accounts and categories — restore is the
+                        // reversal of an archive and destroys nothing, so it is
+                        // one tap with no confirmation (§2). An account returns
+                        // to its group with its balance and history; a category
+                        // reappears in every picker (its old budget does not —
+                        // that has its own Restore above).
+                        if (accounts.isNotEmpty) ...[
+                          SectionLabel(l.arAccounts),
+                          _card([
+                            for (final a in accounts)
+                              _ArchiveRow(
+                                icon: a.displayIcon,
+                                color: a.color,
+                                title: a.name,
+                                subtitle: l.arAccountLine(
+                                  a.group.label(l),
+                                  store.txnsForAccount(a.id).length,
+                                ),
+                                trailing: _RestoreButton(
+                                  onTap: () => store.restoreAccount(a),
+                                ),
+                              ),
+                          ]),
+                        ],
+                        if (cats.isNotEmpty) ...[
+                          SectionLabel(l.arCategories),
+                          _card([
+                            for (final c in cats)
+                              _ArchiveRow(
+                                icon: c.icon,
+                                color: c.color,
+                                title: c.name,
+                                subtitle: l.countTransactions(
+                                    store.txnCountForCategory(c.id)),
+                                trailing: _RestoreButton(
+                                  onTap: () => store.restoreCategory(c),
                                 ),
                               ),
                           ]),

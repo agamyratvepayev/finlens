@@ -1056,6 +1056,42 @@ abstract class AppLocalizations {
   /// **'Remove account'**
   String get eaRemoveAccount;
 
+  /// No description provided for @eaArchiveThisAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Archive this account'**
+  String get eaArchiveThisAccount;
+
+  /// No description provided for @eaMoveOutTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Move the {amount} out first'**
+  String eaMoveOutTitle(String amount);
+
+  /// No description provided for @eaMoveOutMsg.
+  ///
+  /// In en, this message translates to:
+  /// **'Archiving now would drop {amount} from your net worth with nothing in the Ledger to explain where it went. A closed account holds nothing.'**
+  String eaMoveOutMsg(String amount);
+
+  /// No description provided for @eaSettleTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Settle the {amount} first'**
+  String eaSettleTitle(String amount);
+
+  /// No description provided for @eaSettleMsg.
+  ///
+  /// In en, this message translates to:
+  /// **'Archiving now would drop {amount} from your net worth with nothing in the Ledger to explain where it went. A closed account holds nothing.'**
+  String eaSettleMsg(String amount);
+
+  /// No description provided for @eaMoveMoney.
+  ///
+  /// In en, this message translates to:
+  /// **'Move money'**
+  String get eaMoveMoney;
+
   /// No description provided for @eaEditAccount.
   ///
   /// In en, this message translates to:
@@ -1505,6 +1541,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Total monthly budget drops from {from} to {to}.'**
   String ebTotalDrops(Object from, Object to);
+
+  /// No description provided for @ctArchiveCategory.
+  ///
+  /// In en, this message translates to:
+  /// **'Archive category'**
+  String get ctArchiveCategory;
+
+  /// No description provided for @ctArchiveTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Archive \"{name}\"?'**
+  String ctArchiveTitle(String name);
+
+  /// No description provided for @ctArchiveMsg.
+  ///
+  /// In en, this message translates to:
+  /// **'It stops appearing when you add a transaction. Nothing already recorded changes.'**
+  String get ctArchiveMsg;
+
+  /// No description provided for @ctTxnStay.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{Your {count} transaction stays in the Ledger, with this name and icon.} other{Your {count} transactions stay in the Ledger, with this name and icon.}}'**
+  String ctTxnStay(int count);
+
+  /// No description provided for @ctPastMonths.
+  ///
+  /// In en, this message translates to:
+  /// **'Past months keep their {name} figures.'**
+  String ctPastMonths(String name);
+
+  /// No description provided for @ctBudgetRemoved.
+  ///
+  /// In en, this message translates to:
+  /// **'Its {amount} monthly budget is removed — a budget with nothing to track would sit empty forever. You can restore it from Archive.'**
+  String ctBudgetRemoved(String amount);
+
+  /// No description provided for @ctDisappearsPicker.
+  ///
+  /// In en, this message translates to:
+  /// **'It disappears from every category picker.'**
+  String get ctDisappearsPicker;
+
+  /// No description provided for @ctBlockedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Can\'t archive \"{name}\" yet'**
+  String ctBlockedTitle(String name);
+
+  /// No description provided for @ctBlockedMsg.
+  ///
+  /// In en, this message translates to:
+  /// **'The scheduled item \"{task}\" still books into it. Change or remove that item first.'**
+  String ctBlockedMsg(String task);
 
   /// No description provided for @egTitle.
   ///
@@ -2039,6 +2129,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Removed budgets'**
   String get arRemovedBudgets;
+
+  /// No description provided for @arAccounts.
+  ///
+  /// In en, this message translates to:
+  /// **'Accounts'**
+  String get arAccounts;
+
+  /// No description provided for @arCategories.
+  ///
+  /// In en, this message translates to:
+  /// **'Categories'**
+  String get arCategories;
+
+  /// No description provided for @arAccountLine.
+  ///
+  /// In en, this message translates to:
+  /// **'{group} · {count, plural, one{{count} transaction} other{{count} transactions}}'**
+  String arAccountLine(String group, int count);
 
   /// No description provided for @arRemovedLine.
   ///

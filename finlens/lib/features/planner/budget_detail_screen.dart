@@ -7,6 +7,7 @@ import '../../core/utils/fx.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/amount_text.dart';
 import '../../shared/widgets/app_card.dart';
+import '../../shared/widgets/destructive_sheet.dart';
 import '../../shared/widgets/screen_header.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
@@ -157,11 +158,81 @@ class BudgetDetailScreen extends StatelessWidget {
                 );
               },
             ),
+            // Archive the category itself (§4) — the honest home for the action
+            // in an app with no standalone category screen: the one per-category
+            // ••• menu there is. Distinct from "Edit budget": archiving retires
+            // the category from every picker and removes its budget as a
+            // consequence, spelled out in the confirmation.
+            ListTile(
+              leading: const Icon(Icons.inventory_2_rounded,
+                  color: AppColors.negative),
+              title: Text(AppLocalizations.of(context).ctArchiveCategory,
+                  style: AppText.body.copyWith(color: AppColors.negative)),
+              onTap: () {
+                Navigator.of(sheetContext).pop();
+                _confirmArchive(context, category);
+              },
+            ),
             const SizedBox(height: Insets.sm),
           ],
         ),
       ),
     );
+  }
+
+  /// §4 — archive the category. A scheduled item that books into it would keep
+  /// writing real Ledger entries against an archived category, so archiving is
+  /// blocked while one exists and the item is named (§6). Otherwise the impact
+  /// is stated in concrete figures: history stays, the budget goes (recoverably),
+  /// and it leaves every picker. Every figure masks with the privacy eye.
+  Future<void> _confirmArchive(BuildContext context, Category category) async {
+    final store = StoreScope.read(context);
+    final l = AppLocalizations.of(context);
+
+    final blocking = store.tasksUsingCategory(category.id);
+    if (blocking.isNotEmpty) {
+      await showDialog<void>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          backgroundColor: AppColors.surfaceAlt,
+          title: Text(l.ctBlockedTitle(category.name), style: AppText.rowTitle),
+          content: Text(l.ctBlockedMsg(blocking.first.title),
+              style: AppText.body.copyWith(fontSize: 13.5)),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              style:
+                  TextButton.styleFrom(foregroundColor: AppColors.accentLight),
+              child: Text(l.actionClose),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    final count = store.txnCountForCategory(category.id);
+    final budget = category.monthlyBudget;
+    final ok = await showDestructiveConfirm(
+      context,
+      title: l.ctArchiveTitle(category.name),
+      message: l.ctArchiveMsg,
+      impact: [
+        ImpactLine.kept(l.ctTxnStay(count)),
+        ImpactLine.kept(l.ctPastMonths(category.name)),
+        // Omitted entirely when the category has no budget (§4/§6).
+        if (budget != null)
+          ImpactLine.lost(
+              l.ctBudgetRemoved(money(budget, masked: store.masked))),
+        ImpactLine.lost(l.ctDisappearsPicker),
+      ],
+      confirmLabel: l.ctArchiveCategory,
+    );
+    if (!ok || !context.mounted) return;
+    store.archiveCategory(category);
+    // The category is now out of every picker and its budget removed; this
+    // budget screen has nothing left to show, so return to Planner.
+    Navigator.of(context).pop();
   }
 
   // ── Header ───────────────────────────────────────────────────────────────
