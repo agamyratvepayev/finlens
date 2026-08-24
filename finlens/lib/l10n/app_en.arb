@@ -1,0 +1,163 @@
+{
+  "@@locale": "en",
+
+  "language": "Language",
+  "@language": {
+    "description": "Row label for the language selector in More > Preferences."
+  },
+  "languageSystemDefault": "System default",
+  "@languageSystemDefault": {
+    "description": "Language picker option: follow the device locale."
+  },
+
+  "accountGroupSpendable": "Spendable",
+  "accountGroupReceivables": "Receivables",
+  "accountGroupInvestments": "Investments",
+  "accountGroupValuables": "Valuables",
+  "accountGroupCreditCards": "Credit Cards",
+  "accountGroupPayables": "Payables",
+  "accountGroupBankLoans": "Bank Loans",
+
+  "quickAddExpense": "Expense",
+  "quickAddIncome": "Income",
+  "quickAddTransfer": "Transfer",
+  "quickAddRebalance": "Rebalance",
+  "quickAddNewGoal": "New Goal",
+  "quickAddNewTask": "New Task",
+
+  "txnTypeExpense": "Expense",
+  "txnTypeIncome": "Income",
+  "txnTypeTransfer": "Transfer",
+  "txnTypeRebalance": "Rebalance",
+
+  "goalTypeSaving": "Saving",
+  "goalTypeMilestone": "Milestone",
+  "goalTypePurchasing": "Purchasing",
+  "goalSectionSaving": "Saving",
+  "goalSectionMilestone": "Milestone",
+  "goalSectionPurchasing": "Purchasing",
+
+  "priorityLow": "Low",
+  "priorityNormal": "Normal",
+  "priorityHigh": "High",
+
+  "repeatNever": "Never",
+  "repeatWeekly": "Weekly",
+  "repeatMonthly": "Monthly",
+  "repeatQuarterly": "Quarterly",
+  "repeatYearly": "Yearly",
+
+  "comparePeriodTodayLabel": "Today",
+  "comparePeriodTodayCaption": "vs yesterday",
+  "comparePeriodWeekLabel": "Week",
+  "comparePeriodWeekCaption": "vs last week",
+  "comparePeriodMonthLabel": "Month",
+  "comparePeriodMonthCaption": "vs last month",
+
+  "rangeThisWeek": "This week",
+  "rangeLastWeek": "Last week",
+  "rangeThisMonth": "This month",
+  "rangeLastMonth": "Last month",
+  "rangeLast3Months": "Last 3 months",
+  "rangeLast6Months": "Last 6 months",
+  "rangeLast12Months": "Last 12 months",
+  "rangeThisYear": "This year",
+  "rangeAllTime": "All time",
+
+  "navBalance": "Balance",
+  "navLedger": "Ledger",
+  "navPlanner": "Planner",
+  "navInsight": "Insight",
+  "navMore": "More",
+
+  "accountSortValueDesc": "Value — high to low",
+  "accountSortValueAsc": "Value — low to high",
+  "accountSortNameAsc": "Name — A to Z",
+  "accountSortActivity": "Change — most active",
+  "accountSortCustom": "Custom",
+
+  "balanceSectionAll": "Net worth",
+  "balanceSectionAssets": "Assets",
+  "balanceSectionLiabilities": "Liabilities",
+
+  "transSortDateNewest": "Date — newest first",
+  "transSortDateOldest": "Date — oldest first",
+  "transSortAmountHigh": "Amount — high to low",
+  "transSortAmountLow": "Amount — low to high",
+  "transSortByCategory": "Category — A to Z",
+  "transSortByAccount": "Account — A to Z",
+
+  "ledgerAllAccounts": "All accounts",
+  "ledgerAccountFallback": "Account",
+
+  "monthShort": "{month, select, 1{Jan} 2{Feb} 3{Mar} 4{Apr} 5{May} 6{Jun} 7{Jul} 8{Aug} 9{Sep} 10{Oct} 11{Nov} 12{Dec} other{}}",
+  "@monthShort": {
+    "description": "Abbreviated month name by month number 1-12.",
+    "placeholders": { "month": { "type": "String" } }
+  },
+  "monthLong": "{month, select, 1{January} 2{February} 3{March} 4{April} 5{May} 6{June} 7{July} 8{August} 9{September} 10{October} 11{November} 12{December} other{}}",
+  "@monthLong": {
+    "description": "Full month name by month number 1-12.",
+    "placeholders": { "month": { "type": "String" } }
+  },
+  "weekdayLong": "{weekday, select, 1{Monday} 2{Tuesday} 3{Wednesday} 4{Thursday} 5{Friday} 6{Saturday} 7{Sunday} other{}}",
+  "@weekdayLong": {
+    "description": "Full weekday name by ISO weekday number 1 (Mon) - 7 (Sun).",
+    "placeholders": { "weekday": { "type": "String" } }
+  },
+
+  "dateToday": "Today",
+  "dateYesterday": "Yesterday",
+  "dateTomorrow": "Tomorrow",
+  "dateWithTime": "{date}, {time}",
+  "@dateWithTime": {
+    "description": "A date label followed by a time, e.g. 'Today, 14:32'.",
+    "placeholders": { "date": { "type": "String" }, "time": { "type": "String" } }
+  },
+  "dateGroupYesterday": "Yesterday · {date}",
+  "@dateGroupYesterday": {
+    "description": "Ledger day-group header for yesterday, e.g. 'Yesterday · 8 Aug'.",
+    "placeholders": { "date": { "type": "String" } }
+  },
+  "rangeSince": "Since {monthYear}",
+  "@rangeSince": {
+    "description": "All-time range label, e.g. 'Since Mar 2023'.",
+    "placeholders": { "monthYear": { "type": "String" } }
+  },
+
+  "dueToday": "today",
+  "dueTomorrow": "tomorrow",
+  "dueInDays": "{days, plural, one{in {days} day} other{in {days} days}}",
+  "@dueInDays": {
+    "placeholders": { "days": { "type": "int" } }
+  },
+  "dueDaysLate": "{days, plural, one{{days} day late} other{{days} days late}}",
+  "@dueDaysLate": {
+    "placeholders": { "days": { "type": "int" } }
+  },
+
+  "countAccounts": "{count, plural, one{{count} account} other{{count} accounts}}",
+  "@countAccounts": { "placeholders": { "count": { "type": "int" } } },
+  "countTransactions": "{count, plural, one{{count} transaction} other{{count} transactions}}",
+  "@countTransactions": { "placeholders": { "count": { "type": "int" } } },
+  "countResults": "{count, plural, one{{count} result} other{{count} results}}",
+  "@countResults": { "placeholders": { "count": { "type": "int" } } },
+  "countDays": "{count, plural, one{{count} day} other{{count} days}}",
+  "@countDays": { "placeholders": { "count": { "type": "int" } } },
+  "countArchivedItems": "{count, plural, one{{count} archived item} other{{count} archived items}}",
+  "@countArchivedItems": { "placeholders": { "count": { "type": "int" } } },
+  "daysAgo": "{count, plural, one{1 day ago} other{{count} days ago}}",
+  "@daysAgo": { "placeholders": { "count": { "type": "int" } } },
+
+  "moreTitle": "More",
+  "moreYourMoney": "Your money",
+  "morePlannerSection": "Planner",
+  "morePreferences": "Preferences",
+  "moreCategories": "Categories",
+  "moreCategoriesInUse": "{count, plural, one{{count} in use} other{{count} in use}}",
+  "@moreCategoriesInUse": { "placeholders": { "count": { "type": "int" } } },
+  "moreArchive": "Archive",
+  "morePrivacyMode": "Privacy mode",
+  "morePrivacyModeDesc": "Mask every amount across the app",
+  "moreAddAccount": "Add an account"
+}

@@ -4,6 +4,7 @@ import 'package:flutter/semantics.dart';
 import '../../../core/models/models.dart';
 import '../../../core/store/app_store.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../core/utils/search_fold.dart';
 import '../../../shared/widgets/swipe_actions.dart';
 import '../../../shared/widgets/transfer_title.dart';
@@ -116,7 +117,7 @@ class LedgerDayCard extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    dateGroupLabel(group.date).toUpperCase(),
+                    dateGroupLabel(group.date, AppLocalizations.of(context)).toUpperCase(),
                     style: const TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w700,

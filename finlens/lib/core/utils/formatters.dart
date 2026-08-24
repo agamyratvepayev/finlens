@@ -1,12 +1,22 @@
-/// Currency + date formatting. Kept dependency-free (no intl) so the money
-/// rendering matches the mockups exactly: grouped thousands, sign in front of
-/// the symbol ("−$31,200"), and a true minus glyph rather than a hyphen.
+/// Currency + date formatting.
+///
+/// Money rendering stays hand-rolled (no intl) so it matches the mockups
+/// exactly: grouped thousands, sign in front of the symbol ("−$31,200"), and a
+/// true minus glyph rather than a hyphen. Date labels, by contrast, ARE
+/// locale-aware: the month/weekday names and relative words come from the ARB
+/// catalog, so every date formatter takes an [AppLocalizations]. The layout
+/// (day-then-month order, the compression rules) is kept here rather than
+/// delegated to intl's DateFormat — partly to preserve the exact mockup styling,
+/// partly because intl ships no Turkmen date symbols.
 library;
+
+import '../../l10n/app_localizations.dart';
 
 const _symbols = <String, String>{
   'USD': r'$',
   'EUR': '€',
   'TRY': '₺',
+  'TMT': 'm', // Turkmen manat
   'GBP': '£',
   'JPY': '¥',
 };
@@ -85,29 +95,29 @@ String signedPercent(double fraction, {int decimals = 1}) {
   return '$v%';
 }
 
-const _months = [
-  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-];
+/// Abbreviated month name ("Aug" / "авг." / "Ağu"), sourced from the catalog.
+String monthShort(int m, AppLocalizations l) => l.monthShort('$m');
 
-const _monthsLong = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
-];
+/// Full month name ("August" / "Август").
+String monthLong(int m, AppLocalizations l) => l.monthLong('$m');
 
-String monthShort(int m) => _months[m - 1];
+/// Full weekday name from an ISO weekday (1 = Mon … 7 = Sun).
+String weekdayLong(DateTime d, AppLocalizations l) => l.weekdayLong('${d.weekday}');
 
 /// "9 Aug"
-String dayMonth(DateTime d) => '${d.day} ${monthShort(d.month)}';
+String dayMonth(DateTime d, AppLocalizations l) => '${d.day} ${monthShort(d.month, l)}';
 
 /// "9 Aug 2026"
-String dayMonthYear(DateTime d) => '${d.day} ${monthShort(d.month)} ${d.year}';
+String dayMonthYear(DateTime d, AppLocalizations l) =>
+    '${d.day} ${monthShort(d.month, l)} ${d.year}';
 
 /// "Nov 2026"
-String monthYear(DateTime d) => '${monthShort(d.month)} ${d.year}';
+String monthYear(DateTime d, AppLocalizations l) =>
+    '${monthShort(d.month, l)} ${d.year}';
 
 /// "August 2026" — Planner and Ledger period headers.
-String monthYearLong(DateTime d) => '${_monthsLong[d.month - 1]} ${d.year}';
+String monthYearLong(DateTime d, AppLocalizations l) =>
+    '${monthLong(d.month, l)} ${d.year}';
 
 String hhmm(DateTime d) =>
     '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
@@ -117,7 +127,7 @@ String hhmm(DateTime d) =>
 /// [now] exists because the app pins its reference date rather than reading the
 /// wall clock — comparing against `DateTime.now()` made a transaction dated
 /// "today" render as an absolute date whenever the two disagreed.
-String dateTimeLabel(DateTime d, {DateTime? now}) {
+String dateTimeLabel(DateTime d, AppLocalizations l, {DateTime? now}) {
   final today = now ?? DateTime.now();
   final day = DateTime(d.year, d.month, d.day);
   final base = DateTime(today.year, today.month, today.day);
@@ -126,49 +136,59 @@ String dateTimeLabel(DateTime d, {DateTime? now}) {
   // Only the three nearest days get a name; past that a relative label stops
   // being easier to read than the date itself.
   final relative = switch (delta) {
-    0 => 'Today',
-    -1 => 'Yesterday',
-    1 => 'Tomorrow',
+    0 => l.dateToday,
+    -1 => l.dateYesterday,
+    1 => l.dateTomorrow,
     _ => null,
   };
-  if (relative != null) return '$relative, ${hhmm(d)}';
+  if (relative != null) return l.dateWithTime(relative, hhmm(d));
 
   final sameYear = d.year == today.year;
   return sameYear
-      ? '${dayMonth(d)}, ${hhmm(d)}'
-      : '${dayMonthYear(d)}, ${hhmm(d)}';
+      ? l.dateWithTime(dayMonth(d, l), hhmm(d))
+      : l.dateWithTime(dayMonthYear(d, l), hhmm(d));
 }
 
 /// Ledger date-group headings: "Today", "Yesterday · 8 Aug", "7 Aug".
-String dateGroupLabel(DateTime d) {
+String dateGroupLabel(DateTime d, AppLocalizations l) {
   final now = DateTime.now();
   final today = DateTime(now.year, now.month, now.day);
   final day = DateTime(d.year, d.month, d.day);
   final diff = today.difference(day).inDays;
-  if (diff == 0) return 'Today';
-  if (diff == 1) return 'Yesterday · ${dayMonth(d)}';
-  return dayMonth(d);
+  if (diff == 0) return l.dateToday;
+  if (diff == 1) return l.dateGroupYesterday(dayMonth(d, l));
+  return dayMonth(d, l);
 }
 
 /// Relative due wording used by Payables and Schedule ("in 3 days").
-String dueLabel(int days) {
-  if (days < 0) {
-    final n = days.abs();
-    return n == 1 ? '1 day late' : '$n days late';
-  }
-  if (days == 0) return 'today';
-  if (days == 1) return 'tomorrow';
-  return 'in $days days';
+String dueLabel(int days, AppLocalizations l) {
+  if (days < 0) return l.dueDaysLate(-days);
+  if (days == 0) return l.dueToday;
+  if (days == 1) return l.dueTomorrow;
+  return l.dueInDays(days);
 }
 
-String ordinal(int n) {
-  if (n >= 11 && n <= 13) return '${n}th';
-  return switch (n % 10) {
-    1 => '${n}st',
-    2 => '${n}nd',
-    3 => '${n}rd',
-    _ => '${n}th',
-  };
+/// Ordinal day-of-month ("5th" / "5-го" / "5."). English grammar can't be
+/// expressed in an ARB `plural` (it lacks the ordinal categories and gen-l10n
+/// has no `selectordinal`), so the per-locale forms live here. Turkmen/Russian
+/// forms are approximate and flagged for native review.
+String ordinalDay(int n, AppLocalizations l) {
+  switch (l.localeName) {
+    case 'ru':
+      return '$n-го';
+    case 'tr':
+      return '$n.';
+    case 'tk':
+      return '$n-i';
+    default:
+      if (n >= 11 && n <= 13) return '${n}th';
+      return switch (n % 10) {
+        1 => '${n}st',
+        2 => '${n}nd',
+        3 => '${n}rd',
+        _ => '${n}th',
+      };
+  }
 }
 
 int daysInMonth(DateTime d) => DateTime(d.year, d.month + 1, 0).day;

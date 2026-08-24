@@ -4,18 +4,20 @@ import '../../theme/app_colors.dart';
 
 /// Account groups. The asset/liability split drives net worth (spec 1.1) and
 /// the sign interpretation of Task.expected_amount (spec 3.7).
+///
+/// Display labels are localized — see `AccountGroupL10n.label` in
+/// `core/l10n/enum_labels.dart`. The enum carries only colour + icon.
 enum AccountGroup {
-  spendable('Spendable', AppColors.spendable, Icons.account_balance_wallet_rounded),
-  receivables('Receivables', AppColors.receivables, Icons.receipt_long_rounded),
-  investments('Investments', AppColors.investments, Icons.trending_up_rounded),
-  valuables('Valuables', AppColors.valuables, Icons.diamond_rounded),
-  creditCards('Credit Cards', AppColors.creditCards, Icons.credit_card_rounded),
-  payables('Payables', AppColors.payables, Icons.description_rounded),
-  bankLoans('Bank Loans', AppColors.bankLoans, Icons.account_balance_rounded);
+  spendable(AppColors.spendable, Icons.account_balance_wallet_rounded),
+  receivables(AppColors.receivables, Icons.receipt_long_rounded),
+  investments(AppColors.investments, Icons.trending_up_rounded),
+  valuables(AppColors.valuables, Icons.diamond_rounded),
+  creditCards(AppColors.creditCards, Icons.credit_card_rounded),
+  payables(AppColors.payables, Icons.description_rounded),
+  bankLoans(AppColors.bankLoans, Icons.account_balance_rounded);
 
-  const AccountGroup(this.label, this.color, this.icon);
+  const AccountGroup(this.color, this.icon);
 
-  final String label;
   final Color color;
   final IconData icon;
 
@@ -35,83 +37,53 @@ enum AccountGroup {
       values.where((g) => g.isLiability).toList(growable: false);
 }
 
-/// The six Quick Add entry points (spec 3.1).
+/// The six Quick Add entry points (spec 3.1). Labels localized — see
+/// `QuickAddTypeL10n.label`.
 enum QuickAddType {
-  expense('Expense', AppColors.expense, Icons.south_west_rounded),
-  income('Income', AppColors.income, Icons.north_east_rounded),
-  transfer('Transfer', AppColors.transfer, Icons.swap_horiz_rounded),
-  rebalance('Rebalance', AppColors.rebalance, Icons.donut_large_rounded),
-  newGoal('New Goal', AppColors.goal, Icons.flag_rounded),
-  newTask('New Task', AppColors.task, Icons.notifications_rounded);
+  expense(AppColors.expense, Icons.south_west_rounded),
+  income(AppColors.income, Icons.north_east_rounded),
+  transfer(AppColors.transfer, Icons.swap_horiz_rounded),
+  rebalance(AppColors.rebalance, Icons.donut_large_rounded),
+  newGoal(AppColors.goal, Icons.flag_rounded),
+  newTask(AppColors.task, Icons.notifications_rounded);
 
-  const QuickAddType(this.label, this.color, this.icon);
+  const QuickAddType(this.color, this.icon);
 
-  final String label;
   final Color color;
   final IconData icon;
 }
 
 /// Ledger record types. `rebalance` is deliberately isolated from income/expense
-/// metrics (spec 6.2 "Rebalance izolasyonu").
+/// metrics (spec 6.2 "Rebalance izolasyonu"). Labels localized — see
+/// `TxnTypeL10n.label`.
 enum TxnType {
-  expense('Expense', AppColors.expense),
-  income('Income', AppColors.income),
-  transfer('Transfer', AppColors.transfer),
-  rebalance('Rebalance', AppColors.rebalance);
+  expense(AppColors.expense),
+  income(AppColors.income),
+  transfer(AppColors.transfer),
+  rebalance(AppColors.rebalance);
 
-  const TxnType(this.label, this.color);
+  const TxnType(this.color);
 
-  final String label;
   final Color color;
 }
 
 enum CategoryType { expense, income }
 
 /// Goal sub-types share one template + a type parameter (spec 3.6 / 5.2).
-enum GoalType {
-  saving('Saving', 'SAVING'),
-  milestone('Milestone', 'MILESTONE'),
-  purchase('Purchasing', 'PURCHASING');
-
-  const GoalType(this.label, this.sectionTitle);
-
-  final String label;
-  final String sectionTitle;
-}
+/// Labels + section titles localized — see `GoalTypeL10n`.
+enum GoalType { saving, milestone, purchase }
 
 /// Spec 6.2 — nothing with history is truly deleted; it is archived.
 enum GoalStatus { active, reached, abandoned }
 
 enum TaskStatus { open, paid, skipped }
 
-enum Priority {
-  low('Low'),
-  normal('Normal'),
-  high('High');
+/// Priority labels localized — see `PriorityL10n.label`.
+enum Priority { low, normal, high }
 
-  const Priority(this.label);
-  final String label;
-}
+/// Repeat cadences. Labels localized — see `RepeatFrequencyL10n.label`.
+enum RepeatFrequency { none, weekly, monthly, quarterly, yearly }
 
-enum RepeatFrequency {
-  none('Never'),
-  weekly('Weekly'),
-  monthly('Monthly'),
-  quarterly('Quarterly'),
-  yearly('Yearly');
-
-  const RepeatFrequency(this.label);
-  final String label;
-}
-
-/// Comparison window for the Balance header selector (spec 1.1).
-enum ComparePeriod {
-  today('Today', 'vs yesterday'),
-  week('Week', 'vs last week'),
-  month('Month', 'vs last month');
-
-  const ComparePeriod(this.label, this.caption);
-
-  final String label;
-  final String caption;
-}
+/// Comparison window for the Balance header selector (spec 1.1). Label +
+/// caption localized — see `ComparePeriodL10n`.
+enum ComparePeriod { today, week, month }

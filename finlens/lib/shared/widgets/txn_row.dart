@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 
+import '../../core/l10n/enum_labels.dart';
 import '../../core/models/models.dart';
 import '../../core/store/app_store.dart';
 import '../../core/utils/formatters.dart';
 import '../../core/utils/search_fold.dart';
+import '../../l10n/app_localizations.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/app_typography.dart';
@@ -791,7 +793,7 @@ Future<bool> confirmDeleteTxn(BuildContext context, Txn txn) async {
 
   return showDestructiveConfirm(
     context,
-    title: 'Delete this ${txn.type.label.toLowerCase()}?',
+    title: 'Delete this ${txn.type.label(AppLocalizations.of(context)).toLowerCase()}?',
     message: 'This entry is removed for good and the balances below go back to '
         'what they were.',
     impact: impact,

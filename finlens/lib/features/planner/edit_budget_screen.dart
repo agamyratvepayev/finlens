@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/models/models.dart';
 import '../../core/store/app_store.dart';
 import '../../core/utils/formatters.dart';
+import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/app_card.dart';
 import '../../shared/widgets/destructive_sheet.dart';
 import '../../shared/widgets/form_fields.dart';
@@ -139,7 +140,7 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
                       children: [
                         Expanded(
                           child: Text(
-                            monthShort(month.month),
+                            monthShort(month.month, AppLocalizations.of(context)),
                             style: AppText.body.copyWith(fontSize: 14),
                           ),
                         ),

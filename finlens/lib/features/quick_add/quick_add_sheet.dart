@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 
+import '../../core/l10n/enum_labels.dart';
 import '../../core/models/models.dart';
 import '../../core/store/app_store.dart';
 import '../../core/utils/formatters.dart';
 import '../../core/utils/fx.dart';
+import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/app_card.dart';
 import '../../shared/widgets/txn_row.dart';
 import '../../theme/app_colors.dart';
@@ -300,7 +302,7 @@ class _QuickAddScreenState extends State<QuickAddScreen>
   FieldSpec _dateField({String label = 'Date'}) => FieldSpec(
         icon: Icons.event_rounded,
         label: label,
-        value: dateTimeLabel(_date, now: AppStore.today),
+        value: dateTimeLabel(_date, AppLocalizations.of(context), now: AppStore.today),
         onTap: _pickDate,
       );
 
@@ -727,7 +729,7 @@ class _QuickAddScreenState extends State<QuickAddScreen>
           FieldSpec(
             icon: Icons.event_rounded,
             label: 'Target date',
-            value: _targetDate == null ? null : monthYear(_targetDate!),
+            value: _targetDate == null ? null : monthYear(_targetDate!, AppLocalizations.of(context)),
             emptyText: 'Set a date',
             onTap: () async {
               final d = await showDatePicker(
@@ -1080,7 +1082,9 @@ class _QuickAddScreenState extends State<QuickAddScreen>
               ),
             ),
             const SizedBox(width: Insets.md),
-            Expanded(child: Text(type.label, style: AppText.rowTitle)),
+            Expanded(
+                child: Text(type.label(AppLocalizations.of(sheetContext)),
+                    style: AppText.rowTitle)),
             if (type == _type)
               const Icon(
                 Icons.check_rounded,
@@ -1107,7 +1111,7 @@ class _QuickAddScreenState extends State<QuickAddScreen>
         child: Text(
           // Never edited shows the created stamp alone rather than "never
           // edited" — the absence already says it.
-          'Created ${dateTimeLabel(txn.createdAt, now: AppStore.today)}'
+          'Created ${dateTimeLabel(txn.createdAt, AppLocalizations.of(context), now: AppStore.today)}'
           '${edits == 0 ? '' : ' · edited ${edits == 1 ? 'once' : '$edits times'}'}',
           textAlign: TextAlign.center,
           style: const TextStyle(
@@ -1454,7 +1458,7 @@ class _QuickAddScreenState extends State<QuickAddScreen>
 
     Navigator.of(context).pop();
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('${_type.label} saved')),
+      SnackBar(content: Text('${_type.label(AppLocalizations.of(context))} saved')),
     );
   }
 }

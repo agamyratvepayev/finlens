@@ -1,6 +1,8 @@
+import '../../core/l10n/enum_labels.dart';
 import '../../core/models/models.dart';
 import '../../core/store/app_store.dart';
 import '../../core/utils/fx.dart';
+import '../../l10n/app_localizations.dart';
 import 'trans_filter.dart';
 
 /// What the ledger is currently showing.
@@ -15,7 +17,7 @@ sealed class LedgerScope {
   List<Account> accountsIn(AppStore store);
 
   /// Nav title, before the chevron.
-  String title(AppStore store);
+  String title(AppStore store, AppLocalizations l);
 }
 
 class AllAccountsScope extends LedgerScope {
@@ -25,7 +27,7 @@ class AllAccountsScope extends LedgerScope {
   List<Account> accountsIn(AppStore store) => store.accounts;
 
   @override
-  String title(AppStore store) => 'All accounts';
+  String title(AppStore store, AppLocalizations l) => l.ledgerAllAccounts;
 }
 
 class GroupScope extends LedgerScope {
@@ -37,7 +39,7 @@ class GroupScope extends LedgerScope {
   List<Account> accountsIn(AppStore store) => store.accountsIn(group);
 
   @override
-  String title(AppStore store) => group.label;
+  String title(AppStore store, AppLocalizations l) => group.label(l);
 }
 
 class AccountScope extends LedgerScope {
@@ -52,8 +54,8 @@ class AccountScope extends LedgerScope {
   }
 
   @override
-  String title(AppStore store) =>
-      store.accountById(accountId)?.name ?? 'Account';
+  String title(AppStore store, AppLocalizations l) =>
+      store.accountById(accountId)?.name ?? l.ledgerAccountFallback;
 }
 
 /// Whether the list currently on screen is a legible running-balance tape.

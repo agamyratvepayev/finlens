@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:finlens/l10n/app_localizations_en.dart';
 
 import 'package:finlens/core/models/enums.dart';
 import 'package:finlens/core/data/seed_data.dart';
@@ -119,28 +120,28 @@ void main() {
 
     // 1 — repeated month drops out.
     expect(
-      DateRange(DateTime(2026, 8, 4), DateTime(2026, 8, 12)).label(today),
+      DateRange(DateTime(2026, 8, 4), DateTime(2026, 8, 12)).label(today, AppLocalizationsEn()),
       '4–12 Aug',
     );
     // Both ends spelled out when the months differ.
     expect(
-      DateRange(DateTime(2026, 7, 27), DateTime(2026, 8, 2)).label(today),
+      DateRange(DateTime(2026, 7, 27), DateTime(2026, 8, 2)).label(today, AppLocalizationsEn()),
       '27 Jul – 2 Aug',
     );
     // 2 — the year returns once the range leaves the current one.
     expect(
-      DateRange(DateTime(2025, 12, 1), DateTime(2025, 12, 31)).label(today),
+      DateRange(DateTime(2025, 12, 1), DateTime(2025, 12, 31)).label(today, AppLocalizationsEn()),
       '1–31 Dec 2025',
     );
     // 3 — all time is month and year only.
     expect(
       DateRange(DateTime(2000), today, preset: RangePreset.allTime)
-          .label(today, firstEver: DateTime(2023, 3, 4)),
+          .label(today, AppLocalizationsEn(), firstEver: DateTime(2023, 3, 4)),
       'Since Mar 2023',
     );
     // A single day collapses to one date.
     expect(
-      DateRange(DateTime(2026, 8, 9), DateTime(2026, 8, 9)).label(today),
+      DateRange(DateTime(2026, 8, 9), DateTime(2026, 8, 9)).label(today, AppLocalizationsEn()),
       '9 Aug',
     );
   });

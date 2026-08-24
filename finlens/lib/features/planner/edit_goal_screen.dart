@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../../core/l10n/enum_labels.dart';
 import '../../core/models/models.dart';
 import '../../core/store/app_store.dart';
 import '../../core/utils/formatters.dart';
+import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/amount_text.dart';
 import '../../shared/widgets/destructive_sheet.dart';
 import '../../shared/widgets/form_fields.dart';
@@ -100,7 +102,7 @@ class _EditGoalScreenState extends State<EditGoalScreen> {
           ),
           child: SegmentedPicker<GoalType>(
             values: GoalType.values,
-            labelOf: (t) => t.label,
+            labelOf: (t) => t.label(AppLocalizations.of(context)),
             selected: _type,
             onChanged: (t) => setState(() => _type = t),
           ),
@@ -121,7 +123,9 @@ class _EditGoalScreenState extends State<EditGoalScreen> {
               subtitle: _perMonth == null
                   ? 'No target date set'
                   : '${money(_perMonth!)}/mo to stay on track',
-              value: _targetDate == null ? 'Not set' : monthYear(_targetDate!),
+              value: _targetDate == null
+                  ? 'Not set'
+                  : monthYear(_targetDate!, AppLocalizations.of(context)),
               showChevron: true,
               onTap: _pickTargetDate,
             ),
@@ -144,7 +148,7 @@ class _EditGoalScreenState extends State<EditGoalScreen> {
               label: 'Auto contribute',
               subtitle: _autoContribute
                   ? '${money(double.tryParse(_contribution.text) ?? 0)} '
-                      'on the ${ordinal(_contributeDay)}'
+                      'on the ${ordinalDay(_contributeDay, AppLocalizations.of(context))}'
                   : 'Creates a monthly transfer into this goal',
               value: _autoContribute,
               onChanged: (v) => setState(() => _autoContribute = v),

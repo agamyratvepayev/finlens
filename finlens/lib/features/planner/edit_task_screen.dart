@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../../core/l10n/enum_labels.dart';
 import '../../core/models/models.dart';
 import '../../core/store/app_store.dart';
 import '../../core/utils/formatters.dart';
+import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/app_card.dart';
 import '../../shared/widgets/destructive_sheet.dart';
 import '../../shared/widgets/form_fields.dart';
@@ -150,7 +152,7 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
             FormRow(
               icon: Icons.event_rounded,
               label: 'Next due',
-              value: dayMonth(_due),
+              value: dayMonth(_due, AppLocalizations.of(context)),
               showChevron: true,
               onTap: _pickDue,
             ),
@@ -158,12 +160,13 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
               icon: Icons.repeat_rounded,
               label: _repeats == RepeatFrequency.none
                   ? 'Repeats'
-                  : 'Repeats ${_repeats.label.toLowerCase()}',
+                  : 'Repeats ${_repeats.label(AppLocalizations.of(context)).toLowerCase()}',
               // Spec 5.7 — the preview is what makes a series comprehensible.
               subtitle: _preview.isEmpty
                   ? 'One-off task'
-                  : '${_preview.map(dayMonth).join(' · ')} …',
-              value: _preview.isEmpty ? _repeats.label : null,
+                  : '${_preview.map((d) => dayMonth(d, AppLocalizations.of(context))).join(' · ')} …',
+              value:
+                  _preview.isEmpty ? _repeats.label(AppLocalizations.of(context)) : null,
               showChevron: true,
               onTap: _pickRepeat,
             ),
@@ -193,7 +196,7 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
                 icon: Icons.skip_next_rounded,
                 label: 'Skip this month',
                 subtitle: 'Series continues in '
-                    '${monthShort(_task.nextOccurrence(_due).month)}',
+                    '${monthShort(_task.nextOccurrence(_due).month, AppLocalizations.of(context))}',
                 showChevron: true,
                 onTap: _skip,
               ),
@@ -201,7 +204,7 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
         ),
         // Spec 5.7 — two distinct deletions, the first named by its date.
         DestructiveRow(
-          label: 'Delete only ${dayMonth(_due)}',
+          label: 'Delete only ${dayMonth(_due, AppLocalizations.of(context))}',
           onTap: _deleteOccurrence,
         ),
         if (_task.isRecurring)
@@ -257,7 +260,8 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
                 for (var i = 0; i < RepeatFrequency.values.length; i++) ...[
                   if (i > 0) const RowDivider(indent: Insets.md),
                   FormRow(
-                    label: RepeatFrequency.values[i].label,
+                    label:
+                        RepeatFrequency.values[i].label(AppLocalizations.of(context)),
                     onTap: () =>
                         Navigator.of(context).pop(RepeatFrequency.values[i]),
                     trailing: RepeatFrequency.values[i] == _repeats
@@ -310,7 +314,7 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
     Navigator.of(context).pop();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Skipped · next on ${dayMonth(_task.dueDate)}'),
+        content: Text('Skipped · next on ${dayMonth(_task.dueDate, AppLocalizations.of(context))}'),
       ),
     );
   }
@@ -319,19 +323,19 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
     final next = _task.nextOccurrence(_due);
     final ok = await showDestructiveConfirm(
       context,
-      title: 'Delete only ${dayMonth(_due)}?',
+      title: 'Delete only ${dayMonth(_due, AppLocalizations.of(context))}?',
       message: _task.isRecurring
           ? 'Just this one occurrence is removed.'
           : 'This one-off task is removed.',
       impact: [
         if (_task.isRecurring) ...[
-          ImpactLine.kept('The series continues on ${dayMonth(next)}.'),
+          ImpactLine.kept('The series continues on ${dayMonth(next, AppLocalizations.of(context))}.'),
           const ImpactLine.kept('No Ledger entry is created or removed.'),
         ] else
           const ImpactLine.kept('Your Ledger is untouched.'),
-        ImpactLine.lost('${dayMonth(_due)} disappears from your Schedule.'),
+        ImpactLine.lost('${dayMonth(_due, AppLocalizations.of(context))} disappears from your Schedule.'),
       ],
-      confirmLabel: 'Delete ${dayMonth(_due)}',
+      confirmLabel: 'Delete ${dayMonth(_due, AppLocalizations.of(context))}',
     );
     if (!ok || !mounted) return;
     _store.deleteTaskOccurrence(_task);

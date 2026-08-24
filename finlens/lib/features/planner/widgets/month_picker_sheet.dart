@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../core/utils/formatters.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_colors.dart';
 import '../../../theme/app_theme.dart';
 import '../../../theme/app_typography.dart';
@@ -147,7 +148,7 @@ class _MonthPickerState extends State<_MonthPicker> {
           borderRadius: BorderRadius.circular(Radii.md),
         ),
         child: Text(
-          monthShort(month),
+          monthShort(month, AppLocalizations.of(context)),
           style: TextStyle(
             fontSize: 14,
             fontWeight: selected ? FontWeight.w700 : FontWeight.w500,

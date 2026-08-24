@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../../core/l10n/enum_labels.dart';
 import '../../core/models/models.dart';
 import '../../core/store/app_store.dart';
 import '../../core/utils/formatters.dart';
+import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/amount_text.dart';
 import '../../shared/widgets/app_card.dart';
 import '../../shared/widgets/form_fields.dart';
@@ -153,7 +155,7 @@ class _MonthControl extends StatelessWidget {
                   fit: BoxFit.scaleDown,
                   alignment: Alignment.centerLeft,
                   child: Text(
-                    monthYearLong(month),
+                    monthYearLong(month, AppLocalizations.of(context)),
                     maxLines: 1,
                     style: const TextStyle(
                       fontSize: 18,
@@ -701,7 +703,7 @@ class _GoalsTab extends StatelessWidget {
         // three separate entities.
         for (final type in GoalType.values)
           if (store.goalsOfType(type).isNotEmpty) ...[
-            SectionLabel(type.sectionTitle),
+            SectionLabel(type.sectionTitle(AppLocalizations.of(context))),
             for (final g in store.goalsOfType(type))
               _GoalRow(store: store, goal: g),
           ],
@@ -728,7 +730,7 @@ class _GoalRow extends StatelessWidget {
         ? 'Complete · ready to archive'
         : goal.targetDate == null
             ? 'No target date set'
-            : '${monthYear(goal.targetDate!)} · ${money(monthly ?? 0)}/mo needed';
+            : '${monthYear(goal.targetDate!, AppLocalizations.of(context))} · ${money(monthly ?? 0)}/mo needed';
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(
@@ -953,8 +955,8 @@ class _TaskRow extends StatelessWidget {
     final color = payOut ? AppColors.negative : AppColors.positive;
     final days = task.daysUntilDue;
     final due = days < 0
-        ? '${dayMonth(task.dueDate)} · ${dueLabel(days)}'
-        : '${dayMonth(task.dueDate)}${task.isRecurring ? '' : ' · ${dueLabel(days)}'}';
+        ? '${dayMonth(task.dueDate, AppLocalizations.of(context))} · ${dueLabel(days, AppLocalizations.of(context))}'
+        : '${dayMonth(task.dueDate, AppLocalizations.of(context))}${task.isRecurring ? '' : ' · ${dueLabel(days, AppLocalizations.of(context))}'}';
 
     return InkWell(
       onTap: () => Navigator.of(context, rootNavigator: true).push(
@@ -1004,7 +1006,7 @@ class _TaskRow extends StatelessWidget {
                         ),
                         const SizedBox(width: 3),
                         Text(
-                          task.repeats.label.toLowerCase(),
+                          task.repeats.label(AppLocalizations.of(context)).toLowerCase(),
                           style: AppText.caption.copyWith(
                             fontSize: 11,
                             color: AppColors.textTertiary,
@@ -1049,7 +1051,7 @@ class _MarkPaidButton extends StatelessWidget {
           SnackBar(
             content: Text(
               '${task.title} recorded in your Ledger'
-              '${task.isRecurring ? ' · next ${dayMonth(task.dueDate)}' : ''}',
+              '${task.isRecurring ? ' · next ${dayMonth(task.dueDate, AppLocalizations.of(context))}' : ''}',
             ),
           ),
         );

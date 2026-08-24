@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 
+import '../../core/l10n/enum_labels.dart';
 import '../../core/models/models.dart';
 import '../../core/store/app_store.dart';
 import '../../core/utils/formatters.dart';
 import '../../core/utils/fx.dart';
+import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/amount_text.dart';
 import '../../shared/widgets/app_card.dart';
 import '../../shared/widgets/form_fields.dart';
@@ -189,7 +191,9 @@ class _AccountPickerBodyState extends State<_AccountPickerBody> {
               for (final entry in grouped.entries) ...[
                 Padding(
                   padding: const EdgeInsets.fromLTRB(4, Insets.md, 4, Insets.sm),
-                  child: Text(entry.key.label.toUpperCase(), style: AppText.label),
+                  child: Text(
+                      entry.key.label(AppLocalizations.of(context)).toUpperCase(),
+                      style: AppText.label),
                 ),
                 AppCard(
                   child: Column(
@@ -1132,7 +1136,8 @@ class _NewAccountFormState extends State<_NewAccountForm> {
     return Semantics(
       button: true,
       selected: selected,
-      label: '${g.label}, ${g.isAsset ? 'assets' : 'liabilities'}',
+      label:
+          '${g.label(AppLocalizations.of(context))}, ${g.isAsset ? 'assets' : 'liabilities'}',
       child: InkWell(
         onTap: () => _selectGroup(g),
         child: Container(
@@ -1150,7 +1155,7 @@ class _NewAccountFormState extends State<_NewAccountForm> {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  g.label,
+                  g.label(AppLocalizations.of(context)),
                   style: TextStyle(
                     fontSize: 13.5,
                     color:
@@ -1372,7 +1377,7 @@ class _NewAccountFormState extends State<_NewAccountForm> {
 }
 
 Future<String?> pickCurrency(BuildContext context, String current) {
-  const codes = ['USD', 'EUR', 'TRY', 'GBP', 'JPY'];
+  const codes = ['USD', 'EUR', 'TRY', 'TMT', 'GBP', 'JPY'];
   return showAppSheet<String>(
     context,
     title: 'Currency',

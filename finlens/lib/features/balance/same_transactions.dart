@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/models/models.dart';
 import '../../core/utils/date_range.dart';
 import '../../core/utils/fx.dart';
+import '../../l10n/app_localizations.dart';
 
 /// The composite key a tapped transaction resolves to. Every transaction that
 /// shares this key belongs on the Same-transactions screen.
@@ -187,17 +188,13 @@ class SameStats {
 /// week presets, adds 6- and 12-month, and must not leak into the ledger's own
 /// range sheet.
 enum SameRangePreset {
-  thisMonth('This month'),
-  lastMonth('Last month'),
-  last3Months('Last 3 months'),
-  last6Months('Last 6 months'),
-  last12Months('Last 12 months'),
-  thisYear('This year'),
-  allTime('All time');
-
-  const SameRangePreset(this.label);
-
-  final String label;
+  thisMonth,
+  lastMonth,
+  last3Months,
+  last6Months,
+  last12Months,
+  thisYear,
+  allTime;
 
   static const defaultPreset = SameRangePreset.last3Months;
 
@@ -225,6 +222,18 @@ enum SameRangePreset {
             DateTime(day.year, day.month, day.day, 23, 59, 59, 999));
     }
   }
+}
+
+extension SameRangePresetL10n on SameRangePreset {
+  String label(AppLocalizations l) => switch (this) {
+        SameRangePreset.thisMonth => l.rangeThisMonth,
+        SameRangePreset.lastMonth => l.rangeLastMonth,
+        SameRangePreset.last3Months => l.rangeLast3Months,
+        SameRangePreset.last6Months => l.rangeLast6Months,
+        SameRangePreset.last12Months => l.rangeLast12Months,
+        SameRangePreset.thisYear => l.rangeThisYear,
+        SameRangePreset.allTime => l.rangeAllTime,
+      };
 }
 
 /// The shared range choice: a preset, or a hand-picked custom window. One

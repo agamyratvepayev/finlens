@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../../core/l10n/enum_labels.dart';
 import '../../core/models/models.dart';
 import '../../core/store/app_store.dart';
 import '../../core/utils/formatters.dart';
+import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/app_card.dart';
 import '../../shared/widgets/destructive_sheet.dart';
 import '../../shared/widgets/form_fields.dart';
@@ -106,7 +108,7 @@ class _EditAccountScreenState extends State<EditAccountScreen> {
                       FormRow(
                         icon: Icons.folder_rounded,
                         label: 'Group',
-                        value: _group.label,
+                        value: _group.label(AppLocalizations.of(context)),
                         showChevron: true,
                         onTap: _pickGroup,
                       ),
@@ -158,7 +160,7 @@ class _EditAccountScreenState extends State<EditAccountScreen> {
                             label: 'Statement day',
                             value: _statementDay == null
                                 ? 'Not set'
-                                : ordinal(_statementDay!),
+                                : ordinalDay(_statementDay!, AppLocalizations.of(context)),
                             showChevron: true,
                             onTap: () async {
                               final d = await _pickDay('Statement day');
@@ -170,7 +172,7 @@ class _EditAccountScreenState extends State<EditAccountScreen> {
                             label: 'Payment due',
                             value: _paymentDue == null
                                 ? 'Not set'
-                                : ordinal(_paymentDue!),
+                                : ordinalDay(_paymentDue!, AppLocalizations.of(context)),
                             showChevron: true,
                             onTap: () async {
                               final d = await _pickDay('Payment due');
@@ -263,7 +265,7 @@ class _EditAccountScreenState extends State<EditAccountScreen> {
                   if (i > 0) const RowDivider(indent: Insets.md),
                   FormRow(
                     icon: AccountGroup.values[i].icon,
-                    label: AccountGroup.values[i].label,
+                    label: AccountGroup.values[i].label(AppLocalizations.of(context)),
                     onTap: () =>
                         Navigator.of(context).pop(AccountGroup.values[i]),
                     trailing: AccountGroup.values[i] == _group
@@ -317,7 +319,7 @@ class _EditAccountScreenState extends State<EditAccountScreen> {
             'in the Ledger, untouched.',
           ),
         ImpactLine.lost(
-          '${_account.group.label} drops by '
+          '${_account.group.label(AppLocalizations.of(context))} drops by '
           '${money(balance.abs(), currency: _currency)}.',
         ),
         ImpactLine.lost('It disappears from every account picker.'),

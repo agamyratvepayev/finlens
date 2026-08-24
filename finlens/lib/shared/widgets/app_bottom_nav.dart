@@ -1,22 +1,33 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import 'nav_icons.dart';
 
-/// The five modules (spec 1.1). Order is fixed.
+/// The five modules (spec 1.1). Order is fixed. Labels localized — see
+/// [NavTabL10n.label].
 enum NavTab {
-  balance('Balance', NavGlyph.balance),
-  ledger('Ledger', NavGlyph.ledger),
-  planner('Planner', NavGlyph.planner),
-  insight('Insight', NavGlyph.insight),
-  more('More', NavGlyph.more);
+  balance(NavGlyph.balance),
+  ledger(NavGlyph.ledger),
+  planner(NavGlyph.planner),
+  insight(NavGlyph.insight),
+  more(NavGlyph.more);
 
-  const NavTab(this.label, this.glyph);
+  const NavTab(this.glyph);
 
-  final String label;
   final NavGlyph glyph;
+}
+
+extension NavTabL10n on NavTab {
+  String label(AppLocalizations l) => switch (this) {
+        NavTab.balance => l.navBalance,
+        NavTab.ledger => l.navLedger,
+        NavTab.planner => l.navPlanner,
+        NavTab.insight => l.navInsight,
+        NavTab.more => l.navMore,
+      };
 }
 
 /// A badge on a tab. `count == null` renders the dot form.
@@ -122,7 +133,7 @@ class _NavItemState extends State<_NavItem> {
       child: Semantics(
         button: true,
         selected: widget.selected,
-        label: widget.tab.label,
+        label: widget.tab.label(AppLocalizations.of(context)),
         child: AnimatedScale(
           scale: _pressed ? 0.94 : 1.0,
           duration: const Duration(milliseconds: 100),
@@ -156,7 +167,7 @@ class _NavItemState extends State<_NavItem> {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  widget.tab.label,
+                  widget.tab.label(AppLocalizations.of(context)),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: AppText.navLabel.copyWith(

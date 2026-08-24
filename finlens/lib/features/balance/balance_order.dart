@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/models/models.dart';
 import '../../core/store/app_store.dart';
+import '../../l10n/app_localizations.dart';
 
 /// How accounts are ordered *inside* each group.
 ///
@@ -12,22 +13,29 @@ import '../../core/store/app_store.dart';
 /// mode, including [custom], ever reorders them. [custom] is a hand-made
 /// **account** order only, produced by a press-and-hold drag on the Balance
 /// list.
+/// Labels localized — see [AccountSortL10n.label].
 enum AccountSort {
-  valueDesc('Value — high to low'),
-  valueAsc('Value — low to high'),
-  nameAsc('Name — A to Z'),
-  activity('Change — most active'),
-  custom('Custom');
-
-  const AccountSort(this.label);
-
-  final String label;
+  valueDesc,
+  valueAsc,
+  nameAsc,
+  activity,
+  custom;
 
   static const defaultSort = AccountSort.valueDesc;
 
   /// The four automatic options, in sheet order. [custom] is presented on its
   /// own below a divider and never appears in this list.
   static const automatic = <AccountSort>[valueDesc, valueAsc, nameAsc, activity];
+}
+
+extension AccountSortL10n on AccountSort {
+  String label(AppLocalizations l) => switch (this) {
+        AccountSort.valueDesc => l.accountSortValueDesc,
+        AccountSort.valueAsc => l.accountSortValueAsc,
+        AccountSort.nameAsc => l.accountSortNameAsc,
+        AccountSort.activity => l.accountSortActivity,
+        AccountSort.custom => l.accountSortCustom,
+      };
 }
 
 /// The user's hand-made account order for the Balance list.

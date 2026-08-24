@@ -4,6 +4,7 @@ import '../../core/models/models.dart';
 import '../../core/store/app_store.dart';
 import '../../core/utils/formatters.dart';
 import '../../core/utils/fx.dart';
+import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/amount_text.dart';
 import '../../shared/widgets/app_card.dart';
 import '../../shared/widgets/screen_header.dart';
@@ -81,7 +82,8 @@ class BudgetDetailScreen extends StatelessWidget {
                     color: color,
                     isCurrent: isCurrent,
                   ),
-                  _againstTheLimit(store, category, monthlyBudget, color),
+                  _againstTheLimit(store, category, monthlyBudget, color,
+                      AppLocalizations.of(context)),
                   _transactions(context, store, category),
                 ],
               ),
@@ -281,6 +283,7 @@ class BudgetDetailScreen extends StatelessWidget {
     Category category,
     double monthlyBudget,
     Color selectedColor,
+    AppLocalizations l,
   ) {
     // Six calendar months ending with the selected one, newest first.
     final months = [
@@ -325,6 +328,7 @@ class BudgetDetailScreen extends StatelessWidget {
               fraction: axisMax <= 0 ? 0.0 : amounts[i] / axisMax,
               limitFraction: limitFraction,
               color: i == 0 ? selectedColor : _pastMonth,
+              l: l,
             ),
           ],
           if (withSpending >= 3) ...[
@@ -348,13 +352,14 @@ class BudgetDetailScreen extends StatelessWidget {
     required double fraction,
     required double limitFraction,
     required Color color,
+    required AppLocalizations l,
   }) {
     return Row(
       children: [
         SizedBox(
           width: 40,
           child: Text(
-            monthShort(month.month),
+            monthShort(month.month, l),
             style: AppText.caption.copyWith(fontSize: 12.5),
           ),
         ),
@@ -403,8 +408,8 @@ class BudgetDetailScreen extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SectionLabel(
-          '${monthShort(month.month).toUpperCase()} · ${txns.length} '
-          'transaction${txns.length == 1 ? '' : 's'}',
+          '${monthShort(month.month, AppLocalizations.of(context)).toUpperCase()} · '
+          '${AppLocalizations.of(context).countTransactions(txns.length)}',
         ),
         if (txns.isEmpty)
           Padding(
@@ -561,7 +566,8 @@ class _TxnMiniRow extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 2),
-                Text(dayMonth(txn.date), style: AppText.rowSubtitle),
+                Text(dayMonth(txn.date, AppLocalizations.of(context)),
+                    style: AppText.rowSubtitle),
               ],
             ),
           ),

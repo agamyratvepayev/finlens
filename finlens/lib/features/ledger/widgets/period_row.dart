@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/store/app_store.dart';
 import '../../../core/utils/date_range.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_colors.dart';
 import '../ledger_scope.dart';
 
@@ -81,7 +82,7 @@ class PeriodRow extends StatelessWidget {
                 Flexible(
                   child: Semantics(
                     button: true,
-                    label: 'Period, ${range.label(today)}',
+                    label: 'Period, ${range.label(today, AppLocalizations.of(context))}',
                     child: InkWell(
                       onTap: onPickRange,
                       borderRadius: BorderRadius.circular(7),
@@ -95,7 +96,7 @@ class PeriodRow extends StatelessWidget {
                             children: [
                               Flexible(
                                 child: Text(
-                                  range.label(today),
+                                  range.label(today, AppLocalizations.of(context)),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: const TextStyle(

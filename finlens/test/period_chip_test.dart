@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:finlens/l10n/app_localizations_en.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:finlens/core/data/seed_data.dart';
@@ -66,7 +67,7 @@ void main() {
     expect(steps, -1);
     expect(picks, 0, reason: 'the arrow must not open the sheet');
 
-    await tester.tap(find.text(range.label(AppStore.today)));
+    await tester.tap(find.text(range.label(AppStore.today, AppLocalizationsEn())));
     expect(picks, 1, reason: 'tapping the label opens the sheet');
   });
 
@@ -92,7 +93,7 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester
-        .tap(find.text(RangePreset.thisMonth.resolve(AppStore.today).label(AppStore.today)));
+        .tap(find.text(RangePreset.thisMonth.resolve(AppStore.today).label(AppStore.today, AppLocalizationsEn())));
     await tester.pumpAndSettle();
 
     // A RenderFlex overflow throws during layout; none may occur.

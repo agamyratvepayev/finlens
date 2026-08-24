@@ -5,11 +5,13 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../core/l10n/enum_labels.dart';
 import '../../core/models/models.dart';
 import '../../core/store/app_store.dart';
 import '../../core/utils/date_range.dart';
 import '../../core/utils/formatters.dart';
 import '../../core/utils/search_fold.dart';
+import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/section_header.dart';
 import '../../shared/widgets/swipe_actions.dart';
 import '../../shared/widgets/swipe_back_route.dart';
@@ -571,7 +573,7 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
                       children: [
                         Flexible(
                           child: Text(
-                            _scope.title(store),
+                            _scope.title(store, AppLocalizations.of(context)),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
@@ -638,17 +640,18 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
   };
 
   String _metaPrefix(AppStore store) {
+    final l = AppLocalizations.of(context);
     switch (_scope) {
       case AllAccountsScope():
-        return '${store.accounts.length} accounts';
+        return l.countAccounts(store.accounts.length);
       case GroupScope(:final group):
         final n = store.groupCount(group);
-        return '$n ${n == 1 ? 'account' : 'accounts'}  ·  '
+        return '${l.countAccounts(n)}  ·  '
             '${percent(store.groupShare(group))} of '
             '${group.isAsset ? 'assets' : 'liabilities'}';
       case AccountScope(:final accountId):
         final a = store.accountById(accountId);
-        return a == null ? '' : '${a.group.label}  ·  ${a.currency}';
+        return a == null ? '' : '${a.group.label(l)}  ·  ${a.currency}';
     }
   }
 
@@ -836,7 +839,7 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
           Semantics(
             liveRegion: true,
             child: Text(
-              '$results ${results == 1 ? 'result' : 'results'}',
+              AppLocalizations.of(context).countResults(results),
               style: const TextStyle(
                 fontSize: 12.5,
                 color: AppColors.textSecondary,
@@ -859,9 +862,11 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
   // ── Sort & filter sheets ──────────────────────────────────────────────────
 
   Future<void> _openSort(AppStore store) async {
+    final l = AppLocalizations.of(context);
     final account = _scope is AccountScope;
     final current = store.transSort(account: account);
-    final lastLabel = _byCategory ? 'Category — A to Z' : 'Account — A to Z';
+    final lastLabel =
+        _byCategory ? l.transSortByCategory : l.transSortByAccount;
     final picked = await showModalBottomSheet<TransSort>(
       context: context,
       backgroundColor: AppColors.surfaceAlt,
@@ -898,7 +903,7 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
               _sortRow(
                 sheetContext,
                 s,
-                s == TransSort.byName ? lastLabel : s.label,
+                s == TransSort.byName ? lastLabel : s.label(l),
                 s == current,
               ),
             const SizedBox(height: 8),
@@ -1092,11 +1097,11 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
               builder: (_) => txn.type == TxnType.transfer
                   ? TransferDetailScreen(
                       txnId: txn.id,
-                      backLabel: _scope.title(store),
+                      backLabel: _scope.title(store, AppLocalizations.of(context)),
                     )
                   : SameTransactionsScreen(
                       originTxnId: txn.id,
-                      backLabel: _scope.title(store),
+                      backLabel: _scope.title(store, AppLocalizations.of(context)),
                     ),
             ),
           ),
@@ -1275,7 +1280,7 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
             : null,
       ),
       title: Text(
-        p.label,
+        p.label(AppLocalizations.of(sheetContext)),
         style: TextStyle(
           fontSize: 15,
           fontWeight: active ? FontWeight.w600 : FontWeight.w400,
@@ -1283,7 +1288,7 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
         ),
       ),
       trailing: Text(
-        resolved.label(today),
+        resolved.label(today, AppLocalizations.of(sheetContext)),
         style: const TextStyle(fontSize: 12.5, color: AppColors.textTertiary),
       ),
       onTap: () => Navigator.of(sheetContext).pop(p),
@@ -1359,7 +1364,7 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
                       ListTile(
                         leading: Icon(g.icon, size: 20, color: g.color),
                         title: Text(
-                          g.label,
+                          g.label(AppLocalizations.of(sheetContext)),
                           style: const TextStyle(
                             fontSize: 15,
                             color: AppColors.textPrimary,

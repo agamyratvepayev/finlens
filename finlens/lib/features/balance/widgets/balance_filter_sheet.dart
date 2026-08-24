@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/l10n/enum_labels.dart';
 import '../../../core/models/models.dart';
 import '../../../core/store/app_store.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/amount_text.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../../theme/app_colors.dart';
@@ -236,6 +238,7 @@ class _BalanceFilterSheetState extends State<_BalanceFilterSheet> {
 
   Widget _categoryCard(
       AppStore store, BalanceFilter filter, AccountGroup group) {
+    final l = AppLocalizations.of(context);
     final state = filter.toggleState(store, group);
     // Accounts in the same order the Balance list shows them (spec §6).
     final accounts = store.balanceSort == AccountSort.custom
@@ -248,7 +251,7 @@ class _BalanceFilterSheetState extends State<_BalanceFilterSheet> {
     final subtitle = state == ToggleState.mixed
         ? '$visibleCount of ${accounts.length} · '
             '${money(filter.filteredTotal(store, group), masked: store.masked)}'
-        : '${accounts.length} ${accounts.length == 1 ? 'account' : 'accounts'} · '
+        : '${l.countAccounts(accounts.length)} · '
             '${money(store.groupTotal(group), masked: store.masked)}';
 
     return Container(
@@ -303,7 +306,7 @@ class _BalanceFilterSheetState extends State<_BalanceFilterSheet> {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Text(
-                                  group.label,
+                                  group.label(l),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: const TextStyle(
@@ -338,7 +341,7 @@ class _BalanceFilterSheetState extends State<_BalanceFilterSheet> {
                   width: 45,
                   height: 27,
                   knob: 23,
-                  semanticLabel: '${group.label}, ${_stateWord(state)}',
+                  semanticLabel: '${group.label(l)}, ${_stateWord(state)}',
                   semanticHint:
                       'Double tap to ${off ? 'show' : 'hide'} all accounts',
                   onTap: () => _apply(filter.toggleGroup(store, group)),

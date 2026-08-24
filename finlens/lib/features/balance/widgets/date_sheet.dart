@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/store/app_store.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_colors.dart';
 import '../../../theme/app_theme.dart';
 import '../../../theme/app_typography.dart';
@@ -72,7 +73,8 @@ class _DateSheetState extends State<_DateSheet> {
             Row(
               children: [
                 Expanded(
-                  child: Text(monthYearLong(_month), style: AppText.rowTitle),
+                  child: Text(monthYearLong(_month, AppLocalizations.of(context)),
+                      style: AppText.rowTitle),
                 ),
                 _NavArrow(
                   icon: Icons.chevron_left_rounded,

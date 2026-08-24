@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:finlens/l10n/app_localizations_en.dart';
 
 import 'package:finlens/core/data/seed_data.dart';
 import 'package:finlens/core/store/app_store.dart';
@@ -78,7 +79,7 @@ void main() {
     final chip = tester.getRect(find.byType(PeriodRow));
     final label = tester.getRect(
       find.text(
-        RangePreset.thisMonth.resolve(AppStore.today).label(AppStore.today),
+        RangePreset.thisMonth.resolve(AppStore.today).label(AppStore.today, AppLocalizationsEn()),
       ),
     );
 

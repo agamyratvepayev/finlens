@@ -9,6 +9,7 @@ import '../../core/utils/date_range.dart';
 import '../../core/utils/formatters.dart';
 import '../../core/utils/fx.dart';
 import '../../core/utils/search_fold.dart';
+import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/amount_text.dart';
 import '../../shared/widgets/app_card.dart';
 import '../../shared/widgets/section_header.dart';
@@ -605,7 +606,8 @@ class _LedgerScreenState extends State<LedgerScreen> {
   Widget _dayBand(AppStore store, LedgerDay day) {
     final shows = day.showsDayTotal;
     final net = day.total;
-    final dateLabel = dateGroupLabel(day.date).toUpperCase();
+    final dateLabel =
+        dateGroupLabel(day.date, AppLocalizations.of(context)).toUpperCase();
     final totalLabel = money(net, signless: true, masked: store.masked);
 
     final Color netColor = net > 0
@@ -895,7 +897,7 @@ class _HeaderZone extends StatelessWidget {
                   Semantics(
                     button: true,
                     label: 'Clear custom range',
-                    hint: 'Back to ${monthYearLong(store.period)}',
+                    hint: 'Back to ${monthYearLong(store.period, AppLocalizations.of(context))}',
                     child: _CircleButton(
                       icon: Icons.close_rounded,
                       tint: AppColors.accentLight,
@@ -992,14 +994,16 @@ class _PeriodTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final lens = store.rangeLens;
     final isLens = lens != null;
-    final titleText =
-        isLens ? lens.label(AppStore.today) : monthYearLong(store.period);
+    final titleText = isLens
+        ? lens.label(AppStore.today, l)
+        : monthYearLong(store.period, l);
     final days = isLens ? lens.days : 0;
     final semanticLabel = isLens
-        ? '$titleText, $days ${days == 1 ? 'day' : 'days'}'
-        : monthYearLong(store.period);
+        ? '$titleText, ${l.countDays(days)}'
+        : monthYearLong(store.period, l);
 
     return Semantics(
       button: true,
@@ -1043,7 +1047,7 @@ class _PeriodTitle extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.only(top: 1),
                 child: Text(
-                  '$days ${days == 1 ? 'day' : 'days'}',
+                  l.countDays(days),
                   style: const TextStyle(
                     fontSize: 10.5,
                     height: 1.2,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/store/app_store.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/range_calendar.dart';
 import '../../../theme/app_colors.dart';
 import '../../../theme/app_theme.dart';
@@ -123,7 +124,7 @@ class _PresetList extends StatelessWidget {
       children: [
         const _SheetTitle('DATE RANGE'),
         for (final preset in SameRangePreset.values)
-          _presetRow(preset, counts[preset] ?? 0),
+          _presetRow(preset, counts[preset] ?? 0, AppLocalizations.of(context)),
         const Divider(height: 1, thickness: 1, color: AppColors.hairline),
         // Custom range… — an accent row that opens the calendar.
         InkWell(
@@ -145,7 +146,7 @@ class _PresetList extends StatelessWidget {
     );
   }
 
-  Widget _presetRow(SameRangePreset preset, int count) {
+  Widget _presetRow(SameRangePreset preset, int count, AppLocalizations l) {
     final active = !current.isCustom && current.preset == preset;
     final selectable = count > 0;
     // A zero-count preset must be visibly un-enterable.
@@ -169,7 +170,7 @@ class _PresetList extends StatelessWidget {
               ),
               Expanded(
                 child: Text(
-                  preset.label,
+                  preset.label(l),
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: active ? FontWeight.w700 : FontWeight.w400,

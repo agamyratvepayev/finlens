@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../../core/l10n/enum_labels.dart';
 import '../../core/models/models.dart';
 import '../../core/store/app_store.dart';
+import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/amount_text.dart';
 import '../../shared/widgets/app_card.dart';
 import '../../shared/widgets/screen_header.dart';
@@ -45,6 +47,7 @@ class GroupDetailScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
+    final l = AppLocalizations.of(context);
     final list = groups ??
         (isAssets ? AccountGroup.assets : AccountGroup.liabilities);
     // Sum the groups actually being shown, not the whole side. Opening this
@@ -97,7 +100,7 @@ class GroupDetailScreen extends StatelessWidget {
                           padding: const EdgeInsets.only(bottom: Insets.lg),
                           child: DeltaChip(
                             fraction: store.netWorthDeltaFraction,
-                            caption: store.comparePeriod.caption,
+                            caption: store.comparePeriod.caption(l),
                             isLiability: !isAssets,
                           ),
                         ),
@@ -147,7 +150,7 @@ class GroupDetailScreen extends StatelessWidget {
   Widget _row(BuildContext context, AppStore store, Account a) {
     final sub = isAssets
         ? (text: null, color: null)
-        : liabilitySubtitle(store, a);
+        : liabilitySubtitle(store, a, AppLocalizations.of(context));
     return AccountRow(
       account: a,
       balance: store.balanceOf(a.id),

@@ -5,6 +5,7 @@ import '../../core/data/dev_seed_data.dart';
 import '../../core/data/seed_data.dart';
 import '../../core/models/models.dart';
 import '../../core/store/app_store.dart';
+import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/form_fields.dart';
 import '../../shared/widgets/screen_header.dart';
 import '../../theme/app_colors.dart';
@@ -13,6 +14,60 @@ import '../balance/assets_screen.dart';
 import '../balance/liabilities_screen.dart';
 import '../planner/archive_screen.dart';
 import '../quick_add/pickers.dart';
+
+/// Selectable UI languages. `null` = follow the device locale. Endonyms are
+/// intentionally shown in each language's own script and are NOT translated.
+const _languageOptions = <(Locale?, String)>[
+  (null, ''),
+  (Locale('en'), 'English'),
+  (Locale('ru'), 'Русский'),
+  (Locale('tr'), 'Türkçe'),
+  (Locale('tk'), 'Türkmençe'),
+];
+
+String _languageLabel(BuildContext context, Locale? locale) {
+  if (locale == null) return AppLocalizations.of(context).languageSystemDefault;
+  for (final (loc, endonym) in _languageOptions) {
+    if (loc?.languageCode == locale.languageCode) return endonym;
+  }
+  return locale.languageCode;
+}
+
+void _pickLanguage(BuildContext context, AppStore store) {
+  final l = AppLocalizations.of(context);
+  showAppSheet(
+    context,
+    title: l.language,
+    initialSize: 0.5,
+    builder: (sheetContext, controller) {
+      final current = store.locale?.languageCode;
+      return ListView(
+        controller: controller,
+        padding: const EdgeInsets.fromLTRB(
+            Insets.gutter, 0, Insets.gutter, Insets.xxl),
+        children: [
+          FormSection(
+            margin: EdgeInsets.zero,
+            children: [
+              for (final (loc, endonym) in _languageOptions)
+                FormRow(
+                  label: loc == null ? l.languageSystemDefault : endonym,
+                  trailing: (loc?.languageCode == current)
+                      ? const Icon(Icons.check_rounded,
+                          size: 20, color: AppColors.accent)
+                      : null,
+                  onTap: () {
+                    store.setLocale(loc);
+                    Navigator.of(sheetContext).pop();
+                  },
+                ),
+            ],
+          ),
+        ],
+      );
+    },
+  );
+}
 
 /// "More" is listed in the bottom navigation but not specified in v1.1. It
 /// collects the entry points the spec defines elsewhere — Archive (5.8),
@@ -23,24 +78,25 @@ class MoreScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
+    final l = AppLocalizations.of(context);
 
     return SafeArea(
       bottom: false,
       child: Column(
         children: [
-          const ScreenHeader(title: 'More', showEye: false, showAdd: false),
+          ScreenHeader(title: l.moreTitle, showEye: false, showAdd: false),
           Expanded(
             child: ListView(
               padding: const EdgeInsets.only(bottom: Insets.xxl),
               children: [
-                const SectionLabel('Your money'),
+                SectionLabel(l.moreYourMoney),
                 FormSection(
                   children: [
                     FormRow(
                       icon: Icons.trending_up_rounded,
-                      label: 'Assets',
-                      subtitle:
-                          '${AccountGroup.assets.fold(0, (s, g) => s + store.groupCount(g))} accounts',
+                      label: l.balanceSectionAssets,
+                      subtitle: l.countAccounts(AccountGroup.assets
+                          .fold(0, (s, g) => s + store.groupCount(g))),
                       showChevron: true,
                       onTap: () => Navigator.of(context, rootNavigator: true)
                           .push(MaterialPageRoute(
@@ -49,9 +105,9 @@ class MoreScreen extends StatelessWidget {
                     ),
                     FormRow(
                       icon: Icons.credit_card_rounded,
-                      label: 'Liabilities',
-                      subtitle:
-                          '${AccountGroup.liabilities.fold(0, (s, g) => s + store.groupCount(g))} accounts',
+                      label: l.balanceSectionLiabilities,
+                      subtitle: l.countAccounts(AccountGroup.liabilities
+                          .fold(0, (s, g) => s + store.groupCount(g))),
                       showChevron: true,
                       onTap: () => Navigator.of(context, rootNavigator: true)
                           .push(MaterialPageRoute(
@@ -60,25 +116,24 @@ class MoreScreen extends StatelessWidget {
                     ),
                     FormRow(
                       icon: Icons.category_rounded,
-                      label: 'Categories',
-                      subtitle: '${store.categories.length} in use',
+                      label: l.moreCategories,
+                      subtitle: l.moreCategoriesInUse(store.categories.length),
                       showChevron: true,
                       onTap: () => pickCategory(
                         context,
                         type: CategoryType.expense,
-                        title: 'Categories',
+                        title: l.moreCategories,
                       ),
                     ),
                   ],
                 ),
-                const SectionLabel('Planner'),
+                SectionLabel(l.morePlannerSection),
                 FormSection(
                   children: [
                     FormRow(
                       icon: Icons.inventory_2_rounded,
                       label: 'Archive',
-                      subtitle:
-                          '${store.archivedCount} archived item${store.archivedCount == 1 ? '' : 's'}',
+                      subtitle: l.countArchivedItems(store.archivedCount),
                       showChevron: true,
                       onTap: () => Navigator.of(context, rootNavigator: true)
                           .push(MaterialPageRoute(
@@ -87,19 +142,26 @@ class MoreScreen extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SectionLabel('Preferences'),
+                SectionLabel(l.morePreferences),
                 FormSection(
                   children: [
+                    FormRow(
+                      icon: Icons.language_rounded,
+                      label: l.language,
+                      value: _languageLabel(context, store.locale),
+                      showChevron: true,
+                      onTap: () => _pickLanguage(context, store),
+                    ),
                     ToggleRow(
                       icon: Icons.visibility_off_rounded,
-                      label: 'Privacy mode',
-                      subtitle: 'Mask every amount across the app',
+                      label: l.morePrivacyMode,
+                      subtitle: l.morePrivacyModeDesc,
                       value: store.masked,
                       onChanged: (_) => store.toggleMasked(),
                     ),
                     FormRow(
                       icon: Icons.add_circle_outline_rounded,
-                      label: 'Add an account',
+                      label: l.moreAddAccount,
                       showChevron: true,
                       onTap: () => showNewAccountSheet(context),
                     ),

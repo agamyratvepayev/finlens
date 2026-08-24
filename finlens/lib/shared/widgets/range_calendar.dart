@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/utils/formatters.dart';
+import '../../l10n/app_localizations.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/app_typography.dart';
@@ -169,8 +170,7 @@ class _RangeCalendarState extends State<RangeCalendar> {
               ),
               child: Text(
                 complete
-                    ? 'Apply · $count '
-                        '${count == 1 ? 'transaction' : 'transactions'}'
+                    ? 'Apply · ${AppLocalizations.of(context).countTransactions(count)}'
                     : 'Apply',
               ),
             ),
@@ -213,7 +213,7 @@ class _RangeCalendarState extends State<RangeCalendar> {
             ),
             const SizedBox(height: 2),
             Text(
-              value == null ? '—' : dayMonth(value),
+              value == null ? '—' : dayMonth(value, AppLocalizations.of(context)),
               style: const TextStyle(
                 fontSize: 14.5,
                 height: 1.2,
@@ -234,7 +234,7 @@ class _RangeCalendarState extends State<RangeCalendar> {
         children: [
           Expanded(
             child: Text(
-              monthYearLong(_month),
+              monthYearLong(_month, AppLocalizations.of(context)),
               style: AppText.rowTitle.copyWith(fontWeight: FontWeight.w600),
             ),
           ),

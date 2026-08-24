@@ -5,6 +5,7 @@ import '../../core/store/app_store.dart';
 import '../../core/utils/date_range.dart';
 import '../../core/utils/formatters.dart';
 import '../../core/utils/fx.dart';
+import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/amount_text.dart';
 import '../../shared/widgets/swipe_actions.dart';
 import '../../shared/widgets/txn_row.dart' show confirmDeleteTxn;
@@ -291,8 +292,10 @@ class _SameTransactionsScreenState extends State<SameTransactionsScreen> {
   Widget _rangeRow(BuildContext context, AppStore store, SameKey key) {
     final choice = store.sameListRange;
     final label = choice.isCustom
-        ? choice.resolve(AppStore.today).label(AppStore.today)
-        : choice.preset!.label;
+        ? choice
+            .resolve(AppStore.today)
+            .label(AppStore.today, AppLocalizations.of(context))
+        : choice.preset!.label(AppLocalizations.of(context));
 
     return InkWell(
       onTap: () async {
@@ -368,11 +371,10 @@ class _SameTransactionsScreenState extends State<SameTransactionsScreen> {
   }
 
   Widget _frequencyLine(SameStats stats) {
+    final l = AppLocalizations.of(context);
     final n = stats.perMonth!.round();
     final days = stats.lastDaysAgo ?? 0;
-    final last = days == 0
-        ? 'today'
-        : (days == 1 ? '1 day ago' : '$days days ago');
+    final last = days == 0 ? l.dueToday : l.daysAgo(days);
 
     const base = TextStyle(
         fontSize: 11.5, height: 1.2, color: AppColors.textSecondary);
@@ -415,7 +417,7 @@ class _SameTransactionsScreenState extends State<SameTransactionsScreen> {
     var text = 'ALL ${info.sectionLabel.toUpperCase()}';
     if (choice.isCustom) {
       text = '$text · '
-          '${choice.resolve(AppStore.today).label(AppStore.today).toUpperCase()}';
+          '${choice.resolve(AppStore.today).label(AppStore.today, AppLocalizations.of(context)).toUpperCase()}';
     }
     return Padding(
       padding: const EdgeInsets.fromLTRB(Insets.gutter, 14, Insets.gutter, 6),
@@ -466,7 +468,7 @@ class _SameTransactionsScreenState extends State<SameTransactionsScreen> {
   }
 
   Widget _emptyMessage(_KeyInfo info, DateRange range) {
-    final label = range.label(AppStore.today);
+    final label = range.label(AppStore.today, AppLocalizations.of(context));
     // The account no longer scopes an income/expense key, so the empty message
     // names the category alone (spec §6); a transfer's categoryName is its
     // "A → B" title.
@@ -591,7 +593,7 @@ class _SameRow extends StatelessWidget {
           SizedBox(
             width: 48,
             child: Text(
-              dayMonth(txn.date),
+              dayMonth(txn.date, AppLocalizations.of(context)),
               style: const TextStyle(
                 fontSize: 12.5,
                 height: 1.2,
@@ -646,7 +648,7 @@ class _SameRow extends StatelessWidget {
     final semanticsLabel = [
       // Direction in words — colour is the only other cue for an unsigned row.
       info.directionWord,
-      dayMonth(txn.date),
+      dayMonth(txn.date, AppLocalizations.of(context)),
       // primary names the account for an income/expense row — the fact that
       // distinguishes two otherwise identical rows (spec §4).
       primary,

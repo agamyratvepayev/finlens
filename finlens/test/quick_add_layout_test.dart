@@ -5,6 +5,7 @@ import 'package:finlens/core/data/seed_data.dart';
 import 'package:finlens/core/models/enums.dart';
 import 'package:finlens/core/utils/formatters.dart';
 import 'package:finlens/core/store/app_store.dart';
+import 'package:finlens/l10n/app_localizations_en.dart';
 import 'package:finlens/features/quick_add/quick_add_sheet.dart';
 import 'package:finlens/theme/app_theme.dart';
 
@@ -102,7 +103,7 @@ void main() {
 
   test('relative dates name only the three nearest days', () {
     final now = DateTime(2026, 8, 15, 9, 0);
-    String at(DateTime d) => dateTimeLabel(d, now: now);
+    String at(DateTime d) => dateTimeLabel(d, AppLocalizationsEn(), now: now);
 
     expect(at(DateTime(2026, 8, 15, 14, 32)), 'Today, 14:32');
     expect(at(DateTime(2026, 8, 14, 14, 32)), 'Yesterday, 14:32');

@@ -4,21 +4,18 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/models/models.dart';
+import '../../l10n/app_localizations.dart';
 
 /// The order the scoped-ledger list is sorted in (spec §1). One preference per
 /// screen *type* (account vs the group/all bucket); see [AppStore] persistence.
+/// Labels localized — see [TransSortL10n]. The [byName] label is scope-dependent
+/// ("Category — A to Z" / "Account — A to Z"); the sheet supplies it.
 enum TransSort {
-  dateNewest('Date — newest first'),
-  dateOldest('Date — oldest first'),
-  amountHigh('Amount — high to low'),
-  amountLow('Amount — low to high'),
-  // Label is scope-dependent ("Category — A to Z" / "Account — A to Z"); the
-  // sheet supplies it. This enum value's own label is the account-screen form.
-  byName('Category — A to Z');
-
-  const TransSort(this.label);
-
-  final String label;
+  dateNewest,
+  dateOldest,
+  amountHigh,
+  amountLow,
+  byName;
 
   /// Day-group headers render only under the two date sorts — a "9 AUG" header
   /// above rows from five different days would be a lie (spec §1).
@@ -32,6 +29,21 @@ enum TransSort {
     }
     return dateNewest;
   }
+}
+
+extension TransSortL10n on TransSort {
+  /// The default label. For [TransSort.byName] this is the category-scope form;
+  /// account screens substitute [TransSortL10n.byAccountLabel] via the sheet.
+  String label(AppLocalizations l) => switch (this) {
+        TransSort.dateNewest => l.transSortDateNewest,
+        TransSort.dateOldest => l.transSortDateOldest,
+        TransSort.amountHigh => l.transSortAmountHigh,
+        TransSort.amountLow => l.transSortAmountLow,
+        TransSort.byName => l.transSortByCategory,
+      };
+
+  /// The account-scope form of the name sort ("Account — A to Z").
+  static String byAccountLabel(AppLocalizations l) => l.transSortByAccount;
 }
 
 /// The pre-resolved facts a filter needs from one transaction. Keeping [matches]

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/models/models.dart';
 import '../../core/store/app_store.dart';
 import '../../core/utils/formatters.dart';
+import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/amount_text.dart';
 import '../../shared/widgets/app_card.dart';
 import '../../shared/widgets/screen_header.dart';
@@ -47,7 +48,8 @@ class InsightScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Left over · ${monthYearLong(store.period)}',
+                      Text(
+                          'Left over · ${monthYearLong(store.period, AppLocalizations.of(context))}',
                           style: AppText.label),
                       const SizedBox(height: Insets.xs),
                       FittedBox(

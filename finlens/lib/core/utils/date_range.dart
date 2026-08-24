@@ -1,5 +1,6 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../l10n/app_localizations.dart';
 import 'formatters.dart';
 
 /// A closed date range plus the label rules the ledger's period strip uses.
@@ -57,10 +58,10 @@ class DateRange {
   ///  1. drop the repeated month when both ends share one — `4–12 Aug`;
   ///  2. drop the year while the range sits inside the current year;
   ///  3. All time reads `Since Mar 2023` — month and year only.
-  String label(DateTime today, {DateTime? firstEver}) {
+  String label(DateTime today, AppLocalizations l, {DateTime? firstEver}) {
     if (preset == RangePreset.allTime) {
       final from = firstEver ?? start;
-      return 'Since ${monthShort(from.month)} ${from.year}';
+      return l.rangeSince('${monthShort(from.month, l)} ${from.year}');
     }
 
     final sameDay = start.year == end.year &&
@@ -69,8 +70,9 @@ class DateRange {
     final sameMonth = start.year == end.year && start.month == end.month;
     final inThisYear = start.year == today.year && end.year == today.year;
 
-    String tail(DateTime d) =>
-        inThisYear ? monthShort(d.month) : '${monthShort(d.month)} ${d.year}';
+    String tail(DateTime d) => inThisYear
+        ? monthShort(d.month, l)
+        : '${monthShort(d.month, l)} ${d.year}';
 
     if (sameDay) return '${start.day} ${tail(start)}';
     if (sameMonth) return '${start.day}–${end.day} ${tail(end)}';
@@ -78,18 +80,15 @@ class DateRange {
   }
 }
 
+/// Labels localized — see `RangePresetL10n.label` in `core/l10n/enum_labels.dart`.
 enum RangePreset {
-  thisWeek('This week'),
-  lastWeek('Last week'),
-  thisMonth('This month'),
-  lastMonth('Last month'),
-  last3Months('Last 3 months'),
-  thisYear('This year'),
-  allTime('All time');
-
-  const RangePreset(this.label);
-
-  final String label;
+  thisWeek,
+  lastWeek,
+  thisMonth,
+  lastMonth,
+  last3Months,
+  thisYear,
+  allTime;
 
   DateRange resolve(DateTime today) {
     final day = DateTime(today.year, today.month, today.day);

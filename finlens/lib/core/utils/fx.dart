@@ -13,6 +13,7 @@ abstract final class Fx {
     'EUR': 1.10,
     'GBP': 1.28,
     'TRY': 0.031,
+    'TMT': 0.286, // Turkmen manat (official peg ≈ 3.5 TMT/USD)
     'JPY': 0.0067,
   };
 

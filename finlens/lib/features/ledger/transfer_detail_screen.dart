@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/models/models.dart';
 import '../../core/store/app_store.dart';
 import '../../core/utils/formatters.dart';
+import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/txn_row.dart' show confirmDeleteTxn;
 import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
@@ -64,7 +65,7 @@ class TransferDetailScreen extends StatelessWidget {
               child: ListView(
                 padding: const EdgeInsets.only(bottom: Insets.xxl),
                 children: [
-                  _hero(store, txn),
+                  _hero(context, store, txn),
                   _accountsCard(
                     store,
                     txn,
@@ -189,7 +190,7 @@ class TransferDetailScreen extends StatelessWidget {
 
   // ── Hero ─────────────────────────────────────────────────────────────────
 
-  Widget _hero(AppStore store, Txn txn) {
+  Widget _hero(BuildContext context, AppStore store, Txn txn) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(Insets.md, Insets.lg, Insets.md, Insets.sm),
       child: Column(
@@ -222,7 +223,7 @@ class TransferDetailScreen extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            dayMonthYear(txn.date),
+            dayMonthYear(txn.date, AppLocalizations.of(context)),
             style: const TextStyle(
               fontSize: 12.5,
               height: 1.2,

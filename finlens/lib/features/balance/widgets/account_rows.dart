@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/l10n/enum_labels.dart';
 import '../../../core/models/models.dart';
 import '../../../core/store/app_store.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/amount_text.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../../theme/app_colors.dart';
@@ -62,7 +64,8 @@ class GroupRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final masked = StoreScope.of(context).masked;
-    final countLabel = '$count ${count == 1 ? 'account' : 'accounts'}';
+    final l = AppLocalizations.of(context);
+    final countLabel = l.countAccounts(count);
     // Count and share on one quiet line — same numbers as before, new home.
     final subtitle = '$countLabel · ${percent(share)}';
 
@@ -76,7 +79,7 @@ class GroupRow extends StatelessWidget {
           child: Semantics(
             button: true,
             expanded: isOpen,
-            label: '${group.label}, $countLabel, '
+            label: '${group.label(l)}, $countLabel, '
                 '${money(total, signless: true, masked: masked)}, '
                 '${percent(share)} of ${group.isAsset ? 'assets' : 'liabilities'}',
             child: PressZone(
@@ -98,7 +101,7 @@ class GroupRow extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              group.label,
+                              group.label(l),
                               style: AppText.groupName
                                   .copyWith(fontSize: 14, height: 1.2),
                               maxLines: 1,
@@ -118,7 +121,7 @@ class GroupRow extends StatelessWidget {
         ),
         Semantics(
           button: true,
-          label: '${group.label} transactions',
+          label: '${group.label(l)} transactions',
           child: PressZone(
             onTap: onOpenLedger,
             child: Padding(
@@ -311,7 +314,8 @@ class AccountRow extends StatelessWidget {
 
 /// Subtitle under a liability child row: utilisation for cards, due date for
 /// payables, next payment for loans (spec 1.3).
-({String? text, Color? color}) liabilitySubtitle(AppStore store, Account a) {
+({String? text, Color? color}) liabilitySubtitle(
+    AppStore store, Account a, AppLocalizations l) {
   switch (a.group) {
     case AccountGroup.creditCards:
       final u = store.utilisationOf(a.id);
@@ -335,7 +339,7 @@ class AccountRow extends StatelessWidget {
           .inDays;
       // Spec 1.3 — the label warms up as the due date approaches.
       final color = days < 3 ? AppColors.negative : AppColors.warning;
-      return (text: days < 0 ? 'Overdue' : 'Due ${dueLabel(days)}', color: color);
+      return (text: days < 0 ? 'Overdue' : 'Due ${dueLabel(days, l)}', color: color);
     case AccountGroup.bankLoans:
       if (a.paymentDue == null) return (text: null, color: null);
       final next = DateTime(
@@ -343,7 +347,7 @@ class AccountRow extends StatelessWidget {
         AppStore.today.month + (a.paymentDue! < AppStore.today.day ? 1 : 0),
         a.paymentDue!,
       );
-      return (text: 'Next payment: ${dayMonthYear(next)}', color: null);
+      return (text: 'Next payment: ${dayMonthYear(next, l)}', color: null);
     default:
       return (text: null, color: null);
   }

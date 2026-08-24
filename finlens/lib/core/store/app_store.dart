@@ -53,6 +53,29 @@ class AppStore extends ChangeNotifier {
     notifyListeners();
   }
 
+  // ── Language (spec: multilingual UI) ──────────────────────────────────────
+  // null means "follow the device locale" (resolved in MaterialApp against the
+  // supported set, falling back to Turkmen). Only the language code is stored
+  // ('en'/'ru'/'tr'/'tk'). Unlike the presentational toggles above, [setLocale]
+  // DOES notify: every visible string changes, so the whole app must rebuild.
+  static const _localeKey = 'app_locale';
+  Locale? _locale;
+  Locale? get locale => _locale;
+
+  void setLocale(Locale? value) {
+    _locale = value;
+    notifyListeners();
+    unawaited(_saveString(_localeKey, value?.languageCode ?? ''));
+  }
+
+  /// Restores the language preference before the first frame (called from
+  /// `main`), so the app never paints in the wrong language and then re-renders.
+  Future<void> loadLocale() async {
+    final prefs = await SharedPreferences.getInstance();
+    final code = prefs.getString(_localeKey);
+    _locale = (code == null || code.isEmpty) ? null : Locale(code);
+  }
+
   // ── Ledger view preferences ───────────────────────────────────────────────
   // Whether the Ledger tab reveals each noted row's description line. Unlike the
   // filter/search lens, this is a lasting view preference: it persists and never
@@ -87,6 +110,11 @@ class AppStore extends ChangeNotifier {
   static Future<void> _saveBool(String key, bool value) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(key, value);
+  }
+
+  static Future<void> _saveString(String key, String value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(key, value);
   }
 
   /// Restores the descriptions toggles before the first frame (called from

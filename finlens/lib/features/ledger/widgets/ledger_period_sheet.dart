@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../../../core/store/app_store.dart';
 import '../../../core/utils/date_range.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/range_calendar.dart';
 import '../../../theme/app_colors.dart';
 import '../../../theme/app_theme.dart';
@@ -200,7 +201,7 @@ class _PeriodPageState extends State<_PeriodPage> {
                 Expanded(
                   child: Text(
                       lens != null
-                          ? lens.label(AppStore.today)
+                          ? lens.label(AppStore.today, AppLocalizations.of(context))
                           : 'Custom range…',
                       style: const TextStyle(
                           fontSize: 15, color: AppColors.accentLight)),
@@ -397,12 +398,13 @@ class _MonthStripState extends State<_MonthStrip> {
   }
 
   Widget _chip(int month) {
+    final l = AppLocalizations.of(context);
     final isSelected = !widget.lensActive &&
         widget.year == widget.selectedYear &&
         month == widget.selectedMonth;
     final isFuture = widget.year == widget.today.year && month > widget.today.month;
     final hasData = widget.monthsWithData.contains(month);
-    final label = monthShort(month);
+    final label = monthShort(month, l);
     final monthDate = DateTime(widget.year, month);
 
     final Color bg = isSelected
@@ -463,7 +465,7 @@ class _MonthStripState extends State<_MonthStrip> {
     return Semantics(
       button: true,
       selected: isSelected,
-      label: monthYearLong(monthDate),
+      label: monthYearLong(monthDate, l),
       child: chip,
     );
   }

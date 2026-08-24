@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/models/models.dart';
 import '../../core/store/app_store.dart';
 import '../../core/utils/formatters.dart';
+import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/amount_text.dart';
 import '../../shared/widgets/app_card.dart';
 import '../../shared/widgets/destructive_sheet.dart';
@@ -79,7 +80,7 @@ class ArchiveScreen extends StatelessWidget {
                                 color: AppColors.positive,
                                 title: g.name,
                                 subtitle: 'Reached '
-                                    '${dayMonthYear(g.completedAt!)} · took '
+                                    '${dayMonthYear(g.completedAt!, AppLocalizations.of(context))} · took '
                                     '${g.durationMonths ?? 0} months',
                                 trailing: AmountText(
                                   g.targetAmount,
@@ -97,7 +98,7 @@ class ArchiveScreen extends StatelessWidget {
                                 color: AppColors.textSecondary,
                                 title: g.name,
                                 subtitle:
-                                    'Stopped ${dayMonth(g.stoppedAt!)} · '
+                                    'Stopped ${dayMonth(g.stoppedAt!, AppLocalizations.of(context))} · '
                                     '${money(g.saved)} of '
                                     '${money(g.targetAmount)}',
                                 trailing: _RestoreButton(
@@ -115,7 +116,7 @@ class ArchiveScreen extends StatelessWidget {
                                 color: c.color,
                                 title: c.name,
                                 subtitle:
-                                    'Removed ${dayMonth(c.removedOn!)}',
+                                    'Removed ${dayMonth(c.removedOn!, AppLocalizations.of(context))}',
                                 trailing: _RestoreButton(
                                   // The old limit is not retained once cleared,
                                   // so restoring seeds a sensible default from
@@ -131,7 +132,7 @@ class ArchiveScreen extends StatelessWidget {
                         const SizedBox(height: Insets.xl),
                         Center(
                           child: Text(
-                            '$total archived item${total == 1 ? '' : 's'}',
+                            AppLocalizations.of(context).countArchivedItems(total),
                             style: AppText.caption,
                           ),
                         ),

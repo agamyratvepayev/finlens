@@ -1,11 +1,14 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'core/data/dev_seed_data.dart';
 import 'core/data/seed_data.dart';
 import 'core/store/app_store.dart';
 import 'features/shell/app_shell.dart';
+import 'l10n/app_localizations.dart';
+import 'l10n/fallback_localizations.dart';
 import 'theme/app_theme.dart';
 
 /// Debug-only switch for the development data seeder. It is never on by
@@ -31,6 +34,7 @@ Future<void> main() async {
   await store.loadPeriodUnits();
   await store.loadTransPrefs();
   await store.loadLedgerPrefs();
+  await store.loadLocale();
   runApp(FinLensApp(store: store));
 }
 
@@ -43,11 +47,43 @@ class FinLensApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return StoreScope(
       store: store,
-      child: MaterialApp(
-        title: 'FinLens',
-        debugShowCheckedModeBanner: false,
-        theme: AppTheme.dark,
-        home: const AppShell(),
+      // FinLensApp's own context sits above StoreScope, so the MaterialApp is
+      // built one level down via Builder — that inner context can subscribe to
+      // the store and rebuild MaterialApp (and thus the whole app's locale)
+      // whenever the language preference changes.
+      child: Builder(
+        builder: (context) {
+          final locale = StoreScope.of(context).locale;
+          return MaterialApp(
+            title: 'FinLens',
+            debugShowCheckedModeBanner: false,
+            theme: AppTheme.dark,
+            locale: locale, // null ⇒ follow the device locale (see callback)
+            supportedLocales: AppLocalizations.supportedLocales,
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              // Turkmen shims must precede the Global* delegates so they win the
+              // MaterialLocalizations / CupertinoLocalizations slot for `tk`.
+              TkMaterialLocalizationsDelegate(),
+              TkCupertinoLocalizationsDelegate(),
+              GlobalMaterialLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+            ],
+            // When following the device locale, fall back to Turkmen (the target
+            // market) rather than the first supported locale, if the device
+            // language isn't one we support.
+            localeListResolutionCallback: (deviceLocales, supported) {
+              for (final device in deviceLocales ?? const <Locale>[]) {
+                for (final s in supported) {
+                  if (s.languageCode == device.languageCode) return s;
+                }
+              }
+              return const Locale('tk');
+            },
+            home: const AppShell(),
+          );
+        },
       ),
     );
   }

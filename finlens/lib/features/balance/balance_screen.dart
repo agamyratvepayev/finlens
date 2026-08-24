@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../../core/l10n/enum_labels.dart';
 import '../../core/models/models.dart';
 import '../../core/store/app_store.dart';
 import '../../core/utils/formatters.dart';
+import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/amount_text.dart';
 import '../../shared/widgets/section_header.dart';
 import '../../shared/widgets/swipe_back_route.dart';
@@ -21,14 +23,14 @@ import 'widgets/date_sheet.dart';
 /// The three views of the same list. Filtering here is *focusing*, not
 /// narrowing: asking for assets and then expanding each group by hand would be
 /// a redundant step, so a filtered section opens all of its groups.
-enum BalanceSection {
-  all('Net worth'),
-  assets('Assets'),
-  liabilities('Liabilities');
+enum BalanceSection { all, assets, liabilities }
 
-  const BalanceSection(this.label);
-
-  final String label;
+extension BalanceSectionL10n on BalanceSection {
+  String label(AppLocalizations l) => switch (this) {
+        BalanceSection.all => l.balanceSectionAll,
+        BalanceSection.assets => l.balanceSectionAssets,
+        BalanceSection.liabilities => l.balanceSectionLiabilities,
+      };
 }
 
 /// Spec 1.1 — Balance.
@@ -203,16 +205,16 @@ class _BalanceScreenState extends State<BalanceScreen> {
     return Row(
       children: [
         SectionIndicator(
-          label: _section == BalanceSection.all
-              ? 'Net worth'
-              : _section.label,
+          label: _section.label(AppLocalizations.of(context)),
           count: BalanceSection.values.length,
           index: _section.index,
           onAdvance: _advanceSection,
         ),
         const Spacer(),
         _DatePill(
-          label: store.isHistorical ? dayMonth(store.asOf!) : 'Today',
+          label: store.isHistorical
+              ? dayMonth(store.asOf!, AppLocalizations.of(context))
+              : 'Today',
           onTap: () => _pickDate(store),
         ),
         const SizedBox(width: Insets.sm),
@@ -275,7 +277,7 @@ class _BalanceScreenState extends State<BalanceScreen> {
           // is live data.
           if (store.isHistorical)
             Text(
-              'as of ${dayMonthYear(store.asOf!)}',
+              'as of ${dayMonthYear(store.asOf!, AppLocalizations.of(context))}',
               style: AppText.asOfLine,
             ),
         ],
@@ -507,6 +509,7 @@ class _BalanceScreenState extends State<BalanceScreen> {
 
   Future<void> _pickSort() async {
     final current = StoreScope.read(context).balanceSort;
+    final l = AppLocalizations.of(context);
     final picked = await showModalBottomSheet<AccountSort>(
       context: context,
       backgroundColor: AppColors.surfaceAlt,
@@ -557,7 +560,7 @@ class _BalanceScreenState extends State<BalanceScreen> {
               for (final option in AccountSort.automatic)
                 ListTile(
                   leading: check(option),
-                  title: Text(option.label, style: AppText.body),
+                  title: Text(option.label(l), style: AppText.body),
                   // Applies immediately and dismisses — no confirm step.
                   onTap: () => Navigator.of(sheetContext).pop(option),
                 ),
@@ -569,7 +572,7 @@ class _BalanceScreenState extends State<BalanceScreen> {
               ),
               ListTile(
                 leading: check(AccountSort.custom),
-                title: Text(AccountSort.custom.label, style: AppText.body),
+                title: Text(AccountSort.custom.label(l), style: AppText.body),
                 // The second, permanent advertisement of the gesture (the
                 // section-header hint is the first, and self-dismissing).
                 subtitle: const Text(
@@ -769,7 +772,9 @@ class _BalanceScreenState extends State<BalanceScreen> {
 
   bool _matchesQuery(AppStore store, AccountGroup group) {
     final q = _query.toLowerCase();
-    if (group.label.toLowerCase().contains(q)) return true;
+    if (group.label(AppLocalizations.of(context)).toLowerCase().contains(q)) {
+      return true;
+    }
     // Search only sees visible accounts — one hidden inside a group must not
     // surface a match (spec §4.4.11).
     return store.balanceFilter.visibleAccounts(store, group).any(
@@ -782,7 +787,8 @@ class _BalanceScreenState extends State<BalanceScreen> {
   /// the (fixed) group order.
   List<Account> _children(AppStore store, AccountGroup group) {
     final q = _query.toLowerCase();
-    final groupMatches = group.label.toLowerCase().contains(q);
+    final groupMatches =
+        group.label(AppLocalizations.of(context)).toLowerCase().contains(q);
 
     final list = store.balanceFilter
         .visibleAccounts(store, group)
@@ -818,7 +824,10 @@ class _BalanceScreenState extends State<BalanceScreen> {
     // A group matched only through one of its accounts opens itself, so the
     // match the user typed is actually visible.
     final matchedOnChild = _query.isNotEmpty &&
-        !group.label.toLowerCase().contains(_query.toLowerCase());
+        !group
+            .label(AppLocalizations.of(context))
+            .toLowerCase()
+            .contains(_query.toLowerCase());
     final open = matchedOnChild || _isOpen(group);
     final children = _children(store, group);
 
@@ -884,7 +893,7 @@ class _BalanceScreenState extends State<BalanceScreen> {
                       enabled: _query.isEmpty,
                       scrollController: _scrollController,
                       semanticLabel: (a, i, n) =>
-                          '${a.name}, position ${i + 1} of $n in ${group.label}',
+                          '${a.name}, position ${i + 1} of $n in ${group.label(AppLocalizations.of(context))}',
                       onDragStart: (_) => setState(
                           () => _activeDrag = _ActiveDrag.account(group)),
                       onDragEnd: () => setState(() => _activeDrag = null),
@@ -899,10 +908,10 @@ class _BalanceScreenState extends State<BalanceScreen> {
                         account: a,
                         balance: store.balanceOf(a.id),
                         subtitle: group.isLiability
-                            ? liabilitySubtitle(store, a).text
+                            ? liabilitySubtitle(store, a, AppLocalizations.of(context)).text
                             : null,
                         subtitleColor: group.isLiability
-                            ? liabilitySubtitle(store, a).color
+                            ? liabilitySubtitle(store, a, AppLocalizations.of(context)).color
                             : null,
                         // The whole row is one tap target now: name, amount and
                         // the space between all open the account's ledger.
