@@ -9,6 +9,13 @@ import '../../theme/app_colors.dart';
 /// `core/l10n/enum_labels.dart`. The enum carries only colour + icon.
 enum AccountGroup {
   spendable(AppColors.spendable, Icons.account_balance_wallet_rounded),
+  // Cash that is still fully spendable but already has a job — money saved
+  // toward a goal. Kept out of Spendable so its headline keeps answering "what
+  // can I spend today". Must stay immediately after `spendable`: `isAsset` is
+  // computed from the enum index (see below), so an out-of-place entry would
+  // silently reclassify as a liability, and Balance renders groups in this
+  // declaration order.
+  setAside(AppColors.setAside, Icons.savings_rounded),
   receivables(AppColors.receivables, Icons.receipt_long_rounded),
   investments(AppColors.investments, Icons.trending_up_rounded),
   valuables(AppColors.valuables, Icons.diamond_rounded),

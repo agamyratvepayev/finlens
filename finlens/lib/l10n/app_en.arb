@@ -11,6 +11,7 @@
   },
 
   "accountGroupSpendable": "Spendable",
+  "accountGroupSetAside": "Set aside",
   "accountGroupReceivables": "Receivables",
   "accountGroupInvestments": "Investments",
   "accountGroupValuables": "Valuables",

@@ -5,6 +5,7 @@
   "languageSystemDefault": "Enjam sazlamasy",
 
   "accountGroupSpendable": "Sarp ediljek",
+  "accountGroupSetAside": "Aýrylan",
   "accountGroupReceivables": "Aljaklar",
   "accountGroupInvestments": "Maýa goýumlar",
   "accountGroupValuables": "Gymmatlyklar",

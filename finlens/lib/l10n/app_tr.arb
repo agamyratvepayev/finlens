@@ -5,6 +5,7 @@
   "languageSystemDefault": "Cihaz varsayılanı",
 
   "accountGroupSpendable": "Harcanabilir",
+  "accountGroupSetAside": "Ayrılan",
   "accountGroupReceivables": "Alacaklar",
   "accountGroupInvestments": "Yatırımlar",
   "accountGroupValuables": "Değerli varlıklar",

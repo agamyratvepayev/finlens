@@ -5,6 +5,7 @@
   "languageSystemDefault": "Как на устройстве",
 
   "accountGroupSpendable": "Расходные",
+  "accountGroupSetAside": "Отложенные",
   "accountGroupReceivables": "К получению",
   "accountGroupInvestments": "Инвестиции",
   "accountGroupValuables": "Ценности",

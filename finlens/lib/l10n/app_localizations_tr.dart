@@ -18,6 +18,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get accountGroupSpendable => 'Harcanabilir';
 
   @override
+  String get accountGroupSetAside => 'Ayrılan';
+
+  @override
   String get accountGroupReceivables => 'Alacaklar';
 
   @override

@@ -18,6 +18,9 @@ class AppLocalizationsTk extends AppLocalizations {
   String get accountGroupSpendable => 'Sarp ediljek';
 
   @override
+  String get accountGroupSetAside => 'Aýrylan';
+
+  @override
   String get accountGroupReceivables => 'Aljaklar';
 
   @override

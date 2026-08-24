@@ -77,6 +77,11 @@ abstract final class AppColors {
   // every liability group (credit cards, payables, bank loans) shares
   // `negative`, matching the "liabilities are red" rule used everywhere else.
   static const spendable = Color(0xFF30D158);
+  // "Set aside" — earmarked-but-spendable cash. A muted teal (hue ~173°) chosen
+  // to sit between spendable green and receivables blue yet compete with
+  // neither: desaturated so it never reads as the bright green it renders
+  // directly beneath, and far from the violet `accent`/`investments`.
+  static const setAside = Color(0xFF2FB8A6);
   static const receivables = Color(0xFF0A84FF);
   static const investments = Color(0xFF5E5CE6);
   static const valuables = Color(0xFFFF9F0A);

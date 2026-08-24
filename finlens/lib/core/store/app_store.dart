@@ -706,6 +706,14 @@ class AppStore extends ChangeNotifier {
   double get netWorth => totalAssets - totalLiabilities;
 
   /// Spendable cash — the green highlight card on Balance (spec 1.1).
+  ///
+  /// NOTE: currently has no callers. [AccountGroup.setAside] now expresses the
+  /// same "earmarked cash is not spendable" intent structurally (its own group,
+  /// excluded from Spendable by group membership rather than a per-account
+  /// flag), so both this getter and [Account.countAsSpendable] are candidates
+  /// for removal once nothing depends on them. Left in place here — deleting a
+  /// public getter and a model field is a larger change than the group warrants
+  /// and wants its own decision.
   double get spendable => accounts
       .where((a) => a.group == AccountGroup.spendable && a.countAsSpendable)
       .fold(0.0, (sum, a) => sum + balanceInBase(a.id));

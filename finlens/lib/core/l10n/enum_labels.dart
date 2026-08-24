@@ -11,6 +11,7 @@ import '../utils/date_range.dart';
 extension AccountGroupL10n on AccountGroup {
   String label(AppLocalizations l) => switch (this) {
         AccountGroup.spendable => l.accountGroupSpendable,
+        AccountGroup.setAside => l.accountGroupSetAside,
         AccountGroup.receivables => l.accountGroupReceivables,
         AccountGroup.investments => l.accountGroupInvestments,
         AccountGroup.valuables => l.accountGroupValuables,

@@ -197,6 +197,17 @@ List<IconData> iconSuggestionsFor(AccountGroup group) {
         Icons.savings_rounded,
         Icons.attach_money_rounded,
       ];
+    case AccountGroup.setAside:
+      // Saving-toward-a-goal cash — never a lock/padlock; the money is not
+      // restricted, only mentally reserved.
+      return const [
+        Icons.savings_rounded,
+        Icons.flag_rounded,
+        Icons.redeem_rounded,
+        Icons.volunteer_activism_rounded,
+        Icons.account_balance_wallet_rounded,
+        Icons.attach_money_rounded,
+      ];
     case AccountGroup.receivables:
       return const [
         Icons.handshake_rounded,

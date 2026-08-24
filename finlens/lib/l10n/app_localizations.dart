@@ -120,6 +120,12 @@ abstract class AppLocalizations {
   /// **'Spendable'**
   String get accountGroupSpendable;
 
+  /// No description provided for @accountGroupSetAside.
+  ///
+  /// In en, this message translates to:
+  /// **'Set aside'**
+  String get accountGroupSetAside;
+
   /// No description provided for @accountGroupReceivables.
   ///
   /// In en, this message translates to:

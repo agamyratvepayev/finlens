@@ -18,6 +18,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get accountGroupSpendable => 'Расходные';
 
   @override
+  String get accountGroupSetAside => 'Отложенные';
+
+  @override
   String get accountGroupReceivables => 'К получению';
 
   @override

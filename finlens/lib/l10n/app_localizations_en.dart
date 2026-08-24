@@ -18,6 +18,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get accountGroupSpendable => 'Spendable';
 
   @override
+  String get accountGroupSetAside => 'Set aside';
+
+  @override
   String get accountGroupReceivables => 'Receivables';
 
   @override
