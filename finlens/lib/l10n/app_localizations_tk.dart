@@ -2027,6 +2027,15 @@ class AppLocalizationsTk extends AppLocalizations {
   String get qaPaymentDayHint => 'Bundan gysga aýlar öz soňky gününi ulanýar.';
 
   @override
+  String get qaDiscardTitle => 'Täze hasap ýatyrylsynmy?';
+
+  @override
+  String get qaDiscardBody => 'Giren maglumatlaryňyz saklanmaz.';
+
+  @override
+  String get qaDiscardConfirm => 'Ýatyr';
+
+  @override
   String get qaMoreIcons => 'Köp nyşan';
 
   @override

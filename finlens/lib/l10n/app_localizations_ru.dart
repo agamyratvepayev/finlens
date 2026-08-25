@@ -2069,6 +2069,15 @@ class AppLocalizationsRu extends AppLocalizations {
       'Для более коротких месяцев используется их последний день.';
 
   @override
+  String get qaDiscardTitle => 'Отменить создание счёта?';
+
+  @override
+  String get qaDiscardBody => 'Введённые данные не будут сохранены.';
+
+  @override
+  String get qaDiscardConfirm => 'Не сохранять';
+
+  @override
   String get qaMoreIcons => 'Больше значков';
 
   @override

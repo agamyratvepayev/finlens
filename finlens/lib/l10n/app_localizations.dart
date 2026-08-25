@@ -3306,6 +3306,24 @@ abstract class AppLocalizations {
   /// **'Months shorter than this use their last day.'**
   String get qaPaymentDayHint;
 
+  /// No description provided for @qaDiscardTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Discard new account?'**
+  String get qaDiscardTitle;
+
+  /// No description provided for @qaDiscardBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The details you entered won\'t be saved.'**
+  String get qaDiscardBody;
+
+  /// No description provided for @qaDiscardConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Discard'**
+  String get qaDiscardConfirm;
+
   /// No description provided for @qaMoreIcons.
   ///
   /// In en, this message translates to:

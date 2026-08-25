@@ -10,12 +10,21 @@ import '../../core/utils/fx.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/amount_text.dart';
 import '../../shared/widgets/app_card.dart';
+import '../../shared/widgets/destructive_sheet.dart';
 import '../../shared/widgets/form_fields.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/app_typography.dart';
 import 'account_icons.dart';
 import 'icon_picker_sheet.dart';
+
+/// The trailing column [FormRow] reserves for its chevron: an 18pt
+/// `Icons.chevron_right_rounded` preceded by 2pt of left padding (see
+/// `shared/widgets/form_fields.dart`). The amount rows in the New account
+/// details card reserve the same column so every value shares one right edge
+/// (§2). Local to this file on purpose — it mirrors FormRow's internals and
+/// must not be promoted to a global token.
+const double _kFormRowChevronWidth = 20.0;
 
 /// Shell shared by every picker and create sheet: a drag handle, a title bar
 /// and a scrollable body.
@@ -34,11 +43,23 @@ Future<T?> showAppSheet<T>(
   required Widget Function(BuildContext, ScrollController) builder,
   double initialSize = 0.7,
   List<Widget> actions = const [],
+  // Optional dismissal guard (spec §5.2). When supplied it runs on Cancel,
+  // scrim tap, system back, and swipe-down alike; returning false keeps the
+  // sheet open. Callers that omit it (every existing sheet) are untouched.
+  Future<bool> Function()? onDismiss,
+  // When supplied, a muted Cancel affordance is rendered at the right end of
+  // the title row (spec §5). It routes through [onDismiss] when present.
+  String? cancelLabel,
 }) {
   return showModalBottomSheet<T>(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
+    // A guarded sheet takes over its own drag-close (see [_AppSheetBody]);
+    // disabling the outer BottomSheet drag removes its unguarded Navigator.pop
+    // path, leaving the inner DraggableScrollableSheet as the single,
+    // intercepted swipe route. Unguarded sheets keep the default drag.
+    enableDrag: onDismiss == null,
     builder: (context) {
       final media = MediaQuery.of(context);
       // Leave ≥44pt of barrier tappable below the status bar at full extent.
@@ -46,13 +67,108 @@ Future<T?> showAppSheet<T>(
           ((media.size.height - media.padding.top - 44) / media.size.height)
               .clamp(0.5, 0.94);
       final initial = initialSize > maxSize ? maxSize : initialSize;
-      return DraggableScrollableSheet(
-        initialChildSize: initial,
-        minChildSize: 0.4,
-        maxChildSize: maxSize,
-        expand: false,
-        shouldCloseOnMinExtent: true,
-        builder: (context, controller) => Container(
+      return _AppSheetBody(
+        title: title,
+        actions: actions,
+        builder: builder,
+        initialSize: initial,
+        maxSize: maxSize,
+        onDismiss: onDismiss,
+        cancelLabel: cancelLabel,
+      );
+    },
+  );
+}
+
+/// The scrollable sheet scaffold: drag handle, title bar (with optional Cancel),
+/// and body. Stateful only so a guarded sheet can own a
+/// [DraggableScrollableController] and intercept the swipe-down close, which
+/// showModalBottomSheet otherwise routes through a raw `Navigator.pop` that a
+/// [PopScope] cannot catch.
+class _AppSheetBody extends StatefulWidget {
+  const _AppSheetBody({
+    required this.title,
+    required this.actions,
+    required this.builder,
+    required this.initialSize,
+    required this.maxSize,
+    this.onDismiss,
+    this.cancelLabel,
+  });
+
+  final String title;
+  final List<Widget> actions;
+  final Widget Function(BuildContext, ScrollController) builder;
+  final double initialSize;
+  final double maxSize;
+  final Future<bool> Function()? onDismiss;
+  final String? cancelLabel;
+
+  @override
+  State<_AppSheetBody> createState() => _AppSheetBodyState();
+}
+
+class _AppSheetBodyState extends State<_AppSheetBody> {
+  DraggableScrollableController? _dragController;
+
+  /// Re-entrancy latch: the swipe listener can fire repeatedly at the minimum
+  /// extent, and Cancel/scrim can race the confirmation sheet.
+  bool _dismissing = false;
+
+  bool get _guarded => widget.onDismiss != null;
+
+  @override
+  void initState() {
+    super.initState();
+    if (_guarded) _dragController = DraggableScrollableController();
+  }
+
+  @override
+  void dispose() {
+    _dragController?.dispose();
+    super.dispose();
+  }
+
+  Future<void> _attemptDismiss() async {
+    if (_dismissing) return;
+    _dismissing = true;
+    final navigator = Navigator.of(context);
+    final allow = widget.onDismiss == null ? true : await widget.onDismiss!();
+    if (!mounted) {
+      _dismissing = false;
+      return;
+    }
+    if (allow) {
+      navigator.pop();
+    } else {
+      // Kept: if a downward drag shrank the sheet, restore a comfortable height
+      // so the form the user chose to keep is fully visible again.
+      final c = _dragController;
+      if (c != null && c.isAttached && c.size < widget.initialSize) {
+        c.animateTo(
+          widget.initialSize,
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOut,
+        );
+      }
+      _dismissing = false;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final hasCancel = widget.cancelLabel != null;
+    return DraggableScrollableSheet(
+      controller: _dragController,
+      initialChildSize: widget.initialSize,
+      minChildSize: 0.4,
+      maxChildSize: widget.maxSize,
+      expand: false,
+      // Guarded sheets intercept the min-extent close in the notification
+      // listener below so it can route through the discard confirmation.
+      shouldCloseOnMinExtent: !_guarded,
+      builder: (context, controller) {
+        Widget sheet = Container(
           clipBehavior: Clip.antiAlias,
           decoration: const BoxDecoration(
             color: AppColors.surfaceAlt,
@@ -80,20 +196,87 @@ Future<T?> showAppSheet<T>(
                 child: Row(
                   children: [
                     Expanded(
-                      child: Text(title,
-                          style: AppText.title.copyWith(fontSize: 19)),
+                      child: Text(
+                        widget.title,
+                        style: AppText.title.copyWith(fontSize: 19),
+                        // Only constrain wrapping when a Cancel could collide
+                        // with the title; unguarded sheets keep prior behavior.
+                        maxLines: hasCancel ? 1 : null,
+                        overflow:
+                            hasCancel ? TextOverflow.ellipsis : null,
+                      ),
                     ),
-                    ...actions,
+                    ...widget.actions,
+                    if (hasCancel)
+                      _SheetCancelButton(
+                        label: widget.cancelLabel!,
+                        onTap: _attemptDismiss,
+                      ),
                   ],
                 ),
               ),
-              Expanded(child: builder(context, controller)),
+              Expanded(child: widget.builder(context, controller)),
             ],
           ),
+        );
+
+        if (_guarded) {
+          sheet = NotificationListener<DraggableScrollableNotification>(
+            onNotification: (n) {
+              // A downward drag settling at the minimum extent is the swipe
+              // dismissal; route it through the same guard as Cancel (§5.2).
+              if (n.extent <= n.minExtent + 0.0001) _attemptDismiss();
+              return false;
+            },
+            child: PopScope(
+              canPop: false,
+              onPopInvokedWithResult: (didPop, _) {
+                if (didPop) return;
+                // Scrim tap and system back both arrive here via maybePop.
+                _attemptDismiss();
+              },
+              child: sheet,
+            ),
+          );
+        }
+        return sheet;
+      },
+    );
+  }
+}
+
+/// The muted header Cancel affordance (spec §5): a text button — never the
+/// accent colour, so it does not compete with the primary action — with a
+/// ≥44pt tap target reaching into the title row's right gutter.
+class _SheetCancelButton extends StatelessWidget {
+  const _SheetCancelButton({required this.label, required this.onTap});
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: label,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 44, minWidth: 44),
+          alignment: Alignment.center,
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          child: Text(
+            label,
+            style: const TextStyle(
+              fontSize: 14.5,
+              color: AppColors.textSecondary,
+            ),
+          ),
         ),
-      );
-    },
-  );
+      ),
+    );
+  }
 }
 
 /// Spec 4.2 — account picker. The "＋ New account" affordance lives in the
@@ -914,17 +1097,26 @@ Future<Account?> showNewAccountSheet(
   BuildContext context, {
   AccountGroup? initialGroup,
 }) {
+  final l = AppLocalizations.of(context);
+  // The dirty-check lives on the form's state; the header Cancel and every
+  // dismissal gesture reach it through this key (§5.1/§5.2).
+  final formKey = GlobalKey<_NewAccountFormState>();
   return showAppSheet<Account>(
     context,
-    title: AppLocalizations.of(context).qaNewAccount,
+    title: l.qaNewAccount,
     initialSize: 0.85,
-    builder: (context, controller) =>
-        _NewAccountForm(controller: controller, initialGroup: initialGroup),
+    cancelLabel: l.actionCancel,
+    onDismiss: () async => await formKey.currentState?.confirmDiscard() ?? true,
+    builder: (context, controller) => _NewAccountForm(
+      key: formKey,
+      controller: controller,
+      initialGroup: initialGroup,
+    ),
   );
 }
 
 class _NewAccountForm extends StatefulWidget {
-  const _NewAccountForm({required this.controller, this.initialGroup});
+  const _NewAccountForm({super.key, required this.controller, this.initialGroup});
 
   final ScrollController controller;
 
@@ -943,6 +1135,12 @@ class _NewAccountFormState extends State<_NewAccountForm> {
   final _balance = TextEditingController();
   final _limit = TextEditingController(); // Credit Cards
   final _paymentDay = TextEditingController(); // Bank Loans
+
+  // Focus is requested when the user taps anywhere along an amount row's
+  // trailing region, replacing the tap target the old fixed 92pt box gave (§1).
+  final _balanceFocus = FocusNode();
+  final _limitFocus = FocusNode();
+  final _paymentDayFocus = FocusNode();
 
   AccountGroup? _group; // nothing selected initially (spec §5.3)
   String _currency = Fx.baseCurrency;
@@ -968,10 +1166,43 @@ class _NewAccountFormState extends State<_NewAccountForm> {
       c.removeListener(_onChanged);
       c.dispose();
     }
+    _balanceFocus.dispose();
+    _limitFocus.dispose();
+    _paymentDayFocus.dispose();
     super.dispose();
   }
 
   bool get _isLiability => _group?.isLiability ?? false;
+
+  /// True once the user has entered anything worth losing (spec §5.1). A form
+  /// opened on a group starts with that group's default glyph, so neither the
+  /// pre-selected group nor its default icon counts as dirty.
+  bool get _isDirty {
+    final g = _group;
+    return _name.text.trim().isNotEmpty ||
+        g != widget.initialGroup ||
+        _balance.text.trim().isNotEmpty ||
+        _limit.text.trim().isNotEmpty ||
+        _paymentDay.text.trim().isNotEmpty ||
+        (g != null && _icon != defaultIconFor(g));
+  }
+
+  /// Dismissal guard (spec §5.1): an untouched form closes silently; a filled
+  /// one asks first, reusing the app's standard destructive confirmation.
+  /// Returns true when the sheet may close.
+  Future<bool> confirmDiscard() async {
+    if (!_isDirty) return true;
+    if (!mounted) return true;
+    final l = AppLocalizations.of(context);
+    return showDestructiveConfirm(
+      context,
+      title: l.qaDiscardTitle,
+      message: l.qaDiscardBody,
+      impact: const [],
+      confirmLabel: l.qaDiscardConfirm,
+      cancelLabel: l.dsKeepIt,
+    );
+  }
 
   bool get _limitValid {
     final t = _limit.text.trim();
@@ -1203,6 +1434,7 @@ class _NewAccountFormState extends State<_NewAccountForm> {
               _amountRow(
                 label: _isLiability ? AppLocalizations.of(context).qaAmountOwed : AppLocalizations.of(context).eaStartingBalance,
                 controller: _balance,
+                focusNode: _balanceFocus,
                 valueColor:
                     _isLiability ? AppColors.negative : AppColors.textPrimary,
               ),
@@ -1211,6 +1443,7 @@ class _NewAccountFormState extends State<_NewAccountForm> {
                 _amountRow(
                   label: AppLocalizations.of(context).eaCreditLimit,
                   controller: _limit,
+                  focusNode: _limitFocus,
                   valueColor: AppColors.textPrimary,
                   error: !_limitValid,
                 ),
@@ -1220,6 +1453,7 @@ class _NewAccountFormState extends State<_NewAccountForm> {
                 _amountRow(
                   label: AppLocalizations.of(context).qaPaymentDay,
                   controller: _paymentDay,
+                  focusNode: _paymentDayFocus,
                   valueColor: AppColors.textPrimary,
                   showSymbol: false,
                   integer: true,
@@ -1319,6 +1553,7 @@ class _NewAccountFormState extends State<_NewAccountForm> {
   Widget _amountRow({
     required String label,
     required TextEditingController controller,
+    required FocusNode focusNode,
     required Color valueColor,
     bool showSymbol = true,
     bool integer = false,
@@ -1326,51 +1561,100 @@ class _NewAccountFormState extends State<_NewAccountForm> {
     bool error = false,
   }) {
     final color = error ? AppColors.negative : valueColor;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(label,
-                style: const TextStyle(
-                    fontSize: 14.5, color: AppColors.textPrimary)),
+    const fieldStyle = TextStyle(fontSize: 14.5, fontWeight: FontWeight.w600);
+
+    // §1 — size the field to its content so the symbol hugs the first digit and
+    // the pair grows together. Measuring is cleaner than IntrinsicWidth here: an
+    // IntrinsicWidth around an EditableText has no well-defined intrinsic width
+    // and reflows unpredictably as the caret moves. Empty → measure the "0"
+    // hint so the field never collapses and the symbol lands right beside it.
+    // The comfortable touch area is the wrapping GestureDetector, not a padded
+    // field (which is what stranded the symbol from the 0 in the first place).
+    final painter = TextPainter(
+      text: TextSpan(
+        text: controller.text.isEmpty ? '0' : controller.text,
+        style: fieldStyle,
+      ),
+      textDirection: TextDirection.ltr,
+      textScaler: MediaQuery.textScalerOf(context),
+    )..layout();
+    // +2 keeps the caret at the right edge from clipping as digits are added.
+    final fieldWidth = painter.width + 2;
+
+    final field = Flexible(
+      // Loose so a very long value at 320pt shrinks and scrolls instead of
+      // overflowing the row; short values still take exactly [fieldWidth].
+      fit: FlexFit.loose,
+      child: SizedBox(
+        width: fieldWidth,
+        child: TextField(
+          controller: controller,
+          focusNode: focusNode,
+          textAlign: TextAlign.right,
+          keyboardType: integer
+              ? TextInputType.number
+              : const TextInputType.numberWithOptions(decimal: true),
+          inputFormatters: [
+            FilteringTextInputFormatter.allow(
+                integer ? RegExp(r'[0-9]') : RegExp(r'[0-9.]')),
+            if (maxLength != null) LengthLimitingTextInputFormatter(maxLength),
+          ],
+          cursorColor: AppColors.accent,
+          style: fieldStyle.copyWith(color: color),
+          decoration: const InputDecoration(
+            isDense: true,
+            contentPadding: EdgeInsets.zero,
+            border: InputBorder.none,
+            hintText: '0',
+            hintStyle: TextStyle(color: AppColors.textTertiary),
           ),
-          if (showSymbol)
-            Padding(
-              padding: const EdgeInsets.only(right: 1),
-              child: Text(currencySymbol(_currency),
-                  style: TextStyle(
-                      fontSize: 14.5,
-                      fontWeight: FontWeight.w600,
-                      color: color)),
-            ),
-          SizedBox(
-            width: 92,
-            child: TextField(
-              controller: controller,
-              textAlign: TextAlign.right,
-              keyboardType: integer
-                  ? TextInputType.number
-                  : const TextInputType.numberWithOptions(decimal: true),
-              inputFormatters: [
-                FilteringTextInputFormatter.allow(
-                    integer ? RegExp(r'[0-9]') : RegExp(r'[0-9.]')),
-                if (maxLength != null)
-                  LengthLimitingTextInputFormatter(maxLength),
-              ],
-              cursorColor: AppColors.accent,
-              style: TextStyle(
-                  fontSize: 14.5, fontWeight: FontWeight.w600, color: color),
-              decoration: const InputDecoration(
-                isDense: true,
-                contentPadding: EdgeInsets.zero,
-                border: InputBorder.none,
-                hintText: '0',
-                hintStyle: TextStyle(color: AppColors.textTertiary),
+        ),
+      ),
+    );
+
+    return ConstrainedBox(
+      // §3 — match FormRow's row height so hairlines fall at even intervals;
+      // mirrors the minHeight pattern already used by _groupRow.
+      constraints: const BoxConstraints(minHeight: 44),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+        child: Row(
+          children: [
+            Flexible(
+              child: Text(
+                label,
+                style:
+                    const TextStyle(fontSize: 14.5, color: AppColors.textPrimary),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
-          ),
-        ],
+            // The whole right half is one tap target that focuses the field,
+            // preserving the reach of the old fixed 92pt box (§1). Its content
+            // right-aligns so the value hugs the shared right edge.
+            Expanded(
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: focusNode.requestFocus,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    if (showSymbol)
+                      Padding(
+                        padding: const EdgeInsets.only(right: 1),
+                        child: Text(currencySymbol(_currency),
+                            style: fieldStyle.copyWith(color: color)),
+                      ),
+                    field,
+                    // §2 — reserve the same trailing column FormRow gives its
+                    // chevron so every value in the card shares one right edge.
+                    const SizedBox(width: _kFormRowChevronWidth),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

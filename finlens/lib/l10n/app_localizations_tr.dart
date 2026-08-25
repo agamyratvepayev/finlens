@@ -2026,6 +2026,15 @@ class AppLocalizationsTr extends AppLocalizations {
   String get qaPaymentDayHint => 'Bundan kısa aylar son günlerini kullanır.';
 
   @override
+  String get qaDiscardTitle => 'Yeni hesaptan vazgeçilsin mi?';
+
+  @override
+  String get qaDiscardBody => 'Girdiğiniz bilgiler kaydedilmeyecek.';
+
+  @override
+  String get qaDiscardConfirm => 'Vazgeç';
+
+  @override
   String get qaMoreIcons => 'Daha fazla simge';
 
   @override

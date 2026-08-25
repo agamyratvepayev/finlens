@@ -2031,6 +2031,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get qaPaymentDayHint => 'Months shorter than this use their last day.';
 
   @override
+  String get qaDiscardTitle => 'Discard new account?';
+
+  @override
+  String get qaDiscardBody => 'The details you entered won\'t be saved.';
+
+  @override
+  String get qaDiscardConfirm => 'Discard';
+
+  @override
   String get qaMoreIcons => 'More icons';
 
   @override
