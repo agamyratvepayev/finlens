@@ -274,6 +274,36 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String weekdayShort(String weekday) {
+    String _temp0 = intl.Intl.selectLogic(weekday, {
+      '1': 'Mon',
+      '2': 'Tue',
+      '3': 'Wed',
+      '4': 'Thu',
+      '5': 'Fri',
+      '6': 'Sat',
+      '7': 'Sun',
+      'other': '',
+    });
+    return '$_temp0';
+  }
+
+  @override
+  String weekdayNarrow(String weekday) {
+    String _temp0 = intl.Intl.selectLogic(weekday, {
+      '1': 'M',
+      '2': 'T',
+      '3': 'W',
+      '4': 'T',
+      '5': 'F',
+      '6': 'S',
+      '7': 'S',
+      'other': '',
+    });
+    return '$_temp0';
+  }
+
+  @override
   String get dateToday => 'Today';
 
   @override
@@ -2028,6 +2058,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get rsEveryWeek => 'Every week';
 
   @override
+  String get rsEvery2Weeks => 'Every 2 weeks';
+
+  @override
   String get rsEveryMonth => 'Every month';
 
   @override
@@ -2059,6 +2092,38 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String rsYearly(Object day, Object month) {
     return 'every year on $day $month';
+  }
+
+  @override
+  String get rsNext => 'Next';
+
+  @override
+  String get rsShorterMonths => 'Shorter months use their last day';
+
+  @override
+  String get rsEveryDay => 'Every day';
+
+  @override
+  String get rsWeekdays => 'Weekdays';
+
+  @override
+  String rsNDaysWeek(int count) {
+    return '$count days a week';
+  }
+
+  @override
+  String rsNDaysMonth(int count) {
+    return '$count days a month';
+  }
+
+  @override
+  String rsMonthlyOnDay(Object day) {
+    return 'Every month on the $day';
+  }
+
+  @override
+  String rsDaysJoin(Object head, Object last) {
+    return '$head & $last';
   }
 
   @override

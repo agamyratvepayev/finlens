@@ -274,6 +274,36 @@ class AppLocalizationsTk extends AppLocalizations {
   }
 
   @override
+  String weekdayShort(String weekday) {
+    String _temp0 = intl.Intl.selectLogic(weekday, {
+      '1': 'Duş',
+      '2': 'Siş',
+      '3': 'Çar',
+      '4': 'Pen',
+      '5': 'Ann',
+      '6': 'Şen',
+      '7': 'Ýek',
+      'other': '',
+    });
+    return '$_temp0';
+  }
+
+  @override
+  String weekdayNarrow(String weekday) {
+    String _temp0 = intl.Intl.selectLogic(weekday, {
+      '1': 'D',
+      '2': 'S',
+      '3': 'Ç',
+      '4': 'P',
+      '5': 'A',
+      '6': 'Ş',
+      '7': 'Ý',
+      'other': '',
+    });
+    return '$_temp0';
+  }
+
+  @override
   String get dateToday => 'Şu gün';
 
   @override
@@ -2025,6 +2055,9 @@ class AppLocalizationsTk extends AppLocalizations {
   String get rsEveryWeek => 'Her hepde';
 
   @override
+  String get rsEvery2Weeks => '2 hepdede bir';
+
+  @override
   String get rsEveryMonth => 'Her aý';
 
   @override
@@ -2056,6 +2089,38 @@ class AppLocalizationsTk extends AppLocalizations {
   @override
   String rsYearly(Object day, Object month) {
     return 'her ýyl $day $month';
+  }
+
+  @override
+  String get rsNext => 'Indiki';
+
+  @override
+  String get rsShorterMonths => 'Gysga aýlar iň soňky güni ulanýar';
+
+  @override
+  String get rsEveryDay => 'Her gün';
+
+  @override
+  String get rsWeekdays => 'Iş günleri';
+
+  @override
+  String rsNDaysWeek(int count) {
+    return 'hepdede $count gün';
+  }
+
+  @override
+  String rsNDaysMonth(int count) {
+    return 'aýda $count gün';
+  }
+
+  @override
+  String rsMonthlyOnDay(Object day) {
+    return 'her aýyň $day';
+  }
+
+  @override
+  String rsDaysJoin(Object head, Object last) {
+    return '$head we $last';
   }
 
   @override

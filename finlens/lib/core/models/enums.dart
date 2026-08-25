@@ -96,7 +96,10 @@ enum TaskStatus { open, paid, skipped }
 enum Priority { low, normal, high }
 
 /// Repeat cadences. Labels localized — see `RepeatFrequencyL10n.label`.
-enum RepeatFrequency { none, weekly, monthly, quarterly, yearly }
+/// `biweekly` sits between `weekly` and `monthly` to match the Repeat sheet's
+/// row order. Nothing persists this enum by index (no persistence layer; seed
+/// data and callers all use named values / `switch`), so the insertion is safe.
+enum RepeatFrequency { none, weekly, biweekly, monthly, quarterly, yearly }
 
 /// Comparison window for the Balance header selector (spec 1.1). Label +
 /// caption localized — see `ComparePeriodL10n`.

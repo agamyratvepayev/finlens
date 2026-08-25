@@ -540,6 +540,18 @@ abstract class AppLocalizations {
   /// **'{weekday, select, 1{Monday} 2{Tuesday} 3{Wednesday} 4{Thursday} 5{Friday} 6{Saturday} 7{Sunday} other{}}'**
   String weekdayLong(String weekday);
 
+  /// Abbreviated weekday name by ISO weekday number 1 (Mon) - 7 (Sun).
+  ///
+  /// In en, this message translates to:
+  /// **'{weekday, select, 1{Mon} 2{Tue} 3{Wed} 4{Thu} 5{Fri} 6{Sat} 7{Sun} other{}}'**
+  String weekdayShort(String weekday);
+
+  /// Single-letter weekday initial by ISO weekday number 1 (Mon) - 7 (Sun).
+  ///
+  /// In en, this message translates to:
+  /// **'{weekday, select, 1{M} 2{T} 3{W} 4{T} 5{F} 6{S} 7{S} other{}}'**
+  String weekdayNarrow(String weekday);
+
   /// No description provided for @dateToday.
   ///
   /// In en, this message translates to:
@@ -3354,6 +3366,12 @@ abstract class AppLocalizations {
   /// **'Every week'**
   String get rsEveryWeek;
 
+  /// No description provided for @rsEvery2Weeks.
+  ///
+  /// In en, this message translates to:
+  /// **'Every 2 weeks'**
+  String get rsEvery2Weeks;
+
   /// No description provided for @rsEveryMonth.
   ///
   /// In en, this message translates to:
@@ -3401,6 +3419,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'every year on {day} {month}'**
   String rsYearly(Object day, Object month);
+
+  /// No description provided for @rsNext.
+  ///
+  /// In en, this message translates to:
+  /// **'Next'**
+  String get rsNext;
+
+  /// No description provided for @rsShorterMonths.
+  ///
+  /// In en, this message translates to:
+  /// **'Shorter months use their last day'**
+  String get rsShorterMonths;
+
+  /// No description provided for @rsEveryDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Every day'**
+  String get rsEveryDay;
+
+  /// No description provided for @rsWeekdays.
+  ///
+  /// In en, this message translates to:
+  /// **'Weekdays'**
+  String get rsWeekdays;
+
+  /// No description provided for @rsNDaysWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} days a week'**
+  String rsNDaysWeek(int count);
+
+  /// No description provided for @rsNDaysMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} days a month'**
+  String rsNDaysMonth(int count);
+
+  /// No description provided for @rsMonthlyOnDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Every month on the {day}'**
+  String rsMonthlyOnDay(Object day);
+
+  /// No description provided for @rsDaysJoin.
+  ///
+  /// In en, this message translates to:
+  /// **'{head} & {last}'**
+  String rsDaysJoin(Object head, Object last);
 
   /// No description provided for @qaExchange.
   ///

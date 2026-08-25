@@ -104,6 +104,14 @@ String monthLong(int m, AppLocalizations l) => l.monthLong('$m');
 /// Full weekday name from an ISO weekday (1 = Mon … 7 = Sun).
 String weekdayLong(DateTime d, AppLocalizations l) => l.weekdayLong('${d.weekday}');
 
+/// Abbreviated weekday name ("Tue" / "вт" / "Sal") from an ISO weekday.
+String weekdayShort(int weekday, AppLocalizations l) =>
+    l.weekdayShort('$weekday');
+
+/// Single-letter weekday initial ("T") from an ISO weekday, for the day chips.
+String weekdayNarrow(int weekday, AppLocalizations l) =>
+    l.weekdayNarrow('$weekday');
+
 /// "9 Aug"
 String dayMonth(DateTime d, AppLocalizations l) => '${d.day} ${monthShort(d.month, l)}';
 

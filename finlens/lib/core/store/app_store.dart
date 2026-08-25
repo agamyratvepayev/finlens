@@ -1675,6 +1675,8 @@ class AppStore extends ChangeNotifier {
     required IconData icon,
     String? categoryId,
     RepeatFrequency repeats = RepeatFrequency.none,
+    Set<int> weekdays = const {},
+    Set<int> daysOfMonth = const {},
     Priority priority = Priority.normal,
     int? reminderDaysBefore,
     TimeOfDay? reminderTime,
@@ -1688,6 +1690,8 @@ class AppStore extends ChangeNotifier {
       icon: icon,
       categoryId: categoryId,
       repeats: repeats,
+      weekdays: weekdays,
+      daysOfMonth: daysOfMonth,
       priority: priority,
       reminderDaysBefore: reminderDaysBefore,
       reminderTime: reminderTime,
@@ -1705,6 +1709,8 @@ class AppStore extends ChangeNotifier {
     DateTime? dueDate,
     String? categoryId,
     RepeatFrequency? repeats,
+    Set<int>? weekdays,
+    Set<int>? daysOfMonth,
     Priority? priority,
     int? reminderDaysBefore,
     TimeOfDay? reminderTime,
@@ -1717,6 +1723,8 @@ class AppStore extends ChangeNotifier {
       ..expectedAmount = expectedAmount ?? task.expectedAmount
       ..dueDate = dueDate ?? task.dueDate
       ..repeats = repeats ?? task.repeats
+      ..weekdays = weekdays ?? task.weekdays
+      ..daysOfMonth = daysOfMonth ?? task.daysOfMonth
       ..priority = priority ?? task.priority
       ..reminderDaysBefore =
           clearReminder ? null : (reminderDaysBefore ?? task.reminderDaysBefore)

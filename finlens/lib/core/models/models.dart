@@ -380,6 +380,8 @@ class Task {
     required this.icon,
     this.categoryId,
     this.repeats = RepeatFrequency.none,
+    this.weekdays = const {},
+    this.daysOfMonth = const {},
     this.skippedDates = const [],
     this.priority = Priority.normal,
     this.reminderDaysBefore,
@@ -401,6 +403,23 @@ class Task {
   /// distort that budget.
   String? categoryId;
   RepeatFrequency repeats;
+
+  /// Weekdays a weekly series fires on, [DateTime.monday]..[DateTime.sunday].
+  /// Empty means "the seed date's own weekday". Ignored unless
+  /// `repeats == weekly`.
+  Set<int> weekdays;
+
+  /// Days of the month a series fires on, 1..31. For `monthly` this is the set
+  /// of days the user *chose* (one or several); for `quarterly`/`yearly` it
+  /// carries the single chosen day so the cadence never drifts (there is no
+  /// grid for those — see the Repeat sheet). Empty means "the seed date's own
+  /// day".
+  ///
+  /// These are the days the user chose, never rewritten to a day a short month
+  /// forced: a month too short fires on its last day (clamped), and the next
+  /// long-enough month returns to the chosen day.
+  Set<int> daysOfMonth;
+
   List<DateTime> skippedDates;
   Priority priority;
   int? reminderDaysBefore;
@@ -420,23 +439,84 @@ class Task {
     return due.difference(today).inDays;
   }
 
-  /// Advances the series past [from] honouring the repeat rule.
+  /// Advances the series past [from] honouring the repeat rule. Pure — takes no
+  /// clock reading, so a preview and a real advance always agree.
+  ///
+  /// The chosen day/weekday is read from [daysOfMonth]/[weekdays] (or, when
+  /// those are empty, from [from] itself for backward compatibility). Month
+  /// candidates are *clamped* to the month's length, never allowed to roll
+  /// forward — so a series due on the 31st fires on a short month's last day and
+  /// returns to the 31st afterwards instead of drifting to the 1st.
   DateTime nextOccurrence(DateTime from) {
-    var next = from;
     switch (repeats) {
       case RepeatFrequency.none:
         return from;
       case RepeatFrequency.weekly:
-        next = from.add(const Duration(days: 7));
+        if (weekdays.isEmpty) return from.add(const Duration(days: 7));
+        return _nextWeekday(from, weekdays);
+      case RepeatFrequency.biweekly:
+        return from.add(const Duration(days: 14));
       case RepeatFrequency.monthly:
-        next = DateTime(from.year, from.month + 1, from.day);
+        return _nextMonthly(from, daysOfMonth.isEmpty ? {from.day} : daysOfMonth);
       case RepeatFrequency.quarterly:
-        next = DateTime(from.year, from.month + 3, from.day);
+        return _monthStep(from, 3);
       case RepeatFrequency.yearly:
-        next = DateTime(from.year + 1, from.month, from.day);
+        return _monthStep(from, 12);
     }
-    return next;
   }
+
+  /// The next day strictly after [from] whose weekday is in [wds]. Searches the
+  /// following seven days; with all seven weekdays selected this yields the very
+  /// next day (a daily cadence).
+  DateTime _nextWeekday(DateTime from, Set<int> wds) {
+    for (var i = 1; i <= 7; i++) {
+      final cand =
+          DateTime(from.year, from.month, from.day + i, from.hour, from.minute);
+      if (wds.contains(cand.weekday)) return cand;
+    }
+    return from.add(const Duration(days: 7));
+  }
+
+  /// The next date strictly after [from] whose day-of-month is in [days],
+  /// searching forward month by month. Each chosen day is clamped to the
+  /// candidate month's length (so 31 becomes 30/28/29 in short months) and the
+  /// clamped days are visited in ascending order.
+  DateTime _nextMonthly(DateTime from, Set<int> days) {
+    var y = from.year, m = from.month;
+    // A guard well past any real gap between two chosen days.
+    for (var guard = 0; guard < 48; guard++) {
+      final dim = _daysInMonth(y, m);
+      final clamped = days.map((d) => d > dim ? dim : d).toSet().toList()..sort();
+      for (final d in clamped) {
+        final cand = DateTime(y, m, d, from.hour, from.minute);
+        if (cand.isAfter(from)) return cand;
+      }
+      m++;
+      if (m > 12) {
+        m = 1;
+        y++;
+      }
+    }
+    // Unreachable in practice; keeps the return type non-null.
+    return DateTime(from.year, from.month + 1, from.day, from.hour, from.minute);
+  }
+
+  /// Adds [months] to [from] with the chosen day clamped to the target month.
+  /// The chosen day comes from [daysOfMonth] (the seed day the user picked) so
+  /// quarterly/yearly series clamp for a short month yet return to that day —
+  /// e.g. 31 Jan → 30 Apr → 31 Jul, 29 Feb → 28 Feb → 29 Feb in the next leap
+  /// year — rather than drifting.
+  DateTime _monthStep(DateTime from, int months) {
+    final seedDay = daysOfMonth.isEmpty ? from.day : daysOfMonth.first;
+    final total = from.month - 1 + months;
+    final y = from.year + total ~/ 12;
+    final m = total % 12 + 1;
+    final day = seedDay > _daysInMonth(y, m) ? _daysInMonth(y, m) : seedDay;
+    return DateTime(y, m, day, from.hour, from.minute);
+  }
+
+  static int _daysInMonth(int year, int month) =>
+      DateTime(year, month + 1, 0).day;
 
   /// The next 3 dates shown as a preview in New/Edit Task (spec 3.7 / 5.7).
   List<DateTime> upcomingPreview([int count = 3]) {

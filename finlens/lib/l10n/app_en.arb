@@ -106,6 +106,16 @@
     "description": "Full weekday name by ISO weekday number 1 (Mon) - 7 (Sun).",
     "placeholders": { "weekday": { "type": "String" } }
   },
+  "weekdayShort": "{weekday, select, 1{Mon} 2{Tue} 3{Wed} 4{Thu} 5{Fri} 6{Sat} 7{Sun} other{}}",
+  "@weekdayShort": {
+    "description": "Abbreviated weekday name by ISO weekday number 1 (Mon) - 7 (Sun).",
+    "placeholders": { "weekday": { "type": "String" } }
+  },
+  "weekdayNarrow": "{weekday, select, 1{M} 2{T} 3{W} 4{T} 5{F} 6{S} 7{S} other{}}",
+  "@weekdayNarrow": {
+    "description": "Single-letter weekday initial by ISO weekday number 1 (Mon) - 7 (Sun).",
+    "placeholders": { "weekday": { "type": "String" } }
+  },
 
   "dateToday": "Today",
   "dateYesterday": "Yesterday",
@@ -705,6 +715,7 @@
   "rsRepeat": "Repeat",
   "rsHowOften": "How often",
   "rsEveryWeek": "Every week",
+  "rsEvery2Weeks": "Every 2 weeks",
   "rsEveryMonth": "Every month",
   "rsEveryQuarter": "Every quarter",
   "rsEveryYear": "Every year",
@@ -717,6 +728,18 @@
   "rsQuarterly": "on the {day}, every 3 months",
   "@rsQuarterly": { "placeholders": { "day": {} } },
   "rsYearly": "every year on {day} {month}",
+  "rsNext": "Next",
+  "rsShorterMonths": "Shorter months use their last day",
+  "rsEveryDay": "Every day",
+  "rsWeekdays": "Weekdays",
+  "rsNDaysWeek": "{count} days a week",
+  "@rsNDaysWeek": { "placeholders": { "count": { "type": "int" } } },
+  "rsNDaysMonth": "{count} days a month",
+  "@rsNDaysMonth": { "placeholders": { "count": { "type": "int" } } },
+  "rsMonthlyOnDay": "Every month on the {day}",
+  "@rsMonthlyOnDay": { "placeholders": { "day": {} } },
+  "rsDaysJoin": "{head} & {last}",
+  "@rsDaysJoin": { "placeholders": { "head": {}, "last": {} } },
   "qaExchange": "Exchange",
   "qaEnterNewBalance": "Enter the new balance",
   "qaDeleteSplit": "Delete split",

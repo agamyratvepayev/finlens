@@ -4,15 +4,15 @@ import '../../core/l10n/enum_labels.dart';
 import '../../core/models/models.dart';
 import '../../core/store/app_store.dart';
 import '../../core/utils/formatters.dart';
+import '../../core/utils/repeat_labels.dart';
 import '../../l10n/app_localizations.dart';
-import '../../shared/widgets/app_card.dart';
 import '../../shared/widgets/destructive_sheet.dart';
 import '../../shared/widgets/form_fields.dart';
 import '../../shared/widgets/screen_header.dart';
 import '../../theme/app_colors.dart';
-import '../../theme/app_theme.dart';
 import '../../theme/app_typography.dart';
 import '../quick_add/pickers.dart';
+import '../quick_add/repeat_sheet.dart';
 import 'edit_scaffold.dart';
 
 /// Spec 5.7 — task parameters, plus the strict separation between acting on
@@ -46,6 +46,8 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
   late String? _categoryId = _task.categoryId;
   late DateTime _due = _task.dueDate;
   late RepeatFrequency _repeats = _task.repeats;
+  late Set<int> _weekdays = {..._task.weekdays};
+  late Set<int> _daysOfMonth = {..._task.daysOfMonth};
   late final Priority _priority = _task.priority;
   late bool _payOut = _task.isPayOut;
   late bool _remind = _task.reminderDaysBefore != null;
@@ -64,19 +66,19 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
 
   List<DateTime> get _preview {
     if (_repeats == RepeatFrequency.none) return const [];
-    final out = <DateTime>[];
-    var d = _due;
-    for (var i = 0; i < 3; i++) {
-      out.add(d);
-      d = switch (_repeats) {
-        RepeatFrequency.none => d,
-        RepeatFrequency.weekly => d.add(const Duration(days: 7)),
-        RepeatFrequency.monthly => DateTime(d.year, d.month + 1, d.day),
-        RepeatFrequency.quarterly => DateTime(d.year, d.month + 3, d.day),
-        RepeatFrequency.yearly => DateTime(d.year + 1, d.month, d.day),
-      };
-    }
-    return out;
+    // A transient Task runs the one true [Task.nextOccurrence] rule against the
+    // locally-edited frequency, due date and day sets.
+    return Task(
+      id: '',
+      title: '',
+      linkedAccountId: '',
+      expectedAmount: 0,
+      dueDate: _due,
+      icon: _task.icon,
+      repeats: _repeats,
+      weekdays: _weekdays,
+      daysOfMonth: _daysOfMonth,
+    ).upcomingPreview(3);
   }
 
   @override
@@ -161,11 +163,13 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
               icon: Icons.repeat_rounded,
               label: _repeats == RepeatFrequency.none
                   ? l.etRepeats
-                  : l.etRepeatsCadence(_repeats.label(l).toLowerCase()),
+                  : l.etRepeatsCadence(
+                      repeatCadenceLabel(_repeats, _weekdays, _daysOfMonth, _due, l)
+                          .toLowerCase()),
               // Spec 5.7 — the preview is what makes a series comprehensible.
               subtitle: _preview.isEmpty
                   ? l.etOneOff
-                  : '${_preview.map((d) => dayMonth(d, AppLocalizations.of(context))).join(' · ')} …',
+                  : '${_preview.map((d) => repeatPreviewDate(d, _repeats, AppLocalizations.of(context))).join(' · ')} …',
               value:
                   _preview.isEmpty ? _repeats.label(AppLocalizations.of(context)) : null,
               showChevron: true,
@@ -241,45 +245,19 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
   }
 
   Future<void> _pickRepeat() async {
-    final picked = await showAppSheet<RepeatFrequency>(
+    final sel = await showRepeatSheet(
       context,
-      title: AppLocalizations.of(context).etRepeats,
-      initialSize: 0.5,
-      builder: (context, controller) => ListView(
-        controller: controller,
-        padding: const EdgeInsets.fromLTRB(
-          Insets.gutter,
-          0,
-          Insets.gutter,
-          Insets.xxl,
-        ),
-        children: [
-          AppCard(
-            child: Column(
-              children: [
-                for (var i = 0; i < RepeatFrequency.values.length; i++) ...[
-                  if (i > 0) const RowDivider(indent: Insets.md),
-                  FormRow(
-                    label:
-                        RepeatFrequency.values[i].label(AppLocalizations.of(context)),
-                    onTap: () =>
-                        Navigator.of(context).pop(RepeatFrequency.values[i]),
-                    trailing: RepeatFrequency.values[i] == _repeats
-                        ? const Icon(
-                            Icons.check_rounded,
-                            size: 18,
-                            color: AppColors.accentSoft,
-                          )
-                        : null,
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ],
-      ),
+      current: _repeats,
+      date: _due,
+      weekdays: _weekdays,
+      daysOfMonth: _daysOfMonth,
     );
-    if (picked != null) setState(() => _repeats = picked);
+    if (sel == null) return;
+    setState(() {
+      _repeats = sel.freq;
+      _weekdays = sel.weekdays;
+      _daysOfMonth = sel.daysOfMonth;
+    });
   }
 
   void _save() {
@@ -291,6 +269,8 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
       dueDate: _due,
       categoryId: _categoryId,
       repeats: _repeats,
+      weekdays: _weekdays,
+      daysOfMonth: _daysOfMonth,
       priority: _priority,
       reminderDaysBefore: _remind ? _remindDays : null,
       reminderTime: _remind ? _remindTime : null,

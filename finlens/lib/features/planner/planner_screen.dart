@@ -4,6 +4,7 @@ import '../../core/l10n/enum_labels.dart';
 import '../../core/models/models.dart';
 import '../../core/store/app_store.dart';
 import '../../core/utils/formatters.dart';
+import '../../core/utils/repeat_labels.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/amount_text.dart';
 import '../../shared/widgets/app_card.dart';
@@ -1118,7 +1119,13 @@ class _TaskRow extends StatelessWidget {
                         ),
                         const SizedBox(width: 3),
                         Text(
-                          task.repeats.label(AppLocalizations.of(context)).toLowerCase(),
+                          repeatCadenceLabel(
+                            task.repeats,
+                            task.weekdays,
+                            task.daysOfMonth,
+                            task.dueDate,
+                            AppLocalizations.of(context),
+                          ),
                           style: AppText.caption.copyWith(
                             fontSize: 11,
                             color: AppColors.textTertiary,

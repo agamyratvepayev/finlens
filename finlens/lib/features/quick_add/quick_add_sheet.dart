@@ -5,6 +5,7 @@ import '../../core/models/models.dart';
 import '../../core/store/app_store.dart';
 import '../../core/utils/formatters.dart';
 import '../../core/utils/fx.dart';
+import '../../core/utils/repeat_labels.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/app_card.dart';
 import '../../shared/widgets/txn_row.dart';
@@ -108,6 +109,8 @@ class _QuickAddScreenState extends State<QuickAddScreen>
 
   // Toggles, shared across types that use them.
   RepeatFrequency _repeatFreq = RepeatFrequency.none;
+  Set<int> _repeatWeekdays = {}; // weekly fire-days (ISO weekday)
+  Set<int> _repeatDaysOfMonth = {}; // monthly fire-days / seed day
   String? _recurrenceTaskId; // the Planner Task backing an existing repeat
   List<SplitLine>? _splitLines; // non-null once a split is applied
   bool _hasFee = false;
@@ -167,8 +170,10 @@ class _QuickAddScreenState extends State<QuickAddScreen>
     final src = widget.editing!;
     _recurrenceTaskId = src.recurrenceTaskId;
     if (_recurrenceTaskId != null) {
-      _repeatFreq = store.taskById(_recurrenceTaskId)?.repeats ??
-          RepeatFrequency.none;
+      final task = store.taskById(_recurrenceTaskId);
+      _repeatFreq = task?.repeats ?? RepeatFrequency.none;
+      _repeatWeekdays = {...?task?.weekdays};
+      _repeatDaysOfMonth = {...?task?.daysOfMonth};
     }
     if (src.splitGroupId != null) {
       final group = store.txns
@@ -351,15 +356,17 @@ class _QuickAddScreenState extends State<QuickAddScreen>
     );
   }
 
-  FormToggle _repeatToggle() => FormToggle(
-        icon: Icons.repeat_rounded,
-        label: repeatButtonLabel(_repeatFreq, AppLocalizations.of(context)),
-        value: _hasRepeat,
-        semanticValue: _hasRepeat
-            ? repeatButtonLabel(_repeatFreq, AppLocalizations.of(context)).toLowerCase()
-            : 'off',
-        onTap: _openRepeat,
-      );
+  FormToggle _repeatToggle() {
+    final label = repeatButtonLabel(_repeatFreq, _repeatWeekdays,
+        _repeatDaysOfMonth, _date, AppLocalizations.of(context));
+    return FormToggle(
+      icon: Icons.repeat_rounded,
+      label: label,
+      value: _hasRepeat,
+      semanticValue: _hasRepeat ? label.toLowerCase() : 'off',
+      onTap: _openRepeat,
+    );
+  }
 
   FormToggle _splitToggle(AppStore store) => FormToggle(
         icon: Icons.call_split_rounded,
@@ -384,10 +391,19 @@ class _QuickAddScreenState extends State<QuickAddScreen>
       return;
     }
     setState(() => _keypadOpen = false);
-    final freq =
-        await showRepeatSheet(context, current: _repeatFreq, date: _date);
-    if (freq == null || !mounted) return;
-    setState(() => _repeatFreq = freq);
+    final sel = await showRepeatSheet(
+      context,
+      current: _repeatFreq,
+      date: _date,
+      weekdays: _repeatWeekdays,
+      daysOfMonth: _repeatDaysOfMonth,
+    );
+    if (sel == null || !mounted) return;
+    setState(() {
+      _repeatFreq = sel.freq;
+      _repeatWeekdays = sel.weekdays;
+      _repeatDaysOfMonth = sel.daysOfMonth;
+    });
   }
 
   Future<void> _openSplit(AppStore store) async {
@@ -1027,17 +1043,6 @@ class _QuickAddScreenState extends State<QuickAddScreen>
 
   // ── Save ──────────────────────────────────────────────────────────────────
 
-  DateTime _nextDate(DateTime d, RepeatFrequency f) => switch (f) {
-        RepeatFrequency.weekly => d.add(const Duration(days: 7)),
-        RepeatFrequency.monthly =>
-          DateTime(d.year, d.month + 1, d.day, d.hour, d.minute),
-        RepeatFrequency.quarterly =>
-          DateTime(d.year, d.month + 3, d.day, d.hour, d.minute),
-        RepeatFrequency.yearly =>
-          DateTime(d.year + 1, d.month, d.day, d.hour, d.minute),
-        RepeatFrequency.none => d,
-      };
-
   /// Creates, replaces, or clears the Planner Task backing this transaction's
   /// repeat (spec §1). The rule starts at the *next* occurrence — the entered
   /// transaction is the first one.
@@ -1067,16 +1072,31 @@ class _QuickAddScreenState extends State<QuickAddScreen>
       expected = -_amount;
     }
     final note = _note.text.trim();
+    // The entered transaction is the first occurrence; the series starts at the
+    // *next* one. A transient Task computes it through the one true rule.
+    final firstDue = Task(
+      id: '',
+      title: '',
+      linkedAccountId: '',
+      expectedAmount: 0,
+      dueDate: _date,
+      icon: Icons.repeat_rounded,
+      repeats: _repeatFreq,
+      weekdays: _repeatWeekdays,
+      daysOfMonth: _repeatDaysOfMonth,
+    ).nextOccurrence(_date);
     final task = store.addTask(
       title: note.isNotEmpty
           ? note
           : (store.categoryById(categoryId)?.name ?? AppLocalizations.of(context).qaRecurring),
       linkedAccountId: accountId,
       expectedAmount: expected,
-      dueDate: _nextDate(_date, _repeatFreq),
+      dueDate: firstDue,
       icon: Icons.repeat_rounded,
       categoryId: categoryId,
       repeats: _repeatFreq,
+      weekdays: _repeatWeekdays,
+      daysOfMonth: _repeatDaysOfMonth,
     );
     txn.recurrenceTaskId = task.id;
   }
@@ -1281,6 +1301,8 @@ class _QuickAddScreenState extends State<QuickAddScreen>
           icon: Icons.arrow_circle_up_rounded,
           categoryId: _fromRef,
           repeats: _repeatFreq,
+          weekdays: _repeatWeekdays,
+          daysOfMonth: _repeatDaysOfMonth,
           reminderDaysBefore: _remind ? 2 : null,
           reminderTime: _remind ? const TimeOfDay(hour: 9, minute: 0) : null,
         );

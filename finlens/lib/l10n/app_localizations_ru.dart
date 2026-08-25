@@ -274,6 +274,36 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
+  String weekdayShort(String weekday) {
+    String _temp0 = intl.Intl.selectLogic(weekday, {
+      '1': 'Пн',
+      '2': 'Вт',
+      '3': 'Ср',
+      '4': 'Чт',
+      '5': 'Пт',
+      '6': 'Сб',
+      '7': 'Вс',
+      'other': '',
+    });
+    return '$_temp0';
+  }
+
+  @override
+  String weekdayNarrow(String weekday) {
+    String _temp0 = intl.Intl.selectLogic(weekday, {
+      '1': 'П',
+      '2': 'В',
+      '3': 'С',
+      '4': 'Ч',
+      '5': 'П',
+      '6': 'С',
+      '7': 'В',
+      'other': '',
+    });
+    return '$_temp0';
+  }
+
+  @override
   String get dateToday => 'Сегодня';
 
   @override
@@ -2067,6 +2097,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get rsEveryWeek => 'Каждую неделю';
 
   @override
+  String get rsEvery2Weeks => 'Каждые 2 недели';
+
+  @override
   String get rsEveryMonth => 'Каждый месяц';
 
   @override
@@ -2098,6 +2131,38 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String rsYearly(Object day, Object month) {
     return 'каждый год $day $month';
+  }
+
+  @override
+  String get rsNext => 'Далее';
+
+  @override
+  String get rsShorterMonths => 'В коротких месяцах — последний день';
+
+  @override
+  String get rsEveryDay => 'Каждый день';
+
+  @override
+  String get rsWeekdays => 'Будни';
+
+  @override
+  String rsNDaysWeek(int count) {
+    return '$count дн. в неделю';
+  }
+
+  @override
+  String rsNDaysMonth(int count) {
+    return '$count дн. в месяц';
+  }
+
+  @override
+  String rsMonthlyOnDay(Object day) {
+    return 'Каждый месяц $day числа';
+  }
+
+  @override
+  String rsDaysJoin(Object head, Object last) {
+    return '$head и $last';
   }
 
   @override
