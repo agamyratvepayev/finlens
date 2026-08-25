@@ -1633,6 +1633,18 @@ class AppLocalizationsTk extends AppLocalizations {
   String get tdUnchanged => 'Üýtgemedik';
 
   @override
+  String get stDetailNote => 'Bellik';
+
+  @override
+  String get stDetailWhen => 'Haçan';
+
+  @override
+  String get stDetailPaidWith => 'Töleg hasaby';
+
+  @override
+  String get stDetailTags => 'Bellikler';
+
+  @override
   String get qaAmount => 'Möçber';
 
   @override

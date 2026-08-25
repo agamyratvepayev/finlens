@@ -1636,6 +1636,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tdUnchanged => 'Unchanged';
 
   @override
+  String get stDetailNote => 'Note';
+
+  @override
+  String get stDetailWhen => 'When';
+
+  @override
+  String get stDetailPaidWith => 'Paid with';
+
+  @override
+  String get stDetailTags => 'Tags';
+
+  @override
   String get qaAmount => 'Amount';
 
   @override

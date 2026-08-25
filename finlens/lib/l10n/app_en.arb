@@ -572,6 +572,11 @@
   "tdNetWorth": "Net worth",
   "tdUnchanged": "Unchanged",
 
+  "stDetailNote": "Note",
+  "stDetailWhen": "When",
+  "stDetailPaidWith": "Paid with",
+  "stDetailTags": "Tags",
+
   "qaAmount": "Amount",
   "qaDue": "Due",
   "qaNewBalance": "New balance",

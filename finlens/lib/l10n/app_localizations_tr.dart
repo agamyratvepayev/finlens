@@ -1633,6 +1633,18 @@ class AppLocalizationsTr extends AppLocalizations {
   String get tdUnchanged => 'Değişmedi';
 
   @override
+  String get stDetailNote => 'Not';
+
+  @override
+  String get stDetailWhen => 'Ne zaman';
+
+  @override
+  String get stDetailPaidWith => 'Ödeme hesabı';
+
+  @override
+  String get stDetailTags => 'Etiketler';
+
+  @override
   String get qaAmount => 'Tutar';
 
   @override

@@ -104,9 +104,10 @@ void main() {
         const SameRangeChoice.preset(SameRangePreset.allTime));
     await tester.pumpAndSettle();
 
-    // The account leads line 1 — it appears exactly once (only in the row now
-    // that the subtitle is just the direction word).
-    expect(find.text('Main Checking'), findsOneWidget);
+    // The account leads the list row's line 1, and now also names the detail
+    // card's PAID WITH row (spec §1) — so it appears exactly twice, never
+    // borrowing the category as a title.
+    expect(find.text('Main Checking'), findsNWidgets(2));
     // The category is the screen's heading, never repeated as a row title: a
     // note-less row that borrowed it would make this findsNWidgets(2).
     expect(find.text('Groceries'), findsOneWidget);

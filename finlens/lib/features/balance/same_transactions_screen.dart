@@ -16,8 +16,12 @@ import '../quick_add/quick_add_sheet.dart';
 import 'same_transactions.dart';
 import 'widgets/same_range_sheet.dart';
 
-/// Read-only list of every transaction sharing the tapped transaction's key
-/// (spec §2/§3). Reached by tapping a row; a tap never opens the editor.
+/// The screen a transaction row opens. The tapped transaction comes first — a
+/// read-only detail card (note · time · account+balance-after · tags) sits
+/// directly under the header — followed by the range control (now the section
+/// header), the range summary, and the list of every transaction sharing the
+/// tapped one's key (spec §1/§2/§3). Reached by tapping a row; a tap never opens
+/// the editor.
 class SameTransactionsScreen extends StatefulWidget {
   const SameTransactionsScreen({
     super.key,
@@ -80,9 +84,13 @@ class _SameTransactionsScreenState extends State<SameTransactionsScreen> {
               child: ListView(
                 padding: const EdgeInsets.only(bottom: Insets.xxl),
                 children: [
-                  _header(info),
-                  _summaryCard(context, store, key, stats),
-                  _sectionLabel(store, info),
+                  // Specific → general: the tapped transaction, then the range
+                  // that scopes everything below it, then the range's summary,
+                  // then the list (spec §2/§3).
+                  _header(info, origin),
+                  ?_detailCard(context, store, origin),
+                  _rangeHeader(context, store, key),
+                  _summaryCard(stats),
                   if (all.isEmpty)
                     _emptyMessage(info, range)
                   else
@@ -211,7 +219,7 @@ class _SameTransactionsScreenState extends State<SameTransactionsScreen> {
 
   // ── Header ─────────────────────────────────────────────────────────────────
 
-  Widget _header(_KeyInfo info) {
+  Widget _header(_KeyInfo info, Txn origin) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(Insets.md, Insets.gutter, Insets.md, 2),
       child: Row(
@@ -259,6 +267,162 @@ class _SameTransactionsScreenState extends State<SameTransactionsScreen> {
               ],
             ),
           ),
+          const SizedBox(width: Insets.sm),
+          // The origin's own amount, unsigned magnitude in its direction colour
+          // (spec §1) — colour, not a sign, carries income/expense here as
+          // everywhere. Masks with privacy.
+          AmountText.balance(
+            origin.amount,
+            currency: origin.currency,
+            color: info.amountColor,
+            style: const TextStyle(
+              fontSize: 24,
+              height: 1.1,
+              fontWeight: FontWeight.w700,
+              letterSpacing: -0.48, // −0.02em @ 24pt
+              fontFeatures: [FontFeature.tabularFigures()],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Detail card (the tapped transaction) ────────────────────────────────────
+
+  /// The block the whole restructure exists for (spec §1): the one transaction
+  /// the user tapped, sitting directly under the header and inside every scope
+  /// below it. Four label/value rows — NOTE · WHEN · PAID WITH · TAGS — with no
+  /// dividers (the 62pt caps label column does the separating) and no actions
+  /// (the ••• menu stays the only place to act on the origin).
+  ///
+  /// A row is omitted when its field is empty; the card itself is omitted only
+  /// if every row would be. WHEN is derived from [Txn.date] and so is always
+  /// present, which is the point — the time of day is the one fact the list row
+  /// cannot show.
+  Widget? _detailCard(BuildContext context, AppStore store, Txn origin) {
+    final l = AppLocalizations.of(context);
+    final rows = <Widget>[];
+
+    final note = origin.note.trim();
+    if (note.isNotEmpty) {
+      rows.add(_detailRow(l.stDetailNote, note));
+    }
+
+    // WHEN — day, month, year and the time, composed through the same
+    // locale-aware separator the audit trail uses ("9 Aug 2026, 08:12").
+    rows.add(_detailRow(
+      l.stDetailWhen,
+      l.dateWithTime(dayMonthYear(origin.date, l), hhmm(origin.date)),
+    ));
+
+    // PAID WITH — resolvable only when the key pins a single account: expense
+    // pays from [Txn.fromRef], income lands in [Txn.toRef], a rebalance revalues
+    // [Txn.toRef]. A transfer names both accounts in the header and routes to
+    // TransferDetailScreen anyway, so it carries no PAID WITH row here.
+    if (origin.type != TxnType.transfer) {
+      final accountId =
+          origin.type == TxnType.expense ? origin.fromRef : origin.toRef;
+      final account = store.accountById(accountId);
+      if (account != null) {
+        rows.add(_detailRow(
+          l.stDetailPaidWith,
+          account.name,
+          clampValue: true,
+          // The balance the account stood at right after this transaction, in
+          // the account's own currency (a €-wallet reads €). Masks with privacy.
+          trailing: money(
+            store.runningBalanceAt(account.id, origin),
+            currency: account.currency,
+            masked: store.masked,
+          ),
+        ));
+      }
+    }
+
+    if (origin.tags.isNotEmpty) {
+      rows.add(_detailRow(
+        l.stDetailTags,
+        origin.tags.map((t) => '#$t').join(' '),
+        valueColor: AppColors.tagDot,
+      ));
+    }
+
+    if (rows.isEmpty) return null;
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(Insets.md, 0, Insets.md, Insets.sm),
+      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(13),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: rows,
+      ),
+    );
+  }
+
+  /// One `LABEL value` line of the detail card. The caps label is top-aligned so
+  /// that when [value] wraps (a long note) the label stays against the first
+  /// line. [clampValue] ellipsises the value on one line (a long account name),
+  /// leaving [trailing] — the balance-after figure — its intrinsic width.
+  Widget _detailRow(
+    String label,
+    String value, {
+    String? trailing,
+    Color? valueColor,
+    bool clampValue = false,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 62,
+            child: Padding(
+              // Nudge the small caps down onto the value's first line rather
+              // than floating at the very top of the taller value box.
+              padding: const EdgeInsets.only(top: 2),
+              child: Text(
+                label.toUpperCase(),
+                style: const TextStyle(
+                  fontSize: 9.5,
+                  height: 1.2,
+                  fontWeight: FontWeight.w500,
+                  letterSpacing: 0.57, // 0.06em @ 9.5pt
+                  color: AppColors.detailLabel,
+                ),
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              maxLines: clampValue ? 1 : null,
+              overflow:
+                  clampValue ? TextOverflow.ellipsis : TextOverflow.clip,
+              style: TextStyle(
+                fontSize: 13.5,
+                height: 1.3,
+                color: valueColor ?? AppColors.textPrimary,
+              ),
+            ),
+          ),
+          if (trailing != null) ...[
+            const SizedBox(width: Insets.sm),
+            Text(
+              trailing,
+              style: const TextStyle(
+                fontSize: 12,
+                height: 1.3,
+                color: AppColors.textSecondary,
+                fontFeatures: [FontFeature.tabularFigures()],
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -266,8 +430,7 @@ class _SameTransactionsScreenState extends State<SameTransactionsScreen> {
 
   // ── Summary card ─────────────────────────────────────────────────────────
 
-  Widget _summaryCard(
-      BuildContext context, AppStore store, SameKey key, SameStats stats) {
+  Widget _summaryCard(SameStats stats) {
     return Container(
       margin: const EdgeInsets.fromLTRB(Insets.md, 0, Insets.md, Insets.sm),
       decoration: BoxDecoration(
@@ -276,11 +439,11 @@ class _SameTransactionsScreenState extends State<SameTransactionsScreen> {
       ),
       child: Column(
         children: [
-          _rangeRow(context, store, key),
           Padding(
             // One inline row of key·value pairs (~26pt), down from three stacked
-            // key-over-value columns (~50pt) (spec §5).
-            padding: const EdgeInsets.fromLTRB(10, 10, 10, 0),
+            // key-over-value columns (~50pt) (spec §5). The range row that used
+            // to head this card is now the section header above it (spec §2).
+            padding: const EdgeInsets.fromLTRB(10, 12, 10, 0),
             child: Row(
               children: [
                 // TOTAL and AVG are base-currency aggregates (spec §3): a list
@@ -291,52 +454,69 @@ class _SameTransactionsScreenState extends State<SameTransactionsScreen> {
               ],
             ),
           ),
-          if (stats.perMonth != null) _frequencyLine(stats),
+          if (stats.perMonth != null)
+            _frequencyLine(stats)
+          else
+            const SizedBox(height: 12),
         ],
       ),
     );
   }
 
-  Widget _rangeRow(BuildContext context, AppStore store, SameKey key) {
+  // ── Range header (the control) ──────────────────────────────────────────────
+
+  /// The range control, promoted from the summary card's first row to the
+  /// section header above it (spec §2). Accent text and a chevron mark it
+  /// tappable where every other section header in the app is neutral grey; the
+  /// whole ≥44pt row opens the existing range sheet, unchanged. It carries the
+  /// selected range's own name — a preset's label or a custom range's dates —
+  /// never the category, which the 21pt header two blocks up already states.
+  Widget _rangeHeader(BuildContext context, AppStore store, SameKey key) {
     final choice = store.sameListRange;
-    final label = choice.isCustom
-        ? choice
-            .resolve(AppStore.today)
-            .label(AppStore.today, AppLocalizations.of(context))
-        : choice.preset!.label(AppLocalizations.of(context));
+    final l = AppLocalizations.of(context);
+    final label = (choice.isCustom
+            ? choice.resolve(AppStore.today).label(AppStore.today, l)
+            : choice.preset!.label(l))
+        .toUpperCase();
 
     return InkWell(
       onTap: () async {
         setState(() => _rangeSheetOpen = true);
-        final picked = await showSameRangeSheet(context, key: key, current: choice);
+        final picked =
+            await showSameRangeSheet(context, key: key, current: choice);
         if (mounted) setState(() => _rangeSheetOpen = false);
         if (picked != null && context.mounted) {
           store.setSameListRange(picked);
         }
       },
       child: Container(
-        decoration: BoxDecoration(
-          color: _rangeSheetOpen ? AppColors.tint(AppColors.accent, 0.16) : null,
-          border: const Border(
-            bottom: BorderSide(color: AppColors.hairline),
-          ),
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+        // The ink is 10.5pt; the ≥44pt tap target comes from the minimum-height
+        // constraint and padding, not the glyph (spec §2).
+        constraints: const BoxConstraints(minHeight: 44),
+        color: _rangeSheetOpen ? AppColors.tint(AppColors.accent, 0.10) : null,
+        padding: const EdgeInsets.fromLTRB(Insets.gutter, 6, Insets.gutter, 6),
+        alignment: AlignmentDirectional.centerStart,
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              label,
-              style: const TextStyle(
-                fontSize: 13,
-                height: 1.2,
-                fontWeight: FontWeight.w600,
-                color: AppColors.accentLight,
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 10.5,
+                  height: 1.2,
+                  fontWeight: FontWeight.w500,
+                  letterSpacing: 0.63, // 0.06em @ 10.5pt
+                  color: AppColors.accentLight,
+                ),
               ),
             ),
-            const SizedBox(width: 3),
-            const Text('▾',
-                style: TextStyle(fontSize: 10, color: AppColors.accentLight)),
+            const SizedBox(width: 4),
+            // Material rounded chevron; its visible glyph reads ~12pt (spec §2).
+            const Icon(Icons.keyboard_arrow_down_rounded,
+                size: 16, color: AppColors.accentLight),
           ],
         ),
       ),
@@ -413,30 +593,6 @@ class _SameTransactionsScreenState extends State<SameTransactionsScreen> {
           TextSpan(text: last, style: value),
         ]),
         textAlign: TextAlign.center,
-      ),
-    );
-  }
-
-  // ── Section label ──────────────────────────────────────────────────────────
-
-  Widget _sectionLabel(AppStore store, _KeyInfo info) {
-    final choice = store.sameListRange;
-    var text = 'ALL ${info.sectionLabel.toUpperCase()}';
-    if (choice.isCustom) {
-      text = '$text · '
-          '${choice.resolve(AppStore.today).label(AppStore.today, AppLocalizations.of(context)).toUpperCase()}';
-    }
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(Insets.gutter, 14, Insets.gutter, 6),
-      child: Text(
-        text,
-        style: const TextStyle(
-          fontSize: 11,
-          height: 1.2,
-          fontWeight: FontWeight.w600,
-          letterSpacing: 0.66, // 0.06em @ 11pt
-          color: AppColors.textSecondary,
-        ),
       ),
     );
   }
@@ -711,7 +867,6 @@ class _KeyInfo {
   const _KeyInfo({
     required this.title,
     required this.subtitle,
-    required this.sectionLabel,
     required this.icon,
     required this.color,
     required this.amountColor,
@@ -723,7 +878,6 @@ class _KeyInfo {
 
   final String title;
   final String subtitle;
-  final String sectionLabel;
   final IconData icon;
   final Color color;
   final Color amountColor;
@@ -749,7 +903,6 @@ class _KeyInfo {
       return _KeyInfo(
         title: title,
         subtitle: l.txnTypeTransfer,
-        sectionLabel: title,
         icon: Icons.swap_horiz_rounded,
         color: AppColors.transfer,
         // The app's existing transfer colour — never red/green.
@@ -787,7 +940,6 @@ class _KeyInfo {
       // alone ("GROCERIES"). A rebalance key still pins its account, so §6
       // leaves its labels unchanged — the account (== categoryName here) stays.
       subtitle: isRebalance ? '$categoryName · $directionWord' : directionWord,
-      sectionLabel: isRebalance ? '$categoryName · $categoryName' : categoryName,
       icon: isRebalance
           ? Icons.donut_large_rounded
           : store.refIcon(ledger.categoryId),

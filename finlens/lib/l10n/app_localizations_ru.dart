@@ -1674,6 +1674,18 @@ class AppLocalizationsRu extends AppLocalizations {
   String get tdUnchanged => 'Без изменений';
 
   @override
+  String get stDetailNote => 'Заметка';
+
+  @override
+  String get stDetailWhen => 'Когда';
+
+  @override
+  String get stDetailPaidWith => 'Оплачено с';
+
+  @override
+  String get stDetailTags => 'Метки';
+
+  @override
   String get qaAmount => 'Сумма';
 
   @override

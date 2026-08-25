@@ -434,6 +434,11 @@
   "tdNetWorth": "Arassa baýlyk",
   "tdUnchanged": "Üýtgemedik",
 
+  "stDetailNote": "Bellik",
+  "stDetailWhen": "Haçan",
+  "stDetailPaidWith": "Töleg hasaby",
+  "stDetailTags": "Bellikler",
+
   "qaAmount": "Möçber",
   "qaDue": "Möhlet",
   "qaNewBalance": "Täze balans",

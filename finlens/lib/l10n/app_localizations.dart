@@ -2610,6 +2610,30 @@ abstract class AppLocalizations {
   /// **'Unchanged'**
   String get tdUnchanged;
 
+  /// No description provided for @stDetailNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Note'**
+  String get stDetailNote;
+
+  /// No description provided for @stDetailWhen.
+  ///
+  /// In en, this message translates to:
+  /// **'When'**
+  String get stDetailWhen;
+
+  /// No description provided for @stDetailPaidWith.
+  ///
+  /// In en, this message translates to:
+  /// **'Paid with'**
+  String get stDetailPaidWith;
+
+  /// No description provided for @stDetailTags.
+  ///
+  /// In en, this message translates to:
+  /// **'Tags'**
+  String get stDetailTags;
+
   /// No description provided for @qaAmount.
   ///
   /// In en, this message translates to:

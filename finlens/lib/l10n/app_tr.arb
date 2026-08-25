@@ -434,6 +434,11 @@
   "tdNetWorth": "Net değer",
   "tdUnchanged": "Değişmedi",
 
+  "stDetailNote": "Not",
+  "stDetailWhen": "Ne zaman",
+  "stDetailPaidWith": "Ödeme hesabı",
+  "stDetailTags": "Etiketler",
+
   "qaAmount": "Tutar",
   "qaDue": "Vade",
   "qaNewBalance": "Yeni bakiye",

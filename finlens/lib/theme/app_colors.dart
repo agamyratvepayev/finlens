@@ -145,6 +145,12 @@ abstract final class AppColors {
   /// the range ✓ — brighter than the brand purple so it reads as a link.
   static const accentLight = Color(0xFFA5A3FF);
 
+  /// The 62pt caps label column on the tapped-transaction detail card
+  /// (NOTE / WHEN / PAID WITH / TAGS) — a step below [textSecondary] so the
+  /// value stays the brighter of the pair, matching the house caps voice
+  /// (ASSETS, BUDGETED, TOTAL).
+  static const detailLabel = Color(0xFF6E6E73);
+
   /// Hairline between list/summary rows on the Same-transactions cards
   /// (white @ 6%), one step lighter than [sheetRowDivider].
   static const hairline = Color(0x0FFFFFFF);
