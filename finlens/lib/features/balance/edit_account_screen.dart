@@ -13,6 +13,7 @@ import '../../theme/app_theme.dart';
 import '../../theme/app_typography.dart';
 import '../quick_add/pickers.dart';
 import '../quick_add/quick_add_sheet.dart';
+import 'opening_balance_sheet.dart';
 
 /// Spec 1.5 — identity & credit details on top, visibility & removal below.
 class EditAccountScreen extends StatefulWidget {
@@ -124,18 +125,23 @@ class _EditAccountScreenState extends State<EditAccountScreen> {
                           if (c != null) setState(() => _currency = c);
                         },
                       ),
-                      // Spec 1.5 / 6.2 — ledger integrity: a past balance is
-                      // never edited directly, only corrected by a transaction.
+                      // The opening balance — the floor the running-balance
+                      // column is built on (spec §5/§6). Editable here so it can
+                      // be restored after a delete, when the swipe menu that
+                      // reached it is gone. Opens the small opening-balance
+                      // sheet, never the transaction editor.
                       FormRow(
-                        icon: Icons.lock_clock_rounded,
-                        label: l.eaStartingBalance,
-                        subtitle:
-                            l.eaStartingBalanceLock,
-                        locked: true,
-                        value: money(
-                          _account.startingBalance,
-                          currency: _currency,
-                        ),
+                        icon: Icons.flag_rounded,
+                        label: l.obTitle,
+                        value: _account.hasOpeningReceipt
+                            ? money(
+                                _account.startingBalance.abs(),
+                                currency: _currency,
+                              )
+                            : l.obNotSet,
+                        showChevron: true,
+                        onTap: () =>
+                            showOpeningBalanceSheet(context, _account.id),
                       ),
                     ],
                   ),

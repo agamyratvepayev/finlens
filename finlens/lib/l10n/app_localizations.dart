@@ -798,6 +798,60 @@ abstract class AppLocalizations {
   /// **'Copy'**
   String get actionCopy;
 
+  /// No description provided for @obTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Opening balance'**
+  String get obTitle;
+
+  /// No description provided for @obNotSet.
+  ///
+  /// In en, this message translates to:
+  /// **'Not set'**
+  String get obNotSet;
+
+  /// No description provided for @obShiftsNote.
+  ///
+  /// In en, this message translates to:
+  /// **'This shifts every running balance on this account.'**
+  String get obShiftsNote;
+
+  /// No description provided for @obDateTooLate.
+  ///
+  /// In en, this message translates to:
+  /// **'The opening date can’t be after the first transaction.'**
+  String get obDateTooLate;
+
+  /// No description provided for @obDeleteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove the opening balance?'**
+  String get obDeleteTitle;
+
+  /// No description provided for @obDeleteMsg.
+  ///
+  /// In en, this message translates to:
+  /// **'Every balance on this account will shift by {amount}.'**
+  String obDeleteMsg(String amount);
+
+  /// No description provided for @obDeleteConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove opening balance'**
+  String get obDeleteConfirm;
+
+  /// No description provided for @obCopyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy to account'**
+  String get obCopyTitle;
+
+  /// No description provided for @obA11y.
+  ///
+  /// In en, this message translates to:
+  /// **'Opening balance, {account}, {amount}'**
+  String obA11y(String account, String amount);
+
   /// No description provided for @actionUndo.
   ///
   /// In en, this message translates to:

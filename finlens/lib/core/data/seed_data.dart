@@ -757,6 +757,15 @@ AppStore buildSeedStore() {
 
   assert(now.year == 2026);
 
+  // Opening-balance receipts (spec §1). Every seed account's history begins on
+  // 1 August 2026 — one day at or before the earliest seeded transaction — so
+  // its opening row lands at the foot of the default (this-month) tape, under
+  // everything stacked on it, and never sits above a transaction (§9).
+  final openingDate = DateTime(2026, 8, 1);
+  for (final a in accounts) {
+    a.openingDate = openingDate;
+  }
+
   return AppStore(
     accounts: accounts,
     categories: categories,

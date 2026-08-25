@@ -6,8 +6,16 @@ export 'enums.dart';
 
 /// Spec 6.1 — Account.
 ///
-/// `startingBalance` is write-once: after creation the live balance is derived
-/// from transactions only (spec 6.2, "Starting balance kilidi").
+/// [startingBalance] is the account's **opening balance**: the floor its whole
+/// running-balance column is built on (`startingBalance + Σ transactions`). It
+/// was write-once ("Starting balance kilidi"), but the Opening-balance receipt
+/// makes that floor a first-class, editable value — a floor, not a transaction:
+/// it is a row with a date, but it takes no part in the ledger's arithmetic.
+/// Editing it is the one blessed way to move a past balance directly (Opening
+/// balance sheet / Edit Account), so it is now mutable; every other balance is
+/// still derived and never stored. [openingDate] is the day that history begins,
+/// where the synthesized opening row is filed. Amount 0 means "no floor" and no
+/// row renders.
 class Account {
   Account({
     required this.id,
@@ -23,13 +31,18 @@ class Account {
     this.countAsSpendable = true,
     this.icon,
     this.openedOn,
+    this.openingDate,
   });
 
   final String id;
   String name;
   AccountGroup group;
   String currency;
-  final double startingBalance;
+
+  /// The opening balance (signed like every balance: negative for liabilities).
+  /// Mutable so the Opening-balance receipt can edit/clear it; still the single
+  /// seed the running-balance column derives from.
+  double startingBalance;
   double? creditLimit;
   int? statementDay;
   int? paymentDue;
@@ -44,10 +57,21 @@ class Account {
   /// predate the ledger, so they show on any reporting date.
   final DateTime? openedOn;
 
+  /// The day the account's history begins — where the Opening-balance row is
+  /// filed (spec §1). null means the account carries no opening receipt (no
+  /// floor to render), independent of [startingBalance].
+  DateTime? openingDate;
+
   IconData get displayIcon => icon ?? group.icon;
   Color get color => group.color;
   bool get isAsset => group.isAsset;
   bool get isLiability => group.isLiability;
+
+  /// Whether an opening receipt should render for this account: it must have a
+  /// non-zero floor *and* a date to file it under (spec §1 / §9 — "Amount 0
+  /// means no floor").
+  bool get hasOpeningReceipt =>
+      openingDate != null && startingBalance.abs() >= 0.005;
 
   Account copyWith({
     String? name,
@@ -74,6 +98,7 @@ class Account {
       countAsSpendable: countAsSpendable ?? this.countAsSpendable,
       icon: icon,
       openedOn: openedOn,
+      openingDate: openingDate,
     );
   }
 }

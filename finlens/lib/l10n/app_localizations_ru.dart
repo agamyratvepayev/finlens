@@ -527,6 +527,38 @@ class AppLocalizationsRu extends AppLocalizations {
   String get actionCopy => 'Копировать';
 
   @override
+  String get obTitle => 'Начальный баланс';
+
+  @override
+  String get obNotSet => 'Не задано';
+
+  @override
+  String get obShiftsNote => 'Это сместит каждый остаток по этому счёту.';
+
+  @override
+  String get obDateTooLate =>
+      'Дата начала не может быть позже первой операции.';
+
+  @override
+  String get obDeleteTitle => 'Удалить начальный баланс?';
+
+  @override
+  String obDeleteMsg(String amount) {
+    return 'Каждый остаток по этому счёту изменится на $amount.';
+  }
+
+  @override
+  String get obDeleteConfirm => 'Удалить начальный баланс';
+
+  @override
+  String get obCopyTitle => 'Копировать на счёт';
+
+  @override
+  String obA11y(String account, String amount) {
+    return 'Начальный баланс, $account, $amount';
+  }
+
+  @override
   String get actionUndo => 'Отменить';
 
   @override

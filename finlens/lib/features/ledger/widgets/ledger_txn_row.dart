@@ -70,11 +70,20 @@ class LedgerDayCard extends StatelessWidget {
     this.highlight,
     this.showDescription = true,
     this.showBalance = true,
+    this.onOpeningEdit,
+    this.onOpeningCopy,
+    this.onOpeningDelete,
   });
 
   final bool isFirstCard;
   final DayGroup group;
   final LedgerScope scope;
+
+  /// Opening-balance receipt actions (spec §4.2). Copy is null when no eligible
+  /// target account exists, so the swipe menu shows it only when it can act.
+  final ValueChanged<Account>? onOpeningEdit;
+  final ValueChanged<Account>? onOpeningCopy;
+  final ValueChanged<Account>? onOpeningDelete;
 
   /// Whether noted rows reveal their description line — the scoped screens'
   /// descriptions toggle (defaults on; a search-matched note still reveals).
@@ -197,6 +206,26 @@ class LedgerDayCard extends StatelessWidget {
                   highlight: highlight,
                   showDescription: showDescription,
                   showBalance: showBalance,
+                ),
+              ],
+              // The opening receipt is always the last row of its day group,
+              // under everything stacked on it (spec §2.6). It is rendered here,
+              // outside `rows`, so it never touches the day total or count.
+              if (group.opening != null) ...[
+                if (rows.isNotEmpty)
+                  const Padding(
+                    padding: EdgeInsets.only(left: 53),
+                    child: Divider(
+                      height: 0.5,
+                      thickness: 0.5,
+                      color: AppColors.divider,
+                    ),
+                  ),
+                OpeningBalanceRow(
+                  entry: group.opening!,
+                  onEdit: onOpeningEdit,
+                  onCopy: onOpeningCopy,
+                  onDelete: onOpeningDelete,
                 ),
               ],
             ],
@@ -858,6 +887,207 @@ class LedgerTxnRow extends StatelessWidget {
     TxnType.transfer => AppColors.transfer,
     TxnType.rebalance => AppColors.rebalance,
   };
+}
+
+/// The opening-balance receipt row (spec §2). Reuses the transaction row's
+/// skeleton, padding and geometry exactly, diverging in only four places: a
+/// neutral grey tile with a flag glyph (it belongs to no category), the fixed
+/// "Opening balance" title over the account name, a neutral #EBEBF5 amount (it
+/// has no direction, so it takes no direction colour), and no chevron (it has no
+/// destination). It is not tappable and does not highlight on press — a floor
+/// has no history to open (§4.1). Edit / Copy / Delete live behind the swipe,
+/// exactly as on a transaction row, but there is no Move (§4.2).
+class OpeningBalanceRow extends StatelessWidget {
+  const OpeningBalanceRow({
+    super.key,
+    required this.entry,
+    this.onEdit,
+    this.onCopy,
+    this.onDelete,
+  });
+
+  final OpeningEntry entry;
+  final ValueChanged<Account>? onEdit;
+
+  /// Null when no eligible target account exists — Copy is then absent from the
+  /// swipe menu, not present-and-disabled (spec §7).
+  final ValueChanged<Account>? onCopy;
+  final ValueChanged<Account>? onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final store = StoreScope.of(context);
+    final l = AppLocalizations.of(context);
+    final account = entry.account;
+
+    final amountStr = money(
+      entry.amount,
+      currency: account.currency,
+      signless: true,
+      masked: store.masked,
+    );
+    // The figure beneath follows the running-balance column's convention: signed,
+    // so a liability floor reads negative just like the column above it (§2.4).
+    final balanceStr = money(
+      entry.runningBalance,
+      currency: account.currency,
+      masked: store.masked,
+    );
+
+    // Identical to the transaction row's styles so height and rhythm match.
+    const titleStyle = TextStyle(
+      fontSize: 14.5,
+      fontWeight: FontWeight.w600,
+      height: 1.22,
+      color: AppColors.textPrimary,
+    );
+    const subtitleStyle = TextStyle(
+      fontSize: 12.5,
+      fontWeight: FontWeight.w400,
+      height: 1.2,
+      color: AppColors.textSecondary,
+    );
+    const amountStyle = TextStyle(
+      fontSize: 15,
+      fontWeight: FontWeight.w600,
+      height: 1.2,
+      // Neutral: the opening balance has no direction, so it never borrows the
+      // green/red the ledger uses to carry one (spec §2.3).
+      color: AppColors.transferAmount,
+      fontFeatures: [FontFeature.tabularFigures()],
+    );
+    const balanceStyle = TextStyle(
+      fontSize: 11,
+      height: 1.2,
+      color: AppColors.runningBalance,
+      fontFeatures: [FontFeature.tabularFigures()],
+    );
+
+    // Announced without a direction — never "income" or "expense" (§9 / §2.3).
+    final semanticsLabel = l.obA11y(account.name, amountStr);
+
+    final actions = <SwipeActionItem>[
+      SwipeActionItem(
+        icon: Icons.edit_rounded,
+        label: l.actionEdit,
+        color: const Color(0xFF2C2C2E),
+        onTap: () => onEdit?.call(account),
+      ),
+      // Move is absent, not disabled — a floor has no category to reassign and
+      // moving it between accounts would rewrite two histories (spec §4.2).
+      if (onCopy != null)
+        SwipeActionItem(
+          icon: Icons.copy_rounded,
+          label: l.actionCopy,
+          color: const Color(0xFF0A84FF),
+          onTap: () => onCopy!.call(account),
+        ),
+      SwipeActionItem(
+        icon: Icons.delete_outline_rounded,
+        label: l.actionDelete,
+        color: const Color(0xFFFF453A),
+        onTap: () => onDelete?.call(account),
+      ),
+    ];
+
+    return Semantics(
+      customSemanticsActions: {
+        CustomSemanticsAction(label: l.actionEdit): () => onEdit?.call(account),
+        if (onCopy != null)
+          CustomSemanticsAction(label: l.actionCopy): () => onCopy!.call(account),
+        CustomSemanticsAction(label: l.actionDelete):
+            () => onDelete?.call(account),
+      },
+      label: semanticsLabel,
+      child: SwipeActions(
+        actionWidth: 72,
+        actions: actions,
+        child: GestureDetector(
+          // Not tappable (§4.1): the only thing a tap does is dismiss an open
+          // swipe strip elsewhere in the list, matching the tap-to-close rule —
+          // it never navigates and there is no press highlight.
+          behavior: HitTestBehavior.opaque,
+          onTap: () {
+            if (anySwipeRowOpen) closeOpenSwipeRow();
+          },
+          child: ColoredBox(
+            color: AppColors.fieldCard,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 44),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                child: ExcludeSemantics(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: 30,
+                        height: 30,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          // Neutral surface grey, not a category colour — the
+                          // opening balance belongs to no category (§2.1).
+                          color: AppColors.sheetCard,
+                          borderRadius: BorderRadius.circular(9),
+                        ),
+                        child: const Icon(
+                          Icons.flag_rounded,
+                          size: 15,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      const SizedBox(width: 11),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    l.obTitle,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: titleStyle,
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Text(amountStr, style: amountStyle),
+                              ],
+                            ),
+                            const SizedBox(height: 2),
+                            // The subtitle slot always carries the account name —
+                            // never left empty, which would change the row height
+                            // (§2.2). The running balance pairs with it on the
+                            // right, as it does under a noted transaction row.
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    account.name,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: subtitleStyle,
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Text(balanceStr, style: balanceStyle),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 /// Tells the user not to go looking for a matching bank entry. The amount

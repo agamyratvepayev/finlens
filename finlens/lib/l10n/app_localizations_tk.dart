@@ -509,6 +509,38 @@ class AppLocalizationsTk extends AppLocalizations {
   String get actionCopy => 'Nusgala';
 
   @override
+  String get obTitle => 'Açylyş balansy';
+
+  @override
+  String get obNotSet => 'Bellenmedik';
+
+  @override
+  String get obShiftsNote =>
+      'Bu şu hasapdaky ähli hereket edýän balansy süýşürer.';
+
+  @override
+  String get obDateTooLate => 'Açylyş senesi ilkinji amaldan soň bolup bilmez.';
+
+  @override
+  String get obDeleteTitle => 'Açylyş balansy aýrylsynmy?';
+
+  @override
+  String obDeleteMsg(String amount) {
+    return 'Şu hasapdaky ähli balans $amount möçberde üýtgär.';
+  }
+
+  @override
+  String get obDeleteConfirm => 'Açylyş balansyny aýyr';
+
+  @override
+  String get obCopyTitle => 'Hasaba göçür';
+
+  @override
+  String obA11y(String account, String amount) {
+    return 'Açylyş balansy, $account, $amount';
+  }
+
+  @override
   String get actionUndo => 'Yza gaýtar';
 
   @override

@@ -10,14 +10,18 @@ import '../../core/models/models.dart';
 import '../../core/store/app_store.dart';
 import '../../core/utils/date_range.dart';
 import '../../core/utils/formatters.dart';
+import '../../core/utils/fx.dart';
 import '../../core/utils/search_fold.dart';
 import '../../l10n/app_localizations.dart';
+import '../../shared/widgets/destructive_sheet.dart';
 import '../../shared/widgets/section_header.dart';
 import '../../shared/widgets/swipe_actions.dart';
 import '../../shared/widgets/swipe_back_route.dart';
 import '../../theme/app_colors.dart';
 import '../balance/edit_account_screen.dart';
+import '../balance/opening_balance_sheet.dart';
 import '../balance/same_transactions_screen.dart';
+import '../quick_add/pickers.dart';
 import '../quick_add/quick_add_sheet.dart';
 import 'ledger_scope.dart';
 import 'trans_filter.dart';
@@ -307,14 +311,36 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
       narrowed: shown != total,
     );
 
-    final _EmptyReason? emptyReason = total == 0
+    // The opening-balance receipt (spec §1–§3). Rendered only on a single
+    // account's own tape, in date order, with nothing hidden (the same
+    // conditions that make the running-balance column legible), and only when
+    // the floor's date falls inside the visible period so it lands in its own
+    // day group. Excluded from the Ledger tab, group/all scopes, and any
+    // filtered or searched list by exactly these gates.
+    OpeningEntry? openingEntry;
+    if (_scope is AccountScope && shape.showsRunningBalance) {
+      final acc = store.accountById((_scope as AccountScope).accountId);
+      if (acc != null && acc.hasOpeningReceipt) {
+        final od = acc.openingDate!;
+        final inRange =
+            !od.isBefore(_range.start) && !od.isAfter(_range.end);
+        if (inRange) openingEntry = OpeningEntry(acc);
+      }
+    }
+    // Copy needs at least one account without an opening balance of its own to
+    // land in; otherwise the action is absent, not disabled (spec §7).
+    final openingCanCopy = openingEntry != null &&
+        store.visibleAccounts.any((a) =>
+            a.id != openingEntry!.account.id && !a.hasOpeningReceipt);
+
+    final _EmptyReason? emptyReason = (total == 0 && openingEntry == null)
         ? _EmptyReason.period
         : shown == 0
         ? (filter.isActive
               ? _EmptyReason.filter
               : (_searching && q.isNotEmpty
                     ? _EmptyReason.search
-                    : _EmptyReason.period))
+                    : (openingEntry == null ? _EmptyReason.period : null)))
         : null;
 
     return Scaffold(
@@ -358,6 +384,8 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
                   store: store,
                   showDescription: _showDescriptions,
                   showBalance: shape.showsRunningBalance,
+                  opening: openingEntry,
+                  openingCanCopy: openingCanCopy,
                 ),
               ),
               _addButton(store),
@@ -1059,6 +1087,8 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
     required AppStore store,
     required bool showDescription,
     required bool showBalance,
+    OpeningEntry? opening,
+    bool openingCanCopy = false,
   }) {
     if (emptyReason != null) return _emptyState(store, emptyReason);
 
@@ -1077,6 +1107,36 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
       groups = byDay.entries
           .map((e) => DayGroup(date: e.key, rows: e.value))
           .toList();
+      // File the opening receipt in its own day group — into the matching day
+      // if one is on screen, otherwise a new date-only band inserted at the
+      // chronologically correct spot for the active date direction (spec §9).
+      if (opening != null) {
+        final od = opening.account.openingDate!;
+        final okey = DateTime(od.year, od.month, od.day);
+        final idx = groups.indexWhere((g) =>
+            g.date.year == okey.year &&
+            g.date.month == okey.month &&
+            g.date.day == okey.day);
+        if (idx >= 0) {
+          groups[idx] = groups[idx].withOpening(opening);
+        } else {
+          final newGroup =
+              DayGroup(date: okey, rows: const [], opening: opening);
+          final newestFirst = store.transSort(account: true) ==
+              TransSort.dateNewest;
+          var insertAt = groups.length;
+          for (var i = 0; i < groups.length; i++) {
+            final cmp = DateTime(groups[i].date.year, groups[i].date.month,
+                    groups[i].date.day)
+                .compareTo(okey);
+            if (newestFirst ? cmp < 0 : cmp > 0) {
+              insertAt = i;
+              break;
+            }
+          }
+          groups.insert(insertAt, newGroup);
+        }
+      }
     } else {
       groups = [DayGroup(date: rows.first.txn.date, rows: rows)];
     }
@@ -1120,9 +1180,65 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
           // a duplicate appearing unannounced reads as a bug.
           onCopy: (txn) => showQuickAdd(context, copyOf: txn),
           onDelete: _deleteWithUndo,
+          // Opening-balance receipt actions (spec §4.2/§5/§6/§7).
+          onOpeningEdit: _editOpening,
+          onOpeningCopy: openingCanCopy ? _copyOpening : null,
+          onOpeningDelete: _deleteOpening,
         ),
       ),
     );
+  }
+
+  /// Edit — opens the small opening-balance sheet, never the transaction editor
+  /// (spec §5).
+  void _editOpening(Account account) =>
+      showOpeningBalanceSheet(context, account.id);
+
+  /// Delete — sets the floor to zero after a mandatory confirmation; every
+  /// running balance on the account then shifts by the removed amount (spec §6).
+  /// The account edit screen carries the way back.
+  Future<void> _deleteOpening(Account account) async {
+    final store = StoreScope.read(context);
+    final l = AppLocalizations.of(context);
+    final amountStr = money(
+      account.startingBalance.abs(),
+      currency: account.currency,
+      masked: store.masked,
+    );
+    final ok = await showDestructiveConfirm(
+      context,
+      title: l.obDeleteTitle,
+      message: l.obDeleteMsg(amountStr),
+      impact: const [],
+      confirmLabel: l.obDeleteConfirm,
+    );
+    if (!ok || !mounted) return;
+    // Zero the floor; the date is kept so restoring it from Edit Account keeps
+    // the same day. Deleting touches no transaction (spec §6).
+    store.setOpeningBalance(account, amount: 0, date: account.openingDate);
+  }
+
+  /// Copy — creates the chosen account's opening receipt with this amount
+  /// converted into its currency, dated today, then opens the sheet so the user
+  /// can adjust before it settles (spec §7).
+  Future<void> _copyOpening(Account account) async {
+    final store = StoreScope.read(context);
+    final target = await pickAccount(
+      context,
+      title: AppLocalizations.of(context).obCopyTitle,
+      excludeId: account.id,
+      // Only accounts that have no opening balance yet (spec §7).
+      filter: (a) => !a.hasOpeningReceipt,
+    );
+    if (target == null || !mounted) return;
+    final converted = Fx.convert(
+      account.startingBalance.abs(),
+      account.currency,
+      target.currency,
+    );
+    store.setOpeningBalance(target, amount: converted, date: AppStore.today);
+    if (!mounted) return;
+    showOpeningBalanceSheet(context, target.id);
   }
 
   /// The list area's empty states (spec §6). Never replaces the chip, the count

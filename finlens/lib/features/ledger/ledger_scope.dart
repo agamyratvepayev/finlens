@@ -283,15 +283,42 @@ class LedgerQuery {
       };
 }
 
+/// The synthesized opening-balance receipt for an account (spec §1). It follows
+/// the grammar of the ledger — a row with a date, filed in a day group — but
+/// takes no part in its arithmetic: it is never a [ScopedTxn], never enters
+/// [DayGroup.total], the day count, or the §2B guard, and never reaches a query
+/// or aggregate. It is display-only, derived from the account's own fields.
+class OpeningEntry {
+  const OpeningEntry(this.account);
+
+  final Account account;
+
+  /// Unsigned magnitude of the floor, in the account's own currency — the row
+  /// renders it unsigned (spec §2.3).
+  double get amount => account.startingBalance.abs();
+
+  /// The signed floor, matching the running-balance column's convention — the
+  /// figure beneath the amount (negative for liabilities, spec §2.4).
+  double get runningBalance => account.startingBalance;
+}
+
 /// One calendar day's rendered rows, and whether its net is worth printing.
 ///
-/// [rows] is exactly what the list draws, so [total] and the rows can never
-/// disagree.
+/// [rows] is exactly what the list draws for transactions, so [total] and the
+/// rows can never disagree. [opening], when present, is the account's
+/// opening-balance receipt rendered *after* the rows — it is deliberately not in
+/// [rows], so it contributes nothing to [total], the day count or [showsDayTotal]
+/// (spec §8.1: a floor is grammar, not arithmetic).
 class DayGroup {
-  const DayGroup({required this.date, required this.rows});
+  const DayGroup({required this.date, required this.rows, this.opening});
 
   final DateTime date;
   final List<ScopedTxn> rows;
+  final OpeningEntry? opening;
+
+  /// Same day, with the opening receipt attached (or replaced).
+  DayGroup withOpening(OpeningEntry entry) =>
+      DayGroup(date: date, rows: rows, opening: entry);
 
   double get total =>
       rows.fold(0.0, (sum, r) => sum + r.netContribution);

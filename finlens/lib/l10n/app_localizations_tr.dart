@@ -509,6 +509,37 @@ class AppLocalizationsTr extends AppLocalizations {
   String get actionCopy => 'Kopyala';
 
   @override
+  String get obTitle => 'Açılış bakiyesi';
+
+  @override
+  String get obNotSet => 'Ayarlanmadı';
+
+  @override
+  String get obShiftsNote => 'Bu, bu hesaptaki her yürüyen bakiyeyi kaydırır.';
+
+  @override
+  String get obDateTooLate => 'Açılış tarihi ilk işlemden sonra olamaz.';
+
+  @override
+  String get obDeleteTitle => 'Açılış bakiyesi kaldırılsın mı?';
+
+  @override
+  String obDeleteMsg(String amount) {
+    return 'Bu hesaptaki her bakiye $amount kadar kayacak.';
+  }
+
+  @override
+  String get obDeleteConfirm => 'Açılış bakiyesini kaldır';
+
+  @override
+  String get obCopyTitle => 'Hesaba kopyala';
+
+  @override
+  String obA11y(String account, String amount) {
+    return 'Açılış bakiyesi, $account, $amount';
+  }
+
+  @override
   String get actionUndo => 'Geri al';
 
   @override

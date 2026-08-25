@@ -509,6 +509,39 @@ class AppLocalizationsEn extends AppLocalizations {
   String get actionCopy => 'Copy';
 
   @override
+  String get obTitle => 'Opening balance';
+
+  @override
+  String get obNotSet => 'Not set';
+
+  @override
+  String get obShiftsNote =>
+      'This shifts every running balance on this account.';
+
+  @override
+  String get obDateTooLate =>
+      'The opening date can’t be after the first transaction.';
+
+  @override
+  String get obDeleteTitle => 'Remove the opening balance?';
+
+  @override
+  String obDeleteMsg(String amount) {
+    return 'Every balance on this account will shift by $amount.';
+  }
+
+  @override
+  String get obDeleteConfirm => 'Remove opening balance';
+
+  @override
+  String get obCopyTitle => 'Copy to account';
+
+  @override
+  String obA11y(String account, String amount) {
+    return 'Opening balance, $account, $amount';
+  }
+
+  @override
   String get actionUndo => 'Undo';
 
   @override

@@ -7,6 +7,7 @@ import 'package:finlens/core/models/models.dart';
 import 'package:finlens/core/store/app_store.dart';
 import 'package:finlens/features/ledger/ledger_scope.dart';
 import 'package:finlens/features/ledger/scoped_ledger_screen.dart';
+import 'package:finlens/features/ledger/widgets/ledger_txn_row.dart';
 import 'package:finlens/l10n/app_localizations_en.dart';
 import 'package:finlens/theme/app_theme.dart';
 
@@ -49,11 +50,18 @@ void main() {
     final eur = store.accounts.firstWhere((a) => a.currency == 'EUR');
     final usd = store.accounts.firstWhere((a) => a.currency == 'USD');
 
-    // EUR account: its native balance, so a € symbol — and it is the only €
-    // on the screen, because every ledger row is a base-currency ($) figure.
+    // EUR account: its native balance, so a € symbol. Every *transaction* row
+    // is a base-currency ($) figure; the only € figures are the hero and the
+    // account's own opening receipt (also in its native currency, spec §2.3).
     await mount(tester, store, AccountScope(eur.id));
     expect(_heroBalance(tester).data, startsWith('€'));
-    expect(find.textContaining('€'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(LedgerTxnRow),
+        matching: find.textContaining('€'),
+      ),
+      findsNothing,
+    );
 
     // USD account: base symbol, unchanged behaviour.
     await mount(tester, store, AccountScope(usd.id));
@@ -79,9 +87,11 @@ void main() {
     await mount(tester, store, AccountScope(account.id));
 
     // The 44pt tap target now lives on the whole block: the ConstrainedBox
-    // that wraps the name+subtitle column.
+    // that wraps the name+subtitle column. `.first` targets the hero's copy of
+    // the name — the opening-balance receipt at the foot of the tape also prints
+    // the account name (as its own subtitle) and its own 44pt row.
     final block = find.ancestor(
-      of: find.text(account.name),
+      of: find.text(account.name).first,
       matching: find.byWidgetPredicate(
         (w) =>
             w is ConstrainedBox &&
@@ -93,7 +103,7 @@ void main() {
 
     // Title and subtitle are stacked with no spacer, so the subtitle's top
     // sits flush under the name's box — a 1–3px ink gap, not the old ~18px.
-    final title = tester.getRect(find.text(account.name));
+    final title = tester.getRect(find.text(account.name).first);
     final subtitle = tester.getRect(find.text('${account.group.label(l)}  ·  ${account.currency}'));
     expect(subtitle.top - title.bottom, lessThan(4));
     expect(subtitle.top - title.bottom, greaterThan(-2));

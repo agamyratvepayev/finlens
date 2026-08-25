@@ -1408,10 +1408,44 @@ class AppStore extends ChangeNotifier {
       countAsSpendable: countAsSpendable,
       icon: icon,
       openedOn: today,
+      // A new account's history begins the day it is created, so its opening
+      // receipt is filed under today (spec §9 "Account created today").
+      openingDate: DateTime(today.year, today.month, today.day),
     );
     _accounts.add(account);
     notifyListeners();
     return account;
+  }
+
+  /// Sets (or clears, with [amount] 0) an account's opening balance — the one
+  /// blessed way to move a past balance directly (spec §5/§6). [amount] is an
+  /// unsigned magnitude in the account's own currency; the liability sign is
+  /// applied here so the floor matches the running-balance column's convention
+  /// (spec §2.4). Because balances are derived, mutating the floor and notifying
+  /// is enough to shift every running balance on the account at once.
+  void setOpeningBalance(
+    Account account, {
+    required double amount,
+    DateTime? date,
+  }) {
+    account.startingBalance =
+        account.isLiability ? -amount.abs() : amount;
+    if (date != null) {
+      account.openingDate = DateTime(date.year, date.month, date.day);
+    }
+    notifyListeners();
+  }
+
+  /// The earliest transaction date touching [accountId], or null when the
+  /// account has none — the ceiling the opening date may not exceed (spec §5:
+  /// "A floor cannot sit above what rests on it").
+  DateTime? earliestTxnDateForAccount(String accountId) {
+    DateTime? earliest;
+    for (final t in _txns) {
+      if (t.fromRef != accountId && t.toRef != accountId) continue;
+      if (earliest == null || t.date.isBefore(earliest)) earliest = t.date;
+    }
+    return earliest;
   }
 
   void updateAccount(
