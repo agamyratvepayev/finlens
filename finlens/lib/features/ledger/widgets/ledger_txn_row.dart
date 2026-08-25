@@ -7,6 +7,7 @@ import '../../../core/utils/formatters.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../core/utils/search_fold.dart';
 import '../../../shared/widgets/swipe_actions.dart';
+import '../../../shared/widgets/title_tag_row.dart';
 import '../../../shared/widgets/transfer_title.dart';
 import '../../../theme/app_colors.dart';
 import '../ledger_scope.dart';
@@ -271,8 +272,9 @@ class LedgerTxnRow extends StatelessWidget {
     };
 
     // Line 2 is the free-text description; the meta line carries the account
-    // (dropped where the screen already implies it — account scope — and for a
-    // transfer, whose title already names both sides) and the tag.
+    // alone (dropped where the screen already implies it — account scope — and
+    // for a transfer, whose title already names both sides). The tag rides the
+    // title line now, so it no longer keeps the meta line alive on its own.
     final note = txn.note.trim();
     final hasNote = note.isNotEmpty;
     // The description line follows the toggle, but a note the search matched
@@ -290,8 +292,10 @@ class LedgerTxnRow extends StatelessWidget {
                   ?.name ??
               '')
         : '';
-    final tag = txn.tags.isEmpty ? null : txn.tags.first;
-    final hasMeta = accountName.isNotEmpty || tag != null;
+    // The tag has moved to the title line (spec §1), so it no longer forces a
+    // meta line: under AccountScope a tagged, account-less row is now two lines,
+    // not three. The meta line renders only when there is an account to show.
+    final hasMeta = accountName.isNotEmpty;
 
     final money0 = money(
       row.signedAmount,
@@ -317,7 +321,10 @@ class LedgerTxnRow extends StatelessWidget {
       if (descOpen) note,
       if (showBalance) '${AppLocalizations.of(context).a11yBalanceWord} $balance0',
       if (accountName.isNotEmpty) accountName,
-      if (tag != null) 'tag $tag',
+      // Every tag is named — the visual `+N` collapse is a width truncation, and
+      // a screen reader has no width limit. The announcement does not change with
+      // the scope. Shares the one formatter used on both rows.
+      if (txn.tags.isNotEmpty) tagSemanticsLabel(txn.tags),
     ].join(', ');
 
     // Fonts/weights/colours are kept exactly as before — only the layout
@@ -340,25 +347,22 @@ class LedgerTxnRow extends StatelessWidget {
       color: AppColors.runningBalance,
     );
 
-    final amountWidget = Text(
-      money(row.displayAmount, signless: true, masked: store.masked),
-      style: TextStyle(
-        fontSize: 15,
-        fontWeight: FontWeight.w600,
-        height: 1.2,
-        color: amountColour,
-        fontFeatures: const [FontFeature.tabularFigures()],
-      ),
+    final amountStr = money(row.displayAmount, signless: true, masked: store.masked);
+    final amountTextStyle = TextStyle(
+      fontSize: 15,
+      fontWeight: FontWeight.w600,
+      height: 1.2,
+      color: amountColour,
+      fontFeatures: const [FontFeature.tabularFigures()],
     );
-    final balanceWidget = Text(
-      balance0,
-      style: const TextStyle(
-        fontSize: 11,
-        height: 1.2,
-        color: AppColors.runningBalance,
-        fontFeatures: [FontFeature.tabularFigures()],
-      ),
+    final amountWidget = Text(amountStr, style: amountTextStyle);
+    const balanceTextStyle = TextStyle(
+      fontSize: 11,
+      height: 1.2,
+      color: AppColors.runningBalance,
+      fontFeatures: [FontFeature.tabularFigures()],
     );
+    final balanceWidget = Text(balance0, style: balanceTextStyle);
     final titleWidget = isTransfer
         ? TransferTitleText(
             from: parties!.from,
@@ -376,6 +380,47 @@ class LedgerTxnRow extends StatelessWidget {
               ],
             ],
           );
+
+    // Line 1 becomes `title · #tag · (slack) · amount` (spec §1). The tag rides
+    // the slack between the title and the amount, at the meta size in tagDot —
+    // the same treatment as the Ledger-tab TxnRow, so a tag reads identically on
+    // both screens. The width plumbing below feeds TitleTagRow's measure-first
+    // layout, whose rule is the OPPOSITE of the meta line's: the title lays out
+    // whole and the tag collapses/drops before the title ellipsizes.
+    final scaler = MediaQuery.textScalerOf(context);
+    // The title region must reserve the no-cash pill too, or the tag would eat
+    // into it: gap(6) + horizontal padding(5+5) + the pill's own text width.
+    var titleWidth = TitleTagRow.measure(category, titleStyle, scaler);
+    if (!txn.movesCash) {
+      const pillStyle = TextStyle(
+        fontSize: 9.5,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 0.05 * 9.5,
+        height: 1.2,
+      );
+      final pillText = AppLocalizations.of(context).ldgNoCash.toUpperCase();
+      titleWidth += 6 + 10 + TitleTagRow.measure(pillText, pillStyle, scaler);
+    }
+
+    // When the description is closed and the balance is legible, it pairs with
+    // the amount as one right-hand figure (unchanged); otherwise it drops to
+    // line 2 and the amount trails alone.
+    final showBalanceInline = !descOpen && showBalance;
+    final Widget trailingWidget = showBalanceInline
+        ? Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              amountWidget,
+              const SizedBox(width: 6),
+              balanceWidget,
+            ],
+          )
+        : amountWidget;
+    var trailingWidth = TitleTagRow.measure(amountStr, amountTextStyle, scaler);
+    if (showBalanceInline) {
+      trailingWidth += 6 + TitleTagRow.measure(balance0, balanceTextStyle, scaler);
+    }
+    final tagStyle = metaStyle.copyWith(color: AppColors.tagDot);
 
     return Semantics(
       // Swipe actions are invisible to assistive tech unless declared, so all
@@ -466,34 +511,25 @@ class LedgerTxnRow extends StatelessWidget {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                // Line 1: title | amount, read on the baseline —
-                                // two type sizes side by side pair on their
-                                // baselines, not their centres. When the
-                                // description is closed and the balance renders,
-                                // it sits beside the amount here rather than on a
-                                // second line.
-                                Row(
-                                  crossAxisAlignment: CrossAxisAlignment.baseline,
-                                  textBaseline: TextBaseline.alphabetic,
-                                  children: [
-                                    Expanded(child: titleWidget),
-                                    const SizedBox(width: 10),
-                                    if (!descOpen && showBalance)
-                                      // Amount + balance stay centre-aligned to
-                                      // each other (they share this line); the
-                                      // outer row baselines the pair against the
-                                      // title.
-                                      Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          amountWidget,
-                                          const SizedBox(width: 6),
-                                          balanceWidget,
-                                        ],
-                                      )
-                                    else
-                                      amountWidget,
-                                  ],
+                                // Line 1: title · #tag · (slack) · amount, read on
+                                // the baseline — two type sizes side by side pair
+                                // on their baselines, not their centres. The tag
+                                // now rides the slack here (spec §1); when the
+                                // description is closed and the balance renders it
+                                // pairs with the amount as the trailing figure.
+                                TitleTagRow(
+                                  title: titleWidget,
+                                  titleWidth: titleWidth,
+                                  tags: txn.tags,
+                                  tagStyle: tagStyle,
+                                  buildTag: (run) => _highlighted(
+                                    run,
+                                    tagStyle,
+                                    query: highlight,
+                                  ),
+                                  trailing: trailingWidget,
+                                  trailingWidth: trailingWidth,
+                                  trailingGap: 10,
                                 ),
                                 if (descOpen) ...[
                                   const SizedBox(height: 2),
@@ -520,34 +556,19 @@ class LedgerTxnRow extends StatelessWidget {
                           ),
                         ],
                       ),
-                      // ── Meta line: account · tag, full width, left edge aligned
-                      // with the text column (icon 30 + gap 11 = 41pt). Nothing is
-                      // to its right, so the account stops sharing that width.
+                      // ── Meta line: the account alone, full width, left edge
+                      // aligned with the text column (icon 30 + gap 11 = 41pt).
+                      // The tag left for the title line, so under AccountScope —
+                      // where the account is dropped — this line is gone entirely
+                      // and a tagged, note-less row is two lines, not three.
                       if (hasMeta) ...[
                         const SizedBox(height: 2),
                         Padding(
                           padding: const EdgeInsets.only(left: 41),
-                          child: Row(
-                            children: [
-                              if (accountName.isNotEmpty)
-                                Flexible(
-                                  child: _highlighted(
-                                    accountName,
-                                    metaStyle,
-                                    query: highlight,
-                                  ),
-                                ),
-                              if (accountName.isNotEmpty && tag != null)
-                                const Text('  ·  ', style: metaStyle),
-                              // The tag is laid out first (fixed), so the account
-                              // ellipsizes to make room rather than the tag.
-                              if (tag != null)
-                                _highlighted(
-                                  tag,
-                                  metaStyle.copyWith(color: AppColors.tagDot),
-                                  query: highlight,
-                                ),
-                            ],
+                          child: _highlighted(
+                            accountName,
+                            metaStyle,
+                            query: highlight,
                           ),
                         ),
                       ],
@@ -624,22 +645,17 @@ class LedgerTxnRow extends StatelessWidget {
     // Line-1 amount. Same-currency uses the ledger's base-converted figure, so
     // it stays consistent with the sibling rows around it; cross-currency shows
     // the real per-leg amounts, each in its own currency.
-    final Widget amountTop;
+    final String amountTopStr;
     if (crossCurrency) {
       final v = onAccount
           ? (outgoing ? txn.amount : (txn.toAmount ?? txn.amount))
           : txn.amount;
       final c = onAccount ? (outgoing ? fromCur : toCur) : fromCur;
-      amountTop = Text(
-        money(v, currency: c, signless: true, masked: store.masked),
-        style: amountStyle,
-      );
+      amountTopStr = money(v, currency: c, signless: true, masked: store.masked);
     } else {
-      amountTop = Text(
-        money(row.signedAmount, signless: true, masked: store.masked),
-        style: amountStyle,
-      );
+      amountTopStr = money(row.signedAmount, signless: true, masked: store.masked);
     }
+    final amountTop = Text(amountTopStr, style: amountStyle);
 
     final balanceText = money(_runningBalance(store, txn), masked: store.masked);
     final note = txn.note.trim();
@@ -678,9 +694,21 @@ class LedgerTxnRow extends StatelessWidget {
     final semanticsLabel = [
       AppLocalizations.of(context).transferFromTo(parties.from, parties.to),
       money(txn.amount, currency: txn.currency, signless: true, masked: store.masked),
+      // Every tag named, and named the same on both screens (spec §5).
+      if (txn.tags.isNotEmpty) tagSemanticsLabel(txn.tags),
       if (onAccount && descOpen) note,
       if (showBalance) 'balance $balanceText',
     ].join(', ');
+
+    // Line 1 carries the tag on the title line under the same yield order as
+    // the standard row: the counterpart/source title wins, the tag rides the
+    // slack before the amount and collapses/drops before the title ellipsizes.
+    final scaler = MediaQuery.textScalerOf(context);
+    const tagStyle = TextStyle(
+      fontSize: 11.5,
+      height: 1.2,
+      color: AppColors.tagDot,
+    );
 
     return Semantics(
       customSemanticsActions: {
@@ -748,19 +776,21 @@ class LedgerTxnRow extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.baseline,
-                              textBaseline: TextBaseline.alphabetic,
-                              children: [
-                                Expanded(
-                                  child: Text(line1Text,
-                                      style: line1Style,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis),
-                                ),
-                                const SizedBox(width: 10),
-                                amountTop,
-                              ],
+                            TitleTagRow(
+                              title: Text(line1Text,
+                                  style: line1Style,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis),
+                              titleWidth: TitleTagRow.measure(
+                                  line1Text, line1Style, scaler),
+                              tags: txn.tags,
+                              tagStyle: tagStyle,
+                              buildTag: (run) =>
+                                  _highlighted(run, tagStyle, query: highlight),
+                              trailing: amountTop,
+                              trailingWidth: TitleTagRow.measure(
+                                  amountTopStr, amountStyle, scaler),
+                              trailingGap: 10,
                             ),
                             // Line 2 can vanish entirely — a tag-less, note-less
                             // transfer whose balance is suppressed falls to the

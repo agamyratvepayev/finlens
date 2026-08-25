@@ -13,6 +13,7 @@ import 'amount_text.dart';
 import 'app_card.dart';
 import 'destructive_sheet.dart';
 import 'swipe_actions.dart';
+import 'title_tag_row.dart';
 
 /// One Ledger line. The main Ledger tab (2.1) drives it with the description
 /// toggle; the account-detail *perspective* (`perspectiveAccountId` +
@@ -88,10 +89,13 @@ class TxnRow extends StatelessWidget {
     height: 1.15,
     color: AppColors.textTertiary,
   );
+  // The tag now rides the title line, in tagDot at the meta size — the same
+  // colour the scoped LedgerTxnRow uses, so a tag reads identically on both
+  // screens (it was previously accentLight here, which was half the drift).
   static const _tagStyle = TextStyle(
     fontSize: 10.5,
     height: 1.15,
-    color: AppColors.accentLight,
+    color: AppColors.tagDot,
   );
   static const _balanceStyle = TextStyle(
     fontSize: 10.5,
@@ -110,10 +114,10 @@ class TxnRow extends StatelessWidget {
     final l = AppLocalizations.of(context);
     if (txn.type == TxnType.transfer) {
       return perspectiveAccountId != null
-          ? _swipeWrap(l, _buildTransferDetail(l, store))
-          : _swipeWrap(l, _buildTransferLedger(l, store));
+          ? _swipeWrap(l, _buildTransferDetail(context, l, store))
+          : _swipeWrap(l, _buildTransferLedger(context, l, store));
     }
-    return _swipeWrap(l, _buildStandard(l, store));
+    return _swipeWrap(l, _buildStandard(context, l, store));
   }
 
   /// The affected account's after-balance for this row — supplied only by the
@@ -123,20 +127,28 @@ class TxnRow extends StatelessWidget {
 
   // ── Standard rows: expense / income / rebalance ────────────────────────────
 
-  Widget _buildStandard(AppLocalizations l, AppStore store) {
+  Widget _buildStandard(
+      BuildContext context, AppLocalizations l, AppStore store) {
     final signed = _signedAmount(store);
     final amountColor = txn.type == TxnType.rebalance
         ? (txn.amount >= 0 ? AppColors.positive : AppColors.negative)
         : (signed >= 0 ? AppColors.positive : AppColors.negative);
 
+    final forceDecimals = signed.abs() % 1 != 0;
     final amount = AmountText(
       signed,
       currency: txn.currency,
       signless: true,
       color: amountColor,
-      forceDecimals: signed.abs() % 1 != 0,
+      forceDecimals: forceDecimals,
     );
+    final amountStr = money(signed,
+        currency: txn.currency,
+        signless: true,
+        forceDecimals: forceDecimals,
+        masked: store.masked);
 
+    final title = _title(l, store);
     final account = _accountLabel(l, store);
     final balance = _balance;
 
@@ -146,8 +158,12 @@ class TxnRow extends StatelessWidget {
         ? _noCashValue(l, store, balance)
         : (balance != null ? _balanceWidget(store, balance) : null);
 
-    final hasLine2 =
-        account.isNotEmpty || txn.tags.isNotEmpty || secondary != null;
+    // The tag left line 2 for the title line; the meta line is now account +
+    // secondary only. Under a perspective (account implied) a tagged, noteless
+    // row is two lines, not three.
+    final hasLine2 = account.isNotEmpty || secondary != null;
+
+    final scaler = MediaQuery.textScalerOf(context);
 
     return Semantics(
       label: _standardSemantics(l, store, signed, account, balance),
@@ -169,26 +185,24 @@ class TxnRow extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Row(
-                      // Two type sizes side by side read on their baseline, not
-                      // their centres — this is what makes the pairing deliberate.
-                      crossAxisAlignment: CrossAxisAlignment.baseline,
-                      textBaseline: TextBaseline.alphabetic,
-                      children: [
-                        Expanded(child: _highlighted(_title(l, store), _titleStyle)),
-                        const SizedBox(width: Insets.sm),
-                        amount,
-                      ],
+                    TitleTagRow(
+                      title: _highlighted(title, _titleStyle),
+                      titleWidth:
+                          TitleTagRow.measure(title, _titleStyle, scaler),
+                      tags: txn.tags,
+                      tagStyle: _tagStyle,
+                      buildTag: (run) => _highlighted(run, _tagStyle),
+                      trailing: amount,
+                      trailingWidth: TitleTagRow.measure(
+                          amountStr, AppText.amount, scaler),
                     ),
                     if (hasLine2) ...[
                       const SizedBox(height: 1),
                       _MetaLine(
                         account: account,
-                        tags: txn.tags,
                         secondary: secondary,
                         query: searchQuery,
                         accountStyle: _accountStyle,
-                        tagStyle: _tagStyle,
                       ),
                     ],
                     _descriptionLine(),
@@ -204,7 +218,8 @@ class TxnRow extends StatelessWidget {
 
   // ── Transfers: main Ledger (spec §4.6) ─────────────────────────────────────
 
-  Widget _buildTransferLedger(AppLocalizations l, AppStore store) {
+  Widget _buildTransferLedger(
+      BuildContext context, AppLocalizations l, AppStore store) {
     final parties = store.transferParties(txn);
     final fromCur = store.accountById(txn.fromRef)?.currency ?? txn.currency;
     final toCur = store.accountById(txn.toRef)?.currency ?? txn.currency;
@@ -214,9 +229,10 @@ class TxnRow extends StatelessWidget {
 
     // Line 1: the source account name + the sent amount, both neutral. The
     // sent amount is denominated in the transaction's own currency.
+    final amountStr = money(txn.amount,
+        currency: txn.currency, signless: true, masked: store.masked);
     final amount = Text(
-      money(txn.amount,
-          currency: txn.currency, signless: true, masked: store.masked),
+      amountStr,
       style: AppText.amount.copyWith(color: AppColors.transferAmount),
     );
 
@@ -240,6 +256,9 @@ class TxnRow extends StatelessWidget {
       secondary = null;
     }
 
+    final titleStyle = _titleStyle.copyWith(color: AppColors.transferAmount);
+    final scaler = MediaQuery.textScalerOf(context);
+
     return Semantics(
       label: _transferSemantics(l, store, parties, balance),
       excludeSemantics: true,
@@ -253,23 +272,23 @@ class TxnRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.baseline,
-                  textBaseline: TextBaseline.alphabetic,
-                  children: [
-                    Expanded(
-                      child: Text(parties.from,
-                          style: _titleStyle
-                              .copyWith(color: AppColors.transferAmount),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis),
-                    ),
-                    const SizedBox(width: Insets.sm),
-                    amount,
-                  ],
+                // Line 1: source account + the tag (title line) + sent amount.
+                TitleTagRow(
+                  title: Text(parties.from,
+                      style: titleStyle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis),
+                  titleWidth:
+                      TitleTagRow.measure(parties.from, titleStyle, scaler),
+                  tags: txn.tags,
+                  tagStyle: _tagStyle,
+                  buildTag: (run) => _highlighted(run, _tagStyle),
+                  trailing: amount,
+                  trailingWidth:
+                      TitleTagRow.measure(amountStr, AppText.amount, scaler),
                 ),
                 const SizedBox(height: 1),
-                // ↘ destination + tags + secondary. The destination takes the
+                // ↘ destination + secondary. The destination takes the
                 // account's protected role in the overflow order (spec §4.6).
                 Row(
                   children: [
@@ -282,12 +301,10 @@ class TxnRow extends StatelessWidget {
                     Expanded(
                       child: _MetaLine(
                         account: parties.to,
-                        tags: txn.tags,
                         secondary: secondary,
                         query: searchQuery,
                         accountStyle:
                             _accountStyle.copyWith(color: AppColors.transfer),
-                        tagStyle: _tagStyle,
                       ),
                     ),
                   ],
@@ -304,7 +321,8 @@ class TxnRow extends StatelessWidget {
 
   // ── Transfers: account-detail perspective (preserved) ──────────────────────
 
-  Widget _buildTransferDetail(AppLocalizations l, AppStore store) {
+  Widget _buildTransferDetail(
+      BuildContext context, AppLocalizations l, AppStore store) {
     final parties = store.transferParties(txn);
     final outgoing = txn.fromRef == perspectiveAccountId;
     final toCur = store.accountById(txn.toRef)?.currency ?? txn.currency;
@@ -318,8 +336,10 @@ class TxnRow extends StatelessWidget {
     // The sent leg is in the transaction's currency; the received leg is in the
     // destination account's currency.
     final String topCurrency = outgoing ? txn.currency : toCur;
+    final amountStr =
+        money(topValue, currency: topCurrency, signless: true, masked: store.masked);
     final amountTop = Text(
-      money(topValue, currency: topCurrency, signless: true, masked: store.masked),
+      amountStr,
       style: AppText.amount.copyWith(color: AppColors.transferAmount),
     );
 
@@ -332,6 +352,8 @@ class TxnRow extends StatelessWidget {
     final Widget? line2Right =
         balance == null ? null : _balanceWidget(store, balance);
     final hasLine2 = line2Left != null || line2Right != null;
+
+    final scaler = MediaQuery.textScalerOf(context);
 
     return Semantics(
       label: _transferSemantics(l, store, parties, balance),
@@ -346,19 +368,18 @@ class TxnRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.baseline,
-                  textBaseline: TextBaseline.alphabetic,
-                  children: [
-                    Expanded(
-                      child: Text(other,
-                          style: _titleStyle,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis),
-                    ),
-                    const SizedBox(width: Insets.sm),
-                    amountTop,
-                  ],
+                TitleTagRow(
+                  title: Text(other,
+                      style: _titleStyle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis),
+                  titleWidth: TitleTagRow.measure(other, _titleStyle, scaler),
+                  tags: txn.tags,
+                  tagStyle: _tagStyle,
+                  buildTag: (run) => _highlighted(run, _tagStyle),
+                  trailing: amountTop,
+                  trailingWidth:
+                      TitleTagRow.measure(amountStr, AppText.amount, scaler),
                 ),
                 if (hasLine2) ...[
                   const SizedBox(height: 1),
@@ -446,6 +467,9 @@ class TxnRow extends StatelessWidget {
     final parts = <String>[
       _directionWord(l, signed),
       money(signed, currency: txn.currency, signless: true, masked: store.masked),
+      // Every tag is named — the `+N` collapse is a visual truncation only, and
+      // the announcement does not change with the perspective.
+      if (txn.tags.isNotEmpty) tagSemanticsLabel(txn.tags),
     ];
     if (balance != null) {
       final where = account.isNotEmpty ? '$account ' : '';
@@ -457,10 +481,15 @@ class TxnRow extends StatelessWidget {
 
   String _transferSemantics(AppLocalizations l, AppStore store,
       ({String from, String to}) parties, double? balance) {
-    final base = '${l.transferFromTo(parties.from, parties.to)}, '
-        '${money(txn.amount, currency: txn.currency, signless: true, masked: store.masked)}';
-    if (balance == null) return base;
-    return '$base, ${l.a11yAccountBalance(parties.to, money(balance, currency: txn.currency, masked: store.masked))}';
+    final parts = <String>[
+      l.transferFromTo(parties.from, parties.to),
+      money(txn.amount, currency: txn.currency, signless: true, masked: store.masked),
+      if (txn.tags.isNotEmpty) tagSemanticsLabel(txn.tags),
+      if (balance != null)
+        l.a11yAccountBalance(
+            parties.to, money(balance, currency: txn.currency, masked: store.masked)),
+    ];
+    return parts.join(', ');
   }
 
   // ── Resolvers (unchanged semantics) ────────────────────────────────────────
@@ -609,81 +638,28 @@ class TxnRow extends StatelessWidget {
   }
 }
 
-/// Line 2 — `account #tags ——— secondary`. The secondary figure is laid out at
-/// intrinsic width on the right and never moves; the account+tags share the
-/// rest, where the tag run collapses to `#first +n` before the account
-/// ellipsizes, and the account keeps ≥40% of the text column (spec §4.3).
+/// Line 2 — `account ——— secondary`. The tag has moved to the title line, so
+/// the meta line now carries only the account (highlighted, ellipsizing) and
+/// the one secondary figure, which is laid out at intrinsic width on the right
+/// and never moves (spec §4.3).
 class _MetaLine extends StatelessWidget {
   const _MetaLine({
     required this.account,
-    required this.tags,
     required this.secondary,
     required this.query,
     required this.accountStyle,
-    required this.tagStyle,
   });
 
   final String account;
-  final List<String> tags;
   final Widget? secondary;
   final String? query;
   final TextStyle accountStyle;
-  final TextStyle tagStyle;
 
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: _AccountTags(
-            account: account,
-            tags: tags,
-            query: query,
-            accountStyle: accountStyle,
-            tagStyle: tagStyle,
-          ),
-        ),
-        if (secondary != null) ...[
-          const SizedBox(width: Insets.sm),
-          secondary!,
-        ],
-      ],
-    );
-  }
-}
-
-class _AccountTags extends StatelessWidget {
-  const _AccountTags({
-    required this.account,
-    required this.tags,
-    required this.query,
-    required this.accountStyle,
-    required this.tagStyle,
-  });
-
-  final String account;
-  final List<String> tags;
-  final String? query;
-  final TextStyle accountStyle;
-  final TextStyle tagStyle;
-
-  static double _measure(String s, TextStyle style, TextScaler scaler) {
-    final tp = TextPainter(
-      text: TextSpan(text: s, style: style),
-      textDirection: TextDirection.ltr,
-      maxLines: 1,
-      textScaler: scaler,
-    )..layout();
-    return tp.size.width;
-  }
-
-  Widget _text(String text, TextStyle style, {bool ellipsize = false}) {
+  Widget _text(String text, TextStyle style) {
     final q = query;
     if (q == null || q.isEmpty || !foldSearch(text).contains(q)) {
       return Text(text,
-          style: style,
-          maxLines: 1,
-          overflow: ellipsize ? TextOverflow.ellipsis : TextOverflow.clip);
+          style: style, maxLines: 1, overflow: TextOverflow.ellipsis);
     }
     final folded = foldSearch(text);
     final mark = TextStyle(
@@ -702,60 +678,19 @@ class _AccountTags extends StatelessWidget {
     }
     if (cursor < text.length) spans.add(TextSpan(text: text.substring(cursor)));
     return Text.rich(TextSpan(style: style, children: spans),
-        maxLines: 1,
-        overflow: ellipsize ? TextOverflow.ellipsis : TextOverflow.clip);
+        maxLines: 1, overflow: TextOverflow.ellipsis);
   }
 
   @override
   Widget build(BuildContext context) {
-    if (account.isEmpty && tags.isEmpty) return const SizedBox.shrink();
-    final scaler = MediaQuery.textScalerOf(context);
-    const gap = 6.0;
-
-    if (tags.isEmpty) {
-      return _text(account, accountStyle, ellipsize: true);
-    }
-
-    final full = tags.map((t) => '#$t').join(' ');
-    final collapsed =
-        '#${tags.first}${tags.length > 1 ? ' +${tags.length - 1}' : ''}';
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final avail = constraints.maxWidth;
-        final accW =
-            account.isEmpty ? 0.0 : _measure(account, accountStyle, scaler);
-        final fullW = _measure(full, tagStyle, scaler);
-        final accGap = account.isEmpty ? 0.0 : gap;
-
-        // Everything fits at full length: account whole, all tags shown.
-        if (accW + accGap + fullW <= avail) {
-          return Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (account.isNotEmpty)
-                Flexible(child: _text(account, accountStyle, ellipsize: true)),
-              if (account.isNotEmpty) const SizedBox(width: gap),
-              _text(full, tagStyle),
-            ],
-          );
-        }
-
-        // Crowded: collapse the tag run first, cap it to ~60% so the account
-        // keeps ≥40% and ellipsizes only as a last resort.
-        return Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (account.isNotEmpty)
-              Flexible(child: _text(account, accountStyle, ellipsize: true)),
-            if (account.isNotEmpty) const SizedBox(width: gap),
-            ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: avail * 0.6),
-              child: _text(collapsed, tagStyle, ellipsize: true),
-            ),
-          ],
-        );
-      },
+    return Row(
+      children: [
+        Expanded(child: _text(account, accountStyle)),
+        if (secondary != null) ...[
+          const SizedBox(width: Insets.sm),
+          secondary!,
+        ],
+      ],
     );
   }
 }

@@ -8,8 +8,10 @@ import 'package:finlens/shared/widgets/txn_row.dart';
 import 'package:finlens/theme/app_theme.dart';
 
 // Layout/geometry tests for the Ledger-tab TxnRow. Two compact lines by default
-// (title/amount over account/tags); the description is a third line behind the
-// global toggle (spec §4). The main Ledger tab renders NO running balance — its
+// (title · #tag · amount over account · balance); the description is a third
+// line behind the global toggle (spec §4). The tag rides the title line now, so
+// the title wins and the tag yields — see the "title wins" group below and the
+// dedicated txn_row_tags_test.dart. The main Ledger tab renders NO running balance — its
 // list interleaves every account, so a per-row figure reconciles against no
 // series (balance spec §1). A balance appears only on the account-detail
 // perspective (`perspectiveAccountId` + `runningBalance`), a single account's
@@ -162,24 +164,59 @@ void main() {
     });
   });
 
-  group('line-2 overflow order', () {
-    testWidgets('tags collapse to "#first +n" before the account truncates',
+  group('title-line tag overflow order — the title wins', () {
+    // The tag left line 2 for the title line (spec §1). Its rule is the OPPOSITE
+    // of the old meta-line order: a category title is the row's identity, so it
+    // lays out whole and the tag collapses/drops before the title ellipsizes —
+    // never a truncated "Transportation" beside a whole "#groceries".
+    Category longCat() => Category(
+          id: 'c-cat',
+          name: 'Groceries, household and everyday essentials',
+          type: CategoryType.expense,
+          icon: Icons.shopping_bag_rounded,
+          color: const Color(0xFF30D158),
+        );
+
+    AppStore longTitleStore() => AppStore(
+          accounts: [_acc('a1', 'Main Checking'), _acc('a2', 'Cash Wallet')],
+          categories: [longCat()],
+          txns: const <Txn>[],
+          goals: const <Goal>[],
+          tasks: const <Task>[],
+        );
+
+    testWidgets('a long title stays; the tag drops rather than truncating it',
         (tester) async {
-      final store = _store(accounts: [
-        _acc('a1', 'An extremely long account name that will not fit here'),
-        _acc('a2', 'Cash Wallet'),
-      ]);
-      await _pump(tester, store,
+      await _pump(tester, longTitleStore(),
           _expense(tags: const ['commute', 'side']),
           width: 320);
 
-      // The tag run collapsed; the full run is gone.
-      expect(find.text('#commute +1'), findsOneWidget);
+      // The title alone fills the region, so the tag drops entirely — neither
+      // the full run nor the collapsed form is drawn.
       expect(find.text('#commute #side'), findsNothing);
+      expect(find.text('#commute +1'), findsNothing);
 
-      final acct = tester.widget<Text>(find
-          .text('An extremely long account name that will not fit here'));
-      expect(acct.overflow, TextOverflow.ellipsis);
+      // The title is the element that yields to width — it ellipsizes; it is
+      // never truncated to keep a tag whole (there is no whole tag here).
+      final title = tester.widget<Text>(
+          find.text('Groceries, household and everyday essentials'));
+      expect(title.overflow, TextOverflow.ellipsis);
+    });
+
+    testWidgets('a short title keeps its tag; only the tag collapses when tight',
+        (tester) async {
+      // Title 'Groceries' fits whole; three tags exceed the slack, so the run
+      // collapses to "#first +n" — the tag yields, the title does not. Width 390
+      // (the standard portrait width) leaves room for the collapsed run but not
+      // the full one.
+      await _pump(tester, _store(),
+          _expense(tags: const ['fun', 'weekend', 'split']),
+          width: 390);
+
+      expect(find.text('#fun +2'), findsOneWidget);
+      expect(find.text('#fun #weekend #split'), findsNothing);
+      // Title untouched — present and not ellipsis-forced (it had room).
+      expect(find.text('Groceries'), findsOneWidget);
     });
   });
 

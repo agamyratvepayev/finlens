@@ -171,8 +171,10 @@ void main() {
     expect(h, lessThan(60));
   });
 
-  testWidgets('a long account name ellipsizes while the tag stays',
+  testWidgets('a long account name ellipsizes on its now-solo meta line',
       (tester) async {
+    // The tag left the meta line for the title line, so the account no longer
+    // shares that line with anything — it simply ellipsizes when too long.
     store = AppStore(
       accounts: [
         _acc('a1', 'An extremely long account name that will not fit'),
@@ -188,7 +190,6 @@ void main() {
     await pumpRow(tester, row, const GroupScope(AccountGroup.spendable),
         width: 220);
 
-    expect(find.text('side'), findsOneWidget); // tag stays visible
     final acct = tester.widget<Text>(
         find.text('An extremely long account name that will not fit'));
     expect(acct.overflow, TextOverflow.ellipsis);

@@ -194,3 +194,31 @@ String ordinalDay(int n, AppLocalizations l) {
 int daysInMonth(DateTime d) => DateTime(d.year, d.month + 1, 0).day;
 
 bool sameMonth(DateTime a, DateTime b) => a.year == b.year && a.month == b.month;
+
+// ── Tags ───────────────────────────────────────────────────────────────────
+//
+// A transaction's tag run is formatted in exactly one place so the two ledger
+// rows (the Ledger-tab `TxnRow` and the scoped `LedgerTxnRow`) can never drift
+// apart again — before this, one rendered `#fun +2` and the other a bare `fun`.
+
+/// The tag run as it appears on a row's title line: [full] is every tag
+/// (`#fun #weekend #split`); [collapsed] is the first tag plus an overflow
+/// count (`#fun +2`). Callers pick between them by whether the full run fits.
+/// Call only when [tags] is non-empty.
+({String full, String collapsed}) tagRunText(List<String> tags) {
+  final full = tags.map((t) => '#$t').join(' ');
+  final collapsed =
+      '#${tags.first}${tags.length > 1 ? ' +${tags.length - 1}' : ''}';
+  return (full: full, collapsed: collapsed);
+}
+
+/// How a screen reader names a row's tags: `tag fun` for one, `tags fun,
+/// weekend, split` for many. Every tag is named — the visual `+N` collapse is a
+/// width truncation, and a reader has no width limit. Empty when there are no
+/// tags. The `tag`/`tags` words are intentionally not localised (matching the
+/// prior hard-coded `tag $tag`); a future l10n pass owns that.
+String tagSemanticsLabel(List<String> tags) {
+  if (tags.isEmpty) return '';
+  if (tags.length == 1) return 'tag ${tags.first}';
+  return 'tags ${tags.join(', ')}';
+}
