@@ -2586,7 +2586,17 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String goalAveraging(Object actual, Object needs) {
-    return 'В среднем $actual в месяц · нужно $needs, чтобы успеть в срок';
+    return 'Сейчас $actual/мес · нужно $needs/мес, чтобы успеть в срок';
+  }
+
+  @override
+  String a11yMoneyIn(Object amount) {
+    return 'Поступление, $amount';
+  }
+
+  @override
+  String a11yMoneyOut(Object amount) {
+    return 'Списание, $amount';
   }
 
   @override

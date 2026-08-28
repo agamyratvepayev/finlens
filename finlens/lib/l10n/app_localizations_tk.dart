@@ -2540,7 +2540,17 @@ class AppLocalizationsTk extends AppLocalizations {
 
   @override
   String goalAveraging(Object actual, Object needs) {
-    return 'Aýda ortaça $actual · wagtynda ýetmek üçin $needs gerek';
+    return 'Häzir aýda $actual · wagtynda ýetmek üçin aýda $needs gerek';
+  }
+
+  @override
+  String a11yMoneyIn(Object amount) {
+    return 'Pul girişi, $amount';
+  }
+
+  @override
+  String a11yMoneyOut(Object amount) {
+    return 'Pul çykyşy, $amount';
   }
 
   @override

@@ -2543,7 +2543,17 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String goalAveraging(Object actual, Object needs) {
-    return 'Averaging $actual a month · needs $needs to land on time';
+    return 'Now $actual/mo · needs $needs/mo to land on time';
+  }
+
+  @override
+  String a11yMoneyIn(Object amount) {
+    return 'Money in, $amount';
+  }
+
+  @override
+  String a11yMoneyOut(Object amount) {
+    return 'Money out, $amount';
   }
 
   @override

@@ -4113,8 +4113,20 @@ abstract class AppLocalizations {
   /// No description provided for @goalAveraging.
   ///
   /// In en, this message translates to:
-  /// **'Averaging {actual} a month · needs {needs} to land on time'**
+  /// **'Now {actual}/mo · needs {needs}/mo to land on time'**
   String goalAveraging(Object actual, Object needs);
+
+  /// Screen-reader label for an inbound movement amount; direction stated in words because colour is its only visual cue (§6).
+  ///
+  /// In en, this message translates to:
+  /// **'Money in, {amount}'**
+  String a11yMoneyIn(Object amount);
+
+  /// Screen-reader label for an outbound movement amount; direction stated in words because colour is its only visual cue (§6).
+  ///
+  /// In en, this message translates to:
+  /// **'Money out, {amount}'**
+  String a11yMoneyOut(Object amount);
 
   /// No description provided for @goalCategoryWindow.
   ///

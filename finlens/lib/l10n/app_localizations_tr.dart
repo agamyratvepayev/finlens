@@ -2538,7 +2538,17 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String goalAveraging(Object actual, Object needs) {
-    return 'Ayda ortalama $actual · zamanında bitirmek için $needs gerek';
+    return 'Şimdi aylık $actual · zamanında bitirmek için aylık $needs gerek';
+  }
+
+  @override
+  String a11yMoneyIn(Object amount) {
+    return 'Para girişi, $amount';
+  }
+
+  @override
+  String a11yMoneyOut(Object amount) {
+    return 'Para çıkışı, $amount';
   }
 
   @override

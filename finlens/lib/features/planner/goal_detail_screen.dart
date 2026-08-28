@@ -38,6 +38,11 @@ class GoalDetailScreen extends StatelessWidget {
     final m = store.goalMetrics(goal);
     final verdict = goalVerdict(l, goal, m);
 
+    // §10 — SafeArea keeps bottom:false so the top bar can hug the notch, which
+    // means the scroll view itself must clear the home indicator: the safe-area
+    // inset plus a tail so the last CHANGES row scrolls fully into view.
+    final safeBottom = MediaQuery.of(context).padding.bottom;
+
     return Scaffold(
       body: SafeArea(
         bottom: false,
@@ -46,9 +51,14 @@ class GoalDetailScreen extends StatelessWidget {
             _TopBar(goal: goal),
             Expanded(
               child: ListView(
-                padding: const EdgeInsets.only(bottom: Insets.xxl),
+                padding: EdgeInsets.only(bottom: safeBottom + Insets.xxl),
                 children: [
                   _header(l, store, goal, m, verdict),
+                  // §2 — 16pt clearance above the hero. The rule: a hero with
+                  // height:1.0 hugs its glyphs and wants ~5pt more room than
+                  // ordinary text. NB this hero uses AppText.hero, which (unlike
+                  // heroAmount) does NOT set height:1.0, so it keeps default
+                  // leading — 16pt already clears the verdict comfortably.
                   const SizedBox(height: Insets.lg),
                   _figures(l, m),
                   const SizedBox(height: Insets.xl),
@@ -94,14 +104,17 @@ class GoalDetailScreen extends StatelessWidget {
               children: [
                 Text(
                   goal.name,
-                  style: AppText.title.copyWith(fontSize: 21),
+                  // §1 — tighten to 1.15 so a two-line name doesn't gap wide,
+                  // then sit the verdict 1pt below it.
+                  style: AppText.title.copyWith(fontSize: 21, height: 1.15),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: 1),
                 Text(
                   verdict.text,
                   style: AppText.rowSubtitle.copyWith(
+                    height: 1.2,
                     color: goalVerdictColor(m, verdict.attention),
                   ),
                 ),
@@ -143,24 +156,23 @@ class GoalDetailScreen extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: Insets.md),
+          const SizedBox(height: Insets.sm),
           ProgressBar(
             value: m.progress,
             color: goalBarColor(m),
             paceMarker: goalPaceFraction(m),
             height: 8,
           ),
-          const SizedBox(height: Insets.sm),
+          const SizedBox(height: 6),
           Row(
             children: [
               Text(
+                // §3 — "8% · day 189 of 393", reusing the Budgets summary's
+                // day-of clause so the two screens read identically.
                 m.targetDate == null
                     ? percent(pct, decimals: 0)
-                    : l.goalDaysCaption(
-                        percent(pct, decimals: 0),
-                        daysElapsed,
-                        m.daysTotal,
-                      ),
+                    : '${percent(pct, decimals: 0)} · '
+                        '${l.bdDayOfMonth(daysElapsed, m.daysTotal)}',
                 style: AppText.caption.copyWith(fontSize: 11.5),
               ),
               if (goalPaceFraction(m) != null) ...[
@@ -201,17 +213,22 @@ class GoalDetailScreen extends StatelessWidget {
         padding: const EdgeInsets.all(Insets.lg),
         child: Column(
           children: [
+            // §4a — the three columns spread to their own edges (left / centre /
+            // right) so AT THIS RATE terminates on the card's right inset instead
+            // of leaving a wide trailing gap. Flex stays equal.
             Row(
               children: [
                 _Col(label: l.goalColStarted, value: monthYear(started, l)),
                 _Col(
                   label: l.goalColTarget,
                   value: m.targetDate == null ? '—' : monthYear(m.targetDate!, l),
+                  align: CrossAxisAlignment.center,
                 ),
                 _Col(
                   label: l.goalColAtThisRate,
                   value: rateText,
                   color: rateColor,
+                  align: CrossAxisAlignment.end,
                 ),
               ],
             ),
@@ -219,10 +236,13 @@ class GoalDetailScreen extends StatelessWidget {
               padding: EdgeInsets.symmetric(vertical: Insets.md),
               child: RowDivider(indent: 0),
             ),
+            // §4b — centred beneath the divider, matching the Budgets summary's
+            // frequency line.
             Align(
-              alignment: Alignment.centerLeft,
+              alignment: Alignment.center,
               child: Text(
                 _averagingLine(l, m),
+                textAlign: TextAlign.center,
                 style: AppText.caption.copyWith(fontSize: 12),
               ),
             ),
@@ -237,7 +257,12 @@ class GoalDetailScreen extends StatelessWidget {
     if (m.actualRate == null) return l.goalNotMovingYet;
     final needs = m.requiredRate;
     if (needs == null) return l.goalAveragingOnly(money(m.actualRate!));
-    return l.goalAveraging(money(m.actualRate!), money(needs));
+    // §4c — no cents on either figure. The current rate rounds normally; the
+    // required rate ceils, because paying the rounded-down figure lands short.
+    return l.goalAveraging(
+      money(m.actualRate!, noDecimals: true),
+      money(needs, roundUp: true),
+    );
   }
 
   // ── WATCHING ─────────────────────────────────────────────────────────────
@@ -260,25 +285,28 @@ class GoalDetailScreen extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: Insets.gutter),
             child: AppCard(
               child: Padding(
-                padding: const EdgeInsets.all(Insets.md),
+                // §7 — denser row: 7pt vertical padding, 26pt tile, 10pt gap.
+                padding: const EdgeInsets.symmetric(
+                    horizontal: Insets.md, vertical: 7),
                 child: Row(
                   children: [
                     IconTile(cat?.icon ?? Icons.help_outline_rounded,
-                        color: cat?.color ?? AppColors.textSecondary, size: 34),
-                    const SizedBox(width: Insets.md),
+                        color: cat?.color ?? AppColors.textSecondary, size: 26),
+                    const SizedBox(width: 10),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(cat?.name ?? l.goalSourceUnavailable,
-                              style: AppText.rowTitle),
-                          const SizedBox(height: 2),
+                              style: AppText.rowTitle.copyWith(height: 1.15)),
+                          const SizedBox(height: 1),
                           Text(
                             l.goalCategoryWindow(
                               dayMonth(goal.createdAt, l),
                               dayMonth(windowEnd, l),
                             ),
-                            style: AppText.rowSubtitle.copyWith(fontSize: 11.5),
+                            style: AppText.rowSubtitle
+                                .copyWith(fontSize: 11.5, height: 1.15),
                           ),
                         ],
                       ),
@@ -312,22 +340,26 @@ class GoalDetailScreen extends StatelessWidget {
                         ),
                       ),
               child: Padding(
-                padding: const EdgeInsets.all(Insets.md),
+                // §7 — denser row: 7pt vertical padding, 26pt tile, 10pt gap.
+                // §8 — right pad cut to 6 so the balance (which the chevron
+                // pushes inboard) lands close to the movement amounts below.
+                padding: const EdgeInsets.fromLTRB(Insets.md, 7, 6, 7),
                 child: Row(
                   children: [
                     IconTile(acc?.displayIcon ?? Icons.help_outline_rounded,
-                        color: acc?.color ?? AppColors.textSecondary, size: 34),
-                    const SizedBox(width: Insets.md),
+                        color: acc?.color ?? AppColors.textSecondary, size: 26),
+                    const SizedBox(width: 10),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(acc?.name ?? l.goalSourceUnavailable,
-                              style: AppText.rowTitle),
-                          const SizedBox(height: 2),
+                              style: AppText.rowTitle.copyWith(height: 1.15)),
+                          const SizedBox(height: 1),
                           Text(
                             acc == null ? '' : acc.group.label(l),
-                            style: AppText.rowSubtitle.copyWith(fontSize: 11.5),
+                            style: AppText.rowSubtitle
+                                .copyWith(fontSize: 11.5, height: 1.15),
                           ),
                         ],
                       ),
@@ -372,14 +404,18 @@ class GoalDetailScreen extends StatelessWidget {
             child: Column(
               children: [
                 for (var i = 0; i < preview.length; i++) ...[
-                  if (i > 0) const RowDivider(indent: Insets.md),
+                  // §7 — hairline inset to 48 so it starts under the text, past
+                  // the smaller 26pt tile.
+                  if (i > 0) const RowDivider(indent: 48),
                   _MovementRow(
                     store: store,
                     txn: preview[i],
                     accountId: goal.source.id,
                   ),
                 ],
-                const RowDivider(indent: Insets.md),
+                // Full-bleed above the footer: there is no tile below it to
+                // align to, and the footer sits centred.
+                const RowDivider(indent: 0),
                 InkWell(
                   onTap: () => Navigator.of(context, rootNavigator: true).push(
                     MaterialPageRoute(
@@ -390,7 +426,11 @@ class GoalDetailScreen extends StatelessWidget {
                   ),
                   child: Padding(
                     padding: const EdgeInsets.all(Insets.md),
+                    // §9 — label + chevron centred as one unit, 3pt apart, both
+                    // in the accent colour. The chevron belongs to the label,
+                    // not pinned to the card edge.
                     child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
                           l.goalSeeAll(all.length),
@@ -399,7 +439,7 @@ class GoalDetailScreen extends StatelessWidget {
                             fontSize: 13.5,
                           ),
                         ),
-                        const Spacer(),
+                        const SizedBox(width: 3),
                         const Icon(Icons.chevron_right_rounded,
                             size: 18, color: AppColors.accentSoft),
                       ],
@@ -610,22 +650,38 @@ class _ArchiveActions extends StatelessWidget {
 }
 
 class _Col extends StatelessWidget {
-  const _Col({required this.label, required this.value, this.color});
+  const _Col({
+    required this.label,
+    required this.value,
+    this.color,
+    this.align = CrossAxisAlignment.start,
+  });
 
   final String label;
   final String value;
   final Color? color;
 
+  /// Which edge the column packs to (§4a): start / center / end. Both the label
+  /// and the value follow it so the value terminates on the chosen edge.
+  final CrossAxisAlignment align;
+
+  TextAlign get _textAlign => switch (align) {
+        CrossAxisAlignment.center => TextAlign.center,
+        CrossAxisAlignment.end => TextAlign.end,
+        _ => TextAlign.start,
+      };
+
   @override
   Widget build(BuildContext context) {
     return Expanded(
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: align,
         children: [
-          Text(label.toUpperCase(), style: AppText.label),
+          Text(label.toUpperCase(), style: AppText.label, textAlign: _textAlign),
           const SizedBox(height: 4),
           Text(
             value,
+            textAlign: _textAlign,
             style: AppText.rowTitle.copyWith(
               fontSize: 14,
               color: color ?? AppColors.textPrimary,
@@ -655,31 +711,45 @@ class _MovementRow extends StatelessWidget {
     final other = txn.fromRef == accountId ? txn.toRef : txn.fromRef;
     final title = txn.note.trim().isNotEmpty ? txn.note.trim() : store.refName(other);
 
+    // §6 — the sign is gone, so colour is the only visual carrier of direction.
+    // The screen reader gets that direction in words (masked amount honoured).
+    final moneyIn = effect >= 0;
+    final magnitude = money(effect.abs(), masked: store.masked);
+    final directionLabel =
+        moneyIn ? l.a11yMoneyIn(magnitude) : l.a11yMoneyOut(magnitude);
+
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: Insets.md, vertical: Insets.sm),
+      // §7 — denser row: 7pt vertical padding, 26pt tile, 10pt gap. §5 — the
+      // title drops its fontSize:14 override to sit at the 15pt token, matching
+      // the WATCHING row above.
+      padding: const EdgeInsets.symmetric(horizontal: Insets.md, vertical: 7),
       child: Row(
         children: [
-          IconTile(store.refIcon(other), color: store.refColor(other), size: 30),
-          const SizedBox(width: Insets.md),
+          IconTile(store.refIcon(other), color: store.refColor(other), size: 26),
+          const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(title,
-                    style: AppText.rowTitle.copyWith(fontSize: 14),
+                    style: AppText.rowTitle.copyWith(height: 1.15),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis),
-                const SizedBox(height: 2),
+                const SizedBox(height: 1),
                 Text(dayMonth(txn.date, l),
-                    style: AppText.rowSubtitle.copyWith(fontSize: 11.5)),
+                    style: AppText.rowSubtitle
+                        .copyWith(fontSize: 11.5, height: 1.15)),
               ],
             ),
           ),
           const SizedBox(width: Insets.sm),
-          AmountText(
-            effect,
-            showSign: true,
-            color: effect < 0 ? AppColors.negative : AppColors.positive,
+          Semantics(
+            label: directionLabel,
+            excludeSemantics: true,
+            child: AmountText(
+              effect,
+              color: effect < 0 ? AppColors.negative : AppColors.positive,
+            ),
           ),
         ],
       ),
