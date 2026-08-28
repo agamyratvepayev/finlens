@@ -936,9 +936,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get plLeftThisMonth => 'Осталось за месяц';
 
   @override
-  String get plUnbudgeted => 'вне бюджета';
-
-  @override
   String get plOf => 'из';
 
   @override
@@ -966,8 +963,8 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String plPctMonthGone(Object pct) {
-    return 'прошло $pct месяца';
+  String plDayOfMonth(int day, int length) {
+    return 'день $day из $length';
   }
 
   @override

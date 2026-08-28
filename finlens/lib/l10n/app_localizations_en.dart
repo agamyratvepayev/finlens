@@ -911,9 +911,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get plLeftThisMonth => 'Left this month';
 
   @override
-  String get plUnbudgeted => 'unbudgeted';
-
-  @override
   String get plOf => 'of';
 
   @override
@@ -941,8 +938,8 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String plPctMonthGone(Object pct) {
-    return '$pct of the month gone';
+  String plDayOfMonth(int day, int length) {
+    return 'day $day of $length';
   }
 
   @override

@@ -159,7 +159,6 @@ class ProgressBar extends StatelessWidget {
     this.height = 6,
     this.background,
     this.paceMarker,
-    this.hatchValue,
   });
 
   final double value;
@@ -170,23 +169,9 @@ class ProgressBar extends StatelessWidget {
   /// Spec 5.1 — vertical line marking how much of the month has elapsed.
   final double? paceMarker;
 
-  /// Spec 5.1 — a hatched segment drawn immediately after the solid fill, used
-  /// by Planner's headline for unbudgeted spend. It is the same spending, so
-  /// the same amber family, differing only in whether a budget covered it. The
-  /// solid takes `min(value, 1)`; the hatch takes whatever remains up to 1.
-  final double? hatchValue;
-
-  /// The muted amber of the hatched segment (spec `#9A7524`). A local constant,
-  /// not a palette token: it exists only here and only for this one segment.
-  static const _hatchColor = Color(0xFF9A7524);
-
   @override
   Widget build(BuildContext context) {
     final fill = value.clamp(0.0, 1.0);
-    // The hatch takes whatever room the solid left, up to the track's end.
-    final hatch = hatchValue == null
-        ? 0.0
-        : hatchValue!.clamp(0.0, 1.0 - fill);
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;
@@ -205,18 +190,6 @@ class ProgressBar extends StatelessWidget {
                   ),
                 ),
               ),
-              if (hatch > 0)
-                Positioned(
-                  left: width * fill,
-                  width: width * hatch,
-                  top: 0,
-                  bottom: 0,
-                  child: ClipRect(
-                    child: CustomPaint(
-                      painter: _HatchPainter(_hatchColor),
-                    ),
-                  ),
-                ),
               Positioned.fill(
                 child: FractionallySizedBox(
                   alignment: Alignment.centerLeft,
@@ -243,33 +216,4 @@ class ProgressBar extends StatelessWidget {
       },
     );
   }
-}
-
-/// 45° amber stripes over the track — the hatched segment of [ProgressBar].
-class _HatchPainter extends CustomPainter {
-  const _HatchPainter(this.color);
-
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..strokeWidth = 2
-      ..style = PaintingStyle.stroke;
-    const gap = 5.0;
-    // Lines run bottom-left to top-right; starting at −height lets the first
-    // stripe reach the top edge inside the segment.
-    for (var x = -size.height; x < size.width; x += gap) {
-      canvas.drawLine(
-        Offset(x, size.height),
-        Offset(x + size.height, 0),
-        paint,
-      );
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _HatchPainter oldDelegate) =>
-      oldDelegate.color != color;
 }

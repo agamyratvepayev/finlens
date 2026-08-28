@@ -1464,12 +1464,6 @@ abstract class AppLocalizations {
   /// **'Left this month'**
   String get plLeftThisMonth;
 
-  /// No description provided for @plUnbudgeted.
-  ///
-  /// In en, this message translates to:
-  /// **'unbudgeted'**
-  String get plUnbudgeted;
-
   /// No description provided for @plOf.
   ///
   /// In en, this message translates to:
@@ -1512,11 +1506,11 @@ abstract class AppLocalizations {
   /// **'{pct} spent'**
   String plPctSpent(Object pct);
 
-  /// No description provided for @plPctMonthGone.
+  /// No description provided for @plDayOfMonth.
   ///
   /// In en, this message translates to:
-  /// **'{pct} of the month gone'**
-  String plPctMonthGone(Object pct);
+  /// **'day {day} of {length}'**
+  String plDayOfMonth(int day, int length);
 
   /// No description provided for @plCategoriesCount.
   ///

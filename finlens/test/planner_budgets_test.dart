@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:finlens/core/data/seed_data.dart';
@@ -43,14 +44,35 @@ void main() {
     expect(store.unbudgetedSpend(aug), closeTo(73.0, 0.001));
   });
 
-  test('LEFT THIS MONTH subtracts budgeted + unbudgeted spend', () {
+  test('the hero figure is budget − budgeted spend and ignores unbudgeted', () {
     final store = buildSeedStore();
-    final expected = store.totalBudget -
-        (store.budgetedSpend(aug) + store.unbudgetedSpend(aug));
-    expect(store.leftThisMonth(aug), closeTo(expected, 0.001));
+    // The hero describes the budget alone: 3,800 − 2,899 = 901. The $73 of
+    // unbudgeted spend sits outside the budget and must not move it (spec §2).
+    expect(store.unbudgetedSpend(aug), greaterThan(0));
+    expect(
+      store.leftThisMonth(aug),
+      closeTo(store.totalBudget - store.budgetedSpend(aug), 0.001),
+    );
+    expect(store.leftThisMonth(aug), closeTo(901, 0.001));
+    // The old definition (also subtracting unbudgeted) would have read $828 —
+    // the hero now agrees with the tab's `budgeted of total` line instead.
+    expect(store.leftThisMonth(aug), isNot(closeTo(828, 0.001)));
   });
 
-  test('LEFT THIS MONTH goes negative once total spend passes the budget', () {
+  test('the caption percentage uses budgeted spend only', () {
+    final store = buildSeedStore();
+    // 2,899 / 3,800 = 76% — budgeted spend over budget, not (budgeted +
+    // unbudgeted) / budget, which would read 78% (spec §2).
+    final captionRatio = store.budgetedSpend(aug) / store.totalBudget;
+    expect(percent(captionRatio, decimals: 0), '76%');
+    final withUnbudgeted =
+        (store.budgetedSpend(aug) + store.unbudgetedSpend(aug)) /
+            store.totalBudget;
+    expect(percent(withUnbudgeted, decimals: 0), isNot('76%'));
+  });
+
+  test('LEFT THIS MONTH goes negative once budgeted spend passes the budget',
+      () {
     final store = buildSeedStore();
     expect(store.leftThisMonth(aug), greaterThan(0));
 
@@ -64,15 +86,6 @@ void main() {
     );
 
     expect(store.leftThisMonth(aug), lessThan(0));
-  });
-
-  test('the clamped bar segments never exceed the track', () {
-    final store = buildSeedStore();
-    final budget = store.totalBudget;
-    final solid = (store.budgetedSpend(aug) / budget).clamp(0.0, 1.0);
-    final hatch = (store.unbudgetedSpend(aug) / budget).clamp(0.0, 1.0 - solid);
-    expect(solid + hatch, lessThanOrEqualTo(1.0 + 1e-9));
-    expect(hatch, greaterThanOrEqualTo(0.0));
   });
 
   test('spentInCategory converts a EUR expense through Fx.toBase', () {
@@ -276,5 +289,47 @@ void main() {
 
     expect(find.text(firstName), findsOneWidget);
     expect(find.text('Set'), findsWidgets);
+  });
+
+  // ── The summary card (spec §1–§4) ────────────────────────────────────────────
+
+  testWidgets('the caption renders in full beside the Pace legend at 320pt',
+      (tester) async {
+    tester.view.physicalSize = const Size(320 * 3.0, 568 * 3.0);
+    tester.view.devicePixelRatio = 3.0;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(wrap(buildSeedStore(), const PlannerScreen()));
+
+    // Both clauses on one line — "76% spent" (budgeted only) · "day 9 of 31"
+    // (today is 2026-08-09) — with the Pace legend still on the same row.
+    const caption = '76% spent · day 9 of 31';
+    expect(find.text(caption), findsOneWidget);
+    expect(find.text('Pace'), findsOneWidget);
+
+    // The caption is not ellipsised: the paragraph fits inside its one line.
+    final paragraph = tester.renderObject<RenderParagraph>(find.text(caption));
+    expect(paragraph.didExceedMaxLines, isFalse);
+  });
+
+  testWidgets(
+      'the summary bar is one solid budgeted fill — no hatch — when unbudgeted '
+      'spend is non-zero', (tester) async {
+    bigScreen(tester);
+    final store = buildSeedStore();
+    // The precondition the old hatch existed for.
+    expect(store.unbudgetedSpend(aug), greaterThan(0));
+    await tester.pumpWidget(wrap(store, const PlannerScreen()));
+
+    // The hero summary bar is the only 8pt-tall ProgressBar (rows are 4pt).
+    final summary = tester
+        .widgetList<ProgressBar>(find.byType(ProgressBar))
+        .singleWhere((b) => b.height == 8);
+    // Solid fill = budgeted / budget only; there is no hatched segment plotting
+    // the unbudgeted share (spec §2/§3).
+    expect(
+      summary.value,
+      closeTo(store.budgetedSpend(aug) / store.totalBudget, 1e-6),
+    );
+    expect(summary.paceMarker, closeTo(store.monthProgressFor(aug), 1e-6));
   });
 }

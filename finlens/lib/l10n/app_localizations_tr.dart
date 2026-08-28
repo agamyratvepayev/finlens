@@ -907,9 +907,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String get plLeftThisMonth => 'Bu ay kalan';
 
   @override
-  String get plUnbudgeted => 'bütçesiz';
-
-  @override
   String get plOf => '/';
 
   @override
@@ -937,8 +934,8 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
-  String plPctMonthGone(Object pct) {
-    return 'ayın $pct kısmı geçti';
+  String plDayOfMonth(int day, int length) {
+    return '$length günün $day. günü';
   }
 
   @override

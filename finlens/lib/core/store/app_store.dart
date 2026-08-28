@@ -979,10 +979,13 @@ class AppStore extends ChangeNotifier {
       .where((c) => c.type == CategoryType.expense && c.monthlyBudget == null)
       .fold(0.0, (sum, c) => sum + spentInCategory(c.id, month));
 
-  /// The headline figure: budget minus *all* spend (budgeted + unbudgeted).
-  /// Goes negative — with its minus sign — when total spend passes the budget.
+  /// The headline figure: budget minus *budgeted* spend. Unbudgeted spend sits
+  /// outside the budget entirely, so it is excluded here — the hero describes
+  /// the budget and nothing else, and agrees with the tab's own
+  /// `budgeted of total` line (spec 5.1 §2). Goes negative — with its minus
+  /// sign — when budgeted spend alone passes the budget.
   double leftThisMonth(DateTime month) =>
-      totalBudget - (budgetedSpend(month) + unbudgetedSpend(month));
+      totalBudget - budgetedSpend(month);
 
   /// Expense categories with no budget that have spending in [month], amount
   /// descending — the `NO BUDGET SET` list. A category with nothing spent is

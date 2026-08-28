@@ -277,23 +277,20 @@ class _BudgetSummary extends StatelessWidget {
     final budget = store.totalBudget;
     final hasBudget = budget > 0;
     final budgeted = store.budgetedSpend(month);
-    final unbudgeted = store.unbudgetedSpend(month);
-    final spent = budgeted + unbudgeted;
-    // Left = budget − all spend (budgeted + unbudgeted). Over budget the hero
-    // shows the *overage* with the word "over", not a negative figure (spec §2).
+    // Hero and caption describe the budget and nothing else: left = budget −
+    // budgeted spend; the percentage is budgeted / budget. Unbudgeted spend sits
+    // outside the budget and is surfaced by _NoBudgetSection at the foot of the
+    // tab, never here (spec §2). Over budget the hero shows the *overage* with
+    // the word "over", not a negative figure.
     final left = store.leftThisMonth(month);
     final over = hasBudget && left < 0;
-    final ratio = hasBudget ? spent / budget : 0.0;
-    final solidFrac = hasBudget ? budgeted / budget : 0.0;
-    final hatchFrac = hasBudget ? unbudgeted / budget : 0.0;
+    final ratio = hasBudget ? budgeted / budget : 0.0;
     final isCurrent = store.isCurrentMonth(month);
     final monthGone = store.monthProgressFor(month);
-    final showUnbudgeted = hasBudget && unbudgeted > 0;
 
-    // The hero bar colours by PACE, not the spent ratio (spec §2): a blend of
-    // lump-sum and spread spending sitting far past an even burn is a real
-    // signal, unlike a single lump-sum category. Over budget → red; ahead of
-    // pace → amber; on or behind pace → green.
+    // The hero bar colours by PACE, not the spent ratio (spec §2): budgeted
+    // spend sitting far past an even burn is a real signal. Over budget → red;
+    // ahead of pace → amber; on or behind pace → green.
     final barColor = over
         ? AppColors.negative
         : (ratio > monthGone ? AppColors.warning : AppColors.positive);
@@ -306,9 +303,6 @@ class _BudgetSummary extends StatelessWidget {
         over ? l.plOverAmount(budgetStr) : l.plLeftOfAmount(budgetStr);
     final phraseColor = over ? AppColors.negative : AppColors.textSecondary;
 
-    const noteStyle =
-        TextStyle(fontSize: 11, color: AppColors.textSecondary);
-
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         Insets.gutter,
@@ -319,63 +313,39 @@ class _BudgetSummary extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // One line: figure · inline label, then the unbudgeted note far right.
-          // No caps label row — the segmented control above already says
-          // "Budgets" (spec §2). The figure+phrase scale together in a FittedBox
-          // so "left of $3,800" can never truncate; the note sits at the edge.
-          Row(
-            children: [
-              Expanded(
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.centerLeft,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.baseline,
-                    textBaseline: TextBaseline.alphabetic,
-                    children: [
-                      AmountText(
-                        hasBudget ? (over ? -left : left) : 0,
-                        style: AppText.hero.copyWith(fontSize: 32, height: 1.0),
-                        color: over ? AppColors.negative : null,
-                      ),
-                      const SizedBox(width: Insets.sm),
-                      Text(
-                        phrase,
-                        style: AppText.caption.copyWith(color: phraseColor),
-                      ),
-                    ],
-                  ),
+          // One line: figure · inline label. No caps label row — the segmented
+          // control above already says "Budgets" (spec §2). The figure+phrase
+          // scale together in a FittedBox so "left of $3,800" can never
+          // truncate. The hero describes the budget alone — no unbudgeted note.
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
+              children: [
+                AmountText(
+                  hasBudget ? (over ? -left : left) : 0,
+                  style: AppText.hero.copyWith(fontSize: 32, height: 1.0),
+                  color: over ? AppColors.negative : null,
                 ),
-              ),
-              // Neutral grey, never amber: spending outside a budget is a fact,
-              // not a warning, and is unrelated to any overage (spec §2).
-              if (showUnbudgeted) ...[
                 const SizedBox(width: Insets.sm),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    AmountText(
-                      unbudgeted,
-                      style: noteStyle,
-                      color: AppColors.textSecondary,
-                    ),
-                    Text(' ${l.plUnbudgeted}', style: noteStyle),
-                  ],
+                Text(
+                  phrase,
+                  style: AppText.caption.copyWith(color: phraseColor),
                 ),
               ],
-            ],
+            ),
           ),
           // Fix the gap at the box, not the margin (spec §2): a 32pt figure's
           // line box carries ~9px of empty descender space; height:1.0 above
           // removes it, and a 9px top margin lands the visual gap at 10–12px.
           const SizedBox(height: 9),
-          // Solid = budgeted share; hatch = unbudgeted share, drawn right after
-          // it. Both clamp inside 100 %; over-budget is announced by the figure
-          // and the word, not by the bar (spec §2).
+          // Solid fill = budgeted / budget. It clamps inside 100 %; over-budget
+          // is announced by the figure and the word, not by the bar (spec §2).
           ProgressBar(
-            value: solidFrac,
-            hatchValue: showUnbudgeted ? hatchFrac : null,
+            value: ratio,
             color: barColor,
             paceMarker: isCurrent ? monthGone : null,
             height: 8,
@@ -383,13 +353,17 @@ class _BudgetSummary extends StatelessWidget {
           const SizedBox(height: Insets.sm),
           Row(
             children: [
-              // Both halves in the same unit — "87% spent · 71% of the month
-              // gone" — so no arithmetic is needed to compare them (spec §2).
-              Flexible(
+              // "76% spent · day 9 of 31" — the percentage is budgeted spend
+              // only, and the day count (the same clock as the pace marker) is
+              // shorter and more actionable than a percentage of the month, so
+              // it survives narrow widths and large text (spec §2/§4). Takes all
+              // the space the legend leaves — Expanded, not Flexible + Spacer —
+              // so it fills the row and never clips with room to spare.
+              Expanded(
                 child: Text(
                   isCurrent
                       ? '${l.plPctSpent(percent(ratio, decimals: 0))} · '
-                          '${l.plPctMonthGone(percent(monthGone, decimals: 0))}'
+                          '${l.plDayOfMonth(store.dayOfMonthFor(month), store.daysInMonthOf(month))}'
                       : l.plPctSpent(percent(ratio, decimals: 0)),
                   style: AppText.caption.copyWith(fontSize: 11.5),
                   maxLines: 1,
@@ -398,8 +372,9 @@ class _BudgetSummary extends StatelessWidget {
               ),
               // Pace marker legend — only the summary bar is labelled; a closed
               // or future month has no pace to keep, so it is hidden (spec §2).
+              // Sits flush right at its intrinsic width, on the same line.
               if (isCurrent) ...[
-                const Spacer(),
+                const SizedBox(width: Insets.sm),
                 Container(width: 2, height: 10, color: AppColors.textPrimary),
                 const SizedBox(width: 5),
                 Text(l.plPace,
