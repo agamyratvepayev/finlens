@@ -821,80 +821,118 @@ class _GoalCard extends StatelessWidget {
     final m = store.goalMetrics(goal);
     final verdict = goalVerdict(l, goal, m);
 
+    // One composed sentence for the screen reader — name, the amount pair, then
+    // the verdict (which now carries the section's verb). ExcludeSemantics on
+    // the visual tree keeps the two amounts and two Texts from reading twice.
+    final amountPair =
+        '${money(m.current, signless: true, masked: store.masked)}'
+        ' / ${money(m.target)}';
+
     return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        Insets.gutter,
-        0,
-        Insets.gutter,
-        Insets.md,
-      ),
-      child: AppCard(
-        child: InkWell(
-          borderRadius: BorderRadius.circular(Radii.card),
-          onTap: () => Navigator.of(context, rootNavigator: true).push(
-            MaterialPageRoute(
-              builder: (_) => GoalDetailScreen(goalId: goal.id),
-            ),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(Insets.md),
-            child: Column(
-              children: [
-                Row(
+      // Tighter bottom margin than a budget card (§1): 8, not Insets.md.
+      padding: const EdgeInsets.fromLTRB(Insets.gutter, 0, Insets.gutter, 8),
+      child: Semantics(
+        container: true,
+        button: true,
+        label: '${goal.name}, $amountPair, ${verdict.text}',
+        child: ExcludeSemantics(
+          // AppCard is shared, so its 14pt radius (down from Radii.card) is
+          // passed in from here, never edited on the widget itself.
+          child: AppCard(
+            radius: 14,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(14),
+              onTap: () => Navigator.of(context, rootNavigator: true).push(
+                MaterialPageRoute(
+                  builder: (_) => GoalDetailScreen(goalId: goal.id),
+                ),
+              ),
+              // 8 vertical · 12 horizontal (§1): the two text lines and the bar
+              // set the height, the padding is what's tuned — no fixed height,
+              // so the card grows intact at large text scale.
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    IconTile(
-                      m.reached ? Icons.check_rounded : store.goalIcon(goal),
-                      color: m.reached ? AppColors.positive : AppColors.goal,
-                      size: 30,
-                    ),
-                    const SizedBox(width: Insets.md),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            goal.name,
-                            style: AppText.rowTitle,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            verdict.text,
-                            style: AppText.rowSubtitle.copyWith(
-                              fontSize: 11.5,
-                              color: goalVerdictColor(m, verdict.attention),
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: Insets.sm),
                     Row(
                       children: [
-                        AmountText.balance(
-                          m.current,
-                          color: m.reached ? AppColors.positive : null,
+                        IconTile(
+                          m.reached
+                              ? Icons.check_rounded
+                              : store.goalIcon(goal),
+                          color:
+                              m.reached ? AppColors.positive : AppColors.goal,
+                          size: 26,
                         ),
-                        Text(
-                          ' / ${money(m.target)}',
-                          style: AppText.amount.copyWith(
-                            color: AppColors.textSecondary,
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Name and amount share a baseline; the verdict
+                              // sits alone on the line below (§2).
+                              Row(
+                                crossAxisAlignment:
+                                    CrossAxisAlignment.baseline,
+                                textBaseline: TextBaseline.alphabetic,
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      goal.name,
+                                      style: AppText.rowTitle
+                                          .copyWith(height: 1.15),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  const SizedBox(width: Insets.sm),
+                                  AmountText.balance(
+                                    m.current,
+                                    color: m.reached
+                                        ? AppColors.positive
+                                        : null,
+                                  ),
+                                  Text(
+                                    ' / ${money(m.target)}',
+                                    style: AppText.amount.copyWith(
+                                      color: AppColors.textSecondary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 1),
+                              Text(
+                                verdict.text,
+                                style: AppText.rowSubtitle.copyWith(
+                                  fontSize: 11.5,
+                                  height: 1.15,
+                                  color: goalVerdictColor(
+                                      m, verdict.attention),
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
                           ),
                         ),
                       ],
                     ),
+                    const SizedBox(height: 6),
+                    // The goal card's 3pt track with a thinner pace marker
+                    // (§6); the budget bars keep the 2pt/3pt default.
+                    ProgressBar(
+                      value: m.progress,
+                      color: goalBarColor(m),
+                      paceMarker: goalPaceFraction(m),
+                      height: 3,
+                      markerWidth: 1.5,
+                      markerOverhang: 1.5,
+                    ),
                   ],
                 ),
-                const SizedBox(height: Insets.md),
-                ProgressBar(
-                  value: m.progress,
-                  color: goalBarColor(m),
-                  paceMarker: goalPaceFraction(m),
-                ),
-              ],
+              ),
             ),
           ),
         ),

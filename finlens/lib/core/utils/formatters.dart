@@ -36,6 +36,12 @@ String _group(String digits) {
 
 /// Formats money the way the design does. Decimals are dropped when the value
 /// is whole ($14,500) and kept otherwise ($15.99).
+///
+/// [roundUp] ceils to a whole figure before formatting — used for a goal's
+/// required monthly rate, where landing short misses the target, so the only
+/// safe direction is up ($969.13 → $970). [noDecimals] drops cents to the
+/// nearest whole for verdict amounts that carry no fractional meaning ($569.00
+/// → $569). Both suppress cents; neither touches balances or totals elsewhere.
 String money(
   double value, {
   String currency = 'USD',
@@ -43,18 +49,23 @@ String money(
   bool forceDecimals = false,
   bool masked = false,
   bool signless = false,
+  bool roundUp = false,
+  bool noDecimals = false,
 }) {
   final symbol = currencySymbol(currency);
   if (masked) return '$symbol••••';
 
   final negative = value < 0;
-  final abs = value.abs();
+  var abs = value.abs();
+  if (roundUp) abs = abs.ceilToDouble();
 
   // The mockups print cents only on small, precise amounts ($15.99) and keep
   // headline figures whole ($185,700) — anything from 1,000 up is rounded, so
   // FX conversion never leaves a stray ".70" on a net-worth total.
   final fractional = (abs - abs.truncateToDouble()).abs() > 0.004;
-  final needsDecimals = forceDecimals || (fractional && abs < 1000);
+  final needsDecimals = !noDecimals &&
+      !roundUp &&
+      (forceDecimals || (fractional && abs < 1000));
 
   final rounded = needsDecimals ? abs : abs.roundToDouble();
   final whole = _group(rounded.truncate().toString());

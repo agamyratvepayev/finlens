@@ -2376,8 +2376,28 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String goalBehind(Object rate) {
-    return 'Behind · $rate/mo needed';
+  String goalBehind(Object phrase) {
+    return 'Behind · $phrase';
+  }
+
+  @override
+  String plGoalRateSave(Object rate) {
+    return 'save $rate/mo';
+  }
+
+  @override
+  String plGoalRatePay(Object rate) {
+    return 'pay $rate/mo';
+  }
+
+  @override
+  String plGoalRateCollect(Object rate) {
+    return 'collect $rate/mo';
+  }
+
+  @override
+  String plGoalRateEarn(Object rate) {
+    return 'earn $rate/mo';
   }
 
   @override

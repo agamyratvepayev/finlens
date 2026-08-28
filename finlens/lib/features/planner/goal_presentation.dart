@@ -41,20 +41,40 @@ import '../../theme/app_colors.dart';
     return (text: l.goalDueLine(dayMonth(m.targetDate!, l), tail), attention: false);
   }
 
-  // No target date — the refill / funded case (§9). No pace, no rate.
+  // No target date — the refill / funded case (§9). No pace, no rate. The
+  // refill amount carries no fractional meaning, so it prints whole ($569).
   if (m.targetDate == null) {
     if (m.atTarget) return (text: l.goalFunded, attention: false);
-    return (text: l.goalRefill(money(m.remaining)), attention: false);
+    return (text: l.goalRefill(money(m.remaining, noDecimals: true)),
+        attention: false);
   }
 
-  final rate = money(m.requiredRate ?? 0);
-  if (m.behind) return (text: l.goalBehind(rate), attention: true);
+  // The required monthly rate rounds *up*: paying the rounded-down figure lands
+  // short of the target, so the only safe direction is up ($969.13 → $970).
+  final rate = money(m.requiredRate ?? 0, roundUp: true);
+  // Behind leads with the section's own verb ("pay" / "save" / "collect" /
+  // "earn"), never a passive "needed" — the verb tells the user what to do.
+  if (m.behind) {
+    return (text: l.goalBehind(_rateVerb(l, m.section, rate)), attention: true);
+  }
 
   final ahead =
       m.projectedEnd != null && m.projectedEnd!.isBefore(m.targetDate!);
   if (ahead) return (text: l.goalAhead(rate), attention: false);
   return (text: l.goalOnTrack(rate), attention: false);
 }
+
+/// The section's verb applied to a formatted monthly rate ("pay $970/mo"),
+/// chosen from the goal's own section — never a string comparison on the label.
+/// `waitingOn` never reaches this (it returns early with no rate), but it maps
+/// to "collect" for completeness.
+String _rateVerb(AppLocalizations l, GoalSection section, String rate) =>
+    switch (section) {
+      GoalSection.saving => l.plGoalRateSave(rate),
+      GoalSection.payingOff => l.plGoalRatePay(rate),
+      GoalSection.waitingOn => l.plGoalRateCollect(rate),
+      GoalSection.earning => l.plGoalRateEarn(rate),
+    };
 
 /// The verdict's colour: green when reached, amber when it needs attention,
 /// muted otherwise. Colour states a fact; direction is carried elsewhere.

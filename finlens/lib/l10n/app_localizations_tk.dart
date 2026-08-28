@@ -2374,8 +2374,28 @@ class AppLocalizationsTk extends AppLocalizations {
   }
 
   @override
-  String goalBehind(Object rate) {
-    return 'Yza galýar · aýda $rate gerek';
+  String goalBehind(Object phrase) {
+    return 'Yza galýar · $phrase';
+  }
+
+  @override
+  String plGoalRateSave(Object rate) {
+    return 'aýda $rate ýygna';
+  }
+
+  @override
+  String plGoalRatePay(Object rate) {
+    return 'aýda $rate töle';
+  }
+
+  @override
+  String plGoalRateCollect(Object rate) {
+    return 'aýda $rate al';
+  }
+
+  @override
+  String plGoalRateEarn(Object rate) {
+    return 'aýda $rate gazan';
   }
 
   @override

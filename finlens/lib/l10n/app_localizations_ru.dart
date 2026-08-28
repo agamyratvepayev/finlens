@@ -2418,8 +2418,28 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String goalBehind(Object rate) {
-    return 'Отставание · нужно $rate/мес';
+  String goalBehind(Object phrase) {
+    return 'Отставание · $phrase';
+  }
+
+  @override
+  String plGoalRateSave(Object rate) {
+    return 'откладывать $rate/мес';
+  }
+
+  @override
+  String plGoalRatePay(Object rate) {
+    return 'платить $rate/мес';
+  }
+
+  @override
+  String plGoalRateCollect(Object rate) {
+    return 'получать $rate/мес';
+  }
+
+  @override
+  String plGoalRateEarn(Object rate) {
+    return 'зарабатывать $rate/мес';
   }
 
   @override

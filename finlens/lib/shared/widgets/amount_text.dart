@@ -159,6 +159,8 @@ class ProgressBar extends StatelessWidget {
     this.height = 6,
     this.background,
     this.paceMarker,
+    this.markerWidth = 2,
+    this.markerOverhang = 3,
   });
 
   final double value;
@@ -168,6 +170,12 @@ class ProgressBar extends StatelessWidget {
 
   /// Spec 5.1 — vertical line marking how much of the month has elapsed.
   final double? paceMarker;
+
+  /// Pace-marker geometry. Defaults match the budget bars (2pt wide, 3pt of
+  /// overhang each side); the goal card passes thinner values so the marker
+  /// doesn't outweigh its 3pt track.
+  final double markerWidth;
+  final double markerOverhang;
 
   @override
   Widget build(BuildContext context) {
@@ -204,11 +212,12 @@ class ProgressBar extends StatelessWidget {
               ),
               if (paceMarker != null)
                 Positioned(
-                  left: (width * paceMarker!.clamp(0.0, 1.0) - 1)
-                      .clamp(0.0, width - 2),
-                  top: -3,
-                  bottom: -3,
-                  child: Container(width: 2, color: AppColors.textPrimary),
+                  left: (width * paceMarker!.clamp(0.0, 1.0) - markerWidth / 2)
+                      .clamp(0.0, width - markerWidth),
+                  top: -markerOverhang,
+                  bottom: -markerOverhang,
+                  child:
+                      Container(width: markerWidth, color: AppColors.textPrimary),
                 ),
             ],
           ),

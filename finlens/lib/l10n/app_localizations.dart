@@ -3861,8 +3861,32 @@ abstract class AppLocalizations {
   /// No description provided for @goalBehind.
   ///
   /// In en, this message translates to:
-  /// **'Behind · {rate}/mo needed'**
-  String goalBehind(Object rate);
+  /// **'Behind · {phrase}'**
+  String goalBehind(Object phrase);
+
+  /// No description provided for @plGoalRateSave.
+  ///
+  /// In en, this message translates to:
+  /// **'save {rate}/mo'**
+  String plGoalRateSave(Object rate);
+
+  /// No description provided for @plGoalRatePay.
+  ///
+  /// In en, this message translates to:
+  /// **'pay {rate}/mo'**
+  String plGoalRatePay(Object rate);
+
+  /// No description provided for @plGoalRateCollect.
+  ///
+  /// In en, this message translates to:
+  /// **'collect {rate}/mo'**
+  String plGoalRateCollect(Object rate);
+
+  /// No description provided for @plGoalRateEarn.
+  ///
+  /// In en, this message translates to:
+  /// **'earn {rate}/mo'**
+  String plGoalRateEarn(Object rate);
 
   /// No description provided for @goalAhead.
   ///

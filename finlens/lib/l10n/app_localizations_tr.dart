@@ -2371,8 +2371,28 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
-  String goalBehind(Object rate) {
-    return 'Geride · aylık $rate gerek';
+  String goalBehind(Object phrase) {
+    return 'Geride · $phrase';
+  }
+
+  @override
+  String plGoalRateSave(Object rate) {
+    return 'aylık $rate biriktir';
+  }
+
+  @override
+  String plGoalRatePay(Object rate) {
+    return 'aylık $rate öde';
+  }
+
+  @override
+  String plGoalRateCollect(Object rate) {
+    return 'aylık $rate tahsil et';
+  }
+
+  @override
+  String plGoalRateEarn(Object rate) {
+    return 'aylık $rate kazan';
   }
 
   @override
