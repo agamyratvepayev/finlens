@@ -57,7 +57,7 @@ Txn _expense({
       toRef: 'c-cat',
       date: DateTime(2026, 8, 5),
       note: note,
-      tags: tags,
+      tagIds: tags,
     );
 
 Future<double> _pump(
@@ -71,6 +71,8 @@ Future<double> _pump(
   double width = 360,
   double textScale = 1.0,
 }) async {
+  // The row resolves tag ids → names via the store; reify authored names.
+  txn.tagIds = [for (final n in txn.tagIds) store.createTag(n)!.id];
   await tester.pumpWidget(StoreScope(
     store: store,
     child: MaterialApp(

@@ -30,7 +30,7 @@ Txn _expense(String id,
       toRef: 'c-cat',
       date: DateTime(2026, 8, 5),
       note: note,
-      tags: tags,
+      tagIds: tags,
     );
 
 Txn _transfer(String id, {String note = ''}) => Txn(
@@ -65,7 +65,7 @@ void main() {
       toRef: spec.toRef,
       date: spec.date,
       note: spec.note,
-      tags: spec.tags,
+      tagIds: [for (final n in spec.tagIds) store.createTag(n)!.id],
     );
     final q = LedgerQuery(
         store: store, scope: scope, start: DateTime(2020), end: DateTime(2030));

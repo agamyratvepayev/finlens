@@ -141,6 +141,44 @@ class Category {
       monthlyBudget == null ? null : monthlyBudget! + (budgetRollover ? rolloverAmount : 0);
 }
 
+/// A tag is a real entity, not a bare string on a transaction.
+///
+/// It became one the moment tags needed to be *archived*: a tag with no
+/// existence apart from its uses has nothing to mark. Promoting it to an id-bearing
+/// record also makes rename a single field update (not a bulk rewrite of every
+/// transaction carrying the old text) and collapses case/whitespace duplicates
+/// (`#Fun`, `#fun `) into one thing.
+///
+/// [name] is stored **without** the leading `#`, case-preserved for display but
+/// compared case-insensitively for uniqueness (`foldTag`). [lastUsedAt] is
+/// stored, never derived: it orders the picker and the management list, so a full
+/// ledger scan on every build is not acceptable. It advances when a transaction
+/// gains the tag and when a transaction carrying it is edited to a later date —
+/// see `AppStore._touchTags`.
+class Tag {
+  Tag({
+    required this.id,
+    required this.name,
+    this.archived = false,
+    required this.createdAt,
+    required this.lastUsedAt,
+  });
+
+  final String id;
+  String name;
+  bool archived;
+  DateTime createdAt;
+
+  /// Stored, not derived (see class doc). Monotonic — only ever moves forward.
+  DateTime lastUsedAt;
+}
+
+/// The folded key two tag names are compared under for uniqueness: trimmed and
+/// lower-cased, so `#Fun`, `#fun` and `#fun ` are the same tag. Display keeps the
+/// user's casing; only equality folds. Kept beside [Tag] so every call site —
+/// migration, create, rename/merge — folds identically.
+String foldTag(String name) => name.trim().toLowerCase();
+
 /// Spec 6.1 — Transaction. `fromRef`/`toRef` are polymorphic: they hold an
 /// Account id or a Category id depending on [type].
 class Txn {
@@ -156,7 +194,7 @@ class Txn {
     this.toAmount,
     this.fee,
     this.feeFromSource = true,
-    this.tags = const [],
+    this.tagIds = const [],
     this.note = '',
     this.editedCount = 0,
     DateTime? createdAt,
@@ -183,7 +221,10 @@ class Txn {
   double? fee;
   bool feeFromSource;
 
-  List<String> tags;
+  /// Tag ids ([Tag.id]), not names. Resolve to display names through
+  /// `AppStore.tagNames`; the migration in `AppStore` rewrites legacy name-lists
+  /// into id-lists once on load.
+  List<String> tagIds;
   String note;
 
   /// Spec 2.3 — audit trail ("Created 9 Aug, 14:32 · edited once").

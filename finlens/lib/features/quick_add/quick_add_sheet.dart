@@ -15,6 +15,7 @@ import '../../theme/app_typography.dart';
 import '../planner/edit_goal_screen.dart';
 import 'pickers.dart';
 import 'repeat_sheet.dart';
+import 'tag_picker_sheet.dart';
 import 'split_sheet.dart';
 import 'widgets/amount_hero.dart';
 import 'widgets/form_kit.dart';
@@ -100,7 +101,8 @@ class _QuickAddScreenState extends State<QuickAddScreen>
   String? _fromRef;
   String? _toRef;
   DateTime _date = AppStore.today;
-  List<String> _tags = [];
+  /// Selected tag IDS (not names). Resolved to display names for the field.
+  List<String> _tagIds = [];
 
   bool _keypadOpen = false;
 
@@ -145,7 +147,7 @@ class _QuickAddScreenState extends State<QuickAddScreen>
       _toRef = source.toRef;
       // Spec 2.2 — a copy lands on today; an edit keeps its original date.
       _date = widget.editing != null ? source.date : AppStore.today;
-      _tags = List.of(source.tags);
+      _tagIds = List.of(source.tagIds);
       _note.text = source.note;
       _hasFee = (source.fee ?? 0) > 0;
       _rateOverride = source.exchangeRate;
@@ -314,25 +316,24 @@ class _QuickAddScreenState extends State<QuickAddScreen>
         onTap: _pickDate,
       );
 
-  FieldSpec _tagField() => FieldSpec(
-        icon: Icons.sell_rounded,
-        label: AppLocalizations.of(context).qaTag,
-        value: _tags.isEmpty ? null : _tags.join(', '),
-        emptyText: AppLocalizations.of(context).qaNone,
-        onTap: () async {
-          final v = await _promptText(
-            title: AppLocalizations.of(context).qaTag,
-            initial: _tags.join(', '),
-            hint: AppLocalizations.of(context).qaExampleCategory,
-          );
-          if (v == null || !mounted) return;
-          setState(() => _tags = v
-              .split(',')
-              .map((t) => t.trim().replaceAll('#', ''))
-              .where((t) => t.isNotEmpty)
-              .toList());
+  FieldSpec _tagField() {
+    final store = StoreScope.of(context);
+    final names = store.tagNames(_tagIds);
+    return FieldSpec(
+      icon: Icons.sell_rounded,
+      label: AppLocalizations.of(context).qaTag,
+      value: names.isEmpty ? null : names.map((n) => '#$n').join(' '),
+      emptyText: AppLocalizations.of(context).qaNone,
+      onTap: () => showTagPicker(
+        context,
+        selected: _tagIds.toSet(),
+        // Selections apply as they are made; the field just reflects them.
+        onChanged: (ids) {
+          if (mounted) setState(() => _tagIds = ids.toList());
         },
-      );
+      ),
+    );
+  }
 
   FieldSpec _noteField() {
     final text = _note.text.trim();
@@ -1118,7 +1119,7 @@ class _QuickAddScreenState extends State<QuickAddScreen>
           fromRef: income ? line.categoryId! : accountId,
           toRef: income ? accountId : line.categoryId!,
           date: _date,
-          tags: _tags,
+          tagIds: _tagIds,
           note: note,
           splitGroupId: gid,
         );
@@ -1135,7 +1136,7 @@ class _QuickAddScreenState extends State<QuickAddScreen>
         fromRef: _fromRef!,
         toRef: _toRef!,
         date: _date,
-        tags: _tags,
+        tagIds: _tagIds,
         note: note,
       );
       _applyRepeatFor(store, t, income: income);
@@ -1235,7 +1236,7 @@ class _QuickAddScreenState extends State<QuickAddScreen>
           fromRef: _fromRef,
           toRef: _toRef,
           date: _date,
-          tags: _tags,
+          tagIds: _tagIds,
           note: _note.text.trim(),
         );
         if (_type == QuickAddType.expense ||

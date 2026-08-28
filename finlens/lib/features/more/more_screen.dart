@@ -14,6 +14,7 @@ import '../balance/assets_screen.dart';
 import '../balance/liabilities_screen.dart';
 import '../planner/archive_screen.dart';
 import '../quick_add/pickers.dart';
+import 'tag_management_screen.dart';
 
 /// Selectable UI languages. `null` = follow the device locale. Endonyms are
 /// intentionally shown in each language's own script and are NOT translated.
@@ -124,6 +125,17 @@ class MoreScreen extends StatelessWidget {
                         type: CategoryType.expense,
                         title: l.moreCategories,
                       ),
+                    ),
+                    FormRow(
+                      icon: Icons.tag_rounded,
+                      label: l.moreTags,
+                      subtitle: l.tagsSubtitle(
+                          store.tagsInUseCount, store.tagsArchivedCount),
+                      showChevron: true,
+                      onTap: () => Navigator.of(context, rootNavigator: true)
+                          .push(MaterialPageRoute(
+                        builder: (_) => const TagManagementScreen(),
+                      )),
                     ),
                   ],
                 ),

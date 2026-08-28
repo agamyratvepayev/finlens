@@ -369,7 +369,7 @@ AppStore buildSeedStore() {
       toRef: 'a-checking',
       date: at(6, 18, 10),
       note: 'Landing page project',
-      tags: ['side'],
+      tagIds: ['side'],
     ),
     // Housing
     Txn(
@@ -433,7 +433,7 @@ AppStore buildSeedStore() {
       toRef: 'c-entertainment',
       date: at(5, 21, 0),
       note: 'Concert tickets',
-      tags: ['fun'],
+      tagIds: ['fun'],
     ),
     Txn(
       id: 't-cinema',
@@ -455,7 +455,7 @@ AppStore buildSeedStore() {
       toRef: 'c-transport',
       date: at(3, 9, 20),
       note: 'Full tank before the trip',
-      tags: ['vacation'],
+      tagIds: ['vacation'],
     ),
     Txn(
       id: 't-transit',
@@ -477,7 +477,7 @@ AppStore buildSeedStore() {
       toRef: 'c-shopping',
       date: at(7, 13, 5),
       note: 'Kitchen shelves, 3 pcs',
-      tags: ['home'],
+      tagIds: ['home'],
     ),
     Txn(
       id: 't-clothes',

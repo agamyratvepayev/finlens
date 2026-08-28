@@ -39,11 +39,11 @@ List<Txn> buildHistoryTxns() => <Txn>[
   // a-cash-eur: 1 existing + 12 new = 13
   Txn(id: 'th-cash-eur-1', type: TxnType.expense, amount: 42.0, currency: 'EUR', fromRef: 'a-cash-eur', toRef: 'c-groceries', date: DateTime(2025, 9, 10, 18, 0), note: 'Market'),
   Txn(id: 'th-cash-eur-2', type: TxnType.expense, amount: 18.5, currency: 'EUR', fromRef: 'a-cash-eur', toRef: 'c-eatingout', date: DateTime(2025, 10, 17, 20, 10), note: 'Kafe'),
-  Txn(id: 'th-cash-eur-3', type: TxnType.expense, amount: 65.0, currency: 'EUR', fromRef: 'a-cash-eur', toRef: 'c-shopping', date: DateTime(2025, 11, 23, 15, 30), tags: ['vacation'], note: 'Kışlık ayakkabı'),
+  Txn(id: 'th-cash-eur-3', type: TxnType.expense, amount: 65.0, currency: 'EUR', fromRef: 'a-cash-eur', toRef: 'c-shopping', date: DateTime(2025, 11, 23, 15, 30), tagIds: ['vacation'], note: 'Kışlık ayakkabı'),
   Txn(id: 'th-cash-eur-4', type: TxnType.expense, amount: 24.0, currency: 'EUR', fromRef: 'a-cash-eur', toRef: 'c-eatingout', date: DateTime(2025, 12, 14, 13, 0), note: 'Dinner'),
   Txn(id: 'th-cash-eur-5', type: TxnType.expense, amount: 51.3, currency: 'EUR', fromRef: 'a-cash-eur', toRef: 'c-groceries', date: DateTime(2026, 1, 10, 18, 20), note: 'Bakkal'),
   Txn(id: 'th-cash-eur-6', type: TxnType.expense, amount: 12.0, currency: 'EUR', fromRef: 'a-cash-eur', toRef: 'c-transport', date: DateTime(2026, 2, 19, 9, 0), note: 'Metro'),
-  Txn(id: 'th-cash-eur-7', type: TxnType.income, amount: 300.0, currency: 'EUR', fromRef: 'c-freelance', toRef: 'a-cash-eur', date: DateTime(2026, 3, 24, 18, 0), tags: ['side'], note: 'Freelance (EUR)'),
+  Txn(id: 'th-cash-eur-7', type: TxnType.income, amount: 300.0, currency: 'EUR', fromRef: 'c-freelance', toRef: 'a-cash-eur', date: DateTime(2026, 3, 24, 18, 0), tagIds: ['side'], note: 'Freelance (EUR)'),
   Txn(id: 'th-cash-eur-8', type: TxnType.expense, amount: 38.0, currency: 'EUR', fromRef: 'a-cash-eur', toRef: 'c-shopping', date: DateTime(2026, 4, 23, 15, 0), note: 'Clothes'),
   Txn(id: 'th-cash-eur-9', type: TxnType.transfer, amount: 220.0, currency: 'USD', fromRef: 'a-checking', toRef: 'a-cash-eur', date: DateTime(2026, 5, 28, 12, 0), toAmount: 200.0, fee: 2.0, note: 'EUR top-up'),
   Txn(id: 'th-cash-eur-10', type: TxnType.expense, amount: 47.5, currency: 'EUR', fromRef: 'a-cash-eur', toRef: 'c-groceries', date: DateTime(2025, 12, 3, 18, 0), note: 'Market'),
@@ -221,11 +221,11 @@ List<Txn> buildHistoryTxns() => <Txn>[
   Txn(id: 'th-amex-1', type: TxnType.expense, amount: 22.0, currency: 'USD', fromRef: 'a-amex', toRef: 'c-subs', date: DateTime(2025, 12, 2, 7, 0), note: 'Netflix'),
   Txn(id: 'th-amex-2', type: TxnType.expense, amount: 34.5, currency: 'USD', fromRef: 'a-amex', toRef: 'c-eatingout', date: DateTime(2026, 2, 14, 20, 0), note: 'Dinner date'),
   Txn(id: 'th-amex-3', type: TxnType.transfer, amount: 400.0, currency: 'USD', fromRef: 'a-checking', toRef: 'a-amex', date: DateTime(2026, 2, 10, 9, 0), note: 'Partial payment before statement'),
-  Txn(id: 'th-amex-4', type: TxnType.expense, amount: 65.0, currency: 'USD', fromRef: 'a-amex', toRef: 'c-entertainment', date: DateTime(2026, 3, 9, 20, 0), tags: ['fun'], note: 'Theatre'),
+  Txn(id: 'th-amex-4', type: TxnType.expense, amount: 65.0, currency: 'USD', fromRef: 'a-amex', toRef: 'c-entertainment', date: DateTime(2026, 3, 9, 20, 0), tagIds: ['fun'], note: 'Theatre'),
   Txn(id: 'th-amex-5', type: TxnType.transfer, amount: 450.0, currency: 'USD', fromRef: 'a-checking', toRef: 'a-amex', date: DateTime(2026, 4, 10, 9, 0), note: 'Statement payment'),
   Txn(id: 'th-amex-6', type: TxnType.expense, amount: 120.0, currency: 'USD', fromRef: 'a-amex', toRef: 'c-shopping', date: DateTime(2026, 5, 5, 13, 0), note: 'Headphones'),
   Txn(id: 'th-amex-7', type: TxnType.expense, amount: 15.5, currency: 'USD', fromRef: 'a-amex', toRef: 'c-eatingout', date: DateTime(2026, 8, 8, 13, 20), note: 'Lunch wrap'),  // Zone D — 8–9 Aug, uncompensated
-  Txn(id: 'th-amex-8', type: TxnType.expense, amount: 28.0, currency: 'USD', fromRef: 'a-amex', toRef: 'c-entertainment', date: DateTime(2026, 8, 8, 18, 40), tags: ['fun'], note: 'Streaming rental'),  // Zone D — 8–9 Aug, uncompensated
+  Txn(id: 'th-amex-8', type: TxnType.expense, amount: 28.0, currency: 'USD', fromRef: 'a-amex', toRef: 'c-entertainment', date: DateTime(2026, 8, 8, 18, 40), tagIds: ['fun'], note: 'Streaming rental'),  // Zone D — 8–9 Aug, uncompensated
   Txn(id: 'th-amex-9', type: TxnType.expense, amount: 21.0, currency: 'USD', fromRef: 'a-amex', toRef: 'c-transport', date: DateTime(2026, 8, 9, 12, 50), note: 'Taxi home'),  // Zone D — 8–9 Aug, uncompensated
   // a-bonus: 1 existing + 9 new + 1 Zone-D = 11
   Txn(id: 'th-bonus-1', type: TxnType.expense, amount: 78.0, currency: 'USD', fromRef: 'a-bonus', toRef: 'c-shopping', date: DateTime(2025, 10, 17, 16, 0), note: 'Sneakers'),
@@ -233,7 +233,7 @@ List<Txn> buildHistoryTxns() => <Txn>[
   Txn(id: 'th-bonus-3', type: TxnType.expense, amount: 95.0, currency: 'USD', fromRef: 'a-bonus', toRef: 'c-shopping', date: DateTime(2025, 12, 20, 16, 0), note: 'Winter coat'),
   Txn(id: 'th-bonus-4', type: TxnType.expense, amount: 60.0, currency: 'USD', fromRef: 'a-bonus', toRef: 'c-groceries', date: DateTime(2026, 1, 27, 16, 0), note: 'Big grocery run'),
   Txn(id: 'th-bonus-5', type: TxnType.transfer, amount: 200.0, currency: 'USD', fromRef: 'a-checking', toRef: 'a-bonus', date: DateTime(2026, 2, 12, 9, 0), note: 'Card payment'),
-  Txn(id: 'th-bonus-6', type: TxnType.expense, amount: 140.0, currency: 'USD', fromRef: 'a-bonus', toRef: 'c-shopping', date: DateTime(2026, 3, 17, 16, 0), tags: ['home'], note: 'Home decor'),
+  Txn(id: 'th-bonus-6', type: TxnType.expense, amount: 140.0, currency: 'USD', fromRef: 'a-bonus', toRef: 'c-shopping', date: DateTime(2026, 3, 17, 16, 0), tagIds: ['home'], note: 'Home decor'),
   Txn(id: 'th-bonus-7', type: TxnType.transfer, amount: 220.0, currency: 'USD', fromRef: 'a-checking', toRef: 'a-bonus', date: DateTime(2026, 4, 12, 9, 0), note: 'Card payment'),
   Txn(id: 'th-bonus-8', type: TxnType.expense, amount: 42.0, currency: 'USD', fromRef: 'a-bonus', toRef: 'c-eatingout', date: DateTime(2026, 5, 8, 13, 0), note: 'Family lunch out'),
   Txn(id: 'th-bonus-9', type: TxnType.expense, amount: 31.0, currency: 'USD', fromRef: 'a-bonus', toRef: 'c-eatingout', date: DateTime(2026, 4, 22, 13, 0), note: 'Dinner out'),

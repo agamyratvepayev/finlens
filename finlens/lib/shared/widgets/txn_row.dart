@@ -189,7 +189,7 @@ class TxnRow extends StatelessWidget {
                       title: _highlighted(title, _titleStyle),
                       titleWidth:
                           TitleTagRow.measure(title, _titleStyle, scaler),
-                      tags: txn.tags,
+                      tags: store.tagNames(txn.tagIds),
                       tagStyle: _tagStyle,
                       buildTag: (run) => _highlighted(run, _tagStyle),
                       trailing: amount,
@@ -280,7 +280,7 @@ class TxnRow extends StatelessWidget {
                       overflow: TextOverflow.ellipsis),
                   titleWidth:
                       TitleTagRow.measure(parties.from, titleStyle, scaler),
-                  tags: txn.tags,
+                  tags: store.tagNames(txn.tagIds),
                   tagStyle: _tagStyle,
                   buildTag: (run) => _highlighted(run, _tagStyle),
                   trailing: amount,
@@ -374,7 +374,7 @@ class TxnRow extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis),
                   titleWidth: TitleTagRow.measure(other, _titleStyle, scaler),
-                  tags: txn.tags,
+                  tags: store.tagNames(txn.tagIds),
                   tagStyle: _tagStyle,
                   buildTag: (run) => _highlighted(run, _tagStyle),
                   trailing: amountTop,
@@ -469,7 +469,8 @@ class TxnRow extends StatelessWidget {
       money(signed, currency: txn.currency, signless: true, masked: store.masked),
       // Every tag is named — the `+N` collapse is a visual truncation only, and
       // the announcement does not change with the perspective.
-      if (txn.tags.isNotEmpty) tagSemanticsLabel(txn.tags),
+      if (txn.tagIds.isNotEmpty)
+        tagSemanticsLabel(store.tagNames(txn.tagIds)),
     ];
     if (balance != null) {
       final where = account.isNotEmpty ? '$account ' : '';
@@ -484,7 +485,8 @@ class TxnRow extends StatelessWidget {
     final parts = <String>[
       l.transferFromTo(parties.from, parties.to),
       money(txn.amount, currency: txn.currency, signless: true, masked: store.masked),
-      if (txn.tags.isNotEmpty) tagSemanticsLabel(txn.tags),
+      if (txn.tagIds.isNotEmpty)
+        tagSemanticsLabel(store.tagNames(txn.tagIds)),
       if (balance != null)
         l.a11yAccountBalance(
             parties.to, money(balance, currency: txn.currency, masked: store.masked)),

@@ -187,7 +187,8 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
     type: r.txn.type,
     groupIds: _groupIdsOf(r, scopeAccountIds),
     absAmount: r.signedAmount,
-    tags: r.txn.tags,
+    // The filter matches by tag ID now; TxnFacts carries the raw ids.
+    tagIds: r.txn.tagIds,
   );
 
   /// The folded haystack a search query is tested against: the category and
@@ -199,7 +200,7 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
         store.refName(t.fromRef),
         store.refName(t.toRef),
         t.note,
-        ...t.tags,
+        ...store.tagNames(t.tagIds),
         r.signedAmount.toStringAsFixed(2),
         r.signedAmount.round().toString(),
       ].join(' '),
@@ -999,8 +1000,8 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
       for (final id in _groupIdsOf(r, scopeAccountIds)) {
         groupCounts[id] = (groupCounts[id] ?? 0) + 1;
       }
-      for (final tag in r.txn.tags) {
-        tagCounts[tag] = (tagCounts[tag] ?? 0) + 1;
+      for (final id in r.txn.tagIds) {
+        tagCounts[id] = (tagCounts[id] ?? 0) + 1;
       }
     }
     final groups =
@@ -1015,9 +1016,19 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
             )
             .toList()
           ..sort((a, b) => b.count.compareTo(a.count));
+    // Keyed by tag id; archived tags are included (past rows still carry them)
+    // and marked subtly rather than hidden (§6).
     final tags =
         tagCounts.entries
-            .map((e) => FilterChipItem(id: e.key, label: e.key, count: e.value))
+            .map((e) {
+              final tag = store.tagById(e.key);
+              return FilterChipItem(
+                id: e.key,
+                label: '#${tag?.name ?? '—'}',
+                count: e.value,
+                archived: tag?.archived ?? false,
+              );
+            })
             .toList()
           ..sort((a, b) => b.count.compareTo(a.count));
 

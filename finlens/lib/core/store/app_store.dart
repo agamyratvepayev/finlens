@@ -24,19 +24,102 @@ class AppStore extends ChangeNotifier {
     required List<Txn> txns,
     required List<Goal> goals,
     required List<Task> tasks,
+    List<Tag> tags = const [],
   })  : _accounts = List.of(accounts),
         _categories = List.of(categories),
         _txns = List.of(txns),
         _goals = List.of(goals),
-        _tasks = List.of(tasks) {
-    // On load: drop goals whose source no longer resolves to anything (§9),
-    // seed a `created` history entry for any goal that lacks one (so CHANGES is
-    // never empty — §7), then latch any goal already sitting at or past its
-    // target (a seed goal, or a target met before the app started).
+        _tasks = List.of(tasks),
+        _tags = List.of(tags) {
+    // On load: reify tags (turn the fixture's legacy name-lists into Tag
+    // entities and rewrite each txn's tagIds — §1 migration), drop goals whose
+    // source no longer resolves to anything (§9), seed a `created` history entry
+    // for any goal that lacks one (so CHANGES is never empty — §7), then latch
+    // any goal already sitting at or past its target.
+    _migrateTags();
     _pruneOrphanGoals();
     _seedGoalHistory();
     _syncGoalLatches();
   }
+
+  /// Current on-load tag schema. Bumping this re-runs [_migrateTags].
+  static const int tagSchemaVersion = 1;
+  int _tagSchema = 0;
+
+  /// One-pass migration from the legacy model (`Txn.tags` held literal names)
+  /// to the entity model (`Txn.tagIds` holds [Tag.id]). Guarded by
+  /// [_tagSchema]: it runs only when the store is still at schema 0 **and** no
+  /// tags have been reified yet, so it can never run twice (a store built with a
+  /// non-empty [_tags] — e.g. via [loadFrom] copying an already-migrated source —
+  /// is left untouched).
+  ///
+  /// For each distinct folded name found across every transaction it mints one
+  /// [Tag], with `createdAt`/`lastUsedAt` taken from the oldest/newest
+  /// transaction carrying it, and rewrites that transaction's list to the
+  /// matching ids (deduplicated). Case-folded duplicates (`#Fun` / `#fun`)
+  /// collapse into a single tag here.
+  void _migrateTags() {
+    if (_tagSchema >= tagSchemaVersion) return;
+    if (_tags.isEmpty) {
+      final byFold = <String, Tag>{};
+      var merged = 0;
+      for (final t in _txns) {
+        for (final raw in t.tagIds) {
+          final name = _legacyName(raw);
+          if (name == null) continue;
+          final fold = foldTag(name);
+          final existing = byFold[fold];
+          if (existing == null) {
+            byFold[fold] = Tag(
+              id: _nextId('tg'),
+              name: name,
+              createdAt: t.date,
+              lastUsedAt: t.date,
+            );
+          } else {
+            merged++;
+            if (t.date.isBefore(existing.createdAt)) existing.createdAt = t.date;
+            if (t.date.isAfter(existing.lastUsedAt)) existing.lastUsedAt = t.date;
+          }
+        }
+      }
+      _tags
+        ..clear()
+        ..addAll(byFold.values);
+      // Rewrite each txn's list to ids, deduplicated and order-preserving.
+      for (final t in _txns) {
+        final seen = <String>{};
+        final ids = <String>[];
+        for (final raw in t.tagIds) {
+          final name = _legacyName(raw);
+          if (name == null) continue;
+          final tag = byFold[foldTag(name)];
+          if (tag != null && seen.add(tag.id)) ids.add(tag.id);
+        }
+        t.tagIds = ids;
+      }
+      // `merged` counts every folded-duplicate occurrence collapsed away; it is
+      // surfaced through [tagMigrationMergedCount] for the deliverable's report.
+      _tagMigrationMerged = merged;
+    }
+    _tagSchema = tagSchemaVersion;
+  }
+
+  /// Normalise a legacy tag string for migration: trim, strip a single leading
+  /// `#`, trim again. Returns null for an empty result so blank tags vanish.
+  /// Folding happens on this stripped form, so `#fun` and `fun` are one tag.
+  static String? _legacyName(String raw) {
+    var s = raw.trim();
+    if (s.startsWith('#')) s = s.substring(1);
+    s = s.trim();
+    return s.isEmpty ? null : s;
+  }
+
+  int _tagMigrationMerged = 0;
+
+  /// How many case-folded duplicate tag *occurrences* the load migration
+  /// collapsed (0 when the store was built already-migrated). Diagnostic only.
+  int get tagMigrationMergedCount => _tagMigrationMerged;
 
   void _seedGoalHistory() {
     for (final g in _goals) {
@@ -59,6 +142,7 @@ class AppStore extends ChangeNotifier {
   final List<Txn> _txns;
   final List<Goal> _goals;
   final List<Task> _tasks;
+  final List<Tag> _tags;
 
   int _idSeq = 1000;
   String _nextId(String prefix) => '$prefix${_idSeq++}';
@@ -407,8 +491,11 @@ class AppStore extends ChangeNotifier {
       for (final c in _categories) c.id,
       for (final a in _accounts) a.id,
     };
+    // Filters persist tag IDS; a stored id that no longer resolves to a live tag
+    // is pruned on load (spec §5). Archived tags stay valid — past transactions
+    // still carry them and must remain filterable.
     final validTags = <String>{
-      for (final t in _txns) ...t.tags,
+      for (final t in _tags) t.id,
     };
     _transFilters.clear();
     for (final key in _transScopeKeys()) {
@@ -593,6 +680,165 @@ class AppStore extends ChangeNotifier {
   /// archived category (§6). Archiving is blocked while this is non-empty.
   List<Task> tasksUsingCategory(String categoryId) =>
       tasks.where((t) => t.categoryId == categoryId).toList(growable: false);
+
+  // ── Tags (§1–§7) ──────────────────────────────────────────────────────────
+  // Tags are a first-class entity so they can be renamed (one field, not a bulk
+  // rewrite), merged, and archived. `lastUsedAt` is stored and orders every
+  // surface; `_touchTags` advances it. `Txn.tagIds` holds ids, never names.
+
+  /// Every tag, most-recently-used first — the base order both the picker and the
+  /// management screen present in (recency lets finished tags sink on their own).
+  List<Tag> get allTags => [..._tags]
+    ..sort((a, b) => b.lastUsedAt.compareTo(a.lastUsedAt));
+
+  /// The tags the picker offers: never-archived, newest use first. Archiving a
+  /// tag is exactly what removes it from here.
+  List<Tag> get activeTags =>
+      allTags.where((t) => !t.archived).toList(growable: false);
+
+  /// Archived tags, newest use first — the management screen's ARCHIVED section.
+  List<Tag> get archivedTags =>
+      allTags.where((t) => t.archived).toList(growable: false);
+
+  Tag? tagById(String? id) {
+    if (id == null) return null;
+    for (final t in _tags) {
+      if (t.id == id) return t;
+    }
+    return null;
+  }
+
+  /// The tag whose folded name equals [name]'s, across ALL tags (archived too),
+  /// or null. The uniqueness oracle for create/rename/merge.
+  Tag? tagByFoldedName(String name, {String? exceptId}) {
+    final fold = foldTag(name);
+    for (final t in _tags) {
+      if (t.id != exceptId && foldTag(t.name) == fold) return t;
+    }
+    return null;
+  }
+
+  /// Resolve a row's tag ids to display names, dropping any that no longer
+  /// resolve. The layout widgets keep taking names — the model stops here.
+  List<String> tagNames(List<String> ids) => [
+        for (final id in ids)
+          if (tagById(id) case final t?) t.name,
+      ];
+
+  /// How many transactions carry [tagId]. O(n); called for the management list,
+  /// not per row-build.
+  int txnCountForTag(String tagId) {
+    var n = 0;
+    for (final t in _txns) {
+      if (t.tagIds.contains(tagId)) n++;
+    }
+    return n;
+  }
+
+  int get tagsInUseCount => _tags.where((t) => !t.archived).length;
+  int get tagsArchivedCount => _tags.where((t) => t.archived).length;
+
+  /// Advance every listed tag's `lastUsedAt` to at least [when] (monotonic —
+  /// never moves backward). Called whenever a transaction gains a tag or is
+  /// edited to a later date (§1).
+  void _touchTags(Iterable<String> tagIds, DateTime when) {
+    for (final id in tagIds) {
+      final tag = tagById(id);
+      if (tag != null && when.isAfter(tag.lastUsedAt)) tag.lastUsedAt = when;
+    }
+  }
+
+  /// Create a tag from a typed name and return it. A leading `#` is stripped and
+  /// the name is trimmed; an empty result is rejected (returns null). If a tag
+  /// with the same folded name already exists it is returned instead of a
+  /// duplicate — and if that existing tag was archived, creating/using its name
+  /// restores it (the user is explicitly reaching for it again).
+  Tag? createTag(String rawName) {
+    final name = rawName.trim().replaceFirst(RegExp(r'^#'), '').trim();
+    if (name.isEmpty) return null;
+    final existing = tagByFoldedName(name);
+    if (existing != null) {
+      if (existing.archived) {
+        existing.archived = false;
+        notifyListeners();
+      }
+      return existing;
+    }
+    final now = DateTime.now();
+    final tag = Tag(id: _nextId('tg'), name: name, createdAt: now, lastUsedAt: now);
+    _tags.add(tag);
+    notifyListeners();
+    return tag;
+  }
+
+  /// The tag a rename of [source] to [newName] would MERGE into, or null when the
+  /// rename is a plain relabel. A merge is triggered only by a folded collision
+  /// with a *different* existing tag; renaming a tag to its own name in different
+  /// casing is a plain rename (§5).
+  Tag? mergeTargetFor(Tag source, String newName) =>
+      tagByFoldedName(newName, exceptId: source.id);
+
+  /// Rename [source] to [newName], merging into an existing tag when the folded
+  /// name collides with a different one (§5). Returns the surviving tag.
+  ///
+  /// Plain rename touches only the Tag row — no transaction is rewritten, because
+  /// every row references the id. A merge repoints every referencing transaction
+  /// to the target (deduplicated so one carrying both ids never ends up with it
+  /// twice), deletes the source, and moves the target's `lastUsedAt` to the later
+  /// of the two.
+  Tag renameTag(Tag source, String newName) {
+    final name = newName.trim().replaceFirst(RegExp(r'^#'), '').trim();
+    if (name.isEmpty) return source;
+    final target = mergeTargetFor(source, name);
+    if (target == null) {
+      source.name = name;
+      notifyListeners();
+      return source;
+    }
+    // Merge source → target.
+    for (final t in _txns) {
+      if (!t.tagIds.contains(source.id)) continue;
+      final next = <String>[];
+      final seen = <String>{};
+      for (final id in t.tagIds) {
+        final mapped = id == source.id ? target.id : id;
+        if (seen.add(mapped)) next.add(mapped);
+      }
+      t.tagIds = next;
+    }
+    if (source.lastUsedAt.isAfter(target.lastUsedAt)) {
+      target.lastUsedAt = source.lastUsedAt;
+    }
+    if (source.createdAt.isBefore(target.createdAt)) {
+      target.createdAt = source.createdAt;
+    }
+    _tags.remove(source);
+    notifyListeners();
+    return target;
+  }
+
+  /// Archive a tag — take it out of circulation without touching its
+  /// transactions (they keep it and keep matching it in the filter). Reversible,
+  /// destroys nothing, so no confirmation (§4).
+  void archiveTag(Tag tag) {
+    tag.archived = true;
+    notifyListeners();
+  }
+
+  void restoreTag(Tag tag) {
+    tag.archived = false;
+    notifyListeners();
+  }
+
+  /// Delete a tag outright — offered only when it is on no transactions (§4), so
+  /// nothing is stripped from any history. A no-op (returns false) if it is still
+  /// in use, as a guard against a caller that skipped the check.
+  bool deleteTag(Tag tag) {
+    if (txnCountForTag(tag.id) > 0) return false;
+    _tags.remove(tag);
+    notifyListeners();
+    return true;
+  }
 
   // ── Lookups ───────────────────────────────────────────────────────────────
   Account? accountById(String? id) {
@@ -1259,7 +1505,7 @@ class AppStore extends ChangeNotifier {
     double? toAmount,
     double? fee,
     bool feeFromSource = true,
-    List<String> tags = const [],
+    List<String> tagIds = const [],
     String note = '',
     String? goalId,
     String? splitGroupId,
@@ -1277,13 +1523,15 @@ class AppStore extends ChangeNotifier {
       toAmount: toAmount,
       fee: fee,
       feeFromSource: feeFromSource,
-      tags: tags,
+      tagIds: tagIds,
       note: note,
       goalId: goalId,
       splitGroupId: splitGroupId,
       recurrenceTaskId: recurrenceTaskId,
     );
     _txns.add(txn);
+    // Every tag this transaction carries was just used (§1 — lastUsedAt).
+    _touchTags(txn.tagIds, txn.date);
     _sameIndex = null;
     _accountIndex = null;
     // A moved balance can newly meet a goal's target; latch any that reached
@@ -1301,7 +1549,7 @@ class AppStore extends ChangeNotifier {
     String? fromRef,
     String? toRef,
     DateTime? date,
-    List<String>? tags,
+    List<String>? tagIds,
     String? note,
     double? fee,
     double? toAmount,
@@ -1314,7 +1562,7 @@ class AppStore extends ChangeNotifier {
       ..fromRef = fromRef ?? txn.fromRef
       ..toRef = toRef ?? txn.toRef
       ..date = date ?? txn.date
-      ..tags = tags ?? txn.tags
+      ..tagIds = tagIds ?? txn.tagIds
       ..note = note ?? txn.note
       ..fee = fee ?? txn.fee
       ..toAmount = toAmount ?? txn.toAmount
@@ -1322,6 +1570,8 @@ class AppStore extends ChangeNotifier {
       ..recurrenceTaskId =
           clearRecurrence ? null : (recurrenceTaskId ?? txn.recurrenceTaskId)
       ..editedCount += 1;
+    // A tag the edit added, or a date pushed later, counts as a fresh use (§1).
+    _touchTags(txn.tagIds, txn.date);
     // An edit can change fromRef/toRef/date, so the same-key index is stale.
     _sameIndex = null;
     _accountIndex = null;
@@ -1363,6 +1613,13 @@ class AppStore extends ChangeNotifier {
     _tasks
       ..clear()
       ..addAll(source._tasks);
+    _tags
+      ..clear()
+      ..addAll(source._tags);
+    // The source store already ran [_migrateTags] in its own constructor; adopt
+    // its schema so this store does not re-migrate already-reified ids.
+    _tagSchema = source._tagSchema;
+    _tagMigrationMerged = source._tagMigrationMerged;
     _sameIndex = null;
     _accountIndex = null;
     // A moved balance can newly meet a goal's target; latch any that reached

@@ -17,11 +17,16 @@ class FilterChipItem {
     required this.count,
     this.color,
     this.icon,
+    this.archived = false,
   });
 
   final String id;
   final String label;
   final int count;
+
+  /// An archived tag still appears in the filter (past rows carry it), marked
+  /// subtly rather than hidden (§6). Renders one step dimmer than a live entry.
+  final bool archived;
 
   /// The category's own colour (accounts use their group's colour). Null for
   /// tags, which carry no dot.
@@ -806,7 +811,9 @@ class _FilterSheetState extends State<_FilterSheet> {
             selected: sel.contains(i.id),
             dotColor: s.dot ? i.color : null,
             count: s.showCount ? i.count : null,
-            dim: s.showCount && i.count == 0,
+            // Archived tags stay in the list but read one step dimmer — the
+            // subtle mark the spec asks for, reusing the count==0 dim state.
+            dim: (s.showCount && i.count == 0) || i.archived,
             onTap: () => _apply(() => _toggle(_selFor(s.key), i.id)),
           ),
       ],

@@ -353,7 +353,7 @@ class LedgerTxnRow extends StatelessWidget {
       // Every tag is named — the visual `+N` collapse is a width truncation, and
       // a screen reader has no width limit. The announcement does not change with
       // the scope. Shares the one formatter used on both rows.
-      if (txn.tags.isNotEmpty) tagSemanticsLabel(txn.tags),
+      if (txn.tagIds.isNotEmpty) tagSemanticsLabel(store.tagNames(txn.tagIds)),
     ].join(', ');
 
     // Fonts/weights/colours are kept exactly as before — only the layout
@@ -549,7 +549,7 @@ class LedgerTxnRow extends StatelessWidget {
                                 TitleTagRow(
                                   title: titleWidget,
                                   titleWidth: titleWidth,
-                                  tags: txn.tags,
+                                  tags: store.tagNames(txn.tagIds),
                                   tagStyle: tagStyle,
                                   buildTag: (run) => _highlighted(
                                     run,
@@ -724,7 +724,7 @@ class LedgerTxnRow extends StatelessWidget {
       AppLocalizations.of(context).transferFromTo(parties.from, parties.to),
       money(txn.amount, currency: txn.currency, signless: true, masked: store.masked),
       // Every tag named, and named the same on both screens (spec §5).
-      if (txn.tags.isNotEmpty) tagSemanticsLabel(txn.tags),
+      if (txn.tagIds.isNotEmpty) tagSemanticsLabel(store.tagNames(txn.tagIds)),
       if (onAccount && descOpen) note,
       if (showBalance) 'balance $balanceText',
     ].join(', ');
@@ -812,7 +812,7 @@ class LedgerTxnRow extends StatelessWidget {
                                   overflow: TextOverflow.ellipsis),
                               titleWidth: TitleTagRow.measure(
                                   line1Text, line1Style, scaler),
-                              tags: txn.tags,
+                              tags: store.tagNames(txn.tagIds),
                               tagStyle: tagStyle,
                               buildTag: (run) =>
                                   _highlighted(run, tagStyle, query: highlight),

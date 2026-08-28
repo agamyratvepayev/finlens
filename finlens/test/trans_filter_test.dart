@@ -13,7 +13,7 @@ TxnFacts facts({
   double abs = 100,
   List<String> tags = const [],
 }) =>
-    TxnFacts(type: type, groupIds: groups, absAmount: abs, tags: tags);
+    TxnFacts(type: type, groupIds: groups, absAmount: abs, tagIds: tags);
 
 void main() {
   group('TransFilter.matches (spec §2)', () {

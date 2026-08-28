@@ -4211,6 +4211,126 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Archive both'**
   String get goalArchiveBoth;
+
+  /// No description provided for @tagsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Tags'**
+  String get tagsTitle;
+
+  /// No description provided for @moreTags.
+  ///
+  /// In en, this message translates to:
+  /// **'Tags'**
+  String get moreTags;
+
+  /// No description provided for @tagsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'{inUse} in use · {archived} archived'**
+  String tagsSubtitle(int inUse, int archived);
+
+  /// No description provided for @tagSelectedCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} selected'**
+  String tagSelectedCount(int count);
+
+  /// No description provided for @tagSearchOrCreate.
+  ///
+  /// In en, this message translates to:
+  /// **'Search or create'**
+  String get tagSearchOrCreate;
+
+  /// No description provided for @tagCreate.
+  ///
+  /// In en, this message translates to:
+  /// **'Create #{name}'**
+  String tagCreate(Object name);
+
+  /// No description provided for @tagSectionInUse.
+  ///
+  /// In en, this message translates to:
+  /// **'In use'**
+  String get tagSectionInUse;
+
+  /// No description provided for @tagSectionArchived.
+  ///
+  /// In en, this message translates to:
+  /// **'Archived'**
+  String get tagSectionArchived;
+
+  /// No description provided for @tagNeverUsed.
+  ///
+  /// In en, this message translates to:
+  /// **'Not used yet'**
+  String get tagNeverUsed;
+
+  /// No description provided for @tagUsageLine.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{{count} transaction · last {date}} other{{count} transactions · last {date}}}'**
+  String tagUsageLine(int count, Object date);
+
+  /// No description provided for @tagArchiveFootnote.
+  ///
+  /// In en, this message translates to:
+  /// **'Archived tags stay on their transactions and stay searchable. They just don\'t appear when you tag something new.'**
+  String get tagArchiveFootnote;
+
+  /// No description provided for @tagActionArchive.
+  ///
+  /// In en, this message translates to:
+  /// **'Archive'**
+  String get tagActionArchive;
+
+  /// No description provided for @tagActionRename.
+  ///
+  /// In en, this message translates to:
+  /// **'Rename'**
+  String get tagActionRename;
+
+  /// No description provided for @tagNewTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'New tag'**
+  String get tagNewTitle;
+
+  /// No description provided for @tagNameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Tag name'**
+  String get tagNameHint;
+
+  /// No description provided for @tagRenameTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Rename #{name}'**
+  String tagRenameTitle(Object name);
+
+  /// No description provided for @tagRenameSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{{count} transaction carries this tag} other{{count} transactions carry this tag}}'**
+  String tagRenameSubtitle(int count);
+
+  /// No description provided for @tagMergeWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'A tag named #{target} already exists. The two will merge into one tag on {count} transactions. This cannot be undone.'**
+  String tagMergeWarning(Object target, int count);
+
+  /// No description provided for @tagMergeButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Merge into #{target}'**
+  String tagMergeButton(Object target);
+
+  /// No description provided for @tagArchivedBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'archived'**
+  String get tagArchivedBadge;
 }
 
 class _AppLocalizationsDelegate

@@ -54,7 +54,7 @@ class TxnFacts {
     required this.type,
     required this.groupIds,
     required this.absAmount,
-    required this.tags,
+    required this.tagIds,
   });
 
   final TxnType type;
@@ -68,7 +68,9 @@ class TxnFacts {
   /// so a $900 income and a $900 expense fall in the same band (spec §2).
   final double absAmount;
 
-  final List<String> tags;
+  /// The transaction's tag IDS (the filter stores ids too). Archived tags are
+  /// kept — a past transaction still carries them and must stay filterable.
+  final List<String> tagIds;
 }
 
 /// The scoped-ledger transaction filter (spec §2). Immutable; every mutation
@@ -113,7 +115,7 @@ class TransFilter {
     // min > max yields no overlap here, so it matches nothing without a swap.
     if (min != null && f.absAmount < min!) return false;
     if (max != null && f.absAmount > max!) return false;
-    if (tags.isNotEmpty && !f.tags.any(tags.contains)) return false;
+    if (tags.isNotEmpty && !f.tagIds.any(tags.contains)) return false;
     return true;
   }
 

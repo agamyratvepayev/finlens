@@ -92,10 +92,16 @@ AppStore buildDevSeedStore() {
   // Sum each account's signed contribution using the canonical ledger rule
   // (AppStore._effectOn) — never re-implemented here — by probing a store whose
   // starting balances are all zero. balanceOf then returns Σ(effects) alone.
+  //
+  // The probe gets its OWN txn list: an AppStore constructor runs the tag
+  // migration, which rewrites each txn's `tagIds` in place (names → ids). Sharing
+  // one list would leave the returned store's txns already-rewritten, and its own
+  // migration would then mis-read those ids as names. [buildDevTxns] is pure, so
+  // a second call is a clean, independent copy.
   final probe = AppStore(
     accounts: [for (final a in prod.accounts) _withOpening(a, 0)],
     categories: prod.categories,
-    txns: devTxns,
+    txns: buildDevTxns(today),
     goals: const [],
     tasks: const [],
   );
@@ -172,7 +178,7 @@ class _Gen {
       toRef: category,
       date: date,
       note: note,
-      tags: tags,
+      tagIds: tags,
     ));
   }
 
@@ -188,7 +194,7 @@ class _Gen {
       toRef: account,
       date: date,
       note: note,
-      tags: tags,
+      tagIds: tags,
     ));
   }
 

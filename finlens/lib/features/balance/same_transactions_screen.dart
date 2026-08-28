@@ -340,12 +340,15 @@ class _SameTransactionsScreenState extends State<SameTransactionsScreen> {
       }
     }
 
-    if (origin.tags.isNotEmpty) {
-      rows.add(_detailRow(
-        l.stDetailTags,
-        origin.tags.map((t) => '#$t').join(' '),
-        valueColor: AppColors.tagDot,
-      ));
+    if (origin.tagIds.isNotEmpty) {
+      final names = store.tagNames(origin.tagIds);
+      if (names.isNotEmpty) {
+        rows.add(_detailRow(
+          l.stDetailTags,
+          names.map((t) => '#$t').join(' '),
+          valueColor: AppColors.tagDot,
+        ));
+      }
     }
 
     if (rows.isEmpty) return null;

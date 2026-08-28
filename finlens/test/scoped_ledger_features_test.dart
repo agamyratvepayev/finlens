@@ -45,7 +45,7 @@ Txn _txn(String id, TxnType type, double amount, String from, String to,
       toRef: to,
       date: DateTime(2026, month, day, 12),
       note: note,
-      tags: tags,
+      tagIds: tags,
     );
 
 AppStore _store() => AppStore(

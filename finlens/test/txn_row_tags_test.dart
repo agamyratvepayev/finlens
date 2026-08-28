@@ -54,8 +54,15 @@ Txn _expense({String note = '', List<String> tags = const []}) => Txn(
       toRef: 'c-cat',
       date: DateTime(2026, 8, 5),
       note: note,
-      tags: tags,
+      // Authored as names for readability; reified to real Tag ids (and the
+      // Tag entities created in the store) by the pump harnesses below.
+      tagIds: tags,
     );
+
+/// Create a Tag per name in [store] and return the matching ids. createTag
+/// returns an existing tag on a folded-name collision, so repeats are safe.
+List<String> _reify(AppStore store, List<String> names) =>
+    [for (final n in names) store.createTag(n)!.id];
 
 // ── Ledger-tab TxnRow harness ────────────────────────────────────────────────
 
@@ -65,6 +72,9 @@ Future<void> _pumpTxnRow(
   Txn txn, {
   double width = 390,
 }) async {
+  // The row resolves tag ids → names through the store; reify the authored
+  // names into real tags so the ids resolve.
+  txn.tagIds = _reify(store, txn.tagIds);
   await tester.pumpWidget(StoreScope(
     store: store,
     child: MaterialApp(
@@ -100,7 +110,7 @@ ScopedTxn _scopedRow(AppStore store, Txn spec, LedgerScope scope) {
     toRef: spec.toRef,
     date: spec.date,
     note: spec.note,
-    tags: spec.tags,
+    tagIds: _reify(store, spec.tagIds),
   );
   final q = LedgerQuery(
       store: store, scope: scope, start: DateTime(2020), end: DateTime(2030));

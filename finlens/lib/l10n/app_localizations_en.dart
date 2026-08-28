@@ -2601,4 +2601,93 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get goalArchiveBoth => 'Archive both';
+
+  @override
+  String get tagsTitle => 'Tags';
+
+  @override
+  String get moreTags => 'Tags';
+
+  @override
+  String tagsSubtitle(int inUse, int archived) {
+    return '$inUse in use · $archived archived';
+  }
+
+  @override
+  String tagSelectedCount(int count) {
+    return '$count selected';
+  }
+
+  @override
+  String get tagSearchOrCreate => 'Search or create';
+
+  @override
+  String tagCreate(Object name) {
+    return 'Create #$name';
+  }
+
+  @override
+  String get tagSectionInUse => 'In use';
+
+  @override
+  String get tagSectionArchived => 'Archived';
+
+  @override
+  String get tagNeverUsed => 'Not used yet';
+
+  @override
+  String tagUsageLine(int count, Object date) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count transactions · last $date',
+      one: '$count transaction · last $date',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get tagArchiveFootnote =>
+      'Archived tags stay on their transactions and stay searchable. They just don\'t appear when you tag something new.';
+
+  @override
+  String get tagActionArchive => 'Archive';
+
+  @override
+  String get tagActionRename => 'Rename';
+
+  @override
+  String get tagNewTitle => 'New tag';
+
+  @override
+  String get tagNameHint => 'Tag name';
+
+  @override
+  String tagRenameTitle(Object name) {
+    return 'Rename #$name';
+  }
+
+  @override
+  String tagRenameSubtitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count transactions carry this tag',
+      one: '$count transaction carries this tag',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String tagMergeWarning(Object target, int count) {
+    return 'A tag named #$target already exists. The two will merge into one tag on $count transactions. This cannot be undone.';
+  }
+
+  @override
+  String tagMergeButton(Object target) {
+    return 'Merge into #$target';
+  }
+
+  @override
+  String get tagArchivedBadge => 'archived';
 }

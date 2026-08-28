@@ -142,7 +142,7 @@ class _LedgerScreenState extends State<LedgerScreen> {
         !_accountIds.contains(t.toRef)) {
       return false;
     }
-    if (_tagIds.isNotEmpty && !t.tags.any(_tagIds.contains)) return false;
+    if (_tagIds.isNotEmpty && !t.tagIds.any(_tagIds.contains)) return false;
     if (_min != null || _max != null) {
       // Bounds are on absolute base-currency magnitude, matching the sheet's
       // per-item counts and range hint.
@@ -160,7 +160,7 @@ class _LedgerScreenState extends State<LedgerScreen> {
         store.refName(t.fromRef),
         store.refName(t.toRef),
         t.note,
-        ...t.tags,
+        ...store.tagNames(t.tagIds),
       ].join(' '),
     );
     return hay.contains(folded);
@@ -680,8 +680,8 @@ class _LedgerScreenState extends State<LedgerScreen> {
       for (final id in {t.fromRef, t.toRef}) {
         if (accountIds.contains(id)) accCount[id] = (accCount[id] ?? 0) + 1;
       }
-      for (final tag in t.tags) {
-        tagCount[tag] = (tagCount[tag] ?? 0) + 1;
+      for (final id in t.tagIds) {
+        tagCount[id] = (tagCount[id] ?? 0) + 1;
       }
       final amt = Fx.toBase(t.amount, t.currency).abs();
       if (amt < rangeMin) rangeMin = amt;
@@ -703,10 +703,15 @@ class _LedgerScreenState extends State<LedgerScreen> {
       ..sort((a, b) => order(a.id, a.name, b.id, b.name, catCount));
     final accs = [...store.accounts]
       ..sort((a, b) => order(a.id, a.name, b.id, b.name, accCount));
+    // Tag ids present in the window, ordered by count then folded name. Archived
+    // tags are kept (past rows carry them) and marked subtly in the sheet (§6).
+    String tagName(String id) => store.tagById(id)?.name ?? '';
     final tags = tagCount.keys.toList()
       ..sort((a, b) {
         final c = (tagCount[b]!).compareTo(tagCount[a]!);
-        return c != 0 ? c : a.toLowerCase().compareTo(b.toLowerCase());
+        return c != 0
+            ? c
+            : tagName(a).toLowerCase().compareTo(tagName(b).toLowerCase());
       });
 
     // A category's count is contextual to the DIRECTION: a category of the
@@ -743,8 +748,13 @@ class _LedgerScreenState extends State<LedgerScreen> {
             ),
         ];
     List<FilterChipItem> tagItems(TxnType? _) => [
-          for (final tg in tags)
-            FilterChipItem(id: tg, label: '#$tg', count: tagCount[tg]!),
+          for (final id in tags)
+            FilterChipItem(
+              id: id,
+              label: '#${tagName(id)}',
+              count: tagCount[id]!,
+              archived: store.tagById(id)?.archived ?? false,
+            ),
         ];
 
     int countMatches(FilterSnapshot s) {
@@ -767,7 +777,7 @@ class _LedgerScreenState extends State<LedgerScreen> {
             !acc.contains(t.toRef)) {
           continue;
         }
-        if (tg.isNotEmpty && !t.tags.any(tg.contains)) continue;
+        if (tg.isNotEmpty && !t.tagIds.any(tg.contains)) continue;
         final amt = Fx.toBase(t.amount, t.currency).abs();
         if (s.min != null && amt < s.min!) continue;
         if (s.max != null && amt > s.max!) continue;

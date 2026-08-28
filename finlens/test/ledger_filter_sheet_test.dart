@@ -39,7 +39,7 @@ Txn _exp(String id, double amt, String from, String cat, int day,
       fromRef: from,
       toRef: cat,
       date: DateTime(2026, 8, day, 12),
-      tags: tags,
+      tagIds: tags,
     );
 
 AppStore _store() => AppStore(

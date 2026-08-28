@@ -247,8 +247,8 @@ void main() {
     });
 
     test('at least ten tagged transactions across three or more tags', () {
-      final tagged = txns.where((t) => t.tags.isNotEmpty).length;
-      final distinct = {for (final t in txns) ...t.tags};
+      final tagged = txns.where((t) => t.tagIds.isNotEmpty).length;
+      final distinct = {for (final t in txns) ...t.tagIds};
       expect(tagged, greaterThanOrEqualTo(10));
       expect(distinct.length, greaterThanOrEqualTo(3));
     });

@@ -99,7 +99,7 @@ void main() {
         fromRef: 'a1',
         toRef: 'g',
         date: date,
-        tags: ['shop'],
+        tagIds: ['shop'],
         note: 'Weekly');
     first.splitGroupId = first.id;
     store.addTxn(
@@ -109,7 +109,7 @@ void main() {
         fromRef: 'a1',
         toRef: 'h',
         date: date,
-        tags: ['shop'],
+        tagIds: ['shop'],
         note: 'Weekly',
         splitGroupId: first.id);
 
@@ -120,7 +120,7 @@ void main() {
     expect(group.every((t) => t.fromRef == 'a1'), isTrue);
     expect(group.every((t) => t.date == date), isTrue);
     expect(group.every((t) => t.note == 'Weekly'), isTrue);
-    expect(group.every((t) => t.tags.contains('shop')), isTrue);
+    expect(group.every((t) => t.tagIds.contains('shop')), isTrue);
     expect(group.map((t) => t.toRef).toSet(), {'g', 'h'});
     // A plain transaction has no group.
     final plain = store.addTxn(

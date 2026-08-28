@@ -38,7 +38,7 @@ Txn _tx(
       toRef: to,
       date: date ?? DateTime(2026, 8, 9, 8, 12),
       note: note,
-      tags: tags,
+      tagIds: tags,
     );
 
 Account _acc(String id, String name,
