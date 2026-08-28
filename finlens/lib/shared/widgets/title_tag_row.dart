@@ -108,33 +108,55 @@ class TitleTagRow extends StatelessWidget {
           // a whole title, so the tag drops and the title takes the region.
         }
 
-        final children = <Widget>[
-          if (run == null)
-            // No tag (or dropped): the title owns the whole region and
-            // ellipsizes only if it must.
-            Expanded(child: title)
-          else ...[
-            // Capped to its natural width so the tag hugs it with one gap
-            // rather than being shoved to the right by an expanding title.
-            ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: titleWidth + 0.5),
-              child: title,
-            ),
-            SizedBox(width: tagGap),
-            buildTag(run),
-            // Eat the remaining slack so the amount stays pinned right.
-            const Spacer(),
-          ],
-          SizedBox(width: trailingGap),
-          trailing,
-        ];
+        if (run == null) {
+          // No tag (or dropped): the title owns the whole region and
+          // ellipsizes only if it must.
+          return Row(
+            // Two type sizes side by side read on their baseline, not their
+            // centres — matching the title/amount pairing this replaces.
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+              Expanded(child: title),
+              SizedBox(width: trailingGap),
+              trailing,
+            ],
+          );
+        }
 
+        // A tag is shown. The title and tag form one group sized to its own
+        // intrinsic width, and the amount is pinned right by `spaceBetween`,
+        // which drops all the residual slack between the tag and the amount.
+        //
+        // The title is `Flexible.loose` (never `Expanded`): it renders whole
+        // whenever it fits and never stretches to shove the tag toward the
+        // amount. It sits INSIDE the group so its flex competes only with its
+        // own tag — never with the amount-pinning — so it is not capped to a
+        // share of the whole row and cannot be truncated while slack remains.
+        // (That measured-width pin — the old `ConstrainedBox(titleWidth + 0.5)`
+        // — was the truncation defect: the rendered text drifts a fraction past
+        // its own measurement and overflowed a box sized to fit it exactly. The
+        // measurement above now only chooses the run, never sizes the render.)
         return Row(
-          // Two type sizes side by side read on their baseline, not their
-          // centres — matching the title/amount pairing this replaces.
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           crossAxisAlignment: CrossAxisAlignment.baseline,
           textBaseline: TextBaseline.alphabetic,
-          children: children,
+          children: [
+            Flexible(
+              fit: FlexFit.loose,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
+                children: [
+                  Flexible(fit: FlexFit.loose, child: title),
+                  SizedBox(width: tagGap),
+                  buildTag(run),
+                ],
+              ),
+            ),
+            trailing,
+          ],
         );
       },
     );

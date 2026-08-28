@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:finlens/core/models/models.dart';
@@ -342,6 +343,122 @@ void main() {
       expect(find.bySemanticsLabel(RegExp('tags fun, weekend, split')),
           findsOneWidget);
       handle.dispose();
+    });
+  });
+
+  // ── The regression: a tagged title truncated while slack sat before the
+  //    amount. The title must render whole whenever the tag fits beside it; the
+  //    tag must drop before the title ellipsizes; an untagged row is untouched.
+  //    Repeated at 130% text scale, where the metrics differ but the order holds.
+  group('tagged title renders in full (the truncation fix)', () {
+    const titleStyle = TextStyle(fontSize: 14, fontWeight: FontWeight.w600);
+    const tagStyle = TextStyle(fontSize: 10.5, color: Color(0xFFBF5AF2));
+    const amountStyle = TextStyle(fontSize: 15, fontWeight: FontWeight.w600);
+
+    Widget harness(
+      double width, {
+      required String title,
+      required List<String> tags,
+      TextScaler scaler = TextScaler.noScaling,
+      String amount = r'$28',
+    }) {
+      return MaterialApp(
+        home: MediaQuery(
+          data: MediaQueryData(textScaler: scaler),
+          child: Scaffold(
+            body: Align(
+              alignment: Alignment.topLeft,
+              child: SizedBox(
+                width: width,
+                child: Builder(builder: (context) {
+                  final s = MediaQuery.textScalerOf(context);
+                  return TitleTagRow(
+                    title: Text(title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: titleStyle),
+                    titleWidth: TitleTagRow.measure(title, titleStyle, s),
+                    tags: tags,
+                    tagStyle: tagStyle,
+                    buildTag: (run) => Text(run, style: tagStyle),
+                    trailing: Text(amount, style: amountStyle),
+                    trailingWidth: TitleTagRow.measure(amount, amountStyle, s),
+                  );
+                }),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    // Whether the (single-span) title Text actually ellipsized when rendered.
+    bool ellipsized(WidgetTester tester, String text) =>
+        tester.renderObject<RenderParagraph>(find.text(text)).didExceedMaxLines;
+
+    // ── No scaling ─────────────────────────────────────────────────────────
+    testWidgets('a tagged title that fits is not truncated', (tester) async {
+      await tester.pumpWidget(
+          harness(400, title: 'Entertainment', tags: const ['fun']));
+      expect(find.text('Entertainment'), findsOneWidget);
+      expect(find.text('#fun'), findsOneWidget);
+      expect(ellipsized(tester, 'Entertainment'), isFalse);
+      // Rendered at its full natural width — not pinned short by a measurement.
+      final natural =
+          TitleTagRow.measure('Entertainment', titleStyle, TextScaler.noScaling);
+      expect(tester.getSize(find.text('Entertainment')).width,
+          closeTo(natural, 1.0));
+    });
+
+    testWidgets('the tag drops before a long title truncates', (tester) async {
+      // 355 holds the whole name but not the name + even a collapsed tag.
+      const title = 'US Stocks (S&P 500)';
+      await tester.pumpWidget(harness(355,
+          title: title, tags: const ['dividends-reinvested']));
+      expect(find.text(title), findsOneWidget);
+      expect(ellipsized(tester, title), isFalse);
+      // The tag dropped rather than the name being cut.
+      expect(find.textContaining('#dividends'), findsNothing);
+    });
+
+    testWidgets('an untagged title lays out unchanged', (tester) async {
+      await tester.pumpWidget(
+          harness(400, title: 'Entertainment', tags: const []));
+      expect(find.text('Entertainment'), findsOneWidget);
+      expect(ellipsized(tester, 'Entertainment'), isFalse);
+    });
+
+    // ── 130% text scale ────────────────────────────────────────────────────
+    const scale = TextScaler.linear(1.3);
+
+    testWidgets('130%: a tagged title that fits is not truncated',
+        (tester) async {
+      await tester.pumpWidget(harness(500,
+          title: 'Entertainment', tags: const ['fun'], scaler: scale));
+      expect(find.text('Entertainment'), findsOneWidget);
+      expect(find.text('#fun'), findsOneWidget);
+      expect(ellipsized(tester, 'Entertainment'), isFalse);
+      final natural =
+          TitleTagRow.measure('Entertainment', titleStyle, scale);
+      expect(tester.getSize(find.text('Entertainment')).width,
+          closeTo(natural, 1.0));
+    });
+
+    testWidgets('130%: the tag drops before a long title truncates',
+        (tester) async {
+      const title = 'US Stocks (S&P 500)';
+      await tester.pumpWidget(harness(450,
+          title: title, tags: const ['dividends-reinvested'], scaler: scale));
+      expect(find.text(title), findsOneWidget);
+      expect(ellipsized(tester, title), isFalse);
+      expect(find.textContaining('#dividends'), findsNothing);
+    });
+
+    testWidgets('130%: an untagged title lays out unchanged', (tester) async {
+      await tester.pumpWidget(harness(500,
+          title: 'Entertainment', tags: const [], scaler: scale));
+      expect(find.text('Entertainment'), findsOneWidget);
+      expect(ellipsized(tester, 'Entertainment'), isFalse);
     });
   });
 }
