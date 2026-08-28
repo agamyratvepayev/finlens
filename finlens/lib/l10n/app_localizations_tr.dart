@@ -894,9 +894,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String get schThisWeek => 'Bu hafta';
 
   @override
-  String get schLater => 'Bu ayın ilerisi';
-
-  @override
   String get plNothingScheduled => 'Planlanmış bir şey yok';
 
   @override
@@ -1682,7 +1679,7 @@ class AppLocalizationsTr extends AppLocalizations {
   String get tdRate => 'Kur';
 
   @override
-  String get tdNote => 'Not';
+  String get tdNote => 'NOT';
 
   @override
   String get tdNetWorth => 'Net değer';
@@ -2685,4 +2682,501 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get tagArchivedBadge => 'archived';
+
+  @override
+  String get plTitle => 'Planlayıcı';
+
+  @override
+  String get fieldSelectCategory => 'Kategori seç';
+
+  @override
+  String get actionResume => 'Sürdür';
+
+  @override
+  String get schToday => 'Bugün';
+
+  @override
+  String get schHorizonThisWeek => 'Bu hafta';
+
+  @override
+  String get schHorizonNext30 => 'Sonraki 30 gün';
+
+  @override
+  String get schHorizonThisMonth => 'Bu ay';
+
+  @override
+  String get schHorizonNext3Months => 'Sonraki 3 ay';
+
+  @override
+  String get schHorizonTitle => 'UFUK';
+
+  @override
+  String get schHorizonUntilDate => 'Bir tarihe kadar…';
+
+  @override
+  String get schHorizonFootnote =>
+      'Gecikmiş ödemeler burada sayılmaz — hangi ufku seçerseniz seçin listede kalır.';
+
+  @override
+  String schUntilControl(Object date) {
+    return '$date tarihine kadar';
+  }
+
+  @override
+  String get schCompletedThisMonth => 'Bu ay tamamlanan';
+
+  @override
+  String schCompletedLastDays(int count) {
+    return 'Son $count günde tamamlanan';
+  }
+
+  @override
+  String get schUntilTitle => 'BİR TARİHE KADAR';
+
+  @override
+  String get schUntilNote => 'Bugün başlar — bitişi seçin.';
+
+  @override
+  String get schUntilPickPrompt => 'Bir bitiş tarihi seçin';
+
+  @override
+  String schUntilFromTo(Object date) {
+    return 'Bugünden $date tarihine';
+  }
+
+  @override
+  String schDaysChip(int count) {
+    return '$count gün';
+  }
+
+  @override
+  String schDaysCount(int count) {
+    return '$count gün';
+  }
+
+  @override
+  String schPaymentsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ödeme',
+      one: '$count ödeme',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String schApplyDays(int count) {
+    return 'Uygula · $count gün';
+  }
+
+  @override
+  String get schLegendPayment => 'ödeme var';
+
+  @override
+  String get schLegendNegative => 'bakiye eksiye düşer';
+
+  @override
+  String get schShortLabel => 'eksik';
+
+  @override
+  String get schLeftLabel => 'kalıyor';
+
+  @override
+  String get schLeftAfter => 'taahhütlerden sonra kalan';
+
+  @override
+  String get schShortAfter => 'taahhütlerden sonra eksik';
+
+  @override
+  String schCaptionIn(Object amount) {
+    return '$amount gelecek';
+  }
+
+  @override
+  String schCaptionOut(Object amount) {
+    return '$amount çıkacak';
+  }
+
+  @override
+  String schShortToday(Object amount) {
+    return 'Bugün $amount eksik';
+  }
+
+  @override
+  String schShortOnDay(Object amount, Object date) {
+    return '$date tarihinde $amount eksik';
+  }
+
+  @override
+  String schBannerOut(int count, Object amount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count gecikmiş ödeme',
+      one: '$count gecikmiş ödeme',
+    );
+    return '$_temp0 · $amount';
+  }
+
+  @override
+  String schBannerIn(int count, Object amount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count beklenen ödeme gelmedi',
+      one: '$count beklenen ödeme gelmedi',
+    );
+    return '$_temp0 · $amount';
+  }
+
+  @override
+  String schBannerBoth(int count, Object out, Object inAmt) {
+    return '$count gecikmiş · $out çıkan, $inAmt gelen';
+  }
+
+  @override
+  String get schNothingInHorizon => 'Bu aralıkta bir şey yok';
+
+  @override
+  String get schShowNext3Months => 'Sonraki 3 ayı göster ›';
+
+  @override
+  String schDaysLate(int count) {
+    return '$count gün gecikmiş';
+  }
+
+  @override
+  String get schWontCover => 'yetmeyecek';
+
+  @override
+  String get schSemPayingOut => 'ödeniyor';
+
+  @override
+  String get schSemComingIn => 'geliyor';
+
+  @override
+  String get schSemDue => 'vade';
+
+  @override
+  String get schSemFrom => 'hesaptan';
+
+  @override
+  String get schSemInto => 'hesaba';
+
+  @override
+  String schSemRepeats(Object cadence) {
+    return 'tekrarlanır $cadence';
+  }
+
+  @override
+  String schItemsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count kayıt',
+      one: '$count kayıt',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String schPausedArchiveLine(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count duraklatılmış görev',
+      one: '$count duraklatılmış görev',
+    );
+    return '$_temp0 · Arşiv ›';
+  }
+
+  @override
+  String schCompletedFooter(Object out, Object inAmt, int count) {
+    return '$out çıkan · $inAmt gelen · $count gerçekleşmedi';
+  }
+
+  @override
+  String schSeeAll(int count) {
+    return 'Tümünü gör ($count) ›';
+  }
+
+  @override
+  String schPaidLine(Object when, Object account) {
+    return '$when ödendi · $account';
+  }
+
+  @override
+  String schReceivedLine(Object when, Object account) {
+    return '$when alındı · $account';
+  }
+
+  @override
+  String schSkippedLine(Object when) {
+    return '$when atlandı';
+  }
+
+  @override
+  String schCancelledLine(Object when) {
+    return '$when iptal edildi';
+  }
+
+  @override
+  String histLastDays(int count) {
+    return 'Son $count gün';
+  }
+
+  @override
+  String get histThisMonth => 'Bu ay';
+
+  @override
+  String get histLastMonth => 'Geçen ay';
+
+  @override
+  String histSinceDate(Object date) {
+    return '$date tarihinden';
+  }
+
+  @override
+  String get histSincePrompt => 'Bir tarihten…';
+
+  @override
+  String histFilterAll(int count) {
+    return 'Tümü $count';
+  }
+
+  @override
+  String histFilterPaid(int count) {
+    return 'Ödendi $count';
+  }
+
+  @override
+  String histFilterSkipped(int count) {
+    return 'Atlandı $count';
+  }
+
+  @override
+  String histFilterCancelled(int count) {
+    return 'İptal $count';
+  }
+
+  @override
+  String get histOut => 'ÇIKAN';
+
+  @override
+  String get histIn => 'GELEN';
+
+  @override
+  String get histDidntHappen => 'GERÇEKLEŞMEDİ';
+
+  @override
+  String get histNothingHere => 'Bu dönemde bir şey yok';
+
+  @override
+  String histPausedDeleted(int paused, int deleted) {
+    return 'Bu dönemde $paused duraklatıldı, $deleted silindi · Arşiv ›';
+  }
+
+  @override
+  String get mpTitlePaid => 'Ödendi olarak işaretle';
+
+  @override
+  String get mpTitleReceived => 'Alındı olarak işaretle';
+
+  @override
+  String mpSubtitle(Object title, Object date) {
+    return '$title · vade $date';
+  }
+
+  @override
+  String mpExpected(Object amount) {
+    return 'beklenen $amount';
+  }
+
+  @override
+  String get mpDate => 'Tarih';
+
+  @override
+  String get mpFrom => 'Hesaptan';
+
+  @override
+  String get mpInto => 'Hesaba';
+
+  @override
+  String get mpTo => 'Nereye';
+
+  @override
+  String get mpTransferNoCategory => 'Transfer — bütçe kategorisi yok';
+
+  @override
+  String mpRemember(Object amount) {
+    return 'Bir dahaki sefer için $amount hatırla';
+  }
+
+  @override
+  String mpConfirm(Object amount) {
+    return 'Onayla · $amount';
+  }
+
+  @override
+  String get mpChooseDestination => 'Hedef seç';
+
+  @override
+  String get mpPayOffGroup => 'BORÇ ÖDE';
+
+  @override
+  String mpRecorded(Object title) {
+    return '$title Deftere kaydedildi';
+  }
+
+  @override
+  String mpRecordedNext(Object title, Object date) {
+    return '$title Deftere kaydedildi · sonraki $date';
+  }
+
+  @override
+  String get tmEdit => 'Düzenle';
+
+  @override
+  String get tmEditSub =>
+      'Tutar, tarih, tekrar, hesap, kategori, hatırlatıcı ve not.';
+
+  @override
+  String get tmSkip => 'Bunu atla';
+
+  @override
+  String tmSkipSub(Object date, Object next) {
+    return '$date atlandı. Deftere bir şey yazılmaz; seri $next tarihinde devam eder.';
+  }
+
+  @override
+  String get tmPause => 'Duraklat';
+
+  @override
+  String get tmPauseSub =>
+      'Listeden ve tahminden çıkar. Ödeme geçmişi ve gelecek tarihler korunur — istediğiniz zaman Arşiv\'den sürdürün.';
+
+  @override
+  String get tmDelete => 'Sil';
+
+  @override
+  String tmDeleteSub(int count) {
+    return 'Arşiv\'e taşınır — yanlışlıkla silmeyi geri alabilirsiniz. $count ödeme Defterde kalır. Kalıcı silme Arşiv\'den yapılır.';
+  }
+
+  @override
+  String tdDeleteTitle(Object title) {
+    return '$title silinsin mi?';
+  }
+
+  @override
+  String get tdDeleteMsg =>
+      'Arşiv\'e taşınır — yanlışlıkla silmeyi geri alabilirsiniz.';
+
+  @override
+  String tdKeptPayments(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ödeme Defterde kalır',
+      one: '$count ödeme Defterde kalır',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get tdKeptBalances => 'Bakiyeler etkilenmez';
+
+  @override
+  String get tdKeptHistory => 'Ödeme geçmişi görevle birlikte Arşiv\'de kalır';
+
+  @override
+  String get tdLostSchedule => 'Takvim ve tahminden çıkar';
+
+  @override
+  String get tdLostReminders => 'Gelecek hatırlatıcılar durur';
+
+  @override
+  String get tdDeleteConfirm => 'Sil';
+
+  @override
+  String tdPausedOn(Object date) {
+    return '$date tarihinde duraklatıldı';
+  }
+
+  @override
+  String get tdNext => 'SONRAKİ';
+
+  @override
+  String get tdAmount => 'TUTAR';
+
+  @override
+  String get tdPerYear => 'YILLIK';
+
+  @override
+  String get tdDue => 'VADE';
+
+  @override
+  String get tdUpcoming => 'YAKLAŞAN';
+
+  @override
+  String get tdPaymentHistory => 'ÖDEME GEÇMİŞİ';
+
+  @override
+  String get tdNoPayments => 'Henüz ödeme kaydı yok';
+
+  @override
+  String tdPaymentsSince(int count, Object month, Object total) {
+    return '$month tarihinden beri $count ödeme · toplam $total';
+  }
+
+  @override
+  String get tdResume => 'Sürdür';
+
+  @override
+  String get tdMarkPaid => 'Ödendi olarak işaretle';
+
+  @override
+  String get tdMarkReceived => 'Alındı olarak işaretle';
+
+  @override
+  String get tdSkipOne => 'Bunu atla';
+
+  @override
+  String get etNote => 'Not';
+
+  @override
+  String get etNoteHint => 'Not ekle';
+
+  @override
+  String get etPaidTo => 'Nereye ödenir';
+
+  @override
+  String get arPausedTasks => 'DURAKLATILMIŞ GÖREVLER';
+
+  @override
+  String get arCompletedTasks => 'TAMAMLANMIŞ GÖREVLER';
+
+  @override
+  String get arDeletedTasks => 'SİLİNMİŞ GÖREVLER';
+
+  @override
+  String arPausedLine(Object date, int payments, Object total) {
+    return '$date duraklatıldı · $payments ödeme · $total';
+  }
+
+  @override
+  String arCompletedLine(Object date, Object amount) {
+    return '$date ödendi · $amount';
+  }
+
+  @override
+  String arCancelledLine(Object date) {
+    return '$date iptal edildi';
+  }
+
+  @override
+  String arDeletedLineTask(Object date, int payments, Object total) {
+    return '$date silindi · $payments ödeme · $total';
+  }
 }

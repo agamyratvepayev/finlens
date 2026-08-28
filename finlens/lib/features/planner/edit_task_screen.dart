@@ -6,7 +6,6 @@ import '../../core/store/app_store.dart';
 import '../../core/utils/formatters.dart';
 import '../../core/utils/repeat_labels.dart';
 import '../../l10n/app_localizations.dart';
-import '../../shared/widgets/destructive_sheet.dart';
 import '../../shared/widgets/form_fields.dart';
 import '../../shared/widgets/screen_header.dart';
 import '../../theme/app_colors.dart';
@@ -14,6 +13,7 @@ import '../../theme/app_typography.dart';
 import '../quick_add/pickers.dart';
 import '../quick_add/repeat_sheet.dart';
 import 'edit_scaffold.dart';
+import 'mark_paid_sheet.dart';
 
 /// Spec 5.7 — task parameters, plus the strict separation between acting on
 /// *this occurrence* and acting on *the whole series*.
@@ -41,9 +41,15 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
         ? _task.expectedAmount.abs().toStringAsFixed(0)
         : _task.expectedAmount.abs().toStringAsFixed(2),
   );
+  late final TextEditingController _note =
+      TextEditingController(text: _task.note ?? '');
 
   late String _accountId = _task.linkedAccountId;
   late String? _categoryId = _task.categoryId;
+
+  /// Set ⇒ the destination is a liability account and the task is a transfer
+  /// (§10.4); mutually exclusive with [_categoryId].
+  late String? _payToAccountId = _task.payToAccountId;
   late DateTime _due = _task.dueDate;
   late RepeatFrequency _repeats = _task.repeats;
   late Set<int> _weekdays = {..._task.weekdays};
@@ -59,6 +65,7 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
   void dispose() {
     _title.dispose();
     _amount.dispose();
+    _note.dispose();
     super.dispose();
   }
 
@@ -125,7 +132,12 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
                 values: const [true, false],
                 labelOf: (v) => v ? l.etPayOut : l.etPayIn,
                 selected: _payOut,
-                onChanged: (v) => setState(() => _payOut = v),
+                onChanged: (v) => setState(() {
+                  _payOut = v;
+                  // Pay-in can only book into an income category, never a
+                  // liability account (§10.4).
+                  if (!v) _payToAccountId = null;
+                }),
               ),
             ),
             TextFieldRow(
@@ -140,17 +152,10 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
             ),
             FormRow(
               icon: Icons.category_rounded,
-              label: l.fieldCategory,
-              subtitle: store.categoryById(_categoryId)?.name ??
-                  l.etCategoryHint,
+              label: _payOut ? l.etPaidTo : l.fieldCategory,
+              subtitle: _destinationSubtitle(store, l),
               showChevron: true,
-              onTap: () async {
-                final c = await pickCategory(
-                  context,
-                  type: _payOut ? CategoryType.expense : CategoryType.income,
-                );
-                if (c != null) setState(() => _categoryId = c.id);
-              },
+              onTap: _pickDestination,
             ),
             FormRow(
               icon: Icons.event_rounded,
@@ -186,39 +191,54 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
             ),
           ],
         ),
+        // The note lives on the task (§7.4) and is written here — Mark as paid,
+        // Skip, Pause and Delete moved to the Task detail and the ••• menu (§8).
         FormSection(
           children: [
-            FormRow(
-              icon: Icons.check_circle_rounded,
-              label: l.etMarkPaid,
-              subtitle: _payOut ? l.etMarkPaidExpense : l.etMarkPaidIncome,
-              showChevron: true,
-              onTap: _markPaid,
+            TextFieldRow(
+              icon: Icons.notes_rounded,
+              label: l.etNote,
+              controller: _note,
+              hint: l.etNoteHint,
             ),
-            if (_task.isRecurring)
-              FormRow(
-                icon: Icons.skip_next_rounded,
-                label: l.etSkipThisMonth,
-                subtitle: l.etSeriesContinues(
-                    monthShort(_task.nextOccurrence(_due).month, l)),
-                showChevron: true,
-                onTap: _skip,
-              ),
           ],
         ),
-        // Spec 5.7 — two distinct deletions, the first named by its date.
-        DestructiveRow(
-          label: l.etDeleteOnly(dayMonth(_due, l)),
-          onTap: _deleteOccurrence,
-        ),
-        if (_task.isRecurring)
-          DestructiveRow(
-            label: l.etDeleteWholeSeries,
-            subtitle: l.etAllFutureReminders(_task.title),
-            onTap: _deleteSeries,
-          ),
       ],
     );
+  }
+
+  String _destinationSubtitle(AppStore store, AppLocalizations l) {
+    if (_payToAccountId != null) {
+      return '${store.accountById(_payToAccountId)?.name ?? '—'} · '
+          '${l.mpTransferNoCategory}';
+    }
+    return store.categoryById(_categoryId)?.name ?? l.etCategoryHint;
+  }
+
+  Future<void> _pickDestination() async {
+    if (!_payOut) {
+      final c = await pickCategory(context, type: CategoryType.income);
+      if (c != null) {
+        setState(() {
+          _categoryId = c.id;
+          _payToAccountId = null;
+        });
+      }
+      return;
+    }
+    // Pay-out: expense categories or a liability account (a transfer) (§10.4).
+    final store = StoreScope.read(context);
+    final picked = await pickPayOutDestination(context, store);
+    if (picked == null) return;
+    setState(() {
+      if (picked.isAccount) {
+        _payToAccountId = picked.id;
+        _categoryId = null;
+      } else {
+        _categoryId = picked.id;
+        _payToAccountId = null;
+      }
+    });
   }
 
   Future<void> _pickDue() async {
@@ -261,13 +281,18 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
   }
 
   void _save() {
+    final noteText = _note.text.trim();
     _store.updateTask(
       _task,
       title: _title.text.trim(),
       linkedAccountId: _accountId,
       expectedAmount: _payOut ? -_amountValue : _amountValue,
       dueDate: _due,
-      categoryId: _categoryId,
+      categoryId: _payToAccountId == null ? _categoryId : null,
+      payToAccountId: _payToAccountId,
+      clearCategory: _payToAccountId != null,
+      clearPayTo: _payToAccountId == null,
+      note: noteText.isEmpty ? '' : noteText,
       repeats: _repeats,
       weekdays: _weekdays,
       daysOfMonth: _daysOfMonth,
@@ -276,69 +301,6 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
       reminderTime: _remind ? _remindTime : null,
       clearReminder: !_remind,
     );
-    Navigator.of(context).pop();
-  }
-
-  /// Spec 5.7 — writes a real Ledger entry, then advances the series.
-  void _markPaid() {
-    _store.markTaskPaid(_task);
-    Navigator.of(context).pop();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-          content: Text(
-              AppLocalizations.of(context).etRecordedInLedger(_task.title))),
-    );
-  }
-
-  /// Spec 5.7 — unlike Mark as paid, this writes nothing to the Ledger.
-  void _skip() {
-    _store.skipTask(_task);
-    Navigator.of(context).pop();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(AppLocalizations.of(context)
-            .etSkippedNext(dayMonth(_task.dueDate, AppLocalizations.of(context)))),
-      ),
-    );
-  }
-
-  Future<void> _deleteOccurrence() async {
-    final l = AppLocalizations.of(context);
-    final next = _task.nextOccurrence(_due);
-    final ok = await showDestructiveConfirm(
-      context,
-      title: l.etDeleteOnlyTitle(dayMonth(_due, l)),
-      message: _task.isRecurring ? l.etJustThisOne : l.etOneOffRemoved,
-      impact: [
-        if (_task.isRecurring) ...[
-          ImpactLine.kept(l.etSeriesContinuesOn(dayMonth(next, l))),
-          ImpactLine.kept(l.etNoLedgerEntry),
-        ] else
-          ImpactLine.kept(l.etLedgerUntouched),
-        ImpactLine.lost(l.etDisappears(dayMonth(_due, l))),
-      ],
-      confirmLabel: l.etDeleteDate(dayMonth(_due, l)),
-    );
-    if (!ok || !mounted) return;
-    _store.deleteTaskOccurrence(_task);
-    Navigator.of(context).pop();
-  }
-
-  Future<void> _deleteSeries() async {
-    final l = AppLocalizations.of(context);
-    final ok = await showDestructiveConfirm(
-      context,
-      title: l.etDeleteSeriesTitle(_task.title),
-      message: l.etDeleteSeriesMsg,
-      impact: [
-        ImpactLine.kept(l.etPaymentsStay),
-        ImpactLine.lost(l.etAllRemindersCancelled),
-        ImpactLine.lost(l.etOutgoingsDrop(money(_task.expectedAmount.abs()))),
-      ],
-      confirmLabel: l.etDeleteSeries,
-    );
-    if (!ok || !mounted) return;
-    _store.deleteTaskSeries(_task);
     Navigator.of(context).pop();
   }
 }

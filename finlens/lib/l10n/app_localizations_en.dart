@@ -898,9 +898,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get schThisWeek => 'This week';
 
   @override
-  String get schLater => 'Later this month';
-
-  @override
   String get plNothingScheduled => 'Nothing scheduled';
 
   @override
@@ -1687,7 +1684,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tdRate => 'Rate';
 
   @override
-  String get tdNote => 'Note';
+  String get tdNote => 'NOTE';
 
   @override
   String get tdNetWorth => 'Net worth';
@@ -2690,4 +2687,526 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get tagArchivedBadge => 'archived';
+
+  @override
+  String get plTitle => 'Planner';
+
+  @override
+  String get fieldSelectCategory => 'Select category';
+
+  @override
+  String get actionResume => 'Resume';
+
+  @override
+  String get schToday => 'Today';
+
+  @override
+  String get schHorizonThisWeek => 'This week';
+
+  @override
+  String get schHorizonNext30 => 'Next 30 days';
+
+  @override
+  String get schHorizonThisMonth => 'This month';
+
+  @override
+  String get schHorizonNext3Months => 'Next 3 months';
+
+  @override
+  String get schHorizonTitle => 'HORIZON';
+
+  @override
+  String get schHorizonUntilDate => 'Until a date…';
+
+  @override
+  String get schHorizonFootnote =>
+      'Overdue payments are not counted here — they stay in the list whichever horizon you pick.';
+
+  @override
+  String schUntilControl(Object date) {
+    return 'Until $date';
+  }
+
+  @override
+  String get schCompletedThisMonth => 'This month completed';
+
+  @override
+  String schCompletedLastDays(int count) {
+    return 'Last $count days completed';
+  }
+
+  @override
+  String get schUntilTitle => 'UNTIL A DATE';
+
+  @override
+  String get schUntilNote => 'Starts today — pick the end.';
+
+  @override
+  String get schUntilPickPrompt => 'Pick an end date';
+
+  @override
+  String schUntilFromTo(Object date) {
+    return 'From today to $date';
+  }
+
+  @override
+  String schDaysChip(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count days',
+      one: '$count day',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String schDaysCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count days',
+      one: '$count day',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String schPaymentsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count payments',
+      one: '$count payment',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String schApplyDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count days',
+      one: '$count day',
+    );
+    return 'Apply · $_temp0';
+  }
+
+  @override
+  String get schLegendPayment => 'has a payment';
+
+  @override
+  String get schLegendNegative => 'balance goes negative';
+
+  @override
+  String get schShortLabel => 'short';
+
+  @override
+  String get schLeftLabel => 'left';
+
+  @override
+  String get schLeftAfter => 'left after commitments';
+
+  @override
+  String get schShortAfter => 'short after commitments';
+
+  @override
+  String schCaptionIn(Object amount) {
+    return '$amount coming in';
+  }
+
+  @override
+  String schCaptionOut(Object amount) {
+    return '$amount going out';
+  }
+
+  @override
+  String schShortToday(Object amount) {
+    return 'Short $amount today';
+  }
+
+  @override
+  String schShortOnDay(Object amount, Object date) {
+    return 'Short $amount on $date';
+  }
+
+  @override
+  String schBannerOut(int count, Object amount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count payments overdue',
+      one: '$count payment overdue',
+    );
+    return '$_temp0 · $amount';
+  }
+
+  @override
+  String schBannerIn(int count, Object amount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count expected payments haven\'t arrived',
+      one: '$count expected payment hasn\'t arrived',
+    );
+    return '$_temp0 · $amount';
+  }
+
+  @override
+  String schBannerBoth(int count, Object out, Object inAmt) {
+    return '$count items overdue · $out out, $inAmt in';
+  }
+
+  @override
+  String get schNothingInHorizon => 'Nothing due in this window';
+
+  @override
+  String get schShowNext3Months => 'Show next 3 months ›';
+
+  @override
+  String schDaysLate(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count days late',
+      one: '$count day late',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get schWontCover => 'won\'t cover';
+
+  @override
+  String get schSemPayingOut => 'paying out';
+
+  @override
+  String get schSemComingIn => 'coming in';
+
+  @override
+  String get schSemDue => 'due';
+
+  @override
+  String get schSemFrom => 'from';
+
+  @override
+  String get schSemInto => 'into';
+
+  @override
+  String schSemRepeats(Object cadence) {
+    return 'repeats $cadence';
+  }
+
+  @override
+  String schItemsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count items',
+      one: '$count item',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String schPausedArchiveLine(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count paused tasks',
+      one: '$count paused task',
+    );
+    return '$_temp0 · Archive ›';
+  }
+
+  @override
+  String schCompletedFooter(Object out, Object inAmt, int count) {
+    return '$out out · $inAmt in · $count didn\'t happen';
+  }
+
+  @override
+  String schSeeAll(int count) {
+    return 'See all ($count) ›';
+  }
+
+  @override
+  String schPaidLine(Object when, Object account) {
+    return '$when paid · $account';
+  }
+
+  @override
+  String schReceivedLine(Object when, Object account) {
+    return '$when received · $account';
+  }
+
+  @override
+  String schSkippedLine(Object when) {
+    return '$when skipped';
+  }
+
+  @override
+  String schCancelledLine(Object when) {
+    return '$when cancelled';
+  }
+
+  @override
+  String histLastDays(int count) {
+    return 'Last $count days';
+  }
+
+  @override
+  String get histThisMonth => 'This month';
+
+  @override
+  String get histLastMonth => 'Last month';
+
+  @override
+  String histSinceDate(Object date) {
+    return 'Since $date';
+  }
+
+  @override
+  String get histSincePrompt => 'Since a date…';
+
+  @override
+  String histFilterAll(int count) {
+    return 'All $count';
+  }
+
+  @override
+  String histFilterPaid(int count) {
+    return 'Paid $count';
+  }
+
+  @override
+  String histFilterSkipped(int count) {
+    return 'Skipped $count';
+  }
+
+  @override
+  String histFilterCancelled(int count) {
+    return 'Cancelled $count';
+  }
+
+  @override
+  String get histOut => 'OUT';
+
+  @override
+  String get histIn => 'IN';
+
+  @override
+  String get histDidntHappen => 'DIDN\'T HAPPEN';
+
+  @override
+  String get histNothingHere => 'Nothing here for this period';
+
+  @override
+  String histPausedDeleted(int paused, int deleted) {
+    return '$paused paused, $deleted deleted in this period · Archive ›';
+  }
+
+  @override
+  String get mpTitlePaid => 'Mark as paid';
+
+  @override
+  String get mpTitleReceived => 'Mark as received';
+
+  @override
+  String mpSubtitle(Object title, Object date) {
+    return '$title · due $date';
+  }
+
+  @override
+  String mpExpected(Object amount) {
+    return 'expected $amount';
+  }
+
+  @override
+  String get mpDate => 'Date';
+
+  @override
+  String get mpFrom => 'From';
+
+  @override
+  String get mpInto => 'Into';
+
+  @override
+  String get mpTo => 'To';
+
+  @override
+  String get mpTransferNoCategory => 'Transfer — no budget category';
+
+  @override
+  String mpRemember(Object amount) {
+    return 'Remember $amount for next time';
+  }
+
+  @override
+  String mpConfirm(Object amount) {
+    return 'Confirm · $amount';
+  }
+
+  @override
+  String get mpChooseDestination => 'Choose destination';
+
+  @override
+  String get mpPayOffGroup => 'PAY OFF';
+
+  @override
+  String mpRecorded(Object title) {
+    return '$title recorded in your Ledger';
+  }
+
+  @override
+  String mpRecordedNext(Object title, Object date) {
+    return '$title recorded in your Ledger · next $date';
+  }
+
+  @override
+  String get tmEdit => 'Edit';
+
+  @override
+  String get tmEditSub =>
+      'Amount, date, repeat, account, category, reminder and note.';
+
+  @override
+  String get tmSkip => 'Skip this one';
+
+  @override
+  String tmSkipSub(Object date, Object next) {
+    return '$date is skipped. Nothing is written to the Ledger; the series continues on $next.';
+  }
+
+  @override
+  String get tmPause => 'Pause';
+
+  @override
+  String get tmPauseSub =>
+      'Leaves the list and the projection. Payment history and future dates are kept — resume it from the Archive whenever you like.';
+
+  @override
+  String get tmDelete => 'Delete';
+
+  @override
+  String tmDeleteSub(int count) {
+    return 'Moves to the Archive — you can undo an accidental delete. The $count payments stay in your Ledger. Permanent deletion is from the Archive.';
+  }
+
+  @override
+  String tdDeleteTitle(Object title) {
+    return 'Delete $title?';
+  }
+
+  @override
+  String get tdDeleteMsg =>
+      'It moves to the Archive — you can undo an accidental delete.';
+
+  @override
+  String tdKeptPayments(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count payments stay in your Ledger',
+      one: '$count payment stays in your Ledger',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get tdKeptBalances => 'Balances are unaffected';
+
+  @override
+  String get tdKeptHistory =>
+      'Payment history stays with the task in the Archive';
+
+  @override
+  String get tdLostSchedule => 'It leaves the Schedule and the projection';
+
+  @override
+  String get tdLostReminders => 'Future reminders stop';
+
+  @override
+  String get tdDeleteConfirm => 'Delete';
+
+  @override
+  String tdPausedOn(Object date) {
+    return 'Paused on $date';
+  }
+
+  @override
+  String get tdNext => 'NEXT';
+
+  @override
+  String get tdAmount => 'AMOUNT';
+
+  @override
+  String get tdPerYear => 'PER YEAR';
+
+  @override
+  String get tdDue => 'DUE';
+
+  @override
+  String get tdUpcoming => 'UPCOMING';
+
+  @override
+  String get tdPaymentHistory => 'PAYMENT HISTORY';
+
+  @override
+  String get tdNoPayments => 'No payments recorded yet';
+
+  @override
+  String tdPaymentsSince(int count, Object month, Object total) {
+    return '$count payments since $month · $total total';
+  }
+
+  @override
+  String get tdResume => 'Resume';
+
+  @override
+  String get tdMarkPaid => 'Mark as paid';
+
+  @override
+  String get tdMarkReceived => 'Mark as received';
+
+  @override
+  String get tdSkipOne => 'Skip this one';
+
+  @override
+  String get etNote => 'Note';
+
+  @override
+  String get etNoteHint => 'Add a note';
+
+  @override
+  String get etPaidTo => 'Paid to';
+
+  @override
+  String get arPausedTasks => 'PAUSED TASKS';
+
+  @override
+  String get arCompletedTasks => 'COMPLETED TASKS';
+
+  @override
+  String get arDeletedTasks => 'DELETED TASKS';
+
+  @override
+  String arPausedLine(Object date, int payments, Object total) {
+    return 'Paused $date · $payments payments · $total';
+  }
+
+  @override
+  String arCompletedLine(Object date, Object amount) {
+    return 'Paid $date · $amount';
+  }
+
+  @override
+  String arCancelledLine(Object date) {
+    return 'Cancelled $date';
+  }
+
+  @override
+  String arDeletedLineTask(Object date, int payments, Object total) {
+    return 'Deleted $date · $payments payments · $total';
+  }
 }

@@ -244,6 +244,55 @@ class Txn {
   bool get movesCash => type != TxnType.rebalance;
 }
 
+/// What happened to a scheduled occurrence, for the completed section (§5),
+/// the History screen (§6) and a task's own history (§11.5).
+enum ScheduleOutcome { paid, received, skipped, cancelled }
+
+/// One resolved occurrence — a payment made, money received, a recurring skip,
+/// or a cancelled one-off. Built by [AppStore.scheduleEvents]. For `paid` /
+/// `received` the amount and date come from the [txn]; for `skipped` /
+/// `cancelled` there is no transaction and the amount is the task's current
+/// expected amount (no snapshot is taken at skip time — see §11.5).
+class ScheduleEvent {
+  ScheduleEvent({
+    required this.date,
+    required this.task,
+    required this.outcome,
+    required this.amountInBase,
+    this.txn,
+  });
+
+  final DateTime date;
+  final Task task;
+  final Txn? txn;
+  final ScheduleOutcome outcome;
+  final double amountInBase;
+
+  bool get didNotHappen =>
+      outcome == ScheduleOutcome.skipped || outcome == ScheduleOutcome.cancelled;
+}
+
+/// The record [AppStore.markTaskPaid] returns — everything needed to reverse the
+/// three effects of a mark-paid (the written Txn, the advanced series, an
+/// optionally remembered amount) from a snackbar Undo (§10.3).
+class MarkPaidResult {
+  MarkPaidResult({
+    required this.task,
+    required this.txn,
+    required this.previousDueDate,
+    required this.previousStatus,
+    required this.previousStatusChangedAt,
+    required this.previousExpected,
+  });
+
+  final Task task;
+  final Txn txn;
+  final DateTime previousDueDate;
+  final TaskStatus previousStatus;
+  final DateTime? previousStatusChangedAt;
+  final double previousExpected;
+}
+
 /// What a goal watches — an account or an income category. `linkedAccountId`
 /// of the old model is promoted here and is now required: a goal is a *lens*
 /// over one real source, and the source decides the section, the direction and
@@ -453,6 +502,9 @@ class Task {
     this.reminderDaysBefore,
     this.reminderTime,
     this.status = TaskStatus.open,
+    this.note,
+    this.payToAccountId,
+    this.statusChangedAt,
   });
 
   final String id;
@@ -466,8 +518,27 @@ class Task {
 
   /// Which budget category "Mark as paid" books the entry against (spec 5.3).
   /// Without it the entry would silently land in an arbitrary category and
-  /// distort that budget.
+  /// distort that budget. Null for a transfer task (its money moves between two
+  /// accounts, so it carries no budget category — see [payToAccountId]).
   String? categoryId;
+
+  /// Set ⇒ "Mark as paid" writes a **transfer** into this account rather than an
+  /// expense against a category (§10.4). Used for paying down a liability (a
+  /// credit-card statement): a spend would grow the debt it settles, so paying
+  /// it must move money between two of the user's own accounts. Mutually
+  /// exclusive with [categoryId].
+  String? payToAccountId;
+
+  /// A free-text note attached to the task itself (not to any one payment) —
+  /// rendered on the Task detail screen, edited from ••• → Edit (§7.4). Null or
+  /// empty ⇒ the NOTE section does not render.
+  String? note;
+
+  /// When [status] last moved to paid / skipped / paused / deleted — powers the
+  /// Archive subtitles ("Paused 9 Aug") and the detail-screen paused banner
+  /// (§7.7 / §9). Null while the task is open.
+  DateTime? statusChangedAt;
+
   RepeatFrequency repeats;
 
   /// Weekdays a weekly series fires on, [DateTime.monday]..[DateTime.sunday].
@@ -495,14 +566,25 @@ class Task {
   bool get isPayOut => expectedAmount < 0;
   bool get isRecurring => repeats != RepeatFrequency.none;
 
-  bool get isOverdue =>
-      status == TaskStatus.open && dueDate.isBefore(DateTime.now());
+  /// Whether the money moves between two of the user's own accounts (§10.4).
+  /// A pay-out with a [payToAccountId] pays down a liability and is booked as a
+  /// transfer, not a spend.
+  bool get isTransfer => isPayOut && payToAccountId != null;
 
-  int get daysUntilDue {
-    final now = DateTime.now();
+  /// Overdue relative to [today] — the app's single clock (`AppStore.today`),
+  /// never `DateTime.now()`. Schedule was the only surface reading the wall
+  /// clock; passing the reference date in keeps it in sync with every other tab
+  /// (§11.1). A model importing the store would be the wrong layering direction.
+  bool isOverdue(DateTime today) =>
+      status == TaskStatus.open && daysUntilDue(today) < 0;
+
+  /// Whole days from [today] to [dueDate], at day granularity (time-of-day on
+  /// either side is discarded). Negative ⇒ overdue. See [isOverdue] on why the
+  /// reference date is a parameter.
+  int daysUntilDue(DateTime today) {
     final due = DateTime(dueDate.year, dueDate.month, dueDate.day);
-    final today = DateTime(now.year, now.month, now.day);
-    return due.difference(today).inDays;
+    final ref = DateTime(today.year, today.month, today.day);
+    return due.difference(ref).inDays;
   }
 
   /// Advances the series past [from] honouring the repeat rule. Pure — takes no
@@ -583,6 +665,25 @@ class Task {
 
   static int _daysInMonth(int year, int month) =>
       DateTime(year, month + 1, 0).day;
+
+  /// How many times this series fires in a year — drives the detail screen's
+  /// `PER YEAR` figure (§7.3). A one-off has none.
+  int? get occurrencesPerYear {
+    switch (repeats) {
+      case RepeatFrequency.none:
+        return null;
+      case RepeatFrequency.weekly:
+        return 52;
+      case RepeatFrequency.biweekly:
+        return 26;
+      case RepeatFrequency.monthly:
+        return 12 * (daysOfMonth.isEmpty ? 1 : daysOfMonth.length);
+      case RepeatFrequency.quarterly:
+        return 4;
+      case RepeatFrequency.yearly:
+        return 1;
+    }
+  }
 
   /// The next 3 dates shown as a preview in New/Edit Task (spec 3.7 / 5.7).
   List<DateTime> upcomingPreview([int count = 3]) {

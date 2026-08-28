@@ -165,6 +165,12 @@ abstract final class AppColors {
   /// the ledger has no future to select into.
   static const futureDay = Color(0xFF3A3A3C);
 
+  /// The active pill/segment fill — a neutral raised grey, one step above
+  /// [surfaceHigh]. Names the value the Planner segmented control and the
+  /// Schedule filter chips already use, so those call sites reach for a token
+  /// rather than a raw hex.
+  static const chipActive = Color(0xFF43434A);
+
   /// Tinted fill used by highlight cards and icon tiles.
   static Color tint(Color c, [double opacity = 0.16]) => c.withValues(alpha: opacity);
 }

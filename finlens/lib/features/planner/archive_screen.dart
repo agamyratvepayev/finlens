@@ -13,6 +13,7 @@ import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/app_typography.dart';
 import '../balance/balance_screen.dart' show EmptyState;
+import 'task_detail_screen.dart';
 
 /// Spec 5.8 — reached goals, abandoned goals and removed budgets on one page.
 ///
@@ -34,11 +35,17 @@ class ArchiveScreen extends StatelessWidget {
     final budgets = store.removedBudgets;
     final accounts = store.archivedAccounts;
     final cats = store.archivedCategories;
+    final pausedTasks = store.pausedTasks;
+    final completedTasks = store.completedTasks;
+    final deletedTasks = store.deletedTasks;
     final total = reached.length +
         gaveUp.length +
         budgets.length +
         accounts.length +
-        cats.length;
+        cats.length +
+        pausedTasks.length +
+        completedTasks.length +
+        deletedTasks.length;
 
     return Scaffold(
       body: SafeArea(
@@ -76,6 +83,61 @@ class ArchiveScreen extends StatelessWidget {
                             style: AppText.caption.copyWith(fontSize: 12.5),
                           ),
                         ),
+                        // Task sections sit at the top (§9), above goals/budgets.
+                        if (pausedTasks.isNotEmpty) ...[
+                          SectionLabel(l.arPausedTasks),
+                          _card([
+                            for (final t in pausedTasks)
+                              _taskRow(
+                                context,
+                                store,
+                                t,
+                                subtitle: l.arPausedLine(
+                                    dayMonth(t.statusChangedAt ?? t.dueDate, l),
+                                    store.paymentsForTask(t.id).length,
+                                    money(store.paymentTotalForTask(t.id))),
+                                trailing: _pillWithChevron(_RestoreButton(
+                                    onTap: () => store.resumeTask(t),
+                                    label: l.actionResume)),
+                              ),
+                          ]),
+                        ],
+                        if (completedTasks.isNotEmpty) ...[
+                          SectionLabel(l.arCompletedTasks),
+                          _card([
+                            for (final t in completedTasks)
+                              _taskRow(
+                                context,
+                                store,
+                                t,
+                                subtitle: t.status == TaskStatus.skipped
+                                    ? l.arCancelledLine(
+                                        dayMonth(t.statusChangedAt ?? t.dueDate, l))
+                                    : l.arCompletedLine(
+                                        dayMonth(t.statusChangedAt ?? t.dueDate, l),
+                                        money(store.paymentTotalForTask(t.id))),
+                                trailing: const Icon(Icons.chevron_right_rounded,
+                                    size: 18, color: AppColors.textTertiary),
+                              ),
+                          ]),
+                        ],
+                        if (deletedTasks.isNotEmpty) ...[
+                          SectionLabel(l.arDeletedTasks),
+                          _card([
+                            for (final t in deletedTasks)
+                              _taskRow(
+                                context,
+                                store,
+                                t,
+                                subtitle: l.arDeletedLineTask(
+                                    dayMonth(t.statusChangedAt ?? t.dueDate, l),
+                                    store.paymentsForTask(t.id).length,
+                                    money(store.paymentTotalForTask(t.id))),
+                                trailing: _pillWithChevron(
+                                    _UndoButton(onTap: () => store.undoDeleteTask(t))),
+                              ),
+                          ]),
+                        ],
                         if (reached.isNotEmpty) ...[
                           SectionLabel(l.arReachedGoals),
                           _card([
@@ -202,6 +264,39 @@ class ArchiveScreen extends StatelessWidget {
     );
   }
 
+  /// A task archive row — the §4.1-shaped [_ArchiveRow], made tappable so it
+  /// pushes the read-only Task detail (§9). Reuses `_ArchiveRow`, not a fork.
+  Widget _taskRow(
+    BuildContext context,
+    AppStore store,
+    Task task, {
+    required String subtitle,
+    required Widget trailing,
+  }) {
+    final color = task.isPayOut ? AppColors.negative : AppColors.positive;
+    return InkWell(
+      onTap: () => Navigator.of(context, rootNavigator: true).push(
+        MaterialPageRoute(builder: (_) => TaskDetailScreen(taskId: task.id)),
+      ),
+      child: _ArchiveRow(
+        icon: task.icon,
+        color: color,
+        title: task.title,
+        subtitle: subtitle,
+        trailing: trailing,
+      ),
+    );
+  }
+
+  Widget _pillWithChevron(Widget pill) => Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          pill,
+          const Icon(Icons.chevron_right_rounded,
+              size: 18, color: AppColors.textTertiary),
+        ],
+      );
+
   double _suggestLimit(AppStore store, Category c) {
     final spend = store.spentInCategory(
       c.id,
@@ -300,7 +395,28 @@ class _ArchiveRow extends StatelessWidget {
 }
 
 class _RestoreButton extends StatelessWidget {
-  const _RestoreButton({required this.onTap});
+  const _RestoreButton({required this.onTap, this.label});
+
+  final VoidCallback onTap;
+  final String? label;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextButton(
+      onPressed: onTap,
+      style: TextButton.styleFrom(
+        foregroundColor: AppColors.accentSoft,
+        visualDensity: VisualDensity.compact,
+        textStyle: AppText.button.copyWith(fontSize: 13.5),
+      ),
+      child: Text(label ?? AppLocalizations.of(context).actionRestore),
+    );
+  }
+}
+
+/// The Undo pill on a deleted-task row (§9) — restores the previous status.
+class _UndoButton extends StatelessWidget {
+  const _UndoButton({required this.onTap});
 
   final VoidCallback onTap;
 
@@ -313,7 +429,7 @@ class _RestoreButton extends StatelessWidget {
         visualDensity: VisualDensity.compact,
         textStyle: AppText.button.copyWith(fontSize: 13.5),
       ),
-      child: Text(AppLocalizations.of(context).actionRestore),
+      child: Text(AppLocalizations.of(context).actionUndo),
     );
   }
 }

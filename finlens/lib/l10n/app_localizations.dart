@@ -1440,12 +1440,6 @@ abstract class AppLocalizations {
   /// **'This week'**
   String get schThisWeek;
 
-  /// No description provided for @schLater.
-  ///
-  /// In en, this message translates to:
-  /// **'Later this month'**
-  String get schLater;
-
   /// No description provided for @plNothingScheduled.
   ///
   /// In en, this message translates to:
@@ -2655,7 +2649,7 @@ abstract class AppLocalizations {
   /// No description provided for @tdNote.
   ///
   /// In en, this message translates to:
-  /// **'Note'**
+  /// **'NOTE'**
   String get tdNote;
 
   /// No description provided for @tdNetWorth.
@@ -4331,6 +4325,732 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'archived'**
   String get tagArchivedBadge;
+
+  /// No description provided for @plTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Planner'**
+  String get plTitle;
+
+  /// No description provided for @fieldSelectCategory.
+  ///
+  /// In en, this message translates to:
+  /// **'Select category'**
+  String get fieldSelectCategory;
+
+  /// No description provided for @actionResume.
+  ///
+  /// In en, this message translates to:
+  /// **'Resume'**
+  String get actionResume;
+
+  /// No description provided for @schToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Today'**
+  String get schToday;
+
+  /// No description provided for @schHorizonThisWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'This week'**
+  String get schHorizonThisWeek;
+
+  /// No description provided for @schHorizonNext30.
+  ///
+  /// In en, this message translates to:
+  /// **'Next 30 days'**
+  String get schHorizonNext30;
+
+  /// No description provided for @schHorizonThisMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'This month'**
+  String get schHorizonThisMonth;
+
+  /// No description provided for @schHorizonNext3Months.
+  ///
+  /// In en, this message translates to:
+  /// **'Next 3 months'**
+  String get schHorizonNext3Months;
+
+  /// No description provided for @schHorizonTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'HORIZON'**
+  String get schHorizonTitle;
+
+  /// No description provided for @schHorizonUntilDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Until a date…'**
+  String get schHorizonUntilDate;
+
+  /// No description provided for @schHorizonFootnote.
+  ///
+  /// In en, this message translates to:
+  /// **'Overdue payments are not counted here — they stay in the list whichever horizon you pick.'**
+  String get schHorizonFootnote;
+
+  /// No description provided for @schUntilControl.
+  ///
+  /// In en, this message translates to:
+  /// **'Until {date}'**
+  String schUntilControl(Object date);
+
+  /// No description provided for @schCompletedThisMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'This month completed'**
+  String get schCompletedThisMonth;
+
+  /// No description provided for @schCompletedLastDays.
+  ///
+  /// In en, this message translates to:
+  /// **'Last {count} days completed'**
+  String schCompletedLastDays(int count);
+
+  /// No description provided for @schUntilTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'UNTIL A DATE'**
+  String get schUntilTitle;
+
+  /// No description provided for @schUntilNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Starts today — pick the end.'**
+  String get schUntilNote;
+
+  /// No description provided for @schUntilPickPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick an end date'**
+  String get schUntilPickPrompt;
+
+  /// No description provided for @schUntilFromTo.
+  ///
+  /// In en, this message translates to:
+  /// **'From today to {date}'**
+  String schUntilFromTo(Object date);
+
+  /// No description provided for @schDaysChip.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{{count} day} other{{count} days}}'**
+  String schDaysChip(int count);
+
+  /// No description provided for @schDaysCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{{count} day} other{{count} days}}'**
+  String schDaysCount(int count);
+
+  /// No description provided for @schPaymentsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{{count} payment} other{{count} payments}}'**
+  String schPaymentsCount(int count);
+
+  /// No description provided for @schApplyDays.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply · {count, plural, one{{count} day} other{{count} days}}'**
+  String schApplyDays(int count);
+
+  /// No description provided for @schLegendPayment.
+  ///
+  /// In en, this message translates to:
+  /// **'has a payment'**
+  String get schLegendPayment;
+
+  /// No description provided for @schLegendNegative.
+  ///
+  /// In en, this message translates to:
+  /// **'balance goes negative'**
+  String get schLegendNegative;
+
+  /// No description provided for @schShortLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'short'**
+  String get schShortLabel;
+
+  /// No description provided for @schLeftLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'left'**
+  String get schLeftLabel;
+
+  /// No description provided for @schLeftAfter.
+  ///
+  /// In en, this message translates to:
+  /// **'left after commitments'**
+  String get schLeftAfter;
+
+  /// No description provided for @schShortAfter.
+  ///
+  /// In en, this message translates to:
+  /// **'short after commitments'**
+  String get schShortAfter;
+
+  /// No description provided for @schCaptionIn.
+  ///
+  /// In en, this message translates to:
+  /// **'{amount} coming in'**
+  String schCaptionIn(Object amount);
+
+  /// No description provided for @schCaptionOut.
+  ///
+  /// In en, this message translates to:
+  /// **'{amount} going out'**
+  String schCaptionOut(Object amount);
+
+  /// No description provided for @schShortToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Short {amount} today'**
+  String schShortToday(Object amount);
+
+  /// No description provided for @schShortOnDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Short {amount} on {date}'**
+  String schShortOnDay(Object amount, Object date);
+
+  /// No description provided for @schBannerOut.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{{count} payment overdue} other{{count} payments overdue}} · {amount}'**
+  String schBannerOut(int count, Object amount);
+
+  /// No description provided for @schBannerIn.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{{count} expected payment hasn\'t arrived} other{{count} expected payments haven\'t arrived}} · {amount}'**
+  String schBannerIn(int count, Object amount);
+
+  /// No description provided for @schBannerBoth.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} items overdue · {out} out, {inAmt} in'**
+  String schBannerBoth(int count, Object out, Object inAmt);
+
+  /// No description provided for @schNothingInHorizon.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing due in this window'**
+  String get schNothingInHorizon;
+
+  /// No description provided for @schShowNext3Months.
+  ///
+  /// In en, this message translates to:
+  /// **'Show next 3 months ›'**
+  String get schShowNext3Months;
+
+  /// No description provided for @schDaysLate.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{{count} day late} other{{count} days late}}'**
+  String schDaysLate(int count);
+
+  /// No description provided for @schWontCover.
+  ///
+  /// In en, this message translates to:
+  /// **'won\'t cover'**
+  String get schWontCover;
+
+  /// No description provided for @schSemPayingOut.
+  ///
+  /// In en, this message translates to:
+  /// **'paying out'**
+  String get schSemPayingOut;
+
+  /// No description provided for @schSemComingIn.
+  ///
+  /// In en, this message translates to:
+  /// **'coming in'**
+  String get schSemComingIn;
+
+  /// No description provided for @schSemDue.
+  ///
+  /// In en, this message translates to:
+  /// **'due'**
+  String get schSemDue;
+
+  /// No description provided for @schSemFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'from'**
+  String get schSemFrom;
+
+  /// No description provided for @schSemInto.
+  ///
+  /// In en, this message translates to:
+  /// **'into'**
+  String get schSemInto;
+
+  /// No description provided for @schSemRepeats.
+  ///
+  /// In en, this message translates to:
+  /// **'repeats {cadence}'**
+  String schSemRepeats(Object cadence);
+
+  /// No description provided for @schItemsCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{{count} item} other{{count} items}}'**
+  String schItemsCount(int count);
+
+  /// No description provided for @schPausedArchiveLine.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{{count} paused task} other{{count} paused tasks}} · Archive ›'**
+  String schPausedArchiveLine(int count);
+
+  /// No description provided for @schCompletedFooter.
+  ///
+  /// In en, this message translates to:
+  /// **'{out} out · {inAmt} in · {count} didn\'t happen'**
+  String schCompletedFooter(Object out, Object inAmt, int count);
+
+  /// No description provided for @schSeeAll.
+  ///
+  /// In en, this message translates to:
+  /// **'See all ({count}) ›'**
+  String schSeeAll(int count);
+
+  /// No description provided for @schPaidLine.
+  ///
+  /// In en, this message translates to:
+  /// **'{when} paid · {account}'**
+  String schPaidLine(Object when, Object account);
+
+  /// No description provided for @schReceivedLine.
+  ///
+  /// In en, this message translates to:
+  /// **'{when} received · {account}'**
+  String schReceivedLine(Object when, Object account);
+
+  /// No description provided for @schSkippedLine.
+  ///
+  /// In en, this message translates to:
+  /// **'{when} skipped'**
+  String schSkippedLine(Object when);
+
+  /// No description provided for @schCancelledLine.
+  ///
+  /// In en, this message translates to:
+  /// **'{when} cancelled'**
+  String schCancelledLine(Object when);
+
+  /// No description provided for @histLastDays.
+  ///
+  /// In en, this message translates to:
+  /// **'Last {count} days'**
+  String histLastDays(int count);
+
+  /// No description provided for @histThisMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'This month'**
+  String get histThisMonth;
+
+  /// No description provided for @histLastMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Last month'**
+  String get histLastMonth;
+
+  /// No description provided for @histSinceDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Since {date}'**
+  String histSinceDate(Object date);
+
+  /// No description provided for @histSincePrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Since a date…'**
+  String get histSincePrompt;
+
+  /// No description provided for @histFilterAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All {count}'**
+  String histFilterAll(int count);
+
+  /// No description provided for @histFilterPaid.
+  ///
+  /// In en, this message translates to:
+  /// **'Paid {count}'**
+  String histFilterPaid(int count);
+
+  /// No description provided for @histFilterSkipped.
+  ///
+  /// In en, this message translates to:
+  /// **'Skipped {count}'**
+  String histFilterSkipped(int count);
+
+  /// No description provided for @histFilterCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancelled {count}'**
+  String histFilterCancelled(int count);
+
+  /// No description provided for @histOut.
+  ///
+  /// In en, this message translates to:
+  /// **'OUT'**
+  String get histOut;
+
+  /// No description provided for @histIn.
+  ///
+  /// In en, this message translates to:
+  /// **'IN'**
+  String get histIn;
+
+  /// No description provided for @histDidntHappen.
+  ///
+  /// In en, this message translates to:
+  /// **'DIDN\'T HAPPEN'**
+  String get histDidntHappen;
+
+  /// No description provided for @histNothingHere.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing here for this period'**
+  String get histNothingHere;
+
+  /// No description provided for @histPausedDeleted.
+  ///
+  /// In en, this message translates to:
+  /// **'{paused} paused, {deleted} deleted in this period · Archive ›'**
+  String histPausedDeleted(int paused, int deleted);
+
+  /// No description provided for @mpTitlePaid.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark as paid'**
+  String get mpTitlePaid;
+
+  /// No description provided for @mpTitleReceived.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark as received'**
+  String get mpTitleReceived;
+
+  /// No description provided for @mpSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'{title} · due {date}'**
+  String mpSubtitle(Object title, Object date);
+
+  /// No description provided for @mpExpected.
+  ///
+  /// In en, this message translates to:
+  /// **'expected {amount}'**
+  String mpExpected(Object amount);
+
+  /// No description provided for @mpDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Date'**
+  String get mpDate;
+
+  /// No description provided for @mpFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'From'**
+  String get mpFrom;
+
+  /// No description provided for @mpInto.
+  ///
+  /// In en, this message translates to:
+  /// **'Into'**
+  String get mpInto;
+
+  /// No description provided for @mpTo.
+  ///
+  /// In en, this message translates to:
+  /// **'To'**
+  String get mpTo;
+
+  /// No description provided for @mpTransferNoCategory.
+  ///
+  /// In en, this message translates to:
+  /// **'Transfer — no budget category'**
+  String get mpTransferNoCategory;
+
+  /// No description provided for @mpRemember.
+  ///
+  /// In en, this message translates to:
+  /// **'Remember {amount} for next time'**
+  String mpRemember(Object amount);
+
+  /// No description provided for @mpConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm · {amount}'**
+  String mpConfirm(Object amount);
+
+  /// No description provided for @mpChooseDestination.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose destination'**
+  String get mpChooseDestination;
+
+  /// No description provided for @mpPayOffGroup.
+  ///
+  /// In en, this message translates to:
+  /// **'PAY OFF'**
+  String get mpPayOffGroup;
+
+  /// No description provided for @mpRecorded.
+  ///
+  /// In en, this message translates to:
+  /// **'{title} recorded in your Ledger'**
+  String mpRecorded(Object title);
+
+  /// No description provided for @mpRecordedNext.
+  ///
+  /// In en, this message translates to:
+  /// **'{title} recorded in your Ledger · next {date}'**
+  String mpRecordedNext(Object title, Object date);
+
+  /// No description provided for @tmEdit.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit'**
+  String get tmEdit;
+
+  /// No description provided for @tmEditSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Amount, date, repeat, account, category, reminder and note.'**
+  String get tmEditSub;
+
+  /// No description provided for @tmSkip.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip this one'**
+  String get tmSkip;
+
+  /// No description provided for @tmSkipSub.
+  ///
+  /// In en, this message translates to:
+  /// **'{date} is skipped. Nothing is written to the Ledger; the series continues on {next}.'**
+  String tmSkipSub(Object date, Object next);
+
+  /// No description provided for @tmPause.
+  ///
+  /// In en, this message translates to:
+  /// **'Pause'**
+  String get tmPause;
+
+  /// No description provided for @tmPauseSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Leaves the list and the projection. Payment history and future dates are kept — resume it from the Archive whenever you like.'**
+  String get tmPauseSub;
+
+  /// No description provided for @tmDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get tmDelete;
+
+  /// No description provided for @tmDeleteSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Moves to the Archive — you can undo an accidental delete. The {count} payments stay in your Ledger. Permanent deletion is from the Archive.'**
+  String tmDeleteSub(int count);
+
+  /// No description provided for @tdDeleteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete {title}?'**
+  String tdDeleteTitle(Object title);
+
+  /// No description provided for @tdDeleteMsg.
+  ///
+  /// In en, this message translates to:
+  /// **'It moves to the Archive — you can undo an accidental delete.'**
+  String get tdDeleteMsg;
+
+  /// No description provided for @tdKeptPayments.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{{count} payment stays in your Ledger} other{{count} payments stay in your Ledger}}'**
+  String tdKeptPayments(int count);
+
+  /// No description provided for @tdKeptBalances.
+  ///
+  /// In en, this message translates to:
+  /// **'Balances are unaffected'**
+  String get tdKeptBalances;
+
+  /// No description provided for @tdKeptHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment history stays with the task in the Archive'**
+  String get tdKeptHistory;
+
+  /// No description provided for @tdLostSchedule.
+  ///
+  /// In en, this message translates to:
+  /// **'It leaves the Schedule and the projection'**
+  String get tdLostSchedule;
+
+  /// No description provided for @tdLostReminders.
+  ///
+  /// In en, this message translates to:
+  /// **'Future reminders stop'**
+  String get tdLostReminders;
+
+  /// No description provided for @tdDeleteConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get tdDeleteConfirm;
+
+  /// No description provided for @tdPausedOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Paused on {date}'**
+  String tdPausedOn(Object date);
+
+  /// No description provided for @tdNext.
+  ///
+  /// In en, this message translates to:
+  /// **'NEXT'**
+  String get tdNext;
+
+  /// No description provided for @tdAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'AMOUNT'**
+  String get tdAmount;
+
+  /// No description provided for @tdPerYear.
+  ///
+  /// In en, this message translates to:
+  /// **'PER YEAR'**
+  String get tdPerYear;
+
+  /// No description provided for @tdDue.
+  ///
+  /// In en, this message translates to:
+  /// **'DUE'**
+  String get tdDue;
+
+  /// No description provided for @tdUpcoming.
+  ///
+  /// In en, this message translates to:
+  /// **'UPCOMING'**
+  String get tdUpcoming;
+
+  /// No description provided for @tdPaymentHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'PAYMENT HISTORY'**
+  String get tdPaymentHistory;
+
+  /// No description provided for @tdNoPayments.
+  ///
+  /// In en, this message translates to:
+  /// **'No payments recorded yet'**
+  String get tdNoPayments;
+
+  /// No description provided for @tdPaymentsSince.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} payments since {month} · {total} total'**
+  String tdPaymentsSince(int count, Object month, Object total);
+
+  /// No description provided for @tdResume.
+  ///
+  /// In en, this message translates to:
+  /// **'Resume'**
+  String get tdResume;
+
+  /// No description provided for @tdMarkPaid.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark as paid'**
+  String get tdMarkPaid;
+
+  /// No description provided for @tdMarkReceived.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark as received'**
+  String get tdMarkReceived;
+
+  /// No description provided for @tdSkipOne.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip this one'**
+  String get tdSkipOne;
+
+  /// No description provided for @etNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Note'**
+  String get etNote;
+
+  /// No description provided for @etNoteHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a note'**
+  String get etNoteHint;
+
+  /// No description provided for @etPaidTo.
+  ///
+  /// In en, this message translates to:
+  /// **'Paid to'**
+  String get etPaidTo;
+
+  /// No description provided for @arPausedTasks.
+  ///
+  /// In en, this message translates to:
+  /// **'PAUSED TASKS'**
+  String get arPausedTasks;
+
+  /// No description provided for @arCompletedTasks.
+  ///
+  /// In en, this message translates to:
+  /// **'COMPLETED TASKS'**
+  String get arCompletedTasks;
+
+  /// No description provided for @arDeletedTasks.
+  ///
+  /// In en, this message translates to:
+  /// **'DELETED TASKS'**
+  String get arDeletedTasks;
+
+  /// No description provided for @arPausedLine.
+  ///
+  /// In en, this message translates to:
+  /// **'Paused {date} · {payments} payments · {total}'**
+  String arPausedLine(Object date, int payments, Object total);
+
+  /// No description provided for @arCompletedLine.
+  ///
+  /// In en, this message translates to:
+  /// **'Paid {date} · {amount}'**
+  String arCompletedLine(Object date, Object amount);
+
+  /// No description provided for @arCancelledLine.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancelled {date}'**
+  String arCancelledLine(Object date);
+
+  /// No description provided for @arDeletedLineTask.
+  ///
+  /// In en, this message translates to:
+  /// **'Deleted {date} · {payments} payments · {total}'**
+  String arDeletedLineTask(Object date, int payments, Object total);
 }
 
 class _AppLocalizationsDelegate

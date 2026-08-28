@@ -700,10 +700,14 @@ AppStore buildSeedStore() {
       priority: Priority.normal,
     ),
     Task(
+      // Paying a credit-card statement moves money from Checking to Amex — a
+      // transfer that shrinks the debt, not a spend that grows it (§10.4). The
+      // money leaves `linkedAccountId` (Checking) and lands in `payToAccountId`
+      // (Amex); a transfer carries no budget category.
       id: 'k-amex',
       title: 'Pay Amex statement',
-      categoryId: 'c-debt',
-      linkedAccountId: 'a-amex',
+      linkedAccountId: 'a-checking',
+      payToAccountId: 'a-amex',
       expectedAmount: -3000,
       dueDate: DateTime(2026, 8, 12, 9, 0),
       icon: Icons.credit_card_rounded,

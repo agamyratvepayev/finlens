@@ -895,9 +895,6 @@ class AppLocalizationsTk extends AppLocalizations {
   String get schThisWeek => 'Şu hepde';
 
   @override
-  String get schLater => 'Şu aýyň soňunda';
-
-  @override
   String get plNothingScheduled => 'Meýilnama ýok';
 
   @override
@@ -1683,7 +1680,7 @@ class AppLocalizationsTk extends AppLocalizations {
   String get tdRate => 'Kurs';
 
   @override
-  String get tdNote => 'Bellik';
+  String get tdNote => 'BELLIK';
 
   @override
   String get tdNetWorth => 'Arassa baýlyk';
@@ -2687,4 +2684,465 @@ class AppLocalizationsTk extends AppLocalizations {
 
   @override
   String get tagArchivedBadge => 'archived';
+
+  @override
+  String get plTitle => 'Meýilleşdiriji';
+
+  @override
+  String get fieldSelectCategory => 'Kategoriýa saýlaň';
+
+  @override
+  String get actionResume => 'Dowam et';
+
+  @override
+  String get schToday => 'Şu gün';
+
+  @override
+  String get schHorizonThisWeek => 'Şu hepde';
+
+  @override
+  String get schHorizonNext30 => 'Indiki 30 gün';
+
+  @override
+  String get schHorizonThisMonth => 'Şu aý';
+
+  @override
+  String get schHorizonNext3Months => 'Indiki 3 aý';
+
+  @override
+  String get schHorizonTitle => 'GORIZONT';
+
+  @override
+  String get schHorizonUntilDate => 'Sene çenli…';
+
+  @override
+  String get schHorizonFootnote =>
+      'Möhleti geçen tölegler bu ýerde hasaba alynmaýar — haýsy gorizonty saýlasaňyz-da sanawda galýar.';
+
+  @override
+  String schUntilControl(Object date) {
+    return '$date çenli';
+  }
+
+  @override
+  String get schCompletedThisMonth => 'Şu aý tamamlanan';
+
+  @override
+  String schCompletedLastDays(int count) {
+    return 'Soňky $count günde tamamlanan';
+  }
+
+  @override
+  String get schUntilTitle => 'SENE ÇENLI';
+
+  @override
+  String get schUntilNote => 'Şu gün başlaýar — soňuny saýlaň.';
+
+  @override
+  String get schUntilPickPrompt => 'Tamamlanýan senäni saýlaň';
+
+  @override
+  String schUntilFromTo(Object date) {
+    return 'Şu günden $date çenli';
+  }
+
+  @override
+  String schDaysChip(int count) {
+    return '$count gün';
+  }
+
+  @override
+  String schDaysCount(int count) {
+    return '$count gün';
+  }
+
+  @override
+  String schPaymentsCount(int count) {
+    return '$count töleg';
+  }
+
+  @override
+  String schApplyDays(int count) {
+    return 'Ulan · $count gün';
+  }
+
+  @override
+  String get schLegendPayment => 'töleg bar';
+
+  @override
+  String get schLegendNegative => 'balans minusa geçýär';
+
+  @override
+  String get schShortLabel => 'ýetmeýär';
+
+  @override
+  String get schLeftLabel => 'galýar';
+
+  @override
+  String get schLeftAfter => 'borçlardan soň galýar';
+
+  @override
+  String get schShortAfter => 'borçlardan soň ýetmeýär';
+
+  @override
+  String schCaptionIn(Object amount) {
+    return '$amount geler';
+  }
+
+  @override
+  String schCaptionOut(Object amount) {
+    return '$amount çykar';
+  }
+
+  @override
+  String schShortToday(Object amount) {
+    return 'Şu gün $amount ýetmeýär';
+  }
+
+  @override
+  String schShortOnDay(Object amount, Object date) {
+    return '$date senesinde $amount ýetmeýär';
+  }
+
+  @override
+  String schBannerOut(int count, Object amount) {
+    return '$count möhleti geçen töleg · $amount';
+  }
+
+  @override
+  String schBannerIn(int count, Object amount) {
+    return '$count garaşylýan töleg gelmedi · $amount';
+  }
+
+  @override
+  String schBannerBoth(int count, Object out, Object inAmt) {
+    return '$count möhleti geçdi · $out çykýan, $inAmt gelýän';
+  }
+
+  @override
+  String get schNothingInHorizon => 'Bu aralykda hiç zat ýok';
+
+  @override
+  String get schShowNext3Months => 'Indiki 3 aýy görkez ›';
+
+  @override
+  String schDaysLate(int count) {
+    return '$count gün gijä galdy';
+  }
+
+  @override
+  String get schWontCover => 'ýetmez';
+
+  @override
+  String get schSemPayingOut => 'tölenýär';
+
+  @override
+  String get schSemComingIn => 'gelýär';
+
+  @override
+  String get schSemDue => 'möhlet';
+
+  @override
+  String get schSemFrom => 'hasapdan';
+
+  @override
+  String get schSemInto => 'hasaba';
+
+  @override
+  String schSemRepeats(Object cadence) {
+    return 'gaýtalanýar $cadence';
+  }
+
+  @override
+  String schItemsCount(int count) {
+    return '$count ýazgy';
+  }
+
+  @override
+  String schPausedArchiveLine(int count) {
+    return '$count duruzylan iş · Arhiw ›';
+  }
+
+  @override
+  String schCompletedFooter(Object out, Object inAmt, int count) {
+    return '$out çykýan · $inAmt gelýän · $count bolmady';
+  }
+
+  @override
+  String schSeeAll(int count) {
+    return 'Ählisini gör ($count) ›';
+  }
+
+  @override
+  String schPaidLine(Object when, Object account) {
+    return '$when tölendi · $account';
+  }
+
+  @override
+  String schReceivedLine(Object when, Object account) {
+    return '$when alyndy · $account';
+  }
+
+  @override
+  String schSkippedLine(Object when) {
+    return '$when geçildi';
+  }
+
+  @override
+  String schCancelledLine(Object when) {
+    return '$when ýatyryldy';
+  }
+
+  @override
+  String histLastDays(int count) {
+    return 'Soňky $count gün';
+  }
+
+  @override
+  String get histThisMonth => 'Şu aý';
+
+  @override
+  String get histLastMonth => 'Geçen aý';
+
+  @override
+  String histSinceDate(Object date) {
+    return '$date senesinden';
+  }
+
+  @override
+  String get histSincePrompt => 'Senesinden…';
+
+  @override
+  String histFilterAll(int count) {
+    return 'Ählisi $count';
+  }
+
+  @override
+  String histFilterPaid(int count) {
+    return 'Tölenen $count';
+  }
+
+  @override
+  String histFilterSkipped(int count) {
+    return 'Geçilen $count';
+  }
+
+  @override
+  String histFilterCancelled(int count) {
+    return 'Ýatyrylan $count';
+  }
+
+  @override
+  String get histOut => 'ÇYKAN';
+
+  @override
+  String get histIn => 'GELEN';
+
+  @override
+  String get histDidntHappen => 'BOLMADY';
+
+  @override
+  String get histNothingHere => 'Bu döwürde hiç zat ýok';
+
+  @override
+  String histPausedDeleted(int paused, int deleted) {
+    return 'Bu döwürde $paused duruzyldy, $deleted pozuldy · Arhiw ›';
+  }
+
+  @override
+  String get mpTitlePaid => 'Tölenen diýip belle';
+
+  @override
+  String get mpTitleReceived => 'Alnan diýip belle';
+
+  @override
+  String mpSubtitle(Object title, Object date) {
+    return '$title · möhlet $date';
+  }
+
+  @override
+  String mpExpected(Object amount) {
+    return 'garaşylýan $amount';
+  }
+
+  @override
+  String get mpDate => 'Sene';
+
+  @override
+  String get mpFrom => 'Hasapdan';
+
+  @override
+  String get mpInto => 'Hasaba';
+
+  @override
+  String get mpTo => 'Nirä';
+
+  @override
+  String get mpTransferNoCategory => 'Geçirim — býujet kategoriýasy ýok';
+
+  @override
+  String mpRemember(Object amount) {
+    return 'Indiki gezek üçin $amount ýatda sakla';
+  }
+
+  @override
+  String mpConfirm(Object amount) {
+    return 'Tassykla · $amount';
+  }
+
+  @override
+  String get mpChooseDestination => 'Barjak ýerini saýlaň';
+
+  @override
+  String get mpPayOffGroup => 'BERGINI ÜZMEK';
+
+  @override
+  String mpRecorded(Object title) {
+    return '$title Depdere ýazyldy';
+  }
+
+  @override
+  String mpRecordedNext(Object title, Object date) {
+    return '$title Depdere ýazyldy · indiki $date';
+  }
+
+  @override
+  String get tmEdit => 'Üýtget';
+
+  @override
+  String get tmEditSub =>
+      'Möçber, sene, gaýtalanma, hasap, kategoriýa, ýatladyş we bellik.';
+
+  @override
+  String get tmSkip => 'Muny geç';
+
+  @override
+  String tmSkipSub(Object date, Object next) {
+    return '$date geçildi. Depdere hiç zat ýazylmaýar; tapgyr $next senesinde dowam eder.';
+  }
+
+  @override
+  String get tmPause => 'Duruz';
+
+  @override
+  String get tmPauseSub =>
+      'Sanawdan we çaklamadan çykýar. Töleg taryhy we geljekki seneler saklanýar — islän wagtyňyz Arhiwden dowam ediň.';
+
+  @override
+  String get tmDelete => 'Poz';
+
+  @override
+  String tmDeleteSub(int count) {
+    return 'Arhiwe geçýär — tötänleýin pozmagy yzyna gaýtaryp bolýar. $count töleg Depderde galýar. Hemişelik pozmak Arhiwden edilýär.';
+  }
+
+  @override
+  String tdDeleteTitle(Object title) {
+    return '$title pozulsynmy?';
+  }
+
+  @override
+  String get tdDeleteMsg =>
+      'Arhiwe geçýär — tötänleýin pozmagy yzyna gaýtaryp bolýar.';
+
+  @override
+  String tdKeptPayments(int count) {
+    return '$count töleg Depderde galýar';
+  }
+
+  @override
+  String get tdKeptBalances => 'Balanslara täsir etmeýär';
+
+  @override
+  String get tdKeptHistory => 'Töleg taryhy iş bilen Arhiwde galýar';
+
+  @override
+  String get tdLostSchedule => 'Meýilnamadan we çaklamadan çykýar';
+
+  @override
+  String get tdLostReminders => 'Geljekki ýatladyşlar togtaýar';
+
+  @override
+  String get tdDeleteConfirm => 'Poz';
+
+  @override
+  String tdPausedOn(Object date) {
+    return '$date senesinde duruzyldy';
+  }
+
+  @override
+  String get tdNext => 'INDIKI';
+
+  @override
+  String get tdAmount => 'MÖÇBER';
+
+  @override
+  String get tdPerYear => 'ÝYLDA';
+
+  @override
+  String get tdDue => 'MÖHLET';
+
+  @override
+  String get tdUpcoming => 'GELJEKKI';
+
+  @override
+  String get tdPaymentHistory => 'TÖLEG TARYHY';
+
+  @override
+  String get tdNoPayments => 'Heniz töleg ýok';
+
+  @override
+  String tdPaymentsSince(int count, Object month, Object total) {
+    return '$month senesinden $count töleg · jemi $total';
+  }
+
+  @override
+  String get tdResume => 'Dowam et';
+
+  @override
+  String get tdMarkPaid => 'Tölenen diýip belle';
+
+  @override
+  String get tdMarkReceived => 'Alnan diýip belle';
+
+  @override
+  String get tdSkipOne => 'Muny geç';
+
+  @override
+  String get etNote => 'Bellik';
+
+  @override
+  String get etNoteHint => 'Bellik goş';
+
+  @override
+  String get etPaidTo => 'Nirä tölenýär';
+
+  @override
+  String get arPausedTasks => 'DURUZYLAN IŞLER';
+
+  @override
+  String get arCompletedTasks => 'TAMAMLANAN IŞLER';
+
+  @override
+  String get arDeletedTasks => 'POZULAN IŞLER';
+
+  @override
+  String arPausedLine(Object date, int payments, Object total) {
+    return '$date duruzyldy · $payments töleg · $total';
+  }
+
+  @override
+  String arCompletedLine(Object date, Object amount) {
+    return '$date tölendi · $amount';
+  }
+
+  @override
+  String arCancelledLine(Object date) {
+    return '$date ýatyryldy';
+  }
+
+  @override
+  String arDeletedLineTask(Object date, int payments, Object total) {
+    return '$date pozuldy · $payments töleg · $total';
+  }
 }

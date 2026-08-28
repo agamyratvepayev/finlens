@@ -90,7 +90,12 @@ enum GoalSection { saving, payingOff, waitingOn, earning }
 /// Spec 6.2 — nothing with history is truly deleted; it is archived.
 enum GoalStatus { active, reached, abandoned }
 
-enum TaskStatus { open, paid, skipped }
+/// A task's lifecycle state. `paid` closes a one-off; `skipped` marks a
+/// cancelled one-off (a recurring skip appends to `skippedDates` instead, keeping
+/// the series `open`); `paused` and `deleted` are the Archive states (§11.2).
+/// Nothing persists this enum by index (no persistence layer; seed data and
+/// callers use named values), so appending members is safe — do not reorder.
+enum TaskStatus { open, paid, skipped, paused, deleted }
 
 /// Priority labels localized — see `PriorityL10n.label`.
 enum Priority { low, normal, high }

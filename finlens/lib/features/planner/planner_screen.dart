@@ -1,14 +1,12 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 
 import '../../core/l10n/enum_labels.dart';
 import '../../core/models/models.dart';
 import '../../core/store/app_store.dart';
 import '../../core/utils/formatters.dart';
-import '../../core/utils/repeat_labels.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/amount_text.dart';
 import '../../shared/widgets/app_card.dart';
-import '../../shared/widgets/form_fields.dart';
 import '../../shared/widgets/screen_header.dart';
 import '../../shared/widgets/section_header.dart' show HorizontalSectionSwipe;
 import '../../theme/app_colors.dart';
@@ -20,13 +18,14 @@ import 'archive_screen.dart';
 import 'budget_detail_screen.dart';
 import 'edit_budget_screen.dart';
 import 'edit_goal_screen.dart';
-import 'edit_task_screen.dart';
 import 'goal_detail_screen.dart';
 import 'goal_presentation.dart';
+import 'schedule_horizon.dart';
+import 'schedule_tab.dart';
 import 'widgets/month_picker_sheet.dart';
 
-/// Spec 5 — the forward-looking module. Three tabs, each answering its own
-/// question in its own summary header (spec 6.2, "Tek özet kuralı").
+/// Spec 5 вЂ” the forward-looking module. Three tabs, each answering its own
+/// question in its own summary header (spec 6.2, "Tek Г¶zet kuralД±").
 class PlannerScreen extends StatefulWidget {
   const PlannerScreen({super.key});
 
@@ -37,13 +36,34 @@ class PlannerScreen extends StatefulWidget {
 class _PlannerScreenState extends State<PlannerScreen> {
   int _tab = 0;
 
-  /// Planner's own month — never `store.period`. Stepping it leaves Ledger and
+  /// Planner's own month вЂ” never `store.period`. Stepping it leaves Ledger and
   /// Insight untouched (spec 5.1: Planner stops driving the global period).
   late DateTime _month =
       DateTime(AppStore.today.year, AppStore.today.month);
 
+  /// Schedule's own forward horizon (В§1). Its own state вЂ” it never reads or
+  /// writes `_month`, `store.period` or anything global.
+  ScheduleHorizon _horizon = ScheduleHorizon.fallback;
+
   void _stepTab(int delta) =>
       setState(() => _tab = (_tab + delta + 3) % 3);
+
+  Future<void> _openHorizonSheet(BuildContext context) async {
+    final today = AppStore.today;
+    final store = StoreScope.read(context);
+    final counts = store.horizonCounts([
+      for (final p in ScheduleHorizon.presetOrder)
+        ScheduleHorizon.rangeOf(p, today),
+    ]);
+    final picked = await showScheduleHorizonSheet(
+      context,
+      current: _horizon,
+      counts: counts,
+      hasOverdue: store.overdueTasks.isNotEmpty,
+      today: today,
+    );
+    if (picked != null) setState(() => _horizon = picked);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -54,7 +74,7 @@ class _PlannerScreenState extends State<PlannerScreen> {
       bottom: false,
       child: Column(
         children: [
-          // Row 1 — the period is the title. Budgets shows the month control;
+          // Row 1 вЂ” the period is the title. Budgets shows the month control;
           // Goals and Schedule have no scope to set, so the slot is empty.
           ScreenHeader(
             titleWidget: _tab == 0
@@ -66,10 +86,15 @@ class _PlannerScreenState extends State<PlannerScreen> {
                       onPick: (m) => setState(() => _month = m),
                     ),
                   )
-                : const SizedBox.shrink(),
+                : _tab == 2
+                    ? ScheduleControl(
+                        horizon: _horizon,
+                        onTap: () => _openHorizonSheet(context),
+                      )
+                    : const SizedBox.shrink(),
             onAdd: () {
               // Goals use their own full-screen form (the WATCHING picker and
-              // target↔date pair don't fit the numeric-hero sheet); the other
+              // targetв†”date pair don't fit the numeric-hero sheet); the other
               // types stay on Quick Add.
               if (_tab == 1) {
                 openGoalEditor(context);
@@ -89,13 +114,13 @@ class _PlannerScreenState extends State<PlannerScreen> {
                   const BoxConstraints.tightFor(width: 36, height: 36),
               icon: const Icon(Icons.more_horiz_rounded, size: 22),
               color: AppColors.textPrimary,
-              // Spec 5.8 — Archive lives behind the ••• menu, never a tab.
+              // Spec 5.8 вЂ” Archive lives behind the вЂўвЂўвЂў menu, never a tab.
               onPressed: () => Navigator.of(context, rootNavigator: true).push(
                 MaterialPageRoute(builder: (_) => const ArchiveScreen()),
               ),
             ),
           ),
-          // Row 2 — a segmented control, above the summary (spec §1). Margin 14
+          // Row 2 вЂ” a segmented control, above the summary (spec В§1). Margin 14
           // each side (not the 20 gutter) per the container spec.
           Padding(
             padding: const EdgeInsets.fromLTRB(14, 0, 14, Insets.md),
@@ -105,7 +130,7 @@ class _PlannerScreenState extends State<PlannerScreen> {
               onChanged: (i) => setState(() => _tab = i),
             ),
           ),
-          // Row 3 + content — swipe anywhere below the tabs to change tab.
+          // Row 3 + content вЂ” swipe anywhere below the tabs to change tab.
           Expanded(
             child: HorizontalSectionSwipe(
               onNext: () => _stepTab(1),
@@ -124,23 +149,27 @@ class _PlannerScreenState extends State<PlannerScreen> {
   }
 
   Widget _summary(AppStore store) => switch (_tab) {
-        // No summary block above the Goals sections (§2): goals of mixed
+        // No summary block above the Goals sections (В§2): goals of mixed
         // direction have no meaningful sum, and a "1 needs attention" count is
-        // answered by the first card. The cards are sections → cards, nothing
+        // answered by the first card. The cards are sections в†’ cards, nothing
         // else.
         1 => const SizedBox.shrink(),
-        2 => _ScheduleSummary(store: store),
+        2 => ScheduleSummary(store: store, horizon: _horizon),
         _ => _BudgetSummary(store: store, month: _month),
       };
 
   Widget _content(AppStore store) => switch (_tab) {
         1 => _GoalsTab(store: store),
-        2 => _ScheduleTab(store: store),
+        2 => ScheduleTab(
+            store: store,
+            horizon: _horizon,
+            onHorizonChange: (h) => setState(() => _horizon = h),
+          ),
         _ => _BudgetsTab(store: store, month: _month),
       };
 }
 
-/// Row 1's month control on the Budgets tab — a title-weight `August 2026 ⌄`
+/// Row 1's month control on the Budgets tab вЂ” a title-weight `August 2026 вЊ„`
 /// that opens the Planner month picker. Scales down rather than clipping so the
 /// three controls beside it keep their size at 320 pt (spec 5.1).
 class _MonthControl extends StatelessWidget {
@@ -190,10 +219,10 @@ class _MonthControl extends StatelessWidget {
   }
 }
 
-/// Row 2 — the tab selector, a raised-chip segmented control (spec §1). The
+/// Row 2 вЂ” the tab selector, a raised-chip segmented control (spec В§1). The
 /// container sits **darker** than the page so the contrast lives between the
 /// container and the chip, not the chip and the page; the active chip is a
-/// neutral grey, never accent-tinted — six coloured budget bars sit directly
+/// neutral grey, never accent-tinted вЂ” six coloured budget bars sit directly
 /// below and a purple selection would compete with them.
 class _SegmentedTabs extends StatelessWidget {
   const _SegmentedTabs({
@@ -263,7 +292,7 @@ class _SegmentedTabs extends StatelessWidget {
   }
 }
 
-// ── 5.1 Budgets ─────────────────────────────────────────────────────────────
+// в”Ђв”Ђ 5.1 Budgets в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
 class _BudgetSummary extends StatelessWidget {
   const _BudgetSummary({required this.store, required this.month});
@@ -277,10 +306,10 @@ class _BudgetSummary extends StatelessWidget {
     final budget = store.totalBudget;
     final hasBudget = budget > 0;
     final budgeted = store.budgetedSpend(month);
-    // Hero and caption describe the budget and nothing else: left = budget −
+    // Hero and caption describe the budget and nothing else: left = budget в€’
     // budgeted spend; the percentage is budgeted / budget. Unbudgeted spend sits
     // outside the budget and is surfaced by _NoBudgetSection at the foot of the
-    // tab, never here (spec §2). Over budget the hero shows the *overage* with
+    // tab, never here (spec В§2). Over budget the hero shows the *overage* with
     // the word "over", not a negative figure.
     final left = store.leftThisMonth(month);
     final over = hasBudget && left < 0;
@@ -288,16 +317,16 @@ class _BudgetSummary extends StatelessWidget {
     final isCurrent = store.isCurrentMonth(month);
     final monthGone = store.monthProgressFor(month);
 
-    // The hero bar colours by PACE, not the spent ratio (spec §2): budgeted
-    // spend sitting far past an even burn is a real signal. Over budget → red;
-    // ahead of pace → amber; on or behind pace → green.
+    // The hero bar colours by PACE, not the spent ratio (spec В§2): budgeted
+    // spend sitting far past an even burn is a real signal. Over budget в†’ red;
+    // ahead of pace в†’ amber; on or behind pace в†’ green.
     final barColor = over
         ? AppColors.negative
         : (ratio > monthGone ? AppColors.warning : AppColors.positive);
 
     // "left of $3,800" / "over $3,800" as one localized run so it masks with the
     // privacy eye and stays grammatical; the word carries the meaning the bare
-    // figure can't (spec §2).
+    // figure can't (spec В§2).
     final budgetStr = money(budget, masked: store.masked);
     final phrase =
         over ? l.plOverAmount(budgetStr) : l.plLeftOfAmount(budgetStr);
@@ -313,10 +342,10 @@ class _BudgetSummary extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // One line: figure · inline label. No caps label row — the segmented
-          // control above already says "Budgets" (spec §2). The figure+phrase
+          // One line: figure В· inline label. No caps label row вЂ” the segmented
+          // control above already says "Budgets" (spec В§2). The figure+phrase
           // scale together in a FittedBox so "left of $3,800" can never
-          // truncate. The hero describes the budget alone — no unbudgeted note.
+          // truncate. The hero describes the budget alone вЂ” no unbudgeted note.
           FittedBox(
             fit: BoxFit.scaleDown,
             alignment: Alignment.centerLeft,
@@ -338,12 +367,12 @@ class _BudgetSummary extends StatelessWidget {
               ],
             ),
           ),
-          // Fix the gap at the box, not the margin (spec §2): a 32pt figure's
+          // Fix the gap at the box, not the margin (spec В§2): a 32pt figure's
           // line box carries ~9px of empty descender space; height:1.0 above
-          // removes it, and a 9px top margin lands the visual gap at 10–12px.
+          // removes it, and a 9px top margin lands the visual gap at 10вЂ“12px.
           const SizedBox(height: 9),
           // Solid fill = budgeted / budget. It clamps inside 100 %; over-budget
-          // is announced by the figure and the word, not by the bar (spec §2).
+          // is announced by the figure and the word, not by the bar (spec В§2).
           ProgressBar(
             value: ratio,
             color: barColor,
@@ -353,16 +382,16 @@ class _BudgetSummary extends StatelessWidget {
           const SizedBox(height: Insets.sm),
           Row(
             children: [
-              // "76% spent · day 9 of 31" — the percentage is budgeted spend
+              // "76% spent В· day 9 of 31" вЂ” the percentage is budgeted spend
               // only, and the day count (the same clock as the pace marker) is
               // shorter and more actionable than a percentage of the month, so
-              // it survives narrow widths and large text (spec §2/§4). Takes all
-              // the space the legend leaves — Expanded, not Flexible + Spacer —
+              // it survives narrow widths and large text (spec В§2/В§4). Takes all
+              // the space the legend leaves вЂ” Expanded, not Flexible + Spacer вЂ”
               // so it fills the row and never clips with room to spare.
               Expanded(
                 child: Text(
                   isCurrent
-                      ? '${l.plPctSpent(percent(ratio, decimals: 0))} · '
+                      ? '${l.plPctSpent(percent(ratio, decimals: 0))} В· '
                           '${l.plDayOfMonth(store.dayOfMonthFor(month), store.daysInMonthOf(month))}'
                       : l.plPctSpent(percent(ratio, decimals: 0)),
                   style: AppText.caption.copyWith(fontSize: 11.5),
@@ -370,8 +399,8 @@ class _BudgetSummary extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              // Pace marker legend — only the summary bar is labelled; a closed
-              // or future month has no pace to keep, so it is hidden (spec §2).
+              // Pace marker legend вЂ” only the summary bar is labelled; a closed
+              // or future month has no pace to keep, so it is hidden (spec В§2).
               // Sits flush right at its intrinsic width, on the same line.
               if (isCurrent) ...[
                 const SizedBox(width: Insets.sm),
@@ -437,8 +466,8 @@ class _BudgetsTab extends StatelessWidget {
             ),
           ),
           // One card holding every budgeted category, split by the standard 1pt
-          // rule (the pattern the Balance list and Ledger day cards use) — no
-          // per-budget card, no inter-card gap (spec §3). The divider indents
+          // rule (the pattern the Balance list and Ledger day cards use) вЂ” no
+          // per-budget card, no inter-card gap (spec В§3). The divider indents
           // past the icon column (13 pad + 30 icon + 12 gap).
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: Insets.gutter),
@@ -479,8 +508,8 @@ class _BudgetRow extends StatelessWidget {
     final limit = category.effectiveLimit ?? 0;
     final ratio = limit <= 0 ? 0.0 : spent / limit;
 
-    // <80% green, 80–100% amber, >100% red — against effectiveLimit, byte
-    // identical thresholds to before (spec §4). Colour states the fact; the
+    // <80% green, 80вЂ“100% amber, >100% red вЂ” against effectiveLimit, byte
+    // identical thresholds to before (spec В§4). Colour states the fact; the
     // glyph names the one state geometry can't; the marker gives context.
     final over = ratio > 1;
     final warn = !over && ratio >= category.warnThreshold;
@@ -489,7 +518,7 @@ class _BudgetRow extends StatelessWidget {
         : (warn ? AppColors.warning : AppColors.positive);
     final isCurrent = store.isCurrentMonth(month);
 
-    // One sentence per row for the screen reader (spec §4): near-limit has no
+    // One sentence per row for the screen reader (spec В§4): near-limit has no
     // glyph, only colour + bar length, so the state must survive in semantics.
     // Masked amounts make fragmented per-widget semantics unreadable, so the
     // whole row reads as a single composed label.
@@ -508,7 +537,7 @@ class _BudgetRow extends StatelessWidget {
       child: ExcludeSemantics(
         child: InkWell(
           // A tap opens the budget screen ("where did this go?"), never the
-          // editor — a stray tap must not land on financial editing (spec §6).
+          // editor вЂ” a stray tap must not land on financial editing (spec В§6).
           onTap: () => Navigator.of(context, rootNavigator: true).push(
             MaterialPageRoute(
               builder: (_) =>
@@ -516,7 +545,7 @@ class _BudgetRow extends StatelessWidget {
             ),
           ),
           // padding 9 / 13; the bar lives in the text column's second line, so
-          // it costs no extra row height — 48pt of pitch, not 80 (spec §3).
+          // it costs no extra row height вЂ” 48pt of pitch, not 80 (spec В§3).
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 13),
             child: Row(
@@ -540,7 +569,7 @@ class _BudgetRow extends StatelessWidget {
                           // The one glyph: a red triangle, only over budget.
                           // Near-limit's signal is the bar's length; it needs
                           // none, and a second glyph would clutter the list
-                          // (spec §4).
+                          // (spec В§4).
                           if (over)
                             const Padding(
                               padding: EdgeInsets.only(left: 5),
@@ -551,10 +580,10 @@ class _BudgetRow extends StatelessWidget {
                               ),
                             ),
                           const SizedBox(width: Insets.sm),
-                          // $560 / $500 — the amount pair sits on the name line,
+                          // $560 / $500 вЂ” the amount pair sits on the name line,
                           // freeing the second line for a full-width bar. Prints
                           // the effectiveLimit the maths uses, so a rollover row
-                          // shows $742 / $1,080 and needs no caption (spec §4b).
+                          // shows $742 / $1,080 and needs no caption (spec В§4b).
                           AmountText(spent, color: color),
                           Text(
                             ' / $limitStr',
@@ -566,7 +595,7 @@ class _BudgetRow extends StatelessWidget {
                       ),
                       const SizedBox(height: 7),
                       // 4pt so the fill reads clear of the 2pt pace marker; the
-                      // same unlabelled marker as the summary bar (spec §3).
+                      // same unlabelled marker as the summary bar (spec В§3).
                       ProgressBar(
                         value: ratio,
                         color: color,
@@ -586,7 +615,7 @@ class _BudgetRow extends StatelessWidget {
   }
 }
 
-/// Spec §5 — expense categories with spending but no budget this month, amount
+/// Spec В§5 вЂ” expense categories with spending but no budget this month, amount
 /// descending. Rendered only when non-empty: a category with nothing spent has
 /// nothing uncovered. Collapsed by default, so it is noticed afresh each month
 /// (next month's uncovered categories differ). The header carries the count and
@@ -607,7 +636,7 @@ class _NoBudgetSection extends StatefulWidget {
 }
 
 class _NoBudgetSectionState extends State<_NoBudgetSection> {
-  // Never persisted (spec §5): the section opens collapsed every time, and
+  // Never persisted (spec В§5): the section opens collapsed every time, and
   // switching tabs disposes it, so returning shows it collapsed again.
   bool _expanded = false;
 
@@ -622,8 +651,8 @@ class _NoBudgetSectionState extends State<_NoBudgetSection> {
 
     return Column(
       children: [
-        // Header row — like a SectionLabel but tappable, with a rotating
-        // chevron and the count · total. The count is information while the
+        // Header row вЂ” like a SectionLabel but tappable, with a rotating
+        // chevron and the count В· total. The count is information while the
         // rows are hidden (Balance shows "4 accounts" for the same reason);
         // redundant but harmless once expanded, so the header keeps its shape.
         InkWell(
@@ -651,7 +680,7 @@ class _NoBudgetSectionState extends State<_NoBudgetSection> {
                 const Spacer(),
                 Text(l.plCategoriesCount(widget.categories.length),
                     style: headerStyle),
-                Text(' · ', style: headerStyle),
+                Text(' В· ', style: headerStyle),
                 AmountText(total, style: headerStyle),
               ],
             ),
@@ -734,11 +763,11 @@ class _NoBudgetRow extends StatelessWidget {
   }
 }
 
-// ── 5.2 Goals, rebuilt on real balances (§1/§2) ─────────────────────────────
+// в”Ђв”Ђ 5.2 Goals, rebuilt on real balances (В§1/В§2) в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 //
-// Sections → cards, nothing else. Each section is derived from a goal's source
+// Sections в†’ cards, nothing else. Each section is derived from a goal's source
 // (SAVING / PAYING OFF / WAITING ON / EARNING), renders only when non-empty,
-// and carries its own total on the right — no goal count, no summary block.
+// and carries its own total on the right вЂ” no goal count, no summary block.
 
 class _GoalsTab extends StatelessWidget {
   const _GoalsTab({required this.store});
@@ -788,8 +817,8 @@ class _GoalsTab extends StatelessWidget {
     );
   }
 
-  /// Each header carries its own total, formatted per section — `$2,000 of
-  /// $3,700`, `$3,877 left`, `$3,000 owed` (§2).
+  /// Each header carries its own total, formatted per section вЂ” `$2,000 of
+  /// $3,700`, `$3,877 left`, `$3,000 owed` (В§2).
   String _sectionTotal(AppLocalizations l, AppStore store, GoalSection s) {
     final sums = store.goalSectionSums(s);
     switch (s) {
@@ -804,10 +833,10 @@ class _GoalsTab extends StatelessWidget {
   }
 }
 
-/// A goal card: icon · name (no verb) · verdict · `current/target` · bar. The
-/// name carries no verb — the section header already says PAYING OFF — which is
+/// A goal card: icon В· name (no verb) В· verdict В· `current/target` В· bar. The
+/// name carries no verb вЂ” the section header already says PAYING OFF вЂ” which is
 /// what keeps both lines from wrapping at 375 pt. Tapping opens the detail
-/// screen; it is never an edit affordance (§2).
+/// screen; it is never an edit affordance (В§2).
 class _GoalCard extends StatelessWidget {
   const _GoalCard({required this.store, required this.goal});
 
@@ -820,7 +849,7 @@ class _GoalCard extends StatelessWidget {
     final m = store.goalMetrics(goal);
     final verdict = goalVerdict(l, goal, m);
 
-    // One composed sentence for the screen reader — name, the amount pair, then
+    // One composed sentence for the screen reader вЂ” name, the amount pair, then
     // the verdict (which now carries the section's verb). ExcludeSemantics on
     // the visual tree keeps the two amounts and two Texts from reading twice.
     final amountPair =
@@ -828,7 +857,7 @@ class _GoalCard extends StatelessWidget {
         ' / ${money(m.target)}';
 
     return Padding(
-      // Tighter bottom margin than a budget card (§1): 8, not Insets.md.
+      // Tighter bottom margin than a budget card (В§1): 8, not Insets.md.
       padding: const EdgeInsets.fromLTRB(Insets.gutter, 0, Insets.gutter, 8),
       child: Semantics(
         container: true,
@@ -846,8 +875,8 @@ class _GoalCard extends StatelessWidget {
                   builder: (_) => GoalDetailScreen(goalId: goal.id),
                 ),
               ),
-              // 8 vertical · 12 horizontal (§1): the two text lines and the bar
-              // set the height, the padding is what's tuned — no fixed height,
+              // 8 vertical В· 12 horizontal (В§1): the two text lines and the bar
+              // set the height, the padding is what's tuned вЂ” no fixed height,
               // so the card grows intact at large text scale.
               child: Padding(
                 padding:
@@ -871,7 +900,7 @@ class _GoalCard extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               // Name and amount share a baseline; the verdict
-                              // sits alone on the line below (§2).
+                              // sits alone on the line below (В§2).
                               Row(
                                 crossAxisAlignment:
                                     CrossAxisAlignment.baseline,
@@ -920,7 +949,7 @@ class _GoalCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 6),
                     // The goal card's 3pt track with a thinner pace marker
-                    // (§6); the budget bars keep the 2pt/3pt default.
+                    // (В§6); the budget bars keep the 2pt/3pt default.
                     ProgressBar(
                       value: m.progress,
                       color: goalBarColor(m),
@@ -934,270 +963,6 @@ class _GoalCard extends StatelessWidget {
               ),
             ),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-// ── 5.3 Schedule ────────────────────────────────────────────────────────────
-
-class _ScheduleSummary extends StatelessWidget {
-  const _ScheduleSummary({required this.store});
-
-  final AppStore store;
-
-  @override
-  Widget build(BuildContext context) {
-    final overdue = store.overdueTasks;
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        Insets.gutter,
-        0,
-        Insets.gutter,
-        Insets.md,
-      ),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  AppLocalizations.of(context).plComingIn,
-                  style: AppText.body.copyWith(fontSize: 14),
-                ),
-              ),
-              AmountText(
-                store.comingIn,
-                style: AppText.amountLarge,
-                color: AppColors.positive,
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  AppLocalizations.of(context).plGoingOut,
-                  style: AppText.body.copyWith(fontSize: 14),
-                ),
-              ),
-              AmountText(
-                store.goingOut,
-                style: AppText.amountLarge,
-                color: AppColors.negative,
-              ),
-            ],
-          ),
-          if (overdue.isNotEmpty) ...[
-            const SizedBox(height: Insets.md),
-            NoticeBanner(
-              margin: EdgeInsets.zero,
-              color: AppColors.negative,
-              icon: Icons.error_outline_rounded,
-              text: AppLocalizations.of(context)
-                  .plPaymentsOverdue(overdue.length, money(store.overdueAmount)),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _ScheduleTab extends StatelessWidget {
-  const _ScheduleTab({required this.store});
-
-  final AppStore store;
-
-  @override
-  Widget build(BuildContext context) {
-    // Spec 5.3 — one timeline ordered by date, never grouped by pay-in /
-    // pay-out. Direction survives as icon colour and the ↻ recurring mark.
-    final l = AppLocalizations.of(context);
-    final sections = <(String, List<Task>)>[
-      (l.schOverdue, store.overdueTasks),
-      (l.schThisWeek, store.thisWeekTasks),
-      (l.schLater, store.laterTasks),
-    ].where((s) => s.$2.isNotEmpty).toList();
-
-    if (sections.isEmpty) {
-      return Padding(
-        padding: const EdgeInsets.only(top: 56),
-        child: EmptyState(
-          icon: Icons.event_available_rounded,
-          title: AppLocalizations.of(context).plNothingScheduled,
-          message: AppLocalizations.of(context).plNothingSchedMsg,
-          action: FilledButton.icon(
-            onPressed: () =>
-                showQuickAdd(context, type: QuickAddType.newTask),
-            icon: const Icon(Icons.add_rounded, size: 18),
-            label: Text(AppLocalizations.of(context).plNewTask),
-            style: FilledButton.styleFrom(
-              backgroundColor: AppColors.accent,
-              foregroundColor: Colors.white,
-            ),
-          ),
-        ),
-      );
-    }
-
-    return ListView(
-      padding: const EdgeInsets.only(bottom: Insets.xxl),
-      children: [
-        for (final (title, items) in sections) ...[
-          SectionLabel(title),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: Insets.gutter),
-            child: AppCard(
-              child: Column(
-                children: [
-                  for (var i = 0; i < items.length; i++) ...[
-                    if (i > 0) const RowDivider(indent: Insets.md),
-                    _TaskRow(store: store, task: items[i]),
-                  ],
-                ],
-              ),
-            ),
-          ),
-        ],
-      ],
-    );
-  }
-}
-
-class _TaskRow extends StatelessWidget {
-  const _TaskRow({required this.store, required this.task});
-
-  final AppStore store;
-  final Task task;
-
-  @override
-  Widget build(BuildContext context) {
-    final payOut = task.isPayOut;
-    final color = payOut ? AppColors.negative : AppColors.positive;
-    final days = task.daysUntilDue;
-    final due = days < 0
-        ? '${dayMonth(task.dueDate, AppLocalizations.of(context))} · ${dueLabel(days, AppLocalizations.of(context))}'
-        : '${dayMonth(task.dueDate, AppLocalizations.of(context))}${task.isRecurring ? '' : ' · ${dueLabel(days, AppLocalizations.of(context))}'}';
-
-    return InkWell(
-      onTap: () => Navigator.of(context, rootNavigator: true).push(
-        MaterialPageRoute(builder: (_) => EditTaskScreen(taskId: task.id)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: Insets.md,
-          vertical: Insets.md,
-        ),
-        child: Row(
-          children: [
-            IconTile(task.icon, color: color, size: 34),
-            const SizedBox(width: Insets.md),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    task.title,
-                    style: AppText.rowTitle,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 2),
-                  Row(
-                    children: [
-                      Flexible(
-                        child: Text(
-                          due,
-                          style: AppText.rowSubtitle.copyWith(
-                            fontSize: 11.5,
-                            color: days < 0
-                                ? AppColors.negative
-                                : AppColors.textSecondary,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      if (task.isRecurring) ...[
-                        const SizedBox(width: 5),
-                        const Icon(
-                          Icons.repeat_rounded,
-                          size: 11,
-                          color: AppColors.textTertiary,
-                        ),
-                        const SizedBox(width: 3),
-                        Text(
-                          repeatCadenceLabel(
-                            task.repeats,
-                            task.weekdays,
-                            task.daysOfMonth,
-                            task.dueDate,
-                            AppLocalizations.of(context),
-                          ),
-                          style: AppText.caption.copyWith(
-                            fontSize: 11,
-                            color: AppColors.textTertiary,
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: Insets.sm),
-            AmountText(
-              task.expectedAmount,
-              showSign: true,
-              color: color,
-              forceDecimals: task.expectedAmount.abs() % 1 != 0,
-            ),
-            const SizedBox(width: Insets.md),
-            // Spec 5.3 — the circle writes the real Ledger entry and closes
-            // (or advances) the task.
-            _MarkPaidButton(store: store, task: task),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _MarkPaidButton extends StatelessWidget {
-  const _MarkPaidButton({required this.store, required this.task});
-
-  final AppStore store;
-  final Task task;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () {
-        store.markTaskPaid(task);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              '${task.title} recorded in your Ledger'
-              '${task.isRecurring ? ' · next ${dayMonth(task.dueDate, AppLocalizations.of(context))}' : ''}',
-            ),
-          ),
-        );
-      },
-      child: Container(
-        width: 28,
-        height: 28,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          border: Border.all(color: AppColors.surfaceHigh, width: 1.5),
-        ),
-        child: const Icon(
-          Icons.check_rounded,
-          size: 15,
-          color: AppColors.textTertiary,
         ),
       ),
     );

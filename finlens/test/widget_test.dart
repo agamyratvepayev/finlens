@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:finlens/core/data/seed_data.dart';
 import 'package:finlens/core/models/models.dart';
+import 'package:finlens/core/store/app_store.dart';
 import 'package:finlens/main.dart';
 
 void main() {
@@ -71,7 +72,13 @@ void main() {
     final due = task.dueDate;
     final ledgerSize = store.txns.length;
 
-    store.markTaskPaid(task);
+    store.markTaskPaid(
+      task,
+      amount: task.expectedAmount.abs(),
+      date: AppStore.today,
+      fromAccountId: task.linkedAccountId,
+      toRef: task.categoryId!,
+    );
 
     expect(store.txns.length, ledgerSize + 1);
     expect(task.dueDate.isAfter(due), isTrue);

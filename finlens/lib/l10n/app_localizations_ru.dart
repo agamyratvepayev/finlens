@@ -923,9 +923,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get schThisWeek => 'На этой неделе';
 
   @override
-  String get schLater => 'Позже в этом месяце';
-
-  @override
   String get plNothingScheduled => 'Ничего не запланировано';
 
   @override
@@ -1724,7 +1721,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get tdRate => 'Курс';
 
   @override
-  String get tdNote => 'Заметка';
+  String get tdNote => 'ЗАМЕТКА';
 
   @override
   String get tdNetWorth => 'Капитал';
@@ -2733,4 +2730,525 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get tagArchivedBadge => 'archived';
+
+  @override
+  String get plTitle => 'Планер';
+
+  @override
+  String get fieldSelectCategory => 'Выберите категорию';
+
+  @override
+  String get actionResume => 'Возобновить';
+
+  @override
+  String get schToday => 'Сегодня';
+
+  @override
+  String get schHorizonThisWeek => 'На этой неделе';
+
+  @override
+  String get schHorizonNext30 => 'Следующие 30 дней';
+
+  @override
+  String get schHorizonThisMonth => 'В этом месяце';
+
+  @override
+  String get schHorizonNext3Months => 'Следующие 3 месяца';
+
+  @override
+  String get schHorizonTitle => 'ГОРИЗОНТ';
+
+  @override
+  String get schHorizonUntilDate => 'До даты…';
+
+  @override
+  String get schHorizonFootnote =>
+      'Просроченные платежи здесь не учитываются — они остаются в списке при любом горизонте.';
+
+  @override
+  String schUntilControl(Object date) {
+    return 'До $date';
+  }
+
+  @override
+  String get schCompletedThisMonth => 'Выполнено в этом месяце';
+
+  @override
+  String schCompletedLastDays(int count) {
+    return 'Выполнено за $count дн.';
+  }
+
+  @override
+  String get schUntilTitle => 'ДО ДАТЫ';
+
+  @override
+  String get schUntilNote => 'Начинается сегодня — выберите конец.';
+
+  @override
+  String get schUntilPickPrompt => 'Выберите дату окончания';
+
+  @override
+  String schUntilFromTo(Object date) {
+    return 'От сегодня до $date';
+  }
+
+  @override
+  String schDaysChip(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count дн.',
+      one: '$count день',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String schDaysCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count дн.',
+      one: '$count день',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String schPaymentsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count платежей',
+      one: '$count платёж',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String schApplyDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count дн.',
+      one: '$count день',
+    );
+    return 'Применить · $_temp0';
+  }
+
+  @override
+  String get schLegendPayment => 'есть платёж';
+
+  @override
+  String get schLegendNegative => 'баланс уходит в минус';
+
+  @override
+  String get schShortLabel => 'не хватает';
+
+  @override
+  String get schLeftLabel => 'остаётся';
+
+  @override
+  String get schLeftAfter => 'останется после обязательств';
+
+  @override
+  String get schShortAfter => 'не хватит после обязательств';
+
+  @override
+  String schCaptionIn(Object amount) {
+    return '$amount придёт';
+  }
+
+  @override
+  String schCaptionOut(Object amount) {
+    return '$amount уйдёт';
+  }
+
+  @override
+  String schShortToday(Object amount) {
+    return 'Не хватает $amount сегодня';
+  }
+
+  @override
+  String schShortOnDay(Object amount, Object date) {
+    return 'Не хватает $amount — $date';
+  }
+
+  @override
+  String schBannerOut(int count, Object amount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count просроченных платежей',
+      one: '$count просроченный платёж',
+    );
+    return '$_temp0 · $amount';
+  }
+
+  @override
+  String schBannerIn(int count, Object amount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ожидаемых платежей не поступили',
+      one: '$count ожидаемый платёж не поступил',
+    );
+    return '$_temp0 · $amount';
+  }
+
+  @override
+  String schBannerBoth(int count, Object out, Object inAmt) {
+    return '$count просрочено · $out исходящих, $inAmt входящих';
+  }
+
+  @override
+  String get schNothingInHorizon => 'В этом окне ничего не запланировано';
+
+  @override
+  String get schShowNext3Months => 'Показать следующие 3 месяца ›';
+
+  @override
+  String schDaysLate(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'на $count дн. позже',
+      one: 'на $count день позже',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get schWontCover => 'не хватит';
+
+  @override
+  String get schSemPayingOut => 'выплата';
+
+  @override
+  String get schSemComingIn => 'поступление';
+
+  @override
+  String get schSemDue => 'срок';
+
+  @override
+  String get schSemFrom => 'со счёта';
+
+  @override
+  String get schSemInto => 'на счёт';
+
+  @override
+  String schSemRepeats(Object cadence) {
+    return 'повторяется $cadence';
+  }
+
+  @override
+  String schItemsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count записей',
+      one: '$count запись',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String schPausedArchiveLine(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count приостановленных задач',
+      one: '$count приостановленная задача',
+    );
+    return '$_temp0 · Архив ›';
+  }
+
+  @override
+  String schCompletedFooter(Object out, Object inAmt, int count) {
+    return '$out исходящих · $inAmt входящих · $count не состоялось';
+  }
+
+  @override
+  String schSeeAll(int count) {
+    return 'Показать все ($count) ›';
+  }
+
+  @override
+  String schPaidLine(Object when, Object account) {
+    return '$when оплачено · $account';
+  }
+
+  @override
+  String schReceivedLine(Object when, Object account) {
+    return '$when получено · $account';
+  }
+
+  @override
+  String schSkippedLine(Object when) {
+    return '$when пропущено';
+  }
+
+  @override
+  String schCancelledLine(Object when) {
+    return '$when отменено';
+  }
+
+  @override
+  String histLastDays(int count) {
+    return 'Последние $count дн.';
+  }
+
+  @override
+  String get histThisMonth => 'Этот месяц';
+
+  @override
+  String get histLastMonth => 'Прошлый месяц';
+
+  @override
+  String histSinceDate(Object date) {
+    return 'С $date';
+  }
+
+  @override
+  String get histSincePrompt => 'С даты…';
+
+  @override
+  String histFilterAll(int count) {
+    return 'Все $count';
+  }
+
+  @override
+  String histFilterPaid(int count) {
+    return 'Оплачено $count';
+  }
+
+  @override
+  String histFilterSkipped(int count) {
+    return 'Пропущено $count';
+  }
+
+  @override
+  String histFilterCancelled(int count) {
+    return 'Отменено $count';
+  }
+
+  @override
+  String get histOut => 'РАСХОД';
+
+  @override
+  String get histIn => 'ПРИХОД';
+
+  @override
+  String get histDidntHappen => 'НЕ СОСТОЯЛОСЬ';
+
+  @override
+  String get histNothingHere => 'Здесь ничего нет за этот период';
+
+  @override
+  String histPausedDeleted(int paused, int deleted) {
+    return '$paused приостановлено, $deleted удалено за период · Архив ›';
+  }
+
+  @override
+  String get mpTitlePaid => 'Отметить оплаченным';
+
+  @override
+  String get mpTitleReceived => 'Отметить полученным';
+
+  @override
+  String mpSubtitle(Object title, Object date) {
+    return '$title · срок $date';
+  }
+
+  @override
+  String mpExpected(Object amount) {
+    return 'ожидалось $amount';
+  }
+
+  @override
+  String get mpDate => 'Дата';
+
+  @override
+  String get mpFrom => 'Со счёта';
+
+  @override
+  String get mpInto => 'На счёт';
+
+  @override
+  String get mpTo => 'Куда';
+
+  @override
+  String get mpTransferNoCategory => 'Перевод — без категории бюджета';
+
+  @override
+  String mpRemember(Object amount) {
+    return 'Запомнить $amount на будущее';
+  }
+
+  @override
+  String mpConfirm(Object amount) {
+    return 'Подтвердить · $amount';
+  }
+
+  @override
+  String get mpChooseDestination => 'Выберите назначение';
+
+  @override
+  String get mpPayOffGroup => 'ПОГАСИТЬ';
+
+  @override
+  String mpRecorded(Object title) {
+    return '$title записано в Реестр';
+  }
+
+  @override
+  String mpRecordedNext(Object title, Object date) {
+    return '$title записано в Реестр · далее $date';
+  }
+
+  @override
+  String get tmEdit => 'Изменить';
+
+  @override
+  String get tmEditSub =>
+      'Сумма, дата, повтор, счёт, категория, напоминание и заметка.';
+
+  @override
+  String get tmSkip => 'Пропустить эту';
+
+  @override
+  String tmSkipSub(Object date, Object next) {
+    return '$date пропущено. В Реестр ничего не пишется; серия продолжится $next.';
+  }
+
+  @override
+  String get tmPause => 'Приостановить';
+
+  @override
+  String get tmPauseSub =>
+      'Уходит из списка и прогноза. История платежей и будущие даты сохраняются — возобновите из Архива в любой момент.';
+
+  @override
+  String get tmDelete => 'Удалить';
+
+  @override
+  String tmDeleteSub(int count) {
+    return 'Перемещается в Архив — случайное удаление можно отменить. $count платежей остаются в Реестре. Окончательное удаление — из Архива.';
+  }
+
+  @override
+  String tdDeleteTitle(Object title) {
+    return 'Удалить $title?';
+  }
+
+  @override
+  String get tdDeleteMsg =>
+      'Перемещается в Архив — случайное удаление можно отменить.';
+
+  @override
+  String tdKeptPayments(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count платежей остаются в Реестре',
+      one: '$count платёж остаётся в Реестре',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get tdKeptBalances => 'Балансы не затрагиваются';
+
+  @override
+  String get tdKeptHistory => 'История платежей остаётся с задачей в Архиве';
+
+  @override
+  String get tdLostSchedule => 'Уходит из Расписания и прогноза';
+
+  @override
+  String get tdLostReminders => 'Будущие напоминания прекращаются';
+
+  @override
+  String get tdDeleteConfirm => 'Удалить';
+
+  @override
+  String tdPausedOn(Object date) {
+    return 'Приостановлено $date';
+  }
+
+  @override
+  String get tdNext => 'ДАЛЕЕ';
+
+  @override
+  String get tdAmount => 'СУММА';
+
+  @override
+  String get tdPerYear => 'В ГОД';
+
+  @override
+  String get tdDue => 'СРОК';
+
+  @override
+  String get tdUpcoming => 'ПРЕДСТОЯЩИЕ';
+
+  @override
+  String get tdPaymentHistory => 'ИСТОРИЯ ПЛАТЕЖЕЙ';
+
+  @override
+  String get tdNoPayments => 'Платежей пока нет';
+
+  @override
+  String tdPaymentsSince(int count, Object month, Object total) {
+    return '$count платежей с $month · всего $total';
+  }
+
+  @override
+  String get tdResume => 'Возобновить';
+
+  @override
+  String get tdMarkPaid => 'Отметить оплаченным';
+
+  @override
+  String get tdMarkReceived => 'Отметить полученным';
+
+  @override
+  String get tdSkipOne => 'Пропустить эту';
+
+  @override
+  String get etNote => 'Заметка';
+
+  @override
+  String get etNoteHint => 'Добавить заметку';
+
+  @override
+  String get etPaidTo => 'Куда платить';
+
+  @override
+  String get arPausedTasks => 'ПРИОСТАНОВЛЕННЫЕ ЗАДАЧИ';
+
+  @override
+  String get arCompletedTasks => 'ВЫПОЛНЕННЫЕ ЗАДАЧИ';
+
+  @override
+  String get arDeletedTasks => 'УДАЛЁННЫЕ ЗАДАЧИ';
+
+  @override
+  String arPausedLine(Object date, int payments, Object total) {
+    return 'Приостановлено $date · $payments платежей · $total';
+  }
+
+  @override
+  String arCompletedLine(Object date, Object amount) {
+    return 'Оплачено $date · $amount';
+  }
+
+  @override
+  String arCancelledLine(Object date) {
+    return 'Отменено $date';
+  }
+
+  @override
+  String arDeletedLineTask(Object date, int payments, Object total) {
+    return 'Удалено $date · $payments платежей · $total';
+  }
 }

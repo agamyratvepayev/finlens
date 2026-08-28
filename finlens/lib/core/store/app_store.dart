@@ -144,6 +144,11 @@ class AppStore extends ChangeNotifier {
   final List<Task> _tasks;
   final List<Tag> _tags;
 
+  /// Remembers a task's status just before it was archived (deleted), so Archive
+  /// > Undo can restore `open` or `paused` (§9). In-memory only — like every
+  /// other piece of view/undo state, it does not survive a relaunch.
+  final Map<String, TaskStatus> _taskPriorStatus = {};
+
   int _idSeq = 1000;
   String _nextId(String prefix) => '$prefix${_idSeq++}';
 
@@ -658,8 +663,33 @@ class AppStore extends ChangeNotifier {
       .where((g) => g.status != GoalStatus.active)
       .toList(growable: false);
 
+  /// The Schedule list's tasks: open only (§11.2). Paid, paused, deleted and
+  /// cancelled tasks are excluded here but stay reachable by id ([taskById]) for
+  /// the Archive and the detail screens. A separate accessor rather than
+  /// loosening this one, so callers that mean "on the schedule" keep meaning it.
   List<Task> get tasks =>
-      _tasks.where((t) => t.status != TaskStatus.paid).toList(growable: false);
+      _tasks.where((t) => t.status == TaskStatus.open).toList(growable: false);
+
+  /// Paused series — removed from the list and the projection, fully reversible
+  /// from the Archive (§8/§9). Newest change first.
+  List<Task> get pausedTasks => _tasks
+      .where((t) => t.status == TaskStatus.paused)
+      .toList(growable: false);
+
+  /// Finished one-offs — paid or cancelled. They vanish from the Schedule but
+  /// remain reachable here so the task and its history stay findable (§9,
+  /// problem 12). Not restorable.
+  List<Task> get completedTasks => _tasks
+      .where((t) =>
+          !t.isRecurring &&
+          (t.status == TaskStatus.paid || t.status == TaskStatus.skipped))
+      .toList(growable: false);
+
+  /// Archived (soft-deleted) tasks — reversible until the Archive is cleared
+  /// (§8/§9). Their Ledger entries are never touched.
+  List<Task> get deletedTasks => _tasks
+      .where((t) => t.status == TaskStatus.deleted)
+      .toList(growable: false);
 
   List<Category> get removedBudgets => _categories
       .where((c) => c.removedOn != null && c.monthlyBudget == null)
@@ -673,7 +703,10 @@ class AppStore extends ChangeNotifier {
       archivedGoals.length +
       removedBudgets.length +
       archivedAccounts.length +
-      archivedCategories.length;
+      archivedCategories.length +
+      pausedTasks.length +
+      completedTasks.length +
+      deletedTasks.length;
 
   /// Open tasks that book into [categoryId] — a scheduled item whose
   /// "Mark as paid" would otherwise write a fresh Ledger entry against an
@@ -1463,34 +1496,226 @@ class AppStore extends ChangeNotifier {
         : categoryById(g.source.id) == null);
   }
 
-  // ── Schedule (spec 5.3) ───────────────────────────────────────────────────
+  // ── Schedule (spec §1–§11) ────────────────────────────────────────────────
+
+  /// [today] at day granularity — the reference clock for everything on the tab.
+  DateTime get _todayDay => DateTime(today.year, today.month, today.day);
 
   List<Task> get openTasks {
-    final list = tasks.where((t) => t.status == TaskStatus.open).toList();
+    final list = _tasks.where((t) => t.status == TaskStatus.open).toList();
     list.sort((a, b) => a.dueDate.compareTo(b.dueDate));
     return list;
   }
 
-  List<Task> get overdueTasks =>
-      openTasks.where((t) => t.daysUntilDue < 0).toList(growable: false);
+  /// The task's expected amount in base currency (§2.1). Converts through the
+  /// **linked account's** currency exactly as mark-paid does; an absent account
+  /// falls back to the base currency and never crashes.
+  double _taskAmountInBase(Task t) => Fx.toBase(
+        t.expectedAmount.abs(),
+        accountById(t.linkedAccountId)?.currency ?? Fx.baseCurrency,
+      );
 
-  List<Task> get thisWeekTasks => openTasks
-      .where((t) => t.daysUntilDue >= 0 && t.daysUntilDue <= 7)
+  /// Public read of a task's expected amount in base currency — the detail
+  /// screen's `PER YEAR` figure and row amounts (§7.3).
+  double taskAmountInBase(Task t) => _taskAmountInBase(t);
+
+  /// Overdue is horizon-independent by design (§3.1): a filter cannot make money
+  /// not owed, so narrowing the horizon never hides an unpaid bill. Shape
+  /// unchanged for the nav badge (app_shell) and the summary banner.
+  List<Task> get overdueTasks => openTasks
+      .where((t) => t.daysUntilDue(today) < 0)
       .toList(growable: false);
 
-  List<Task> get laterTasks =>
-      openTasks.where((t) => t.daysUntilDue > 7).toList(growable: false);
+  /// Overdue pay-outs still owed. Applied at day 0 of the projection (§2.4).
+  List<Task> get overdueOutflows =>
+      overdueTasks.where((t) => t.isPayOut).toList(growable: false);
 
-  double get comingIn => openTasks
-      .where((t) => t.expectedAmount > 0)
-      .fold(0.0, (sum, t) => sum + t.expectedAmount);
+  /// Overdue pay-ins. Excluded from the projection — a salary that did not
+  /// arrive is not money (§2.1) — but still shown in the banner (§2.5).
+  List<Task> get overdueInflows =>
+      overdueTasks.where((t) => !t.isPayOut).toList(growable: false);
 
-  double get goingOut => openTasks
-      .where((t) => t.expectedAmount < 0)
-      .fold(0.0, (sum, t) => sum + t.expectedAmount.abs());
+  double get overdueOutAmount =>
+      overdueOutflows.fold(0.0, (s, t) => s + _taskAmountInBase(t));
 
-  double get overdueAmount => overdueTasks
-      .fold(0.0, (sum, t) => sum + t.expectedAmount.abs());
+  double get overdueInAmount =>
+      overdueInflows.fold(0.0, (s, t) => s + _taskAmountInBase(t));
+
+  /// Total magnitude overdue — the banner's masked figure (§2.5).
+  double get overdueAmount => overdueOutAmount + overdueInAmount;
+
+  bool _dueInRange(Task t, DateRange h) {
+    final d = DateTime(t.dueDate.year, t.dueDate.month, t.dueDate.day);
+    final start = DateTime(h.start.year, h.start.month, h.start.day);
+    final end = DateTime(h.end.year, h.end.month, h.end.day);
+    return !d.isBefore(start) && !d.isAfter(end);
+  }
+
+  bool _sameDay(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
+
+  /// Open tasks whose due date falls inside [h]. Overdue tasks (due before the
+  /// horizon's start, which is always today) fall out naturally (§3.1).
+  List<Task> tasksInHorizon(DateRange h) =>
+      openTasks.where((t) => _dueInRange(t, h)).toList(growable: false);
+
+  /// Σ inflow in the horizon, excluding overdue inflows (§2.1/§2.3).
+  double comingIn(DateRange h) => tasksInHorizon(h)
+      .where((t) => !t.isPayOut)
+      .fold(0.0, (s, t) => s + _taskAmountInBase(t));
+
+  /// Σ outflow in the horizon **plus** every overdue outflow (§2.1/§2.3).
+  double goingOut(DateRange h) {
+    var out = tasksInHorizon(h)
+        .where((t) => t.isPayOut)
+        .fold(0.0, (s, t) => s + _taskAmountInBase(t));
+    out += overdueOutAmount;
+    return out;
+  }
+
+  /// The hero figure (§2.1): what is left after everything already committed —
+  /// spendable cash, plus horizon inflows, minus horizon and overdue outflows.
+  /// The projection is the only figure in Planner that converts currency; the
+  /// app-wide FX gap in budgets/insight is out of this spec's scope.
+  double projection(DateRange h) => spendable + comingIn(h) - goingOut(h);
+
+  /// The first day the running balance goes negative within [h], and by how
+  /// much — the highest-value output on the tab (§2.4). Overdue outflows land at
+  /// day 0; inflows are applied before outflows on the same day. Only the first
+  /// breach is reported.
+  ({DateTime day, double amount})? firstShortfall(DateRange h) {
+    var running = spendable - overdueOutAmount;
+    final inRange = tasksInHorizon(h);
+    final start = DateTime(h.start.year, h.start.month, h.start.day);
+    final end = DateTime(h.end.year, h.end.month, h.end.day);
+    for (var d = start; !d.isAfter(end); d = d.add(const Duration(days: 1))) {
+      for (final t in inRange) {
+        if (_sameDay(t.dueDate, d) && !t.isPayOut) {
+          running += _taskAmountInBase(t);
+        }
+      }
+      for (final t in inRange) {
+        if (_sameDay(t.dueDate, d) && t.isPayOut) {
+          running -= _taskAmountInBase(t);
+        }
+      }
+      if (running < 0) return (day: d, amount: -running);
+    }
+    return null;
+  }
+
+  /// Days in [h] that carry a task — the calendar dots (§1.2).
+  Set<DateTime> daysWithTasks(DateRange h) => {
+        for (final t in tasksInHorizon(h))
+          DateTime(t.dueDate.year, t.dueDate.month, t.dueDate.day),
+      };
+
+  /// Days in [h] on which the running balance is negative — the red dots
+  /// (§1.2), using the same day-by-day run as [firstShortfall].
+  Set<DateTime> negativeDays(DateRange h) {
+    final out = <DateTime>{};
+    var running = spendable - overdueOutAmount;
+    final inRange = tasksInHorizon(h);
+    final start = DateTime(h.start.year, h.start.month, h.start.day);
+    final end = DateTime(h.end.year, h.end.month, h.end.day);
+    for (var d = start; !d.isAfter(end); d = d.add(const Duration(days: 1))) {
+      for (final t in inRange) {
+        if (_sameDay(t.dueDate, d) && !t.isPayOut) {
+          running += _taskAmountInBase(t);
+        }
+      }
+      for (final t in inRange) {
+        if (_sameDay(t.dueDate, d) && t.isPayOut) {
+          running -= _taskAmountInBase(t);
+        }
+      }
+      if (running < 0) out.add(DateTime(d.year, d.month, d.day));
+    }
+    return out;
+  }
+
+  /// The count of open, non-overdue tasks due in each of [ranges], in ONE pass
+  /// over [openTasks] (§1). Overdue tasks are outside every horizon and excluded
+  /// from every count.
+  List<int> horizonCounts(List<DateRange> ranges) {
+    final counts = List<int>.filled(ranges.length, 0);
+    for (final t in openTasks) {
+      if (t.daysUntilDue(today) < 0) continue;
+      for (var i = 0; i < ranges.length; i++) {
+        if (_dueInRange(t, ranges[i])) counts[i]++;
+      }
+    }
+    return counts;
+  }
+
+  /// Every Ledger entry a task produced, newest first — the detail screen's
+  /// PAYMENT HISTORY (§7.6). Empty until the first payment is booked after this
+  /// ships, because [markTaskPaid] only started stamping `recurrenceTaskId` now.
+  List<Txn> paymentsForTask(String taskId) => txns
+      .where((t) => t.recurrenceTaskId == taskId)
+      .toList(growable: false);
+
+  double paymentTotalForTask(String taskId) => paymentsForTask(taskId)
+      .fold(0.0, (s, t) => s + Fx.toBase(t.amount, t.currency));
+
+  /// Completed / skipped / cancelled events over [period], newest first (§11.5).
+  /// Merged from three sources: paid & received transactions (amount and date
+  /// from the Txn, never the task), recurring skips, and cancelled one-offs.
+  /// A permanently-deleted task's payments lose their link and drop out — the
+  /// reason Delete archives rather than destroys.
+  List<ScheduleEvent> scheduleEvents(DateRange period) {
+    bool inPeriod(DateTime d) {
+      final day = DateTime(d.year, d.month, d.day);
+      final s = DateTime(period.start.year, period.start.month, period.start.day);
+      final e = DateTime(period.end.year, period.end.month, period.end.day);
+      return !day.isBefore(s) && !day.isAfter(e);
+    }
+
+    final events = <ScheduleEvent>[];
+    // 1 · paid / received — real transactions linked back to their task.
+    for (final t in _txns) {
+      final rid = t.recurrenceTaskId;
+      if (rid == null || !inPeriod(t.date)) continue;
+      final task = taskById(rid);
+      if (task == null) continue;
+      final received = t.type == TxnType.income;
+      events.add(ScheduleEvent(
+        date: t.date,
+        task: task,
+        txn: t,
+        outcome:
+            received ? ScheduleOutcome.received : ScheduleOutcome.paid,
+        amountInBase: Fx.toBase(t.amount, t.currency),
+      ));
+    }
+    // 2 · skipped — every recurring skip, including on paused/archived tasks.
+    for (final task in _tasks) {
+      for (final sd in task.skippedDates) {
+        if (!inPeriod(sd)) continue;
+        events.add(ScheduleEvent(
+          date: sd,
+          task: task,
+          outcome: ScheduleOutcome.skipped,
+          amountInBase: _taskAmountInBase(task),
+        ));
+      }
+    }
+    // 3 · cancelled — one-off tasks whose single occurrence was skipped.
+    for (final task in _tasks) {
+      if (!task.isRecurring &&
+          task.status == TaskStatus.skipped &&
+          inPeriod(task.dueDate)) {
+        events.add(ScheduleEvent(
+          date: task.dueDate,
+          task: task,
+          outcome: ScheduleOutcome.cancelled,
+          amountInBase: _taskAmountInBase(task),
+        ));
+      }
+    }
+    events.sort((a, b) => b.date.compareTo(a.date));
+    return events;
+  }
 
   // ── Mutations: transactions ───────────────────────────────────────────────
 
@@ -1956,6 +2181,23 @@ class AppStore extends ChangeNotifier {
     for (final c in _categories) {
       c.removedOn = null;
     }
+    // Permanently remove archived tasks and sever every payment that pointed at
+    // them, so no orphan `recurrenceTaskId` survives (§9). Ledger entries stay —
+    // only the link is nulled.
+    final clearedIds = {
+      for (final t in [...pausedTasks, ...completedTasks, ...deletedTasks])
+        t.id,
+    };
+    if (clearedIds.isNotEmpty) {
+      for (final t in _txns) {
+        if (t.recurrenceTaskId != null &&
+            clearedIds.contains(t.recurrenceTaskId)) {
+          t.recurrenceTaskId = null;
+        }
+      }
+      _tasks.removeWhere((t) => clearedIds.contains(t.id));
+      _taskPriorStatus.removeWhere((id, _) => clearedIds.contains(id));
+    }
     notifyListeners();
   }
 
@@ -2002,6 +2244,8 @@ class AppStore extends ChangeNotifier {
     double? expectedAmount,
     DateTime? dueDate,
     String? categoryId,
+    String? payToAccountId,
+    String? note,
     RepeatFrequency? repeats,
     Set<int>? weekdays,
     Set<int>? daysOfMonth,
@@ -2009,10 +2253,15 @@ class AppStore extends ChangeNotifier {
     int? reminderDaysBefore,
     TimeOfDay? reminderTime,
     bool clearReminder = false,
+    bool clearCategory = false,
+    bool clearPayTo = false,
   }) {
     task
       ..title = title ?? task.title
-      ..categoryId = categoryId ?? task.categoryId
+      // A transfer task carries no budget category and vice versa (§10.4).
+      ..categoryId = clearCategory ? null : (categoryId ?? task.categoryId)
+      ..payToAccountId = clearPayTo ? null : (payToAccountId ?? task.payToAccountId)
+      ..note = note ?? task.note
       ..linkedAccountId = linkedAccountId ?? task.linkedAccountId
       ..expectedAmount = expectedAmount ?? task.expectedAmount
       ..dueDate = dueDate ?? task.dueDate
@@ -2026,36 +2275,112 @@ class AppStore extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Spec 5.3/5.7 — writes the real Ledger entry, then advances the series.
-  /// A one-off task closes; a recurring one just moves to its next date.
-  Txn markTaskPaid(Task task) {
-    final account = accountById(task.linkedAccountId);
+  /// §10.3/§10.4 — books the real Ledger entry for one occurrence, then advances
+  /// the series (or closes a one-off). The caller supplies the actual amount,
+  /// pay date, source account and destination, so the entry never needs
+  /// correcting afterwards.
+  ///
+  /// [toRef] is a **category id** (ordinary spend / income) or an **account id**
+  /// (paying down a liability). A pay-out into an account is a **transfer**, not
+  /// a spend: a spend would grow the debt it settles (§10.4). The returned
+  /// [MarkPaidResult] carries everything [undoMarkTaskPaid] needs to reverse it.
+  MarkPaidResult markTaskPaid(
+    Task task, {
+    required double amount,
+    required DateTime date,
+    required String fromAccountId,
+    required String toRef,
+    bool rememberAmount = false,
+  }) {
+    final prevDue = task.dueDate;
+    final prevStatus = task.status;
+    final prevChanged = task.statusChangedAt;
+    final prevExpected = task.expectedAmount;
+
     final isPayOut = task.expectedAmount < 0;
-    final txn = addTxn(
-      type: isPayOut ? TxnType.expense : TxnType.income,
-      amount: task.expectedAmount.abs(),
-      currency: account?.currency ?? 'USD',
-      fromRef: isPayOut
-          ? task.linkedAccountId
-          : (task.categoryId ?? _uncategorisedId(CategoryType.income)),
-      toRef: isPayOut
-          ? (task.categoryId ?? _uncategorisedId(CategoryType.expense))
-          : task.linkedAccountId,
-      date: task.dueDate,
-      note: task.title,
-    );
+    final toIsAccount = accountById(toRef) != null;
+    final Txn txn;
+    if (isPayOut && toIsAccount) {
+      final from = accountById(fromAccountId);
+      txn = addTxn(
+        type: TxnType.transfer,
+        amount: amount,
+        currency: from?.currency ?? Fx.baseCurrency,
+        fromRef: fromAccountId,
+        toRef: toRef,
+        date: date,
+        note: task.title,
+        recurrenceTaskId: task.id,
+      );
+    } else if (isPayOut) {
+      final from = accountById(fromAccountId);
+      txn = addTxn(
+        type: TxnType.expense,
+        amount: amount,
+        currency: from?.currency ?? Fx.baseCurrency,
+        fromRef: fromAccountId,
+        toRef: toRef,
+        date: date,
+        note: task.title,
+        recurrenceTaskId: task.id,
+      );
+    } else {
+      // Pay-in: income from a category into an account. Here [fromAccountId] is
+      // the destination account (where the money lands) and [toRef] the income
+      // category.
+      final into = accountById(fromAccountId);
+      txn = addTxn(
+        type: TxnType.income,
+        amount: amount,
+        currency: into?.currency ?? Fx.baseCurrency,
+        fromRef: toRef,
+        toRef: fromAccountId,
+        date: date,
+        note: task.title,
+        recurrenceTaskId: task.id,
+      );
+    }
+
+    if (rememberAmount) {
+      task.expectedAmount = isPayOut ? -amount : amount;
+    }
     _advance(task);
     notifyListeners();
-    return txn;
+    return MarkPaidResult(
+      task: task,
+      txn: txn,
+      previousDueDate: prevDue,
+      previousStatus: prevStatus,
+      previousStatusChangedAt: prevChanged,
+      previousExpected: prevExpected,
+    );
   }
 
-  /// Spec 5.7 — skip writes no transaction but still advances the series.
+  /// Reverses a [markTaskPaid]: deletes the written Txn and restores the due
+  /// date, status and (if the sheet changed it) the expected amount (§10.3).
+  void undoMarkTaskPaid(MarkPaidResult r) {
+    _txns.removeWhere((t) => t.id == r.txn.id);
+    _sameIndex = null;
+    _accountIndex = null;
+    r.task
+      ..dueDate = r.previousDueDate
+      ..status = r.previousStatus
+      ..statusChangedAt = r.previousStatusChangedAt
+      ..expectedAmount = r.previousExpected;
+    _syncGoalLatches();
+    notifyListeners();
+  }
+
+  /// §8 — skip writes nothing to the Ledger. A recurring skip is recorded in
+  /// [Task.skippedDates] and the series advances; a one-off is cancelled.
   void skipTask(Task task) {
     if (task.isRecurring) {
       task.skippedDates = [...task.skippedDates, task.dueDate];
       _advance(task);
     } else {
-      task.status = TaskStatus.skipped;
+      task
+        ..status = TaskStatus.skipped
+        ..statusChangedAt = today;
     }
     notifyListeners();
   }
@@ -2064,41 +2389,73 @@ class AppStore extends ChangeNotifier {
     if (task.isRecurring) {
       task.dueDate = task.nextOccurrence(task.dueDate);
     } else {
-      task.status = TaskStatus.paid;
+      task
+        ..status = TaskStatus.paid
+        ..statusChangedAt = today;
     }
   }
 
-  /// Spec 5.7 — "Delete only `<date>`" appends to skipped_dates, it never spawns
-  /// or destroys rows; "Delete the whole series" removes the single record.
-  void deleteTaskOccurrence(Task task) {
-    if (task.isRecurring) {
-      task.skippedDates = [...task.skippedDates, task.dueDate];
-      task.dueDate = task.nextOccurrence(task.dueDate);
-    } else {
-      _tasks.removeWhere((t) => t.id == task.id);
-    }
+  /// §8 — pause: the whole series leaves the list and the projection, fully
+  /// reversible. History and future dates are kept; nothing is written.
+  void pauseTask(Task task) {
+    task
+      ..status = TaskStatus.paused
+      ..statusChangedAt = today;
     notifyListeners();
   }
 
+  /// §9 — resume a paused (or, via Undo, deleted) task. A recurring series whose
+  /// due date slipped into the past while paused is advanced to the next
+  /// occurrence at or after today, so it does not return already overdue. A
+  /// one-off whose date has passed returns as overdue — it genuinely is.
+  void resumeTask(Task task) {
+    if (task.isRecurring) {
+      var d = task.dueDate;
+      var guard = 0;
+      while (DateTime(d.year, d.month, d.day).isBefore(_todayDay) &&
+          guard++ < 600) {
+        final next = task.nextOccurrence(d);
+        if (!next.isAfter(d)) break;
+        d = next;
+      }
+      task.dueDate = d;
+    }
+    task
+      ..status = TaskStatus.open
+      ..statusChangedAt = null;
+    notifyListeners();
+  }
+
+  /// §8 — delete: archive the series (reversible until the Archive is cleared).
+  /// Its Ledger entries are never touched. The prior status is remembered so
+  /// Undo can restore `open` or `paused` (§9).
+  void deleteTask(Task task) {
+    _taskPriorStatus[task.id] = task.status;
+    task
+      ..status = TaskStatus.deleted
+      ..statusChangedAt = today;
+    notifyListeners();
+  }
+
+  /// §9 — Archive > Undo on a deleted task: restore the status it had before.
+  void undoDeleteTask(Task task) {
+    final prior = _taskPriorStatus.remove(task.id) ?? TaskStatus.open;
+    task
+      ..status = prior
+      ..statusChangedAt = prior == TaskStatus.paused ? today : null;
+    notifyListeners();
+  }
+
+  /// Hard-removes a task record. Still used by Quick Add when an edited
+  /// transaction's recurrence link is rewritten (the old generating task is
+  /// replaced, not archived). The Schedule UI never calls this — it uses
+  /// [deleteTask] (archive) instead.
   void deleteTaskSeries(Task task) {
     _tasks.removeWhere((t) => t.id == task.id);
+    _taskPriorStatus.remove(task.id);
     notifyListeners();
   }
 
-  /// Last-resort bucket so a task without a category never pollutes a real
-  /// budget. Created on demand rather than seeded, so it only exists if used.
-  String _uncategorisedId(CategoryType type) {
-    final existing = _categories.where(
-      (c) => c.type == type && c.name == 'Uncategorised',
-    );
-    if (existing.isNotEmpty) return existing.first.id;
-    return addCategory(
-      name: 'Uncategorised',
-      type: type,
-      icon: Icons.help_outline_rounded,
-      color: const Color(0xFF8E8E93),
-    ).id;
-  }
 }
 
 /// Dependency injection without a package — [AppStore] rebuilds its dependents
