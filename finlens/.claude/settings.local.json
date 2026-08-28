@@ -42,7 +42,9 @@
       "Bash(kill 7226)",
       "Bash(pkill -f \"flutter_tools.snapshot run\")",
       "Bash(pkill -f \"flutter_tools.snapshot run\" 2>&1; sleep 1 *)",
-      "Bash(flutter pub *)"
+      "Bash(flutter pub *)",
+      "mcp__playwright__browser_resize",
+      "mcp__playwright__browser_navigate"
     ]
   },
   "hooks": {

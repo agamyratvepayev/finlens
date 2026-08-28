@@ -84,6 +84,14 @@ class _ReorderableGroupState<T> extends State<ReorderableGroup<T>> {
   /// match it exactly.
   Size _dragSize = Size.zero;
 
+  /// The group's own laid-out width, captured on every build. The drag avatar
+  /// snapshots the feedback widget *before* `onDragStarted` runs, so the
+  /// measured [_dragSize] can never reach the proxy — it must know its width at
+  /// build time. Rows stretch the full column, so this width IS the row width;
+  /// without it the proxy (a Row with an Expanded child) hits the overlay's
+  /// unbounded constraints and every drag dies in layout.
+  double? _width;
+
   /// One key per row, used to measure the lifted row.
   List<GlobalKey> _keys = const [];
 
@@ -313,17 +321,26 @@ class _ReorderableGroupState<T> extends State<ReorderableGroup<T>> {
 
   @override
   Widget build(BuildContext context) {
-    final children = <Widget>[];
-    for (var i = 0; i < _count; i++) {
-      if (_dragIndex != null && _insertIndex == i) children.add(_placeholder());
-      children.add(_row(i));
-    }
-    if (_dragIndex != null && _insertIndex == _count) {
-      children.add(_placeholder());
-    }
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: children,
+    // The rows are built inside the LayoutBuilder so [_width] is already set
+    // when each row's drag proxy is constructed — see [_width].
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        _width = constraints.maxWidth.isFinite ? constraints.maxWidth : null;
+        final children = <Widget>[];
+        for (var i = 0; i < _count; i++) {
+          if (_dragIndex != null && _insertIndex == i) {
+            children.add(_placeholder());
+          }
+          children.add(_row(i));
+        }
+        if (_dragIndex != null && _insertIndex == _count) {
+          children.add(_placeholder());
+        }
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: children,
+        );
+      },
     );
   }
 
@@ -388,7 +405,11 @@ class _ReorderableGroupState<T> extends State<ReorderableGroup<T>> {
       child: Material(
         type: MaterialType.transparency,
         child: Container(
-          width: _dragSize.width == 0 ? null : _dragSize.width,
+          // Never the measured drag size: the avatar snapshots this widget
+          // before the lift is measured, so only the build-time group width
+          // ([_width]) can bound it. Unbounded, the row's Expanded child
+          // throws and the whole drag dies.
+          width: _width,
           decoration: BoxDecoration(
             color: AppColors.dragLifted,
             borderRadius: BorderRadius.circular(10),
