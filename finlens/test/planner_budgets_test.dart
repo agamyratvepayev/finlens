@@ -236,6 +236,69 @@ void main() {
     expect(find.byIcon(Icons.warning_amber_rounded), findsNWidgets(overCount));
   });
 
+  // A 402pt-wide viewport — the width the row layout is specified against
+  // (spec §1/§4). Tall enough that the Budgets list lays out unclipped.
+  void narrowScreen(WidgetTester tester) {
+    tester.view.physicalSize = const Size(402 * 3.0, 1400 * 3.0);
+    tester.view.devicePixelRatio = 3.0;
+    addTearDown(tester.view.reset);
+  }
+
+  // The trailing " / $limit" Text inside a named category's row. It is the only
+  // child in the row carrying a slash, so textContaining('/') isolates it.
+  Finder limitTextOf(WidgetTester tester, String categoryName) {
+    final row = find
+        .ancestor(of: find.text(categoryName), matching: find.byType(InkWell))
+        .first;
+    return find.descendant(of: row, matching: find.textContaining('/'));
+  }
+
+  testWidgets('Entertainment renders in full — no ellipsis — at 402pt',
+      (tester) async {
+    narrowScreen(tester);
+    await tester.pumpWidget(wrap(buildSeedStore(), const PlannerScreen()));
+
+    // With the name on Expanded (not Flexible beside a Spacer), the full room
+    // the amount doesn't need is the name's: "Entertainment" fits whole.
+    final name = tester.renderObject<RenderParagraph>(find.text('Entertainment'));
+    expect(name.didExceedMaxLines, isFalse);
+    // Transportation is the other name that used to truncate.
+    final trans =
+        tester.renderObject<RenderParagraph>(find.text('Transportation'));
+    expect(trans.didExceedMaxLines, isFalse);
+  });
+
+  testWidgets('rows with different amount widths end on one right edge',
+      (tester) async {
+    narrowScreen(tester);
+    await tester.pumpWidget(wrap(buildSeedStore(), const PlannerScreen()));
+
+    // Housing ($1,200 limit) is the widest pair; Personal ($200) the narrowest.
+    // Both amounts sit flush to the text column's trailing edge, so the two
+    // limit Texts terminate at the same x (spec §2).
+    final wide = tester.getRect(limitTextOf(tester, 'Housing').first);
+    final narrow = tester.getRect(limitTextOf(tester, 'Personal').first);
+    expect(wide.width, isNot(closeTo(narrow.width, 1)));
+    expect(wide.right, closeTo(narrow.right, 0.5));
+  });
+
+  testWidgets('an over-budget row with a very long name keeps the triangle',
+      (tester) async {
+    narrowScreen(tester);
+    final store = buildSeedStore();
+    // Entertainment is the seed's only over-limit budget; give it a name too
+    // long to fit so the ellipsis has to bite.
+    store.budgetedCategories.firstWhere((c) => c.id == 'c-entertainment').name =
+        'Entertainment and Recreation and Streaming Subscriptions Budget Line';
+    await tester.pumpWidget(wrap(store, const PlannerScreen()));
+
+    // The name shortens; the triangle is not inside the Expanded, so it stays.
+    final name = tester.renderObject<RenderParagraph>(
+        find.textContaining('Entertainment and Recreation'));
+    expect(name.didExceedMaxLines, isTrue);
+    expect(find.byIcon(Icons.warning_amber_rounded), findsOneWidget);
+  });
+
   testWidgets('every budget row announces its state in a single semantics label',
       (tester) async {
     bigScreen(tester);

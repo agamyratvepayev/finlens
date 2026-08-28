@@ -529,7 +529,7 @@ class _BudgetRow extends StatelessWidget {
                     children: [
                       Row(
                         children: [
-                          Flexible(
+                          Expanded(
                             child: Text(
                               category.name,
                               style: AppText.rowTitle,
@@ -550,15 +550,14 @@ class _BudgetRow extends StatelessWidget {
                                 color: AppColors.negative,
                               ),
                             ),
-                          const Spacer(),
                           const SizedBox(width: Insets.sm),
-                          // $560 /$500 — the amount pair sits on the name line,
+                          // $560 / $500 — the amount pair sits on the name line,
                           // freeing the second line for a full-width bar. Prints
                           // the effectiveLimit the maths uses, so a rollover row
-                          // shows $742 /$1,080 and needs no caption (spec §4b).
+                          // shows $742 / $1,080 and needs no caption (spec §4b).
                           AmountText(spent, color: color),
                           Text(
-                            ' /$limitStr',
+                            ' / $limitStr',
                             style: AppText.amount.copyWith(
                               color: AppColors.textSecondary,
                             ),
