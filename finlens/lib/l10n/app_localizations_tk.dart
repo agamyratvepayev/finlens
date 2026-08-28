@@ -2525,6 +2525,45 @@ class AppLocalizationsTk extends AppLocalizations {
   String get goalColAtThisRate => 'Şu depginde';
 
   @override
+  String get goalColReachedOn => 'Ýetildi';
+
+  @override
+  String get goalColStoppedOn => 'Duruzyldy';
+
+  @override
+  String get goalColGotTo => 'Ýygnaldy';
+
+  @override
+  String get goalColTook => 'Wagt';
+
+  @override
+  String goalTookMonths(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count aý',
+      one: '1 aý',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get goalTookUnderMonth => '< 1 aý';
+
+  @override
+  String goalOutcomeReachedOn(Object date) {
+    return '$date ýetildi';
+  }
+
+  @override
+  String goalOutcomeStoppedOn(Object date) {
+    return '$date duruzyldy';
+  }
+
+  @override
+  String get goalDeletePermanently => 'Hemişelik pozmak';
+
+  @override
   String get goalReachedSummary => 'Ýetildi — başga edere zat ýok';
 
   @override

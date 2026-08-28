@@ -2528,6 +2528,45 @@ class AppLocalizationsEn extends AppLocalizations {
   String get goalColAtThisRate => 'At this rate';
 
   @override
+  String get goalColReachedOn => 'Reached on';
+
+  @override
+  String get goalColStoppedOn => 'Stopped on';
+
+  @override
+  String get goalColGotTo => 'Got to';
+
+  @override
+  String get goalColTook => 'Took';
+
+  @override
+  String goalTookMonths(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count months',
+      one: '1 month',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get goalTookUnderMonth => '< 1 month';
+
+  @override
+  String goalOutcomeReachedOn(Object date) {
+    return 'Reached on $date';
+  }
+
+  @override
+  String goalOutcomeStoppedOn(Object date) {
+    return 'Stopped on $date';
+  }
+
+  @override
+  String get goalDeletePermanently => 'Delete permanently';
+
+  @override
   String get goalReachedSummary => 'Reached — nothing more to do';
 
   @override

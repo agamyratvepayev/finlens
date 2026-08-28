@@ -13,6 +13,9 @@ import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/app_typography.dart';
 import '../balance/balance_screen.dart' show EmptyState;
+import '../ledger/ledger_scope.dart';
+import '../ledger/scoped_ledger_screen.dart';
+import 'goal_detail_screen.dart';
 import 'task_detail_screen.dart';
 
 /// Spec 5.8 — reached goals, abandoned goals and removed budgets on one page.
@@ -149,6 +152,7 @@ class ArchiveScreen extends StatelessWidget {
                                 subtitle: l.arReachedLine(
                                     dayMonthYear(g.completedAt!, l),
                                     g.durationMonths ?? 0),
+                                onTap: () => _openGoal(context, g, l),
                                 trailing: AmountText(
                                   g.targetAmount,
                                   style: AppText.amountLarge,
@@ -166,10 +170,14 @@ class ArchiveScreen extends StatelessWidget {
                                 title: g.name,
                                 subtitle: l.arStoppedLine(
                                     dayMonth(g.stoppedAt!, l),
-                                    // `saved` is gone — the figure a stopped
-                                    // goal reached is derived from the ledger.
-                                    money(store.goalMetrics(g).current),
+                                    // `saved` is gone, and the figure is frozen:
+                                    // what the source held on the day the goal
+                                    // stopped, not what it holds today (§3).
+                                    money(store
+                                        .goalMetrics(g, asOf: g.stoppedAt!)
+                                        .current),
                                     money(g.targetAmount)),
+                                onTap: () => _openGoal(context, g, l),
                                 trailing: _RestoreButton(
                                   onTap: () => store.restoreGoal(g),
                                 ),
@@ -216,6 +224,13 @@ class ArchiveScreen extends StatelessWidget {
                                   a.group.label(l),
                                   store.txnsForAccount(a.id).length,
                                 ),
+                                onTap: () =>
+                                    Navigator.of(context, rootNavigator: true)
+                                        .push(MaterialPageRoute(
+                                  builder: (_) => ScopedLedgerScreen(
+                                    initialScope: AccountScope(a.id),
+                                  ),
+                                )),
                                 trailing: _RestoreButton(
                                   onTap: () => store.restoreAccount(a),
                                 ),
@@ -288,6 +303,16 @@ class ArchiveScreen extends StatelessWidget {
     );
   }
 
+  /// Opens the goal detail in its archived mode (§2). The back label is this
+  /// screen's own title, so the detail reads `‹ Archive`, not `‹ Goals`.
+  void _openGoal(BuildContext context, Goal g, AppLocalizations l) =>
+      Navigator.of(context, rootNavigator: true).push(
+        MaterialPageRoute(
+          builder: (_) =>
+              GoalDetailScreen(goalId: g.id, backLabel: l.moreArchive),
+        ),
+      );
+
   Widget _pillWithChevron(Widget pill) => Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -347,6 +372,7 @@ class _ArchiveRow extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.trailing,
+    this.onTap,
   });
 
   final IconData icon;
@@ -355,9 +381,14 @@ class _ArchiveRow extends StatelessWidget {
   final String subtitle;
   final Widget trailing;
 
+  /// When non-null the whole row becomes tappable (§1); when null it renders
+  /// exactly as before — no ripple, no chevron. `_RestoreButton` absorbs its own
+  /// hits, so a tap on Restore never also fires this.
+  final VoidCallback? onTap;
+
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    final row = Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: Insets.md,
         vertical: Insets.md,
@@ -389,6 +420,17 @@ class _ArchiveRow extends StatelessWidget {
           const SizedBox(width: Insets.sm),
           trailing,
         ],
+      ),
+    );
+
+    if (onTap == null) return row;
+    return Semantics(
+      button: true,
+      label: '$title, $subtitle',
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(Radii.card),
+        child: row,
       ),
     );
   }

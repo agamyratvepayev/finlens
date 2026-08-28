@@ -20,9 +20,18 @@ import 'goal_presentation.dart';
 /// keeps no history of its own. The most valuable figure, `AT THIS RATE`,
 /// cannot be computed on the card and lives here.
 class GoalDetailScreen extends StatelessWidget {
-  const GoalDetailScreen({super.key, required this.goalId});
+  const GoalDetailScreen({
+    super.key,
+    required this.goalId,
+    required this.backLabel,
+  });
 
   final String goalId;
+
+  /// The name of the screen the user came from — the back button's label. The
+  /// Goals tab passes `Goals`, the Archive passes `Archive`; the screen never
+  /// assumes (§4).
+  final String backLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -30,13 +39,25 @@ class GoalDetailScreen extends StatelessWidget {
     final l = AppLocalizations.of(context);
     final goal = store.goalById(goalId);
 
-    // The goal may have been deleted from the ••• menu while this was open.
+    // The goal may have been deleted from the ••• menu while this was open, or
+    // cleared from the Archive. The empty scaffold covers both.
     if (goal == null) {
       return const Scaffold(body: SizedBox.shrink());
     }
 
-    final m = store.goalMetrics(goal);
-    final verdict = goalVerdict(l, goal, m);
+    // §2.1 — the mode is read from the goal's own status, never a flag, so a
+    // goal restored while this is open flips back to live on the next build.
+    final isArchived = goal.status != GoalStatus.active;
+    // §3 — frozen at the day the goal ended; a data-error goal with no end date
+    // falls back to today rather than crashing.
+    final asOf = isArchived ? (goal.endedAt ?? AppStore.today) : null;
+    final reachedOutcome = goal.status == GoalStatus.reached;
+
+    final m = store.goalMetrics(goal, asOf: asOf);
+    // The archived body never reads the live verdict: its outcome comes from
+    // completedAt / stoppedAt, so a source archived after the goal ended cannot
+    // rewrite it to "source unavailable" (§3).
+    final verdict = isArchived ? null : goalVerdict(l, goal, m);
 
     // §10 — SafeArea keeps bottom:false so the top bar can hug the notch, which
     // means the scroll view itself must clear the home indicator: the safe-area
@@ -48,26 +69,30 @@ class GoalDetailScreen extends StatelessWidget {
         bottom: false,
         child: Column(
           children: [
-            _TopBar(goal: goal),
+            _TopBar(goal: goal, backLabel: backLabel),
             Expanded(
               child: ListView(
                 padding: EdgeInsets.only(bottom: safeBottom + Insets.xxl),
                 children: [
-                  _header(l, store, goal, m, verdict),
+                  _header(l, store, goal, m, verdict, isArchived: isArchived),
                   // §2 — 16pt clearance above the hero. The rule: a hero with
                   // height:1.0 hugs its glyphs and wants ~5pt more room than
                   // ordinary text. NB this hero uses AppText.hero, which (unlike
                   // heroAmount) does NOT set height:1.0, so it keeps default
                   // leading — 16pt already clears the verdict comfortably.
                   const SizedBox(height: Insets.lg),
-                  _figures(l, m),
+                  _figures(l, m,
+                      isArchived: isArchived, reachedOutcome: reachedOutcome),
                   const SizedBox(height: Insets.xl),
-                  if (store.goalOffersArchive(goal))
+                  // §2.4 — the reached-at-zero prompt is a live-only action.
+                  if (!isArchived && store.goalOffersArchive(goal))
                     _ArchiveActions(store: store, goal: goal),
-                  _columns(l, m),
+                  // Forecasts (rate/projection/pace) are replaced by the frozen
+                  // outcome on an archived record (§2.5).
+                  if (isArchived) _outcome(l, goal, m) else _columns(l, m),
                   _watching(context, l, store, goal, m),
                   if (goal.source.isAccount)
-                    _movements(context, l, store, goal),
+                    _movements(context, l, store, goal, asOf: asOf),
                   if (goal.note.trim().isNotEmpty) _note(l, goal),
                   _changes(l, goal),
                 ],
@@ -86,15 +111,21 @@ class GoalDetailScreen extends StatelessWidget {
     AppStore store,
     Goal goal,
     GoalMetrics m,
-    ({String text, bool attention}) verdict,
-  ) {
+    ({String text, bool attention})? verdict, {
+    required bool isArchived,
+  }) {
+    // On an archived record the outcome is known from the goal's status, not
+    // from m.reached — a source that grew past target after the goal was
+    // abandoned must not read as "reached" (§2.5).
+    final reachedOutcome = goal.status == GoalStatus.reached;
+    final showReached = isArchived ? reachedOutcome : m.reached;
     return Padding(
       padding: const EdgeInsets.fromLTRB(Insets.gutter, Insets.sm, Insets.gutter, 0),
       child: Row(
         children: [
           IconTile(
-            m.reached ? Icons.check_rounded : store.goalIcon(goal),
-            color: m.reached ? AppColors.positive : AppColors.goal,
+            showReached ? Icons.check_rounded : store.goalIcon(goal),
+            color: showReached ? AppColors.positive : AppColors.goal,
             size: 40,
           ),
           const SizedBox(width: Insets.md),
@@ -111,13 +142,24 @@ class GoalDetailScreen extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 1),
-                Text(
-                  verdict.text,
-                  style: AppText.rowSubtitle.copyWith(
-                    height: 1.2,
-                    color: goalVerdictColor(m, verdict.attention),
+                if (isArchived)
+                  Text(
+                    _outcomeLine(l, goal, reachedOutcome),
+                    style: AppText.caption.copyWith(
+                      height: 1.2,
+                      color: reachedOutcome
+                          ? AppColors.positive
+                          : AppColors.textSecondary,
+                    ),
+                  )
+                else
+                  Text(
+                    verdict!.text,
+                    style: AppText.rowSubtitle.copyWith(
+                      height: 1.2,
+                      color: goalVerdictColor(m, verdict.attention),
+                    ),
                   ),
-                ),
               ],
             ),
           ),
@@ -126,11 +168,33 @@ class GoalDetailScreen extends StatelessWidget {
     );
   }
 
+  /// The header line on an archived goal: `Reached on 14 May 2026` /
+  /// `Stopped on 3 Apr 2026`. Deliberately not [goalVerdict] — that is written
+  /// for live goals and the Goals-tab card depends on it unchanged (§2.5).
+  String _outcomeLine(AppLocalizations l, Goal goal, bool reachedOutcome) {
+    final on = goal.endedAt ?? AppStore.today;
+    return reachedOutcome
+        ? l.goalOutcomeReachedOn(dayMonthYear(on, l))
+        : l.goalOutcomeStoppedOn(dayMonthYear(on, l));
+  }
+
   // ── Figures ──────────────────────────────────────────────────────────────
 
-  Widget _figures(AppLocalizations l, GoalMetrics m) {
+  Widget _figures(
+    AppLocalizations l,
+    GoalMetrics m, {
+    bool isArchived = false,
+    bool reachedOutcome = false,
+  }) {
     final pct = m.progress;
     final daysElapsed = m.daysTotal > 0 ? m.daysElapsed.clamp(0, m.daysTotal) : m.daysElapsed;
+    // Archived: full green when the goal was reached, a frozen muted bar when it
+    // was abandoned. Live keeps the shared goal colour (§2.4).
+    final barColor = isArchived
+        ? (reachedOutcome ? AppColors.positive : AppColors.textSecondary)
+        : goalBarColor(m);
+    // A finished goal has no pace to keep — the marker is a forecast (§2.4/§3).
+    final pace = isArchived ? null : goalPaceFraction(m);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: Insets.gutter),
       child: Column(
@@ -143,12 +207,14 @@ class GoalDetailScreen extends StatelessWidget {
               AmountText.balance(
                 m.current,
                 style: AppText.hero.copyWith(fontSize: 30),
-                color: goalBarColor(m),
+                color: barColor,
               ),
               const SizedBox(width: Insets.sm),
               Flexible(
                 child: Text(
-                  m.reached
+                  // Archived reads factually ("of $2,000") — never "$X to go",
+                  // which would imply the goal is still being pursued.
+                  (isArchived || m.reached)
                       ? '${l.goalOfWord} ${money(m.target)}'
                       : l.goalOfToGo(money(m.target), money(m.remaining)),
                   style: AppText.caption,
@@ -159,8 +225,8 @@ class GoalDetailScreen extends StatelessWidget {
           const SizedBox(height: Insets.sm),
           ProgressBar(
             value: m.progress,
-            color: goalBarColor(m),
-            paceMarker: goalPaceFraction(m),
+            color: barColor,
+            paceMarker: pace,
             height: 8,
           ),
           const SizedBox(height: 6),
@@ -175,7 +241,7 @@ class GoalDetailScreen extends StatelessWidget {
                         '${l.bdDayOfMonth(daysElapsed, m.daysTotal)}',
                 style: AppText.caption.copyWith(fontSize: 11.5),
               ),
-              if (goalPaceFraction(m) != null) ...[
+              if (pace != null) ...[
                 const Spacer(),
                 Container(width: 2, height: 10, color: AppColors.textPrimary),
                 const SizedBox(width: 5),
@@ -263,6 +329,91 @@ class GoalDetailScreen extends StatelessWidget {
       money(m.actualRate!, noDecimals: true),
       money(needs, roundUp: true),
     );
+  }
+
+  // ── OUTCOME (archived, replaces _columns) ────────────────────────────────
+
+  /// The frozen three-column record that stands in for `AT THIS RATE` on an
+  /// archived goal (§2.5). Reached: `TARGET · REACHED ON · TOOK`. Abandoned:
+  /// `TARGET · STOPPED ON · GOT TO`. Same geometry as the app's other
+  /// three-column stat cards.
+  Widget _outcome(AppLocalizations l, Goal goal, GoalMetrics m) {
+    final reachedOutcome = goal.status == GoalStatus.reached;
+    final on = dayMonth(goal.endedAt ?? AppStore.today, l);
+    final List<({String label, Widget value})> cols = reachedOutcome
+        ? [
+            (label: l.goalColTarget, value: _outcomeAmount(m.target)),
+            (label: l.goalColReachedOn, value: _outcomeText(on)),
+            (label: l.goalColTook, value: _outcomeText(_tookText(l, goal))),
+          ]
+        : [
+            (label: l.goalColTarget, value: _outcomeAmount(m.target)),
+            (label: l.goalColStoppedOn, value: _outcomeText(on)),
+            // The frozen figure — what the source held on the day it stopped.
+            (label: l.goalColGotTo, value: _outcomeAmount(m.current)),
+          ];
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(Insets.gutter, 0, Insets.gutter, Insets.lg),
+      child: AppCard(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(6, 9, 6, 10),
+          child: Row(
+            children: [
+              for (final c in cols)
+                Expanded(
+                  child: Column(
+                    children: [
+                      Text(
+                        c.label.toUpperCase(),
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.8,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      c.value,
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  static const _outcomeValueStyle = TextStyle(
+    fontSize: 18,
+    fontWeight: FontWeight.w700,
+    color: AppColors.textPrimary,
+    fontFeatures: [FontFeature.tabularFigures()],
+  );
+
+  // Values scale down rather than clip, so the third column (`TOOK` / `GOT TO`)
+  // survives 320 pt and 130 % text scale without overflow (§4).
+  Widget _outcomeAmount(double v) => _shrink(
+        AmountText.balance(v, style: _outcomeValueStyle),
+      );
+
+  Widget _outcomeText(String t) => _shrink(
+        Text(t, maxLines: 1, style: _outcomeValueStyle),
+      );
+
+  Widget _shrink(Widget child) => FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: Alignment.center,
+        child: child,
+      );
+
+  /// `TOOK`: reached-only. `durationMonths` is null exactly when the goal was
+  /// abandoned (no completedAt), which is why that column is `GOT TO` instead.
+  String _tookText(AppLocalizations l, Goal goal) {
+    final months = goal.durationMonths;
+    if (months == null || months < 1) return l.goalTookUnderMonth;
+    return l.goalTookMonths(months);
   }
 
   // ── WATCHING ─────────────────────────────────────────────────────────────
@@ -388,9 +539,17 @@ class GoalDetailScreen extends StatelessWidget {
     BuildContext context,
     AppLocalizations l,
     AppStore store,
-    Goal goal,
-  ) {
-    final all = store.txnsForAccount(goal.source.id);
+    Goal goal, {
+    DateTime? asOf,
+  }) {
+    var all = store.txnsForAccount(goal.source.id);
+    // Archived: the movement window ends at the goal's end date — a record does
+    // not gain new movements after it stopped (§2.4).
+    if (asOf != null) {
+      final cutoff =
+          DateTime(asOf.year, asOf.month, asOf.day, 23, 59, 59, 999);
+      all = all.where((t) => !t.date.isAfter(cutoff)).toList(growable: false);
+    }
     if (all.isEmpty) return const SizedBox.shrink();
     final preview = all.take(3).toList();
 
@@ -501,13 +660,15 @@ class GoalDetailScreen extends StatelessWidget {
 }
 
 class _TopBar extends StatelessWidget {
-  const _TopBar({required this.goal});
+  const _TopBar({required this.goal, required this.backLabel});
 
   final Goal goal;
+  final String backLabel;
+
+  bool get _isArchived => goal.status != GoalStatus.active;
 
   @override
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: Insets.xs, vertical: Insets.xs),
       child: Row(
@@ -515,7 +676,7 @@ class _TopBar extends StatelessWidget {
           TextButton.icon(
             onPressed: () => Navigator.of(context).pop(),
             icon: const Icon(Icons.chevron_left_rounded, size: 22),
-            label: Text(l.plTabGoals),
+            label: Text(backLabel),
             style: TextButton.styleFrom(
               foregroundColor: AppColors.accentSoft,
               padding: const EdgeInsets.symmetric(horizontal: Insets.sm),
@@ -546,28 +707,45 @@ class _TopBar extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             const SizedBox(height: Insets.sm),
-            _MenuRow(
-              icon: Icons.edit_rounded,
-              label: l.goalMenuEdit,
-              onTap: () => Navigator.of(sheetContext).pop('edit'),
-            ),
-            _MenuRow(
-              icon: Icons.flag_rounded,
-              label: l.egMarkReached,
-              onTap: () => Navigator.of(sheetContext).pop('reached'),
-            ),
-            _MenuRow(
-              icon: Icons.pause_circle_rounded,
-              label: l.goalStopTracking,
-              subtitle: l.goalStopTrackingDesc,
-              onTap: () => Navigator.of(sheetContext).pop('stop'),
-            ),
-            _MenuRow(
-              icon: Icons.delete_outline_rounded,
-              label: l.egDeleteGoal,
-              danger: true,
-              onTap: () => Navigator.of(sheetContext).pop('delete'),
-            ),
+            // Nothing on an archived goal is editable (§2.3): only Restore (for
+            // an abandoned goal) and Delete permanently.
+            if (_isArchived) ...[
+              if (goal.status == GoalStatus.abandoned)
+                _MenuRow(
+                  icon: Icons.unarchive_rounded,
+                  label: l.actionRestore,
+                  onTap: () => Navigator.of(sheetContext).pop('restore'),
+                ),
+              _MenuRow(
+                icon: Icons.delete_outline_rounded,
+                label: l.goalDeletePermanently,
+                danger: true,
+                onTap: () => Navigator.of(sheetContext).pop('delete'),
+              ),
+            ] else ...[
+              _MenuRow(
+                icon: Icons.edit_rounded,
+                label: l.goalMenuEdit,
+                onTap: () => Navigator.of(sheetContext).pop('edit'),
+              ),
+              _MenuRow(
+                icon: Icons.flag_rounded,
+                label: l.egMarkReached,
+                onTap: () => Navigator.of(sheetContext).pop('reached'),
+              ),
+              _MenuRow(
+                icon: Icons.pause_circle_rounded,
+                label: l.goalStopTracking,
+                subtitle: l.goalStopTrackingDesc,
+                onTap: () => Navigator.of(sheetContext).pop('stop'),
+              ),
+              _MenuRow(
+                icon: Icons.delete_outline_rounded,
+                label: l.egDeleteGoal,
+                danger: true,
+                onTap: () => Navigator.of(sheetContext).pop('delete'),
+              ),
+            ],
             const SizedBox(height: Insets.sm),
           ],
         ),
@@ -584,7 +762,13 @@ class _TopBar extends StatelessWidget {
       case 'stop':
         store.abandonGoal(goal);
         Navigator.of(context).pop();
+      case 'restore':
+        // Same call the Archive row's Restore button makes; pops back to it.
+        store.restoreGoal(goal);
+        Navigator.of(context).pop();
       case 'delete':
+        // The same confirm flow for both a live delete and an archived
+        // permanent delete (§2.3).
         final ok = await confirmGoalDelete(context, store, goal);
         if (!ok || !context.mounted) return;
         store.deleteGoal(goal);

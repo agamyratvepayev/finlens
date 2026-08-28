@@ -872,7 +872,8 @@ class _GoalCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(14),
               onTap: () => Navigator.of(context, rootNavigator: true).push(
                 MaterialPageRoute(
-                  builder: (_) => GoalDetailScreen(goalId: goal.id),
+                  builder: (_) =>
+                      GoalDetailScreen(goalId: goal.id, backLabel: l.plTabGoals),
                 ),
               ),
               // 8 vertical В· 12 horizontal (В§1): the two text lines and the bar

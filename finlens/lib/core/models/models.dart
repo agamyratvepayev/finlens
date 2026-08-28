@@ -402,6 +402,11 @@ class Goal {
     return (completedAt!.year - createdAt.year) * 12 +
         (completedAt!.month - createdAt.month);
   }
+
+  /// The day this goal stopped being live — the as-of date for every figure on
+  /// its archived record. A reached goal freezes on [completedAt], an abandoned
+  /// one on [stoppedAt]; an active goal has no end and returns null.
+  DateTime? get endedAt => completedAt ?? stoppedAt;
 }
 
 /// Everything a goal's card and detail screen need, derived from the ledger by

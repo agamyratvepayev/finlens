@@ -2523,6 +2523,45 @@ class AppLocalizationsTr extends AppLocalizations {
   String get goalColAtThisRate => 'Bu hızla';
 
   @override
+  String get goalColReachedOn => 'Ulaşıldı';
+
+  @override
+  String get goalColStoppedOn => 'Durduruldu';
+
+  @override
+  String get goalColGotTo => 'Ulaşılan';
+
+  @override
+  String get goalColTook => 'Sürdü';
+
+  @override
+  String goalTookMonths(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ay',
+      one: '1 ay',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get goalTookUnderMonth => '< 1 ay';
+
+  @override
+  String goalOutcomeReachedOn(Object date) {
+    return '$date tarihinde ulaşıldı';
+  }
+
+  @override
+  String goalOutcomeStoppedOn(Object date) {
+    return '$date tarihinde durduruldu';
+  }
+
+  @override
+  String get goalDeletePermanently => 'Kalıcı olarak sil';
+
+  @override
   String get goalReachedSummary => 'Ulaşıldı — yapılacak başka şey yok';
 
   @override

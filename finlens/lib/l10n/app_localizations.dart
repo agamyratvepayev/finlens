@@ -4086,6 +4086,60 @@ abstract class AppLocalizations {
   /// **'At this rate'**
   String get goalColAtThisRate;
 
+  /// No description provided for @goalColReachedOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Reached on'**
+  String get goalColReachedOn;
+
+  /// No description provided for @goalColStoppedOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Stopped on'**
+  String get goalColStoppedOn;
+
+  /// No description provided for @goalColGotTo.
+  ///
+  /// In en, this message translates to:
+  /// **'Got to'**
+  String get goalColGotTo;
+
+  /// No description provided for @goalColTook.
+  ///
+  /// In en, this message translates to:
+  /// **'Took'**
+  String get goalColTook;
+
+  /// No description provided for @goalTookMonths.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{1 month} other{{count} months}}'**
+  String goalTookMonths(int count);
+
+  /// No description provided for @goalTookUnderMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'< 1 month'**
+  String get goalTookUnderMonth;
+
+  /// No description provided for @goalOutcomeReachedOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Reached on {date}'**
+  String goalOutcomeReachedOn(Object date);
+
+  /// No description provided for @goalOutcomeStoppedOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Stopped on {date}'**
+  String goalOutcomeStoppedOn(Object date);
+
+  /// No description provided for @goalDeletePermanently.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete permanently'**
+  String get goalDeletePermanently;
+
   /// No description provided for @goalReachedSummary.
   ///
   /// In en, this message translates to:

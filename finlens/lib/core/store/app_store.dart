@@ -1343,9 +1343,14 @@ class AppStore extends ChangeNotifier {
 
   /// Everything a goal's card and detail screen read (§1). Pure over the
   /// current ledger; nothing here mutates the goal.
-  GoalMetrics goalMetrics(Goal g) {
+  ///
+  /// [asOf] freezes every figure at a past date — an archived goal's record must
+  /// not keep moving after the goal ended, so its detail passes the goal's
+  /// [Goal.endedAt]. Omitted (null) for a live goal, where every figure tracks
+  /// [today] exactly as before.
+  GoalMetrics goalMetrics(Goal g, {DateTime? asOf}) {
     final section = goalSection(g);
-    final now = today;
+    final now = asOf ?? today;
 
     final double start;
     final double current;
@@ -1354,12 +1359,18 @@ class AppStore extends ChangeNotifier {
       final acc = accountById(g.source.id);
       sourceAvailable = acc != null && !acc.archived;
       start = balanceOnInBase(g.source.id, g.createdAt);
-      current = balanceInBase(g.source.id);
+      // Frozen: the balance the account actually held on [asOf], not today's.
+      current = asOf == null
+          ? balanceInBase(g.source.id)
+          : balanceOnInBase(g.source.id, asOf);
     } else {
       final cat = categoryById(g.source.id);
       sourceAvailable = cat != null && !cat.archived;
       start = 0;
-      current = earnedInWindow(g.source.id, g.createdAt, g.targetDate ?? now);
+      // The window ends at [asOf] when frozen — never past it, whatever the
+      // targetDate says.
+      current =
+          earnedInWindow(g.source.id, g.createdAt, asOf ?? g.targetDate ?? now);
     }
 
     final target = g.targetAmount;

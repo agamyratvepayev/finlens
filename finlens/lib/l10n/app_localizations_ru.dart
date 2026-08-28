@@ -2571,6 +2571,47 @@ class AppLocalizationsRu extends AppLocalizations {
   String get goalColAtThisRate => 'При этом темпе';
 
   @override
+  String get goalColReachedOn => 'Достигнута';
+
+  @override
+  String get goalColStoppedOn => 'Остановлена';
+
+  @override
+  String get goalColGotTo => 'Собрано';
+
+  @override
+  String get goalColTook => 'Заняло';
+
+  @override
+  String goalTookMonths(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count месяца',
+      many: '$count месяцев',
+      few: '$count месяца',
+      one: '1 месяц',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get goalTookUnderMonth => '< 1 месяца';
+
+  @override
+  String goalOutcomeReachedOn(Object date) {
+    return 'Достигнута $date';
+  }
+
+  @override
+  String goalOutcomeStoppedOn(Object date) {
+    return 'Остановлена $date';
+  }
+
+  @override
+  String get goalDeletePermanently => 'Удалить навсегда';
+
+  @override
   String get goalReachedSummary => 'Достигнуто — делать больше нечего';
 
   @override
