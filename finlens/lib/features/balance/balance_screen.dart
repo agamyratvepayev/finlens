@@ -7,6 +7,7 @@ import '../../core/utils/formatters.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/amount_text.dart';
 import '../../shared/widgets/section_header.dart';
+import '../../shared/widgets/undo_bar.dart';
 import '../../shared/widgets/swipe_back_route.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
@@ -985,26 +986,17 @@ class _BalanceScreenState extends State<BalanceScreen> {
     // Names the flip to Custom the first time, plain "Moved" once already there.
     final l = AppLocalizations.of(context);
     final text = flipped ? l.balMovedCustom : l.balMoved;
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Semantics(
-            liveRegion: true,
-            // The announced text matches what is shown; no empty-content
-            // workaround any more.
-            child: Text(
-              text,
-              style: AppText.body.copyWith(fontSize: 13.5),
-            ),
-          ),
-          duration: const Duration(seconds: 5),
-          action: SnackBarAction(
-            label: AppLocalizations.of(context).actionUndo,
-            onPressed: () => _undoLastMove(store),
-          ),
-        ),
-      );
+    showUndoBar(
+      context,
+      message: text,
+      onUndo: () => _undoLastMove(store),
+    ).closed.then((reason) {
+      // The bar has gone away without an undo (expired, hidden by the next
+      // move, or the user navigated off). Drop the stale undo target so it
+      // can't be reversed out from under whatever came after.
+      if (reason == SnackBarClosedReason.action) return;
+      _pendingMove = null;
+    });
   }
 
   /// Reverts the most recent move — both the row's position and, when the move

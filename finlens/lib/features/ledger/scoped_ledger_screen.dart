@@ -17,6 +17,7 @@ import '../../shared/widgets/destructive_sheet.dart';
 import '../../shared/widgets/section_header.dart';
 import '../../shared/widgets/swipe_actions.dart';
 import '../../shared/widgets/swipe_back_route.dart';
+import '../../shared/widgets/undo_bar.dart';
 import '../../theme/app_colors.dart';
 import '../balance/edit_account_screen.dart';
 import '../balance/opening_balance_sheet.dart';
@@ -1309,24 +1310,17 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
   void _deleteWithUndo(Txn txn) {
     setState(() => _pendingDelete.add(txn.id));
     final store = StoreScope.read(context);
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context).ldgTransactionDeleted),
-          duration: const Duration(seconds: 5),
-          action: SnackBarAction(
-            label: AppLocalizations.of(context).actionUndo,
-            onPressed: () {
-              if (mounted) setState(() => _pendingDelete.remove(txn.id));
-            },
-          ),
-        ),
-      ).closed.then((reason) {
-        if (reason == SnackBarClosedReason.action) return;
-        // Left to expire, or the user navigated away: commit.
-        if (_pendingDelete.remove(txn.id)) store.deleteTxn(txn);
-      });
+    showUndoBar(
+      context,
+      message: AppLocalizations.of(context).ldgTransactionDeleted,
+      onUndo: () {
+        if (mounted) setState(() => _pendingDelete.remove(txn.id));
+      },
+    ).closed.then((reason) {
+      if (reason == SnackBarClosedReason.action) return;
+      // Left to expire, or the user navigated away: commit.
+      if (_pendingDelete.remove(txn.id)) store.deleteTxn(txn);
+    });
   }
 
   // ── Sheets ────────────────────────────────────────────────────────────────
