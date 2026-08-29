@@ -463,34 +463,227 @@ class AppLocalizationsEn extends AppLocalizations {
   String get insightTitle => 'Insight';
 
   @override
-  String get insightLeftOver => 'Left over';
+  String get insNetWorth => 'Net worth';
 
   @override
-  String get insightNoIncome => 'No income recorded this month';
+  String get insNetWorthCaption => 'your net worth';
 
   @override
-  String insightKept(String percent, String amount) {
-    return '$percent of $amount kept';
+  String get insIncome => 'Income';
+
+  @override
+  String get insSpending => 'Spending';
+
+  @override
+  String get insDebtCredit => 'Debt & credit';
+
+  @override
+  String get insRevaluation => 'Revaluation';
+
+  @override
+  String get insIn => 'In';
+
+  @override
+  String get insOut => 'Out';
+
+  @override
+  String get insRevalued => 'Revalued';
+
+  @override
+  String get insYourDebt => 'Your debt';
+
+  @override
+  String get insYourCredit => 'Owed to you';
+
+  @override
+  String get insUnchanged => 'unchanged';
+
+  @override
+  String get insChargedToCards => 'Charged to cards';
+
+  @override
+  String get insCardPayment => 'Card payment';
+
+  @override
+  String insSeeAll(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count categories',
+      one: '1 category',
+    );
+    return 'See all · $_temp0';
   }
 
   @override
-  String get insightWhereItWent => 'Where it went';
+  String insCategoriesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count categories',
+      one: '1 category',
+    );
+    return '$_temp0';
+  }
 
   @override
-  String get insightGoalPerformance => 'Goal performance';
+  String insUntouchedGained(String amount) {
+    return 'Money you didn\'t touch earned $amount';
+  }
 
   @override
-  String get insightReached => 'Reached';
+  String insUntouchedLost(String amount) {
+    return 'Money you didn\'t touch lost $amount';
+  }
 
   @override
-  String get insightSuccessRate => 'Success rate';
+  String insTransferFootnote(String amount) {
+    return 'Moved $amount between your accounts';
+  }
 
   @override
-  String get insightAvgTime => 'Avg. time';
+  String insTransferCount(int count) {
+    return '$count transfers';
+  }
 
   @override
-  String insightMonthsShort(int count) {
+  String insFee(String amount) {
+    return '$amount fee';
+  }
+
+  @override
+  String insContradictionUp(String amount) {
+    return 'Your net worth rose, but you spent $amount more than you earned.';
+  }
+
+  @override
+  String insContradictionDown(String amount) {
+    return 'Your net worth fell, though you earned $amount more than you spent.';
+  }
+
+  @override
+  String get insContradictionRevalued =>
+      'The whole change this period is investment revaluation.';
+
+  @override
+  String get insNoRecords => 'No records in this period';
+
+  @override
+  String insBackToPeriod(String period) {
+    return 'Back to $period';
+  }
+
+  @override
+  String get insMovements => 'Movements';
+
+  @override
+  String get insAverage => 'Avg.';
+
+  @override
+  String insAverageValue(String amount) {
+    return 'Average $amount';
+  }
+
+  @override
+  String insHighest(String label, String amount) {
+    return 'highest $label $amount';
+  }
+
+  @override
+  String get insEmptyMonthsExcluded => 'empty periods excluded';
+
+  @override
+  String insVsLastPeriod(String amount, String percent) {
+    return '$amount vs last period ($percent)';
+  }
+
+  @override
+  String insTooFewPeriods(int count) {
+    return 'Only $count periods with records — no average or trend shown';
+  }
+
+  @override
+  String get insNoPreviousPeriod => 'no records last period';
+
+  @override
+  String insMonthlyBudget(String amount, String percent) {
+    return 'Monthly budget $amount · $percent';
+  }
+
+  @override
+  String insLeft(String amount) {
+    return '$amount left';
+  }
+
+  @override
+  String insOverBudget(String amount) {
+    return '$amount over';
+  }
+
+  @override
+  String get insNoBudget => 'no budget';
+
+  @override
+  String insBudgetSub(String amount, String percent) {
+    return 'budget $amount · $percent';
+  }
+
+  @override
+  String insBudgetSubOver(String amount, String percent) {
+    return 'budget $amount · $percent over';
+  }
+
+  @override
+  String get insAddBudget => 'Add budget';
+
+  @override
+  String insUnbudgetedTotal(String amount) {
+    return '$amount in unbudgeted categories';
+  }
+
+  @override
+  String insCustomRange(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days days',
+      one: '1 day',
+    );
+    return 'Custom range · $_temp0';
+  }
+
+  @override
+  String get insClearRange => 'clear';
+
+  @override
+  String get insSelectDateRange => 'Select date range…';
+
+  @override
+  String get insOther => 'Other';
+
+  @override
+  String get arcReached => 'Reached';
+
+  @override
+  String get arcSuccess => 'Success';
+
+  @override
+  String get arcAvgTime => 'Avg. time';
+
+  @override
+  String arcMonthsShort(int count) {
     return '$count mo';
+  }
+
+  @override
+  String arcGoalsTakeAbout(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count months',
+      one: '1 month',
+    );
+    return 'Your goals take about $_temp0 on average';
   }
 
   @override

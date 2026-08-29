@@ -463,34 +463,223 @@ class AppLocalizationsTr extends AppLocalizations {
   String get insightTitle => 'Analiz';
 
   @override
-  String get insightLeftOver => 'Kalan';
+  String get insNetWorth => 'Net değer';
 
   @override
-  String get insightNoIncome => 'Bu ay gelir kaydedilmedi';
+  String get insNetWorthCaption => 'net değerin';
 
   @override
-  String insightKept(String percent, String amount) {
-    return '$amount tutarın $percent kadarı korundu';
+  String get insIncome => 'Gelir';
+
+  @override
+  String get insSpending => 'Gider';
+
+  @override
+  String get insDebtCredit => 'Borç & alacak';
+
+  @override
+  String get insRevaluation => 'Değer değişimi';
+
+  @override
+  String get insIn => 'Girdi';
+
+  @override
+  String get insOut => 'Çıktı';
+
+  @override
+  String get insRevalued => 'Değerlendi';
+
+  @override
+  String get insYourDebt => 'Borcun';
+
+  @override
+  String get insYourCredit => 'Alacağın';
+
+  @override
+  String get insUnchanged => 'değişmedi';
+
+  @override
+  String get insChargedToCards => 'Kartla harcadın';
+
+  @override
+  String get insCardPayment => 'Kart ödemesi';
+
+  @override
+  String insSeeAll(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count kategori',
+    );
+    return 'Tümünü gör · $_temp0';
   }
 
   @override
-  String get insightWhereItWent => 'Nereye gitti';
+  String insCategoriesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count kategori',
+    );
+    return '$_temp0';
+  }
 
   @override
-  String get insightGoalPerformance => 'Hedef performansı';
+  String insUntouchedGained(String amount) {
+    return 'Elini sürmediğin para $amount kazandırdı';
+  }
 
   @override
-  String get insightReached => 'Ulaşıldı';
+  String insUntouchedLost(String amount) {
+    return 'Elini sürmediğin para $amount kaybettirdi';
+  }
 
   @override
-  String get insightSuccessRate => 'Başarı oranı';
+  String insTransferFootnote(String amount) {
+    return 'Hesaplar arasında $amount taşıdın';
+  }
 
   @override
-  String get insightAvgTime => 'Ort. süre';
+  String insTransferCount(int count) {
+    return '$count aktarım';
+  }
 
   @override
-  String insightMonthsShort(int count) {
+  String insFee(String amount) {
+    return '$amount komisyon';
+  }
+
+  @override
+  String insContradictionUp(String amount) {
+    return 'Net değerin arttı ama kazandığından $amount fazla harcadın.';
+  }
+
+  @override
+  String insContradictionDown(String amount) {
+    return 'Net değerin azaldı ama harcadığından $amount fazla kazandın.';
+  }
+
+  @override
+  String get insContradictionRevalued =>
+      'Bu dönemki değişimin tamamı yatırım değerlemesinden.';
+
+  @override
+  String get insNoRecords => 'Bu dönemde kayıt yok';
+
+  @override
+  String insBackToPeriod(String period) {
+    return '$period dönemine dön';
+  }
+
+  @override
+  String get insMovements => 'Hareketler';
+
+  @override
+  String get insAverage => 'Ort.';
+
+  @override
+  String insAverageValue(String amount) {
+    return 'Ortalama $amount';
+  }
+
+  @override
+  String insHighest(String label, String amount) {
+    return 'en yüksek $label $amount';
+  }
+
+  @override
+  String get insEmptyMonthsExcluded => 'boş dönemler hariç';
+
+  @override
+  String insVsLastPeriod(String amount, String percent) {
+    return '$amount geçen döneme göre ($percent)';
+  }
+
+  @override
+  String insTooFewPeriods(int count) {
+    return 'Sadece $count dönemde kayıt var — ortalama ve eğilim yazılmadı';
+  }
+
+  @override
+  String get insNoPreviousPeriod => 'geçen dönemde kayıt yok';
+
+  @override
+  String insMonthlyBudget(String amount, String percent) {
+    return 'Aylık bütçe $amount · $percent';
+  }
+
+  @override
+  String insLeft(String amount) {
+    return '$amount kaldı';
+  }
+
+  @override
+  String insOverBudget(String amount) {
+    return '$amount aşıldı';
+  }
+
+  @override
+  String get insNoBudget => 'bütçe yok';
+
+  @override
+  String insBudgetSub(String amount, String percent) {
+    return 'bütçe $amount · $percent';
+  }
+
+  @override
+  String insBudgetSubOver(String amount, String percent) {
+    return 'bütçe $amount · $percent aşıldı';
+  }
+
+  @override
+  String get insAddBudget => 'Bütçe ekle';
+
+  @override
+  String insUnbudgetedTotal(String amount) {
+    return 'Bütçesiz kategorilerde $amount';
+  }
+
+  @override
+  String insCustomRange(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days gün',
+    );
+    return 'Özel aralık · $_temp0';
+  }
+
+  @override
+  String get insClearRange => 'temizle';
+
+  @override
+  String get insSelectDateRange => 'Tarih aralığı seç…';
+
+  @override
+  String get insOther => 'Diğer';
+
+  @override
+  String get arcReached => 'Ulaşılan';
+
+  @override
+  String get arcSuccess => 'Başarı';
+
+  @override
+  String get arcAvgTime => 'Ort. süre';
+
+  @override
+  String arcMonthsShort(int count) {
     return '$count ay';
+  }
+
+  @override
+  String arcGoalsTakeAbout(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ay',
+    );
+    return 'Hedeflerin ortalama $_temp0 sürüyor';
   }
 
   @override

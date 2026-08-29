@@ -420,6 +420,13 @@ class AppStore extends ChangeNotifier {
   PeriodUnit _categoryPeriodUnit = PeriodUnit.month;
   PeriodUnit get categoryPeriodUnit => _categoryPeriodUnit;
 
+  // Insight's own period unit (spec §2.5). Only the unit persists; the cursor
+  // resets to the period containing today on launch, and a custom range is never
+  // persisted — it is a question, not a setting. Held here beside the scoped
+  // units so the same save/load path serves it; Insight owns its live cursor.
+  PeriodUnit _insightPeriodUnit = PeriodUnit.month;
+  PeriodUnit get insightPeriodUnit => _insightPeriodUnit;
+
   void setAccountPeriodUnit(PeriodUnit unit) {
     _accountPeriodUnit = unit;
     unawaited(savePeriodUnit('account_period_unit', unit));
@@ -430,9 +437,15 @@ class AppStore extends ChangeNotifier {
     unawaited(savePeriodUnit('category_period_unit', unit));
   }
 
+  void setInsightPeriodUnit(PeriodUnit unit) {
+    _insightPeriodUnit = unit;
+    unawaited(savePeriodUnit('insight_period_unit', unit));
+  }
+
   Future<void> loadPeriodUnits() async {
     _accountPeriodUnit = await loadPeriodUnit('account_period_unit');
     _categoryPeriodUnit = await loadPeriodUnit('category_period_unit');
+    _insightPeriodUnit = await loadPeriodUnit('insight_period_unit');
   }
 
   // ── Scoped-ledger sort (per screen type) & filter (per instance) ───────────
@@ -1152,22 +1165,26 @@ class AppStore extends ChangeNotifier {
       .toList(growable: false);
 
   /// Money in for the month — rebalances excluded (spec 6.2 isolation rule).
-  double monthIncome(DateTime month) => txnsInMonth(month)
-      .where((t) => t.type == TxnType.income)
-      .fold(0.0, (sum, t) => sum + t.amount);
+  /// Converted through [Fx.toBase] (spec §9): a foreign-currency income row must
+  /// count as its base value, or this figure disagrees with the category budgets
+  /// (which already convert) and the Insight flow identity cannot close.
+  /// Delegates to the windowed twin so the fold — and its conversion — lives once.
+  double monthIncome(DateTime month) =>
+      incomeInWindow(DateRange(_monthStart(month), _monthEnd(month)));
 
-  double monthExpense(DateTime month) => txnsInMonth(month)
-      .where((t) => t.type == TxnType.expense)
-      .fold(0.0, (sum, t) => sum + t.amount);
+  double monthExpense(DateTime month) =>
+      expenseInWindow(DateRange(_monthStart(month), _monthEnd(month)));
 
-  /// Range-lens twins of [monthIncome]/[monthExpense] — same fold, windowed.
+  /// Range-lens twins of [monthIncome]/[monthExpense] — same fold, windowed, and
+  /// **converted** (spec §9). Aliased by [inflowInWindow]/[outflowInWindow], the
+  /// names Insight reads, which promise conversion in the getter name itself.
   double incomeInWindow(DateRange window) => txnsInWindow(window)
       .where((t) => t.type == TxnType.income)
-      .fold(0.0, (sum, t) => sum + t.amount);
+      .fold(0.0, (sum, t) => sum + Fx.toBase(t.amount, t.currency));
 
   double expenseInWindow(DateRange window) => txnsInWindow(window)
       .where((t) => t.type == TxnType.expense)
-      .fold(0.0, (sum, t) => sum + t.amount);
+      .fold(0.0, (sum, t) => sum + Fx.toBase(t.amount, t.currency));
 
   /// The set of months (1–12) in [year] that hold at least one transaction —
   /// the Period sheet's has-data dots. One grouped pass per displayed year per
@@ -1217,25 +1234,24 @@ class AppStore extends ChangeNotifier {
   /// expense is converted through [Fx.toBase] before it is summed — every
   /// Planner budget figure depends on this, so a raw fold would understate (or
   /// overstate) burn for any non-base spending.
-  double spentInCategory(String categoryId, DateTime month) => txnsInMonth(month)
-      .where((t) => t.type == TxnType.expense && t.toRef == categoryId)
-      .fold(0.0, (sum, t) => sum + Fx.toBase(t.amount, t.currency));
+  ///
+  /// One-line delegate to [spentInCategoryWindow] over the month's window — one
+  /// fold, three entry points (spec §1 refactor rule). A calendar month is just
+  /// the window `[1st … last 23:59:59]`, so this returns bit-identical values.
+  double spentInCategory(String categoryId, DateTime month) =>
+      spentInCategoryWindow(
+          categoryId, DateRange(_monthStart(month), _monthEnd(month)));
 
   double earnedInCategory(String categoryId, DateTime month) =>
-      txnsInMonth(month)
-          .where((t) => t.type == TxnType.income && t.fromRef == categoryId)
-          .fold(0.0, (sum, t) => sum + Fx.toBase(t.amount, t.currency));
+      earnedInCategoryWindow(
+          categoryId, DateRange(_monthStart(month), _monthEnd(month)));
 
   /// Income booked against [categoryId] over an arbitrary window (inclusive),
-  /// in base currency — an `EARNING` goal's `current` figure (§1/§6). The
-  /// windowed twin of [earnedInCategory], which is locked to one calendar month.
-  double earnedInWindow(String categoryId, DateTime from, DateTime to) => _txns
-      .where((t) =>
-          t.type == TxnType.income &&
-          t.fromRef == categoryId &&
-          !t.date.isBefore(from) &&
-          !t.date.isAfter(to))
-      .fold(0.0, (sum, t) => sum + Fx.toBase(t.amount, t.currency));
+  /// in base currency — an `EARNING` goal's `current` figure (§1/§6). Delegates
+  /// to [earnedInCategoryWindow]; `txnsInWindow`'s `!isBefore/!isAfter` bounds
+  /// match the old inline predicate exactly, so every caller is unchanged.
+  double earnedInWindow(String categoryId, DateTime from, DateTime to) =>
+      earnedInCategoryWindow(categoryId, DateRange(from, to));
 
   int txnCountForCategory(String categoryId) => _txns
       .where((t) => t.fromRef == categoryId || t.toRef == categoryId)
@@ -1315,6 +1331,178 @@ class AppStore extends ChangeNotifier {
     final projected = (totalSpentAgainstBudget / dayOfMonth) * daysInPeriod;
     return projected - totalBudget;
   }
+
+  // ── Insight (spec §6.5) ────────────────────────────────────────────────────
+  // Insight's own window API. Ledger says *how much*; Insight says *where from,
+  // where to, and what it did to what you own* — so these figures include the
+  // revaluation the income/expense metrics deliberately exclude, and are all in
+  // base currency. Two conversion bases, matching how the app already works:
+  // balance-derived numbers fold through each ACCOUNT's currency (like
+  // [netWorthDelta]); flow numbers fold through each TRANSACTION's currency
+  // (like [spentInCategory]). Both identities in spec §0 close to the cent.
+  //
+  // Performance: [netWorthChangeInWindow] plus one [groupChangeInWindow] per
+  // group is nine passes over `_txns` per build. Compute the whole report once
+  // per build into a local record in the screen; do not call these from inside
+  // row builders.
+
+  /// Base-currency net worth at the end of [date] — every account's signed
+  /// converted balance summed (liabilities carry negative balances, so this is
+  /// assets − liabilities). The Insight hero's `before → after` pair reads this
+  /// at each end of the window. Summed over ALL accounts (hidden included, like
+  /// every net-worth total; archived included so a windowed history stays whole)
+  /// — the same set [groupChangeInWindow] partitions.
+  double netWorthOn(DateTime date) =>
+      _accounts.fold(0.0, (sum, a) => sum + balanceOnInBase(a.id, date));
+
+  /// Net worth change across [window] — the Insight hero. The windowed twin of
+  /// [netWorthDelta], which is anchored to the Balance header's ComparePeriod and
+  /// therefore cannot answer "what did August do". One pass over the window
+  /// (like [netWorthDelta]); equals `netWorthOn(end) − netWorthOn(before)` and,
+  /// by construction, the sum of [groupChangeInWindow] over every group (§0
+  /// stock identity).
+  double netWorthChangeInWindow(DateRange window) {
+    var delta = 0.0;
+    for (final t in txnsInWindow(window)) {
+      for (final a in _accounts) {
+        delta += Fx.toBase(_effectOn(t, a.id), a.currency);
+      }
+    }
+    return delta;
+  }
+
+  /// Change in the summed base-currency balances of one [group] across [window].
+  /// The stock identity: these sum to [netWorthChangeInWindow]. One pass.
+  double groupChangeInWindow(AccountGroup group, DateRange window) {
+    var delta = 0.0;
+    for (final t in txnsInWindow(window)) {
+      for (final a in _accounts) {
+        if (a.group != group) continue;
+        delta += Fx.toBase(_effectOn(t, a.id), a.currency);
+      }
+    }
+    return delta;
+  }
+
+  /// Revaluation booked in [window], in base currency — the DEĞER DEĞİŞİMİ block.
+  /// This is the figure income/expense metrics deliberately exclude (spec 6.2).
+  double revaluedInWindow(DateRange window) => txnsInWindow(window)
+      .where((t) => t.type == TxnType.rebalance)
+      .fold(0.0, (sum, t) => sum + Fx.toBase(t.amount, t.currency));
+
+  /// What a window's transfers actually cost: the fee, plus any gap between what
+  /// left the source and what landed in the destination once both are converted
+  /// (spec §0). A same-currency transfer with no fee leaks 0 — which is why card
+  /// payments and goal contributions never distort the hero. Defined as the
+  /// negated sum of each transfer's own effects on the two accounts it touches.
+  /// Never negative in practice, but not clamped — a negative leak is a data
+  /// error worth surfacing, not hiding.
+  double transferLeakInWindow(DateRange window) {
+    var leak = 0.0;
+    for (final t in txnsInWindow(window)) {
+      if (t.type != TxnType.transfer) continue;
+      for (final ref in {t.fromRef, t.toRef}) {
+        final acc = accountById(ref);
+        if (acc != null) leak -= Fx.toBase(_effectOn(t, acc.id), acc.currency);
+      }
+    }
+    return leak;
+  }
+
+  /// One grouped pass over [window], bucketed by category id, in base currency —
+  /// the INCOME and SPENDING lists. Insight renders every category, so a
+  /// per-category scan would be N passes over the ledger; this is one.
+  ({Map<String, double> income, Map<String, double> expense})
+      categoryFlowInWindow(DateRange window) {
+    final income = <String, double>{};
+    final expense = <String, double>{};
+    for (final t in txnsInWindow(window)) {
+      switch (t.type) {
+        case TxnType.expense:
+          expense[t.toRef] =
+              (expense[t.toRef] ?? 0) + Fx.toBase(t.amount, t.currency);
+        case TxnType.income:
+          income[t.fromRef] =
+              (income[t.fromRef] ?? 0) + Fx.toBase(t.amount, t.currency);
+        case TxnType.transfer:
+        case TxnType.rebalance:
+          break;
+      }
+    }
+    return (income: income, expense: expense);
+  }
+
+  /// Windowed twins of [spentInCategory] / [earnedInCategory] — the category
+  /// detail screen's per-period figure (§6). The month versions delegate here.
+  double spentInCategoryWindow(String categoryId, DateRange window) =>
+      txnsInWindow(window)
+          .where((t) => t.type == TxnType.expense && t.toRef == categoryId)
+          .fold(0.0, (sum, t) => sum + Fx.toBase(t.amount, t.currency));
+
+  double earnedInCategoryWindow(String categoryId, DateRange window) =>
+      txnsInWindow(window)
+          .where((t) => t.type == TxnType.income && t.fromRef == categoryId)
+          .fold(0.0, (sum, t) => sum + Fx.toBase(t.amount, t.currency));
+
+  /// Spent in [window] on expense categories that carry no budget — the windowed
+  /// twin of [unbudgetedSpend], for the see-all screen's `Bütçesiz…` strip.
+  double unbudgetedSpendWindow(DateRange window) => categories
+      .where((c) => c.type == CategoryType.expense && c.monthlyBudget == null)
+      .fold(0.0, (sum, c) => sum + spentInCategoryWindow(c.id, window));
+
+  /// Every rebalance in [window], newest first — the rows of the revaluation
+  /// block, each naming its account.
+  List<Txn> revaluationsInWindow(DateRange window) => txnsInWindow(window)
+      .where((t) => t.type == TxnType.rebalance)
+      .toList(growable: false);
+
+  /// Every transfer in [window], newest first — the transfer footnote's count
+  /// and total.
+  List<Txn> transfersInWindow(DateRange window) => txnsInWindow(window)
+      .where((t) => t.type == TxnType.transfer)
+      .toList(growable: false);
+
+  /// Spent on credit-card accounts in [window]: expense transactions whose
+  /// `fromRef` is an account in [AccountGroup.creditCards], in base — the DEBT
+  /// block's "charged" figure.
+  double chargedToCardsInWindow(DateRange window) => txnsInWindow(window)
+      .where((t) =>
+          t.type == TxnType.expense &&
+          accountById(t.fromRef)?.group == AccountGroup.creditCards)
+      .fold(0.0, (sum, t) => sum + Fx.toBase(t.amount, t.currency));
+
+  /// Paid *into* liability accounts in [window] via transfer — the DEBT block's
+  /// "paid" figure, a positive magnitude. Uses what actually landed in the
+  /// destination (`toAmount`), in the destination account's currency, so a
+  /// cross-currency payment counts what the debt actually received.
+  double paidToLiabilitiesInWindow(DateRange window) {
+    var paid = 0.0;
+    for (final t in txnsInWindow(window)) {
+      if (t.type != TxnType.transfer) continue;
+      final dest = accountById(t.toRef);
+      if (dest == null || !dest.group.isLiability) continue;
+      paid += Fx.toBase(t.toAmount ?? t.amount, dest.currency);
+    }
+    return paid;
+  }
+
+  /// Total liabilities as they stood at the end of [date] — positive magnitude.
+  /// Built from [balanceOnInBase]; the DEBT block's before/after pair.
+  double totalLiabilitiesOn(DateTime date) => _accounts
+      .where((a) => a.group.isLiability)
+      .fold(0.0, (sum, a) => sum + balanceOnInBase(a.id, date))
+      .abs();
+
+  /// Total receivables as they stood at the end of [date] — the ALACAĞIN cell.
+  double totalReceivablesOn(DateTime date) => _accounts
+      .where((a) => a.group == AccountGroup.receivables)
+      .fold(0.0, (sum, a) => sum + balanceOnInBase(a.id, date));
+
+  /// The window's income/expense, **converted** (spec §9). Insight reads these —
+  /// the getter name promises the conversion [incomeInWindow]/[expenseInWindow]
+  /// now also perform, so a reader of Insight never has to wonder.
+  double inflowInWindow(DateRange window) => incomeInWindow(window);
+  double outflowInWindow(DateRange window) => expenseInWindow(window);
 
   // ── Goals, rebuilt on real balances (§1) ──────────────────────────────────
   //

@@ -481,34 +481,238 @@ class AppLocalizationsRu extends AppLocalizations {
   String get insightTitle => 'Аналитика';
 
   @override
-  String get insightLeftOver => 'Остаток';
+  String get insNetWorth => 'Чистый капитал';
 
   @override
-  String get insightNoIncome => 'В этом месяце дохода не было';
+  String get insNetWorthCaption => 'твой чистый капитал';
 
   @override
-  String insightKept(String percent, String amount) {
-    return '$percent из $amount сохранено';
+  String get insIncome => 'Доход';
+
+  @override
+  String get insSpending => 'Расходы';
+
+  @override
+  String get insDebtCredit => 'Долги и требования';
+
+  @override
+  String get insRevaluation => 'Переоценка';
+
+  @override
+  String get insIn => 'Приход';
+
+  @override
+  String get insOut => 'Расход';
+
+  @override
+  String get insRevalued => 'Переоценка';
+
+  @override
+  String get insYourDebt => 'Твой долг';
+
+  @override
+  String get insYourCredit => 'Тебе должны';
+
+  @override
+  String get insUnchanged => 'без изменений';
+
+  @override
+  String get insChargedToCards => 'Потрачено картой';
+
+  @override
+  String get insCardPayment => 'Оплата карты';
+
+  @override
+  String insSeeAll(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count категорий',
+      few: '$count категории',
+      one: '$count категория',
+    );
+    return 'Показать все · $_temp0';
   }
 
   @override
-  String get insightWhereItWent => 'Куда ушло';
+  String insCategoriesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count категорий',
+      few: '$count категории',
+      one: '$count категория',
+    );
+    return '$_temp0';
+  }
 
   @override
-  String get insightGoalPerformance => 'Достижение целей';
+  String insUntouchedGained(String amount) {
+    return 'Деньги, к которым ты не притрагивался, принесли $amount';
+  }
 
   @override
-  String get insightReached => 'Достигнуто';
+  String insUntouchedLost(String amount) {
+    return 'Деньги, к которым ты не притрагивался, потеряли $amount';
+  }
 
   @override
-  String get insightSuccessRate => 'Успешность';
+  String insTransferFootnote(String amount) {
+    return 'Ты перевёл $amount между своими счетами';
+  }
 
   @override
-  String get insightAvgTime => 'Ср. время';
+  String insTransferCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count переводов',
+      few: '$count перевода',
+      one: '$count перевод',
+    );
+    return '$_temp0';
+  }
 
   @override
-  String insightMonthsShort(int count) {
+  String insFee(String amount) {
+    return 'комиссия $amount';
+  }
+
+  @override
+  String insContradictionUp(String amount) {
+    return 'Твой чистый капитал вырос, но ты потратил на $amount больше, чем заработал.';
+  }
+
+  @override
+  String insContradictionDown(String amount) {
+    return 'Твой чистый капитал упал, хотя ты заработал на $amount больше, чем потратил.';
+  }
+
+  @override
+  String get insContradictionRevalued =>
+      'Весь рост за этот период — это переоценка инвестиций.';
+
+  @override
+  String get insNoRecords => 'Нет записей за этот период';
+
+  @override
+  String insBackToPeriod(String period) {
+    return 'Назад к $period';
+  }
+
+  @override
+  String get insMovements => 'Движения';
+
+  @override
+  String get insAverage => 'Сред.';
+
+  @override
+  String insAverageValue(String amount) {
+    return 'Среднее $amount';
+  }
+
+  @override
+  String insHighest(String label, String amount) {
+    return 'макс. $label $amount';
+  }
+
+  @override
+  String get insEmptyMonthsExcluded => 'пустые периоды исключены';
+
+  @override
+  String insVsLastPeriod(String amount, String percent) {
+    return '$amount к прошлому периоду ($percent)';
+  }
+
+  @override
+  String insTooFewPeriods(int count) {
+    return 'Записи лишь за $count периода — среднее и тренд не показаны';
+  }
+
+  @override
+  String get insNoPreviousPeriod => 'нет записей за прошлый период';
+
+  @override
+  String insMonthlyBudget(String amount, String percent) {
+    return 'Месячный бюджет $amount · $percent';
+  }
+
+  @override
+  String insLeft(String amount) {
+    return 'осталось $amount';
+  }
+
+  @override
+  String insOverBudget(String amount) {
+    return 'превышено на $amount';
+  }
+
+  @override
+  String get insNoBudget => 'нет бюджета';
+
+  @override
+  String insBudgetSub(String amount, String percent) {
+    return 'бюджет $amount · $percent';
+  }
+
+  @override
+  String insBudgetSubOver(String amount, String percent) {
+    return 'бюджет $amount · $percent превышен';
+  }
+
+  @override
+  String get insAddBudget => 'Добавить бюджет';
+
+  @override
+  String insUnbudgetedTotal(String amount) {
+    return '$amount в категориях без бюджета';
+  }
+
+  @override
+  String insCustomRange(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days дней',
+      few: '$days дня',
+      one: '$days день',
+    );
+    return 'Свой период · $_temp0';
+  }
+
+  @override
+  String get insClearRange => 'очистить';
+
+  @override
+  String get insSelectDateRange => 'Выбрать период…';
+
+  @override
+  String get insOther => 'Другое';
+
+  @override
+  String get arcReached => 'Достигнуто';
+
+  @override
+  String get arcSuccess => 'Успех';
+
+  @override
+  String get arcAvgTime => 'Ср. время';
+
+  @override
+  String arcMonthsShort(int count) {
     return '$count мес';
+  }
+
+  @override
+  String arcGoalsTakeAbout(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count месяцев',
+      few: '$count месяцев',
+      one: '$count месяца',
+    );
+    return 'Твои цели в среднем занимают около $_temp0';
   }
 
   @override

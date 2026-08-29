@@ -74,6 +74,12 @@ class ArchiveScreen extends StatelessWidget {
                   : ListView(
                       padding: const EdgeInsets.only(bottom: Insets.xxl),
                       children: [
+                        // Goal performance moved here from Insight (§7): a
+                        // statistic about finished goals belongs next to the
+                        // goals it describes, where it turns into advice. Hidden
+                        // when no goal has finished.
+                        if (reached.isNotEmpty || gaveUp.isNotEmpty)
+                          _GoalPerformanceCard(reached: reached, gaveUp: gaveUp),
                         Padding(
                           padding: const EdgeInsets.fromLTRB(
                             Insets.gutter,
@@ -474,4 +480,86 @@ class _UndoButton extends StatelessWidget {
       child: Text(AppLocalizations.of(context).actionUndo),
     );
   }
+}
+
+/// Goal performance (spec §7) — reached count, success rate and average duration
+/// of finished goals, at the §4 density (76 pt). Moved here from Insight: in a
+/// money-flow report it was a statistic; next to the goals it describes it turns
+/// into advice ("your goals take about five months") worth reading while setting
+/// the next one's date.
+class _GoalPerformanceCard extends StatelessWidget {
+  const _GoalPerformanceCard({required this.reached, required this.gaveUp});
+
+  final List<Goal> reached;
+  final List<Goal> gaveUp;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final finished = reached.length + gaveUp.length;
+    final rate = finished == 0 ? 0.0 : reached.length / finished;
+    final durs = reached.map((g) => g.durationMonths).whereType<int>().toList();
+    final avg =
+        durs.isEmpty ? 0 : (durs.reduce((a, b) => a + b) / durs.length).round();
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+          Insets.gutter, Insets.sm, Insets.gutter, Insets.md),
+      child: AppCard(
+        key: const Key('arc-perfcard'),
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(Insets.lg, 11, Insets.lg, 10),
+              child: Row(
+                children: [
+                  _stat(l.arcReached, '${reached.length}', AppColors.positive),
+                  _stat(l.arcSuccess,
+                      finished == 0 ? '—' : percent(rate, decimals: 0),
+                      AppColors.goal),
+                  _stat(l.arcAvgTime,
+                      durs.isEmpty ? '—' : l.arcMonthsShort(avg), AppColors.info),
+                ],
+              ),
+            ),
+            if (durs.isNotEmpty) _foot(l.arcGoalsTakeAbout(avg)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _stat(String label, String value, Color color) => Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label.toUpperCase(),
+                style: AppText.label.copyWith(fontSize: 10)),
+            const SizedBox(height: 3),
+            Text(value,
+                style: AppText.amountLarge.copyWith(fontSize: 17, color: color)),
+          ],
+        ),
+      );
+
+  /// The centred, one-line §4 card-bottom strip.
+  Widget _foot(String text) => Container(
+        decoration: const BoxDecoration(
+          border: Border(top: BorderSide(color: AppColors.divider, width: 0.5)),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Flexible(
+              child: Text(text,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                      fontSize: 11, height: 1.45, color: AppColors.textSecondary)),
+            ),
+          ],
+        ),
+      );
 }

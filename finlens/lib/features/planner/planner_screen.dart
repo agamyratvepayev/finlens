@@ -569,6 +569,8 @@ class _BudgetRow extends StatelessWidget {
         child: InkWell(
           // A tap opens the budget screen ("where did this go?"), never the
           // editor вЂ” a stray tap must not land on financial editing (spec В§6).
+          // A tap opens the budget detail ("where did this go?"), never the
+          // editor — a stray tap must not land on financial editing (spec 6).
           onTap: () => Navigator.of(context, rootNavigator: true).push(
             MaterialPageRoute(
               builder: (_) =>

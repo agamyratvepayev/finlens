@@ -15,6 +15,11 @@ abstract final class AppColors {
   static const textSecondary = Color(0xFF8E8E93);
   static const textTertiary = Color(0xFF636366);
 
+  /// One step below [textTertiary] — the dimmest legible text. Insight uses it
+  /// for a zero hero and for "no budget" rows, where the figure is present but
+  /// deliberately faded to "an answer, not a highlight".
+  static const textQuaternary = Color(0xFF48484C);
+
   // Brand
   static const accent = Color(0xFF5E5CE6);
   static const accentSoft = Color(0xFF5E5CE6);

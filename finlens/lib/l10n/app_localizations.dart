@@ -714,59 +714,311 @@ abstract class AppLocalizations {
   /// **'Insight'**
   String get insightTitle;
 
-  /// No description provided for @insightLeftOver.
+  /// No description provided for @insNetWorth.
   ///
   /// In en, this message translates to:
-  /// **'Left over'**
-  String get insightLeftOver;
+  /// **'Net worth'**
+  String get insNetWorth;
 
-  /// No description provided for @insightNoIncome.
+  /// No description provided for @insNetWorthCaption.
   ///
   /// In en, this message translates to:
-  /// **'No income recorded this month'**
-  String get insightNoIncome;
+  /// **'your net worth'**
+  String get insNetWorthCaption;
 
-  /// No description provided for @insightKept.
+  /// No description provided for @insIncome.
   ///
   /// In en, this message translates to:
-  /// **'{percent} of {amount} kept'**
-  String insightKept(String percent, String amount);
+  /// **'Income'**
+  String get insIncome;
 
-  /// No description provided for @insightWhereItWent.
+  /// No description provided for @insSpending.
   ///
   /// In en, this message translates to:
-  /// **'Where it went'**
-  String get insightWhereItWent;
+  /// **'Spending'**
+  String get insSpending;
 
-  /// No description provided for @insightGoalPerformance.
+  /// No description provided for @insDebtCredit.
   ///
   /// In en, this message translates to:
-  /// **'Goal performance'**
-  String get insightGoalPerformance;
+  /// **'Debt & credit'**
+  String get insDebtCredit;
 
-  /// No description provided for @insightReached.
+  /// No description provided for @insRevaluation.
+  ///
+  /// In en, this message translates to:
+  /// **'Revaluation'**
+  String get insRevaluation;
+
+  /// No description provided for @insIn.
+  ///
+  /// In en, this message translates to:
+  /// **'In'**
+  String get insIn;
+
+  /// No description provided for @insOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Out'**
+  String get insOut;
+
+  /// No description provided for @insRevalued.
+  ///
+  /// In en, this message translates to:
+  /// **'Revalued'**
+  String get insRevalued;
+
+  /// No description provided for @insYourDebt.
+  ///
+  /// In en, this message translates to:
+  /// **'Your debt'**
+  String get insYourDebt;
+
+  /// No description provided for @insYourCredit.
+  ///
+  /// In en, this message translates to:
+  /// **'Owed to you'**
+  String get insYourCredit;
+
+  /// No description provided for @insUnchanged.
+  ///
+  /// In en, this message translates to:
+  /// **'unchanged'**
+  String get insUnchanged;
+
+  /// No description provided for @insChargedToCards.
+  ///
+  /// In en, this message translates to:
+  /// **'Charged to cards'**
+  String get insChargedToCards;
+
+  /// No description provided for @insCardPayment.
+  ///
+  /// In en, this message translates to:
+  /// **'Card payment'**
+  String get insCardPayment;
+
+  /// No description provided for @insSeeAll.
+  ///
+  /// In en, this message translates to:
+  /// **'See all · {count, plural, =1{1 category} other{{count} categories}}'**
+  String insSeeAll(int count);
+
+  /// No description provided for @insCategoriesCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 category} other{{count} categories}}'**
+  String insCategoriesCount(int count);
+
+  /// No description provided for @insUntouchedGained.
+  ///
+  /// In en, this message translates to:
+  /// **'Money you didn\'t touch earned {amount}'**
+  String insUntouchedGained(String amount);
+
+  /// No description provided for @insUntouchedLost.
+  ///
+  /// In en, this message translates to:
+  /// **'Money you didn\'t touch lost {amount}'**
+  String insUntouchedLost(String amount);
+
+  /// No description provided for @insTransferFootnote.
+  ///
+  /// In en, this message translates to:
+  /// **'Moved {amount} between your accounts'**
+  String insTransferFootnote(String amount);
+
+  /// No description provided for @insTransferCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} transfers'**
+  String insTransferCount(int count);
+
+  /// No description provided for @insFee.
+  ///
+  /// In en, this message translates to:
+  /// **'{amount} fee'**
+  String insFee(String amount);
+
+  /// No description provided for @insContradictionUp.
+  ///
+  /// In en, this message translates to:
+  /// **'Your net worth rose, but you spent {amount} more than you earned.'**
+  String insContradictionUp(String amount);
+
+  /// No description provided for @insContradictionDown.
+  ///
+  /// In en, this message translates to:
+  /// **'Your net worth fell, though you earned {amount} more than you spent.'**
+  String insContradictionDown(String amount);
+
+  /// No description provided for @insContradictionRevalued.
+  ///
+  /// In en, this message translates to:
+  /// **'The whole change this period is investment revaluation.'**
+  String get insContradictionRevalued;
+
+  /// No description provided for @insNoRecords.
+  ///
+  /// In en, this message translates to:
+  /// **'No records in this period'**
+  String get insNoRecords;
+
+  /// No description provided for @insBackToPeriod.
+  ///
+  /// In en, this message translates to:
+  /// **'Back to {period}'**
+  String insBackToPeriod(String period);
+
+  /// No description provided for @insMovements.
+  ///
+  /// In en, this message translates to:
+  /// **'Movements'**
+  String get insMovements;
+
+  /// No description provided for @insAverage.
+  ///
+  /// In en, this message translates to:
+  /// **'Avg.'**
+  String get insAverage;
+
+  /// No description provided for @insAverageValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Average {amount}'**
+  String insAverageValue(String amount);
+
+  /// No description provided for @insHighest.
+  ///
+  /// In en, this message translates to:
+  /// **'highest {label} {amount}'**
+  String insHighest(String label, String amount);
+
+  /// No description provided for @insEmptyMonthsExcluded.
+  ///
+  /// In en, this message translates to:
+  /// **'empty periods excluded'**
+  String get insEmptyMonthsExcluded;
+
+  /// No description provided for @insVsLastPeriod.
+  ///
+  /// In en, this message translates to:
+  /// **'{amount} vs last period ({percent})'**
+  String insVsLastPeriod(String amount, String percent);
+
+  /// No description provided for @insTooFewPeriods.
+  ///
+  /// In en, this message translates to:
+  /// **'Only {count} periods with records — no average or trend shown'**
+  String insTooFewPeriods(int count);
+
+  /// No description provided for @insNoPreviousPeriod.
+  ///
+  /// In en, this message translates to:
+  /// **'no records last period'**
+  String get insNoPreviousPeriod;
+
+  /// No description provided for @insMonthlyBudget.
+  ///
+  /// In en, this message translates to:
+  /// **'Monthly budget {amount} · {percent}'**
+  String insMonthlyBudget(String amount, String percent);
+
+  /// No description provided for @insLeft.
+  ///
+  /// In en, this message translates to:
+  /// **'{amount} left'**
+  String insLeft(String amount);
+
+  /// No description provided for @insOverBudget.
+  ///
+  /// In en, this message translates to:
+  /// **'{amount} over'**
+  String insOverBudget(String amount);
+
+  /// No description provided for @insNoBudget.
+  ///
+  /// In en, this message translates to:
+  /// **'no budget'**
+  String get insNoBudget;
+
+  /// No description provided for @insBudgetSub.
+  ///
+  /// In en, this message translates to:
+  /// **'budget {amount} · {percent}'**
+  String insBudgetSub(String amount, String percent);
+
+  /// No description provided for @insBudgetSubOver.
+  ///
+  /// In en, this message translates to:
+  /// **'budget {amount} · {percent} over'**
+  String insBudgetSubOver(String amount, String percent);
+
+  /// No description provided for @insAddBudget.
+  ///
+  /// In en, this message translates to:
+  /// **'Add budget'**
+  String get insAddBudget;
+
+  /// No description provided for @insUnbudgetedTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'{amount} in unbudgeted categories'**
+  String insUnbudgetedTotal(String amount);
+
+  /// No description provided for @insCustomRange.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom range · {days, plural, =1{1 day} other{{days} days}}'**
+  String insCustomRange(int days);
+
+  /// No description provided for @insClearRange.
+  ///
+  /// In en, this message translates to:
+  /// **'clear'**
+  String get insClearRange;
+
+  /// No description provided for @insSelectDateRange.
+  ///
+  /// In en, this message translates to:
+  /// **'Select date range…'**
+  String get insSelectDateRange;
+
+  /// No description provided for @insOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Other'**
+  String get insOther;
+
+  /// No description provided for @arcReached.
   ///
   /// In en, this message translates to:
   /// **'Reached'**
-  String get insightReached;
+  String get arcReached;
 
-  /// No description provided for @insightSuccessRate.
+  /// No description provided for @arcSuccess.
   ///
   /// In en, this message translates to:
-  /// **'Success rate'**
-  String get insightSuccessRate;
+  /// **'Success'**
+  String get arcSuccess;
 
-  /// No description provided for @insightAvgTime.
+  /// No description provided for @arcAvgTime.
   ///
   /// In en, this message translates to:
   /// **'Avg. time'**
-  String get insightAvgTime;
+  String get arcAvgTime;
 
-  /// No description provided for @insightMonthsShort.
+  /// No description provided for @arcMonthsShort.
   ///
   /// In en, this message translates to:
   /// **'{count} mo'**
-  String insightMonthsShort(int count);
+  String arcMonthsShort(int count);
+
+  /// No description provided for @arcGoalsTakeAbout.
+  ///
+  /// In en, this message translates to:
+  /// **'Your goals take about {count, plural, =1{1 month} other{{count} months}} on average'**
+  String arcGoalsTakeAbout(int count);
 
   /// No description provided for @actionCancel.
   ///
