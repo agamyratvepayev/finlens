@@ -2912,6 +2912,57 @@ class AppLocalizationsEn extends AppLocalizations {
   String get goalChangeDate => 'Target date';
 
   @override
+  String get bhCreated => 'Created';
+
+  @override
+  String get bhLimit => 'Limit';
+
+  @override
+  String get bhRollover => 'Rollover';
+
+  @override
+  String get bhWarn => 'Alert at';
+
+  @override
+  String get bhRemoved => 'Removed';
+
+  @override
+  String get bhRestored => 'Restored';
+
+  @override
+  String get bhCategoryArchived => 'Category archived';
+
+  @override
+  String get bhOn => 'On';
+
+  @override
+  String get bhOff => 'Off';
+
+  @override
+  String bhCreatedRolloverOn(String amount) {
+    return '$amount · rollover on';
+  }
+
+  @override
+  String bhCreatedRolloverOff(String amount) {
+    return '$amount · rollover off';
+  }
+
+  @override
+  String get bhEmpty => 'No changes recorded yet';
+
+  @override
+  String bhSince(String date) {
+    return 'Changes are recorded from $date';
+  }
+
+  @override
+  String get bhA11yTo => 'to';
+
+  @override
+  String get bhA11yIncreased => 'increased';
+
+  @override
   String get goalMenuEdit => 'Edit goal';
 
   @override

@@ -7,6 +7,7 @@ import '../../core/utils/formatters.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/amount_text.dart';
 import '../../shared/widgets/app_card.dart';
+import '../../shared/widgets/change_row.dart';
 import '../../shared/widgets/screen_header.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
@@ -657,7 +658,14 @@ class GoalDetailScreen extends StatelessWidget {
               children: [
                 for (var i = 0; i < goal.history.length; i++) ...[
                   if (i > 0) const RowDivider(indent: Insets.md),
-                  _ChangeRow(l: l, edit: goal.history[i]),
+                  ChangeRow(
+                    date: '${goal.history[i].at.day}.${goal.history[i].at.month}',
+                    label: _goalChangeLabel(l, goal.history[i].field),
+                    value: goal.history[i].field == 'created'
+                        ? goal.history[i].to
+                        : '${goal.history[i].from} → ${goal.history[i].to}',
+                    amber: goal.history[i].amber,
+                  ),
                 ],
               ],
             ),
@@ -957,52 +965,13 @@ class _MovementRow extends StatelessWidget {
   }
 }
 
-class _ChangeRow extends StatelessWidget {
-  const _ChangeRow({required this.l, required this.edit});
-
-  final AppLocalizations l;
-  final GoalEdit edit;
-
-  @override
-  Widget build(BuildContext context) {
-    final fieldLabel = switch (edit.field) {
+/// The localized label for a goal-history [GoalEdit.field]. Kept beside the row
+/// that now delegates rendering to the shared [ChangeRow].
+String _goalChangeLabel(AppLocalizations l, String field) => switch (field) {
       'created' => l.goalChangeCreated,
       'target' => l.goalChangeTarget,
       _ => l.goalChangeDate,
     };
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: Insets.md, vertical: Insets.sm),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 64,
-            child: Text(
-              '${edit.at.day}.${edit.at.month}',
-              style: AppText.caption.copyWith(fontSize: 11.5),
-            ),
-          ),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(fieldLabel,
-                    style: AppText.rowSubtitle.copyWith(fontSize: 12.5)),
-                const SizedBox(height: 1),
-                Text(
-                  edit.field == 'created' ? edit.to : '${edit.from} → ${edit.to}',
-                  style: AppText.caption.copyWith(fontSize: 11.5),
-                ),
-              ],
-            ),
-          ),
-          if (edit.amber)
-            const Icon(Icons.schedule_rounded,
-                size: 15, color: AppColors.warning),
-        ],
-      ),
-    );
-  }
-}
 
 class _MenuRow extends StatelessWidget {
   const _MenuRow({

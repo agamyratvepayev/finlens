@@ -7,6 +7,7 @@ import '../../core/utils/fx.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/amount_text.dart';
 import '../../shared/widgets/app_card.dart';
+import '../../shared/widgets/change_row.dart';
 import '../../shared/widgets/destructive_sheet.dart';
 import '../../shared/widgets/screen_header.dart';
 import '../../theme/app_colors.dart';
@@ -87,6 +88,7 @@ class BudgetDetailScreen extends StatelessWidget {
                   _againstTheLimit(store, category, monthlyBudget, color,
                       AppLocalizations.of(context)),
                   _transactions(context, store, category),
+                  _changes(context, store, category),
                 ],
               ),
             ),
@@ -550,6 +552,130 @@ class BudgetDetailScreen extends StatelessWidget {
       ],
     );
   }
+
+  // ── Changes (budget edit history) ──────────────────────────────────────────
+
+  /// The record the goal screen has and a budget needs more: every limit,
+  /// rollover, threshold and removal edit, in write order (newest last). A
+  /// raised limit trails an amber `trending_up` — the one place a card turning
+  /// green because the limit grew is told apart from one turning green because
+  /// spending fell. Existing budgets start empty (no backfill); the footnote
+  /// dates the record so its emptiness reads as new, not missing.
+  Widget _changes(BuildContext context, AppStore store, Category category) {
+    final l = AppLocalizations.of(context);
+    final history = category.budgetHistory;
+    final since =
+        '${store.budgetHistorySince.day} ${monthLong(store.budgetHistorySince.month, l)} ${store.budgetHistorySince.year}';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: Insets.md),
+        SectionLabel(l.goalChanges),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: Insets.gutter),
+          child: AppCard(
+            child: history.isEmpty
+                ? Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: Insets.md,
+                      vertical: Insets.md,
+                    ),
+                    child: Center(
+                      child: Text(
+                        l.bhEmpty,
+                        style: AppText.caption
+                            .copyWith(color: AppColors.textSecondary),
+                      ),
+                    ),
+                  )
+                : Column(
+                    children: [
+                      for (var i = 0; i < history.length; i++) ...[
+                        if (i > 0) const RowDivider(indent: Insets.md),
+                        _changeRow(l, history[i], store.masked),
+                      ],
+                    ],
+                  ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(
+            Insets.gutter,
+            Insets.sm,
+            Insets.gutter,
+            0,
+          ),
+          child: Text(
+            l.bhSince(since),
+            style: AppText.caption.copyWith(color: AppColors.textTertiary),
+          ),
+        ),
+      ],
+    );
+  }
+
+  ChangeRow _changeRow(AppLocalizations l, BudgetEdit e, bool masked) {
+    final label = switch (e.field) {
+      'created' => l.bhCreated,
+      'limit' => l.bhLimit,
+      'rollover' => l.bhRollover,
+      'warn' => l.bhWarn,
+      'removed' => l.bhRemoved,
+      'restored' => l.bhRestored,
+      _ => l.bhCategoryArchived,
+    };
+    final value = _changeValue(l, e, masked);
+    // Screen reader: one sentence, the amber flag folded in as words rather than
+    // read as a separate node. Money in the value honours the privacy eye.
+    final spoken = value.replaceAll(' → ', ' ${l.bhA11yTo} ');
+    final sentence = StringBuffer('${e.at.day}.${e.at.month}, $label');
+    if (spoken.isNotEmpty) sentence.write(', $spoken');
+    if (e.amber) sentence.write(', ${l.bhA11yIncreased}');
+    return ChangeRow(
+      date: '${e.at.day}.${e.at.month}',
+      label: label,
+      value: value,
+      amber: e.amber,
+      amberIcon: Icons.trending_up_rounded,
+      semanticsLabel: sentence.toString(),
+    );
+  }
+
+  /// Composes the display value from the record's language-neutral parts. The
+  /// store never stores localised words (it holds no [AppLocalizations]): the
+  /// rollover state rides in as an `on`/`off` token, resolved here.
+  String _changeValue(AppLocalizations l, BudgetEdit e, bool masked) {
+    switch (e.field) {
+      case 'created':
+        final amount = _mask(e.to, masked);
+        return e.from == 'on'
+            ? l.bhCreatedRolloverOn(amount)
+            : l.bhCreatedRolloverOff(amount);
+      case 'limit':
+        return '${_mask(e.from, masked)} → ${_mask(e.to, masked)}';
+      case 'rollover':
+        return '${_rolloverWord(l, e.from)} → ${_rolloverWord(l, e.to)}';
+      case 'warn':
+        // Percentages are not money and do not mask.
+        return '${e.from} → ${e.to}';
+      case 'removed':
+      case 'restored':
+        return _mask(e.to, masked);
+      default:
+        // categoryArchived — a label with no value line.
+        return '';
+    }
+  }
+
+  String _rolloverWord(AppLocalizations l, String token) =>
+      token == 'on' ? l.bhOn : l.bhOff;
+
+  /// Masks the money runs in an already-formatted string when the privacy eye is
+  /// on, leaving separators and any trailing words ("· rollover off") intact.
+  /// The base currency is `$` throughout the app, so the pattern is unambiguous.
+  static final _moneyRe = RegExp(r'\$[\d,]+(?:\.\d+)?');
+  String _mask(String s, bool masked) =>
+      masked ? s.replaceAll(_moneyRe, r'$••••') : s;
 }
 
 /// A single history bar with a fill and the shared vertical limit line.

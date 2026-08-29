@@ -2905,6 +2905,57 @@ class AppLocalizationsTk extends AppLocalizations {
   String get goalChangeDate => 'Maksat senesi';
 
   @override
+  String get bhCreated => 'Döredildi';
+
+  @override
+  String get bhLimit => 'Çäk';
+
+  @override
+  String get bhRollover => 'Geçiriş';
+
+  @override
+  String get bhWarn => 'Duýduryş';
+
+  @override
+  String get bhRemoved => 'Aýryldy';
+
+  @override
+  String get bhRestored => 'Dikeldildi';
+
+  @override
+  String get bhCategoryArchived => 'Kategoriýa arhiwlendi';
+
+  @override
+  String get bhOn => 'Açyk';
+
+  @override
+  String get bhOff => 'Ýapyk';
+
+  @override
+  String bhCreatedRolloverOn(String amount) {
+    return '$amount · geçiriş açyk';
+  }
+
+  @override
+  String bhCreatedRolloverOff(String amount) {
+    return '$amount · geçiriş ýapyk';
+  }
+
+  @override
+  String get bhEmpty => 'Heniz üýtgeşme ýazgysy ýok';
+
+  @override
+  String bhSince(String date) {
+    return 'Üýtgeşmeler $date senesinden bäri ýazylýar';
+  }
+
+  @override
+  String get bhA11yTo => '→';
+
+  @override
+  String get bhA11yIncreased => 'ýokarlandy';
+
+  @override
   String get goalMenuEdit => 'Maksady üýtget';
 
   @override

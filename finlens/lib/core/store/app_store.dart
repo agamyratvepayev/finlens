@@ -25,12 +25,20 @@ class AppStore extends ChangeNotifier {
     required List<Goal> goals,
     required List<Task> tasks,
     List<Tag> tags = const [],
+    DateTime? budgetHistorySince,
   })  : _accounts = List.of(accounts),
         _categories = List.of(categories),
         _txns = List.of(txns),
         _goals = List.of(goals),
         _tasks = List.of(tasks),
-        _tags = List.of(tags) {
+        _tags = List.of(tags),
+        // Budget-detail CHANGES records forward-only: the day this store first
+        // ran with the feature. A persistence layer would pass its stored value
+        // so the footnote never moves; absent one (this app resets every launch),
+        // it resolves to `today` for both a migrated and a fresh store. Never
+        // AppStore.today at render, which would drift daily. Existing budgets are
+        // NOT backfilled — history begins empty and fills from the first edit.
+        budgetHistorySince = budgetHistorySince ?? today {
     // On load: reify tags (turn the fixture's legacy name-lists into Tag
     // entities and rewrite each txn's tagIds — §1 migration), drop goals whose
     // source no longer resolves to anything (§9), seed a `created` history entry
@@ -156,6 +164,10 @@ class AppStore extends ChangeNotifier {
   // The seed data is authored around the mockups' "August 2026". Pinning
   // "today" keeps the documented screens reproducible instead of drifting.
   static final DateTime today = DateTime(2026, 8, 9, 14, 32);
+
+  /// The day this store first ran with budget-detail CHANGES (see constructor).
+  /// Displayed in the section's footnote; fixed for the store's lifetime.
+  final DateTime budgetHistorySince;
 
   // ── Privacy mode (spec 1.1 — eye icon masks every amount) ─────────────────
   bool _masked = false;
@@ -2228,27 +2240,99 @@ class AppStore extends ChangeNotifier {
       color: color,
       monthlyBudget: monthlyBudget,
     );
+    // A budget born with the category is its own `created` entry — history is
+    // complete from birth (no backfill needed). rollover defaults off here.
+    if (monthlyBudget != null) {
+      category.budgetHistory.add(BudgetEdit(
+        at: today,
+        field: 'created',
+        from: category.budgetRollover ? 'on' : 'off',
+        to: money(monthlyBudget),
+      ));
+    }
     _categories.add(category);
     notifyListeners();
     return category;
   }
 
+  /// Every budget-field change is logged to [Category.budgetHistory] — but only
+  /// a *real* change: this method writes `x ?? category.x`, so a save that
+  /// touched nothing must append nothing. Compare before assigning. A null→value
+  /// transition is a `created` entry (money + rollover state), not a `limit`
+  /// one; on that birth call the rollover/warn moves fold into `created` rather
+  /// than logging separately. One save can legitimately emit three rows (limit,
+  /// rollover, warn), all carrying the same [today].
   void updateBudget(
     Category category, {
     double? monthlyBudget,
     bool? rollover,
     double? warnThreshold,
   }) {
+    final creating = monthlyBudget != null && category.monthlyBudget == null;
+    final newLimit = monthlyBudget ?? category.monthlyBudget;
+    final newRollover = rollover ?? category.budgetRollover;
+    final newWarn = warnThreshold ?? category.warnThreshold;
+
+    if (creating) {
+      category.budgetHistory.add(BudgetEdit(
+        at: today,
+        field: 'created',
+        from: newRollover ? 'on' : 'off',
+        to: money(newLimit!),
+      ));
+    } else {
+      if (monthlyBudget != null && monthlyBudget != category.monthlyBudget) {
+        category.budgetHistory.add(BudgetEdit(
+          at: today,
+          field: 'limit',
+          from: money(category.monthlyBudget!),
+          to: money(monthlyBudget),
+          // A raised limit is amber; a lowered one is not.
+          amber: monthlyBudget > category.monthlyBudget!,
+        ));
+      }
+      if (rollover != null && rollover != category.budgetRollover) {
+        category.budgetHistory.add(BudgetEdit(
+          at: today,
+          field: 'rollover',
+          from: category.budgetRollover ? 'on' : 'off',
+          to: rollover ? 'on' : 'off',
+        ));
+      }
+      if (warnThreshold != null && warnThreshold != category.warnThreshold) {
+        category.budgetHistory.add(BudgetEdit(
+          at: today,
+          field: 'warn',
+          from: percent(category.warnThreshold, decimals: 0),
+          to: percent(warnThreshold, decimals: 0),
+        ));
+      }
+    }
+
     category
-      ..monthlyBudget = monthlyBudget ?? category.monthlyBudget
-      ..budgetRollover = rollover ?? category.budgetRollover
-      ..warnThreshold = warnThreshold ?? category.warnThreshold;
+      ..monthlyBudget = newLimit
+      ..budgetRollover = newRollover
+      ..warnThreshold = newWarn;
     notifyListeners();
   }
 
   /// Spec 5.5 — removing a budget is `Category.monthly_budget = null`. The
-  /// category and its transactions are deliberately untouched.
-  void removeBudget(Category category) {
+  /// category and its transactions are deliberately untouched. Logs `removed`
+  /// with the last limit. The history outlives the removal.
+  void removeBudget(Category category) => _removeBudget(category, log: true);
+
+  /// The shared removal. [archiveCategory] passes `log: false` so one user
+  /// action (archiving) writes one `categoryArchived` row, not a `removed` row
+  /// as well.
+  void _removeBudget(Category category, {required bool log}) {
+    if (log && category.monthlyBudget != null) {
+      category.budgetHistory.add(BudgetEdit(
+        at: today,
+        field: 'removed',
+        from: '',
+        to: money(category.monthlyBudget!),
+      ));
+    }
     category
       ..monthlyBudget = null
       ..removedOn = today;
@@ -2256,6 +2340,12 @@ class AppStore extends ChangeNotifier {
   }
 
   void restoreBudget(Category category, double limit) {
+    category.budgetHistory.add(BudgetEdit(
+      at: today,
+      field: 'restored',
+      from: '',
+      to: money(limit),
+    ));
     category
       ..monthlyBudget = limit
       ..removedOn = null;
@@ -2265,11 +2355,21 @@ class AppStore extends ChangeNotifier {
   /// Retire a category from every picker while leaving its history intact.
   /// Nothing already filed changes: past transactions keep rendering with this
   /// category's name and icon. A budget on it would sit at $0/limit forever
-  /// with nothing left to file, so it is removed through [removeBudget] (which
-  /// sets `removedOn`, landing it in the Archive's own removed-budgets section
-  /// to be restored independently). Direction/type are untouched.
+  /// with nothing left to file, so it is removed (which sets `removedOn`,
+  /// landing it in the Archive's own removed-budgets section to be restored
+  /// independently). Direction/type are untouched. The budget's CHANGES record
+  /// gets a single `categoryArchived` row — the nested removal is logged as
+  /// `false` so this one action does not write two rows.
   void archiveCategory(Category category) {
-    if (category.monthlyBudget != null) removeBudget(category);
+    if (category.monthlyBudget != null) {
+      category.budgetHistory.add(BudgetEdit(
+        at: today,
+        field: 'categoryArchived',
+        from: '',
+        to: '',
+      ));
+      _removeBudget(category, log: false);
+    }
     category.archived = true;
     notifyListeners();
   }

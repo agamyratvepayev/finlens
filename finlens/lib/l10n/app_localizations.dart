@@ -4602,6 +4602,96 @@ abstract class AppLocalizations {
   /// **'Target date'**
   String get goalChangeDate;
 
+  /// No description provided for @bhCreated.
+  ///
+  /// In en, this message translates to:
+  /// **'Created'**
+  String get bhCreated;
+
+  /// No description provided for @bhLimit.
+  ///
+  /// In en, this message translates to:
+  /// **'Limit'**
+  String get bhLimit;
+
+  /// No description provided for @bhRollover.
+  ///
+  /// In en, this message translates to:
+  /// **'Rollover'**
+  String get bhRollover;
+
+  /// No description provided for @bhWarn.
+  ///
+  /// In en, this message translates to:
+  /// **'Alert at'**
+  String get bhWarn;
+
+  /// No description provided for @bhRemoved.
+  ///
+  /// In en, this message translates to:
+  /// **'Removed'**
+  String get bhRemoved;
+
+  /// No description provided for @bhRestored.
+  ///
+  /// In en, this message translates to:
+  /// **'Restored'**
+  String get bhRestored;
+
+  /// No description provided for @bhCategoryArchived.
+  ///
+  /// In en, this message translates to:
+  /// **'Category archived'**
+  String get bhCategoryArchived;
+
+  /// No description provided for @bhOn.
+  ///
+  /// In en, this message translates to:
+  /// **'On'**
+  String get bhOn;
+
+  /// No description provided for @bhOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Off'**
+  String get bhOff;
+
+  /// No description provided for @bhCreatedRolloverOn.
+  ///
+  /// In en, this message translates to:
+  /// **'{amount} · rollover on'**
+  String bhCreatedRolloverOn(String amount);
+
+  /// No description provided for @bhCreatedRolloverOff.
+  ///
+  /// In en, this message translates to:
+  /// **'{amount} · rollover off'**
+  String bhCreatedRolloverOff(String amount);
+
+  /// No description provided for @bhEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No changes recorded yet'**
+  String get bhEmpty;
+
+  /// No description provided for @bhSince.
+  ///
+  /// In en, this message translates to:
+  /// **'Changes are recorded from {date}'**
+  String bhSince(String date);
+
+  /// No description provided for @bhA11yTo.
+  ///
+  /// In en, this message translates to:
+  /// **'to'**
+  String get bhA11yTo;
+
+  /// No description provided for @bhA11yIncreased.
+  ///
+  /// In en, this message translates to:
+  /// **'increased'**
+  String get bhA11yIncreased;
+
   /// No description provided for @goalMenuEdit.
   ///
   /// In en, this message translates to:

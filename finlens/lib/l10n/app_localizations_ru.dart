@@ -2976,6 +2976,57 @@ class AppLocalizationsRu extends AppLocalizations {
   String get goalChangeDate => 'Дата цели';
 
   @override
+  String get bhCreated => 'Создано';
+
+  @override
+  String get bhLimit => 'Лимит';
+
+  @override
+  String get bhRollover => 'Перенос';
+
+  @override
+  String get bhWarn => 'Оповещение при';
+
+  @override
+  String get bhRemoved => 'Удалено';
+
+  @override
+  String get bhRestored => 'Восстановлено';
+
+  @override
+  String get bhCategoryArchived => 'Категория архивирована';
+
+  @override
+  String get bhOn => 'Вкл';
+
+  @override
+  String get bhOff => 'Выкл';
+
+  @override
+  String bhCreatedRolloverOn(String amount) {
+    return '$amount · перенос вкл';
+  }
+
+  @override
+  String bhCreatedRolloverOff(String amount) {
+    return '$amount · перенос выкл';
+  }
+
+  @override
+  String get bhEmpty => 'Изменений пока нет';
+
+  @override
+  String bhSince(String date) {
+    return 'Изменения записываются с $date';
+  }
+
+  @override
+  String get bhA11yTo => 'до';
+
+  @override
+  String get bhA11yIncreased => 'увеличено';
+
+  @override
   String get goalMenuEdit => 'Изменить цель';
 
   @override

@@ -103,6 +103,41 @@ class Account {
   }
 }
 
+/// One recorded change to a category's budget (budget-detail CHANGES). Written
+/// by the store on every budget write path; never derived, never edited, never
+/// deleted. A deliberate sibling of [GoalEdit], not a shared class: a budget
+/// edit has its own field vocabulary and the two must be free to diverge.
+class BudgetEdit {
+  const BudgetEdit({
+    required this.at,
+    required this.field,
+    required this.from,
+    required this.to,
+    this.amber = false,
+  });
+
+  final DateTime at;
+
+  /// 'created' | 'limit' | 'rollover' | 'warn' | 'removed' | 'restored'
+  /// | 'categoryArchived'
+  final String field;
+
+  /// Formatted, and language-neutral: money via `money()`, percent via
+  /// `percent()`, or a machine token ('on'/'off') the render layer localises —
+  /// the store holds no [AppLocalizations]. Empty for entries with no prior
+  /// value ('created' repurposes it to carry the rollover token). For a
+  /// 'created' entry it holds the rollover state ('on'/'off'), never displayed
+  /// as-is.
+  final String from;
+
+  /// Formatted (see [from]); empty for 'categoryArchived'.
+  final String to;
+
+  /// A raised limit is amber; everything else is neutral. Colour states a fact;
+  /// the reader forms the opinion.
+  final bool amber;
+}
+
 /// Spec 6.1 — Category. The budget is *fields on the category*, not a separate
 /// entity: Quick Add's picker and Planner > Budgets read the same record
 /// (spec 4.1 / 5.4). Removing a budget sets [monthlyBudget] to null (spec 5.5).
@@ -119,7 +154,8 @@ class Category {
     this.rolloverAmount = 0,
     this.archived = false,
     this.removedOn,
-  });
+    List<BudgetEdit>? budgetHistory,
+  }) : budgetHistory = budgetHistory ?? <BudgetEdit>[];
 
   final String id;
   String name;
@@ -135,6 +171,11 @@ class Category {
 
   bool archived;
   DateTime? removedOn;
+
+  /// Budget edit history (budget-detail CHANGES). Empty for a category that has
+  /// never been budgeted, and for budgets that predate this feature — the store
+  /// does not backfill a guessed `created` entry.
+  List<BudgetEdit> budgetHistory;
 
   /// Spec 5.4 — rollover adds last month's leftover on top of the limit.
   double? get effectiveLimit =>

@@ -2903,6 +2903,57 @@ class AppLocalizationsTr extends AppLocalizations {
   String get goalChangeDate => 'Hedef tarihi';
 
   @override
+  String get bhCreated => 'Oluşturuldu';
+
+  @override
+  String get bhLimit => 'Limit';
+
+  @override
+  String get bhRollover => 'Devir';
+
+  @override
+  String get bhWarn => 'Uyarı';
+
+  @override
+  String get bhRemoved => 'Kaldırıldı';
+
+  @override
+  String get bhRestored => 'Geri yüklendi';
+
+  @override
+  String get bhCategoryArchived => 'Kategori arşivlendi';
+
+  @override
+  String get bhOn => 'Açık';
+
+  @override
+  String get bhOff => 'Kapalı';
+
+  @override
+  String bhCreatedRolloverOn(String amount) {
+    return '$amount · devir açık';
+  }
+
+  @override
+  String bhCreatedRolloverOff(String amount) {
+    return '$amount · devir kapalı';
+  }
+
+  @override
+  String get bhEmpty => 'Henüz değişiklik kaydı yok';
+
+  @override
+  String bhSince(String date) {
+    return 'Değişiklikler $date tarihinden itibaren kaydediliyor';
+  }
+
+  @override
+  String get bhA11yTo => '→';
+
+  @override
+  String get bhA11yIncreased => 'artırıldı';
+
+  @override
   String get goalMenuEdit => 'Hedefi düzenle';
 
   @override
