@@ -2403,6 +2403,89 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
+  String get plGoalFilterButton => 'Hedef filtresi';
+
+  @override
+  String plGoalScopeAllSome(int n, int m) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n hedef',
+      one: '$n hedef',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      m,
+      locale: localeName,
+      other: '$m ilgi bekliyor',
+      one: '$m ilgi bekliyor',
+    );
+    return '$_temp0 · $_temp1';
+  }
+
+  @override
+  String plGoalScopeAllNone(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n hedef',
+      one: '$n hedef',
+    );
+    return '$_temp0 · tümü yolunda';
+  }
+
+  @override
+  String get plGoalScopeOneAttention => '1 hedef · ilgi bekliyor';
+
+  @override
+  String get plGoalScopeOneOnTrack => '1 hedef · yolunda';
+
+  @override
+  String plGoalScopeNeeds(int m, int n) {
+    return 'İlgi bekliyor · $n hedeften $m';
+  }
+
+  @override
+  String plGoalScopeOnTrack(int k, int n) {
+    return 'Yolunda · $n hedeften $k';
+  }
+
+  @override
+  String get plGoalStatus => 'DURUM';
+
+  @override
+  String get plGoalFilterAll => 'Tümü';
+
+  @override
+  String get plGoalFilterNeeds => 'İlgi bekliyor';
+
+  @override
+  String get plGoalFilterOnTrack => 'Yolunda';
+
+  @override
+  String get plGoalArchiveNote =>
+      'Ulaşılan ve vazgeçilen hedefler burada değil — Arşiv\'de.';
+
+  @override
+  String get plGoalNoneNeed => 'İlgi bekleyen hedef yok';
+
+  @override
+  String get plGoalNoneOnTrack => 'Yolunda giden hedef yok';
+
+  @override
+  String get plGoalShowAll => 'Tümünü göster';
+
+  @override
+  String plGoalRowA11y(Object option, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count hedef',
+      one: '$count hedef',
+    );
+    return '$option, $_temp0';
+  }
+
+  @override
   String goalPerMonth(Object amount) {
     return 'aylık $amount';
   }

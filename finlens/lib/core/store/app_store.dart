@@ -1435,14 +1435,48 @@ class AppStore extends ChangeNotifier {
     );
   }
 
-  /// Active goals in [section], unsorted.
-  List<Goal> goalsInSection(GoalSection section) =>
-      goals.where((g) => goalSection(g) == section).toList(growable: false);
+  /// Whether [g] survives the Goals-tab header filter (Planner §1). The split
+  /// runs off [GoalMetrics.needsAttention] and nothing else — the same predicate
+  /// the sort uses — so a filtered list and the sort can never disagree.
+  bool _matchesGoalFilter(Goal g, GoalFilter filter) => switch (filter) {
+        GoalFilter.all => true,
+        GoalFilter.needsAttention => goalMetrics(g).needsAttention,
+        GoalFilter.onTrack => !goalMetrics(g).needsAttention,
+      };
+
+  /// The three header-filter counts over every active goal, in a single pass
+  /// (Planner §1/§2): `all` is `goals.length`, `needsAttention` counts the goals
+  /// `GoalMetrics.needsAttention` flags, and `onTrack` is the remainder. Feeds
+  /// both the control's label and the sheet's row counts.
+  ({int all, int needsAttention, int onTrack}) goalFilterCounts() {
+    final list = goals;
+    var attention = 0;
+    for (final g in list) {
+      if (goalMetrics(g).needsAttention) attention++;
+    }
+    return (
+      all: list.length,
+      needsAttention: attention,
+      onTrack: list.length - attention,
+    );
+  }
+
+  /// Active goals in [section], unsorted, narrowed to [filter] (Planner §3.2).
+  /// The default `all` keeps every earlier caller (the Archive, the sums) on the
+  /// unfiltered list.
+  List<Goal> goalsInSection(GoalSection section,
+          {GoalFilter filter = GoalFilter.all}) =>
+      goals
+          .where((g) =>
+              goalSection(g) == section && _matchesGoalFilter(g, filter))
+          .toList(growable: false);
 
   /// Active goals in [section], needs-attention first, then by target date
-  /// (§2). A goal with no date sorts last within its group.
-  List<Goal> sortedGoalsInSection(GoalSection section) {
-    final list = goalsInSection(section).toList();
+  /// (§2). A goal with no date sorts last within its group. [filter] removes
+  /// rows *before* the sort; the sort rule itself is untouched (Planner §3.2).
+  List<Goal> sortedGoalsInSection(GoalSection section,
+      {GoalFilter filter = GoalFilter.all}) {
+    final list = goalsInSection(section, filter: filter).toList();
     list.sort((a, b) {
       final ma = goalMetrics(a);
       final mb = goalMetrics(b);
@@ -1460,11 +1494,14 @@ class AppStore extends ChangeNotifier {
   }
 
   /// The current/target sums a section header shows on the right (§2). The
-  /// header formats them per section (`of`, `left`, `owed`).
-  ({double current, double target}) goalSectionSums(GoalSection section) {
+  /// header formats them per section (`of`, `left`, `owed`). Under a [filter]
+  /// the sums recompute over the visible goals only — a header must never carry
+  /// its unfiltered total above a filtered card (Planner §3.2).
+  ({double current, double target}) goalSectionSums(GoalSection section,
+      {GoalFilter filter = GoalFilter.all}) {
     var c = 0.0;
     var t = 0.0;
-    for (final g in goalsInSection(section)) {
+    for (final g in goalsInSection(section, filter: filter)) {
       final m = goalMetrics(g);
       c += m.current;
       t += m.target;
@@ -1472,10 +1509,13 @@ class AppStore extends ChangeNotifier {
     return (current: c, target: t);
   }
 
-  /// The sections that have at least one goal, in display order (§2).
-  List<GoalSection> get activeGoalSections => GoalSection.values
-      .where((s) => goalsInSection(s).isNotEmpty)
-      .toList(growable: false);
+  /// The sections that have at least one goal matching [filter], in display
+  /// order (§2). A section whose goals all filter out drops from the list, so
+  /// the Goals tab never renders an empty section (Planner §3.2).
+  List<GoalSection> activeGoalSections({GoalFilter filter = GoalFilter.all}) =>
+      GoalSection.values
+          .where((s) => goalsInSection(s, filter: filter).isNotEmpty)
+          .toList(growable: false);
 
   /// The account or category id backing the goal, for name/icon/colour lookups.
   IconData goalIcon(Goal g) => refIcon(g.source.id);

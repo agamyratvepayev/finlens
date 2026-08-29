@@ -2408,6 +2408,89 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get plGoalFilterButton => 'Goal filter';
+
+  @override
+  String plGoalScopeAllSome(int n, int m) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n goals',
+      one: '$n goal',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      m,
+      locale: localeName,
+      other: '$m need attention',
+      one: '$m needs attention',
+    );
+    return '$_temp0 · $_temp1';
+  }
+
+  @override
+  String plGoalScopeAllNone(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n goals',
+      one: '$n goal',
+    );
+    return '$_temp0 · all on track';
+  }
+
+  @override
+  String get plGoalScopeOneAttention => '1 goal · needs attention';
+
+  @override
+  String get plGoalScopeOneOnTrack => '1 goal · on track';
+
+  @override
+  String plGoalScopeNeeds(int m, int n) {
+    return 'Needs attention · $m of $n';
+  }
+
+  @override
+  String plGoalScopeOnTrack(int k, int n) {
+    return 'On track · $k of $n';
+  }
+
+  @override
+  String get plGoalStatus => 'STATUS';
+
+  @override
+  String get plGoalFilterAll => 'All';
+
+  @override
+  String get plGoalFilterNeeds => 'Needs attention';
+
+  @override
+  String get plGoalFilterOnTrack => 'On track';
+
+  @override
+  String get plGoalArchiveNote =>
+      'Reached and abandoned goals aren\'t here — they\'re in the Archive.';
+
+  @override
+  String get plGoalNoneNeed => 'No goals need attention';
+
+  @override
+  String get plGoalNoneOnTrack => 'No goals are on track';
+
+  @override
+  String get plGoalShowAll => 'Show all';
+
+  @override
+  String plGoalRowA11y(Object option, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count goals',
+      one: '$count goal',
+    );
+    return '$option, $_temp0';
+  }
+
+  @override
   String goalPerMonth(Object amount) {
     return '$amount a month';
   }

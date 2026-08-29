@@ -2450,6 +2450,97 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
+  String get plGoalFilterButton => 'Фильтр целей';
+
+  @override
+  String plGoalScopeAllSome(int n, int m) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n цели',
+      many: '$n целей',
+      few: '$n цели',
+      one: '$n цель',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      m,
+      locale: localeName,
+      other: '$m требуют внимания',
+      many: '$m требуют внимания',
+      few: '$m требуют внимания',
+      one: '$m требует внимания',
+    );
+    return '$_temp0 · $_temp1';
+  }
+
+  @override
+  String plGoalScopeAllNone(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n цели',
+      many: '$n целей',
+      few: '$n цели',
+      one: '$n цель',
+    );
+    return '$_temp0 · все в графике';
+  }
+
+  @override
+  String get plGoalScopeOneAttention => '1 цель · требует внимания';
+
+  @override
+  String get plGoalScopeOneOnTrack => '1 цель · в графике';
+
+  @override
+  String plGoalScopeNeeds(int m, int n) {
+    return 'Требуют внимания · $m из $n';
+  }
+
+  @override
+  String plGoalScopeOnTrack(int k, int n) {
+    return 'В графике · $k из $n';
+  }
+
+  @override
+  String get plGoalStatus => 'СТАТУС';
+
+  @override
+  String get plGoalFilterAll => 'Все';
+
+  @override
+  String get plGoalFilterNeeds => 'Требуют внимания';
+
+  @override
+  String get plGoalFilterOnTrack => 'В графике';
+
+  @override
+  String get plGoalArchiveNote =>
+      'Достигнутых и отменённых целей здесь нет — они в Архиве.';
+
+  @override
+  String get plGoalNoneNeed => 'Нет целей, требующих внимания';
+
+  @override
+  String get plGoalNoneOnTrack => 'Нет целей в графике';
+
+  @override
+  String get plGoalShowAll => 'Показать все';
+
+  @override
+  String plGoalRowA11y(Object option, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count цели',
+      many: '$count целей',
+      few: '$count цели',
+      one: '$count цель',
+    );
+    return '$option, $_temp0';
+  }
+
+  @override
   String goalPerMonth(Object amount) {
     return '$amount в месяц';
   }

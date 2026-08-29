@@ -3894,6 +3894,102 @@ abstract class AppLocalizations {
   /// **'On track · {rate}/mo'**
   String goalOnTrack(Object rate);
 
+  /// No description provided for @plGoalFilterButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Goal filter'**
+  String get plGoalFilterButton;
+
+  /// No description provided for @plGoalScopeAllSome.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, one{{n} goal} other{{n} goals}} · {m, plural, one{{m} needs attention} other{{m} need attention}}'**
+  String plGoalScopeAllSome(int n, int m);
+
+  /// No description provided for @plGoalScopeAllNone.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, one{{n} goal} other{{n} goals}} · all on track'**
+  String plGoalScopeAllNone(int n);
+
+  /// No description provided for @plGoalScopeOneAttention.
+  ///
+  /// In en, this message translates to:
+  /// **'1 goal · needs attention'**
+  String get plGoalScopeOneAttention;
+
+  /// No description provided for @plGoalScopeOneOnTrack.
+  ///
+  /// In en, this message translates to:
+  /// **'1 goal · on track'**
+  String get plGoalScopeOneOnTrack;
+
+  /// No description provided for @plGoalScopeNeeds.
+  ///
+  /// In en, this message translates to:
+  /// **'Needs attention · {m} of {n}'**
+  String plGoalScopeNeeds(int m, int n);
+
+  /// No description provided for @plGoalScopeOnTrack.
+  ///
+  /// In en, this message translates to:
+  /// **'On track · {k} of {n}'**
+  String plGoalScopeOnTrack(int k, int n);
+
+  /// No description provided for @plGoalStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'STATUS'**
+  String get plGoalStatus;
+
+  /// No description provided for @plGoalFilterAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get plGoalFilterAll;
+
+  /// No description provided for @plGoalFilterNeeds.
+  ///
+  /// In en, this message translates to:
+  /// **'Needs attention'**
+  String get plGoalFilterNeeds;
+
+  /// No description provided for @plGoalFilterOnTrack.
+  ///
+  /// In en, this message translates to:
+  /// **'On track'**
+  String get plGoalFilterOnTrack;
+
+  /// No description provided for @plGoalArchiveNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Reached and abandoned goals aren\'t here — they\'re in the Archive.'**
+  String get plGoalArchiveNote;
+
+  /// No description provided for @plGoalNoneNeed.
+  ///
+  /// In en, this message translates to:
+  /// **'No goals need attention'**
+  String get plGoalNoneNeed;
+
+  /// No description provided for @plGoalNoneOnTrack.
+  ///
+  /// In en, this message translates to:
+  /// **'No goals are on track'**
+  String get plGoalNoneOnTrack;
+
+  /// No description provided for @plGoalShowAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Show all'**
+  String get plGoalShowAll;
+
+  /// No description provided for @plGoalRowA11y.
+  ///
+  /// In en, this message translates to:
+  /// **'{option}, {count, plural, one{{count} goal} other{{count} goals}}'**
+  String plGoalRowA11y(Object option, int count);
+
   /// No description provided for @goalPerMonth.
   ///
   /// In en, this message translates to:

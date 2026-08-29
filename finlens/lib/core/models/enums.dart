@@ -87,6 +87,14 @@ enum GoalSourceKind { account, category }
 /// income category accrues (EARNING). Labels localized — see `GoalSectionL10n`.
 enum GoalSection { saving, payingOff, waitingOn, earning }
 
+/// The Goals-tab header filter (Planner §1). A view-only lens over the active
+/// goal list — it removes cards and empties sections, but never reorders, never
+/// touches money, and is never persisted. `all` is the default and shows every
+/// goal; the split runs off `GoalMetrics.needsAttention`, the same key the sort
+/// already uses, so the filter can never drift from the sort. Lives in `core`
+/// so `AppStore`'s filtered getters can name it without importing a feature.
+enum GoalFilter { all, needsAttention, onTrack }
+
 /// Spec 6.2 — nothing with history is truly deleted; it is archived.
 enum GoalStatus { active, reached, abandoned }
 

@@ -2406,6 +2406,89 @@ class AppLocalizationsTk extends AppLocalizations {
   }
 
   @override
+  String get plGoalFilterButton => 'Maksat süzgüçi';
+
+  @override
+  String plGoalScopeAllSome(int n, int m) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n maksat',
+      one: '$n maksat',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      m,
+      locale: localeName,
+      other: '$m üns talap edýär',
+      one: '$m üns talap edýär',
+    );
+    return '$_temp0 · $_temp1';
+  }
+
+  @override
+  String plGoalScopeAllNone(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n maksat',
+      one: '$n maksat',
+    );
+    return '$_temp0 · ählisi meýilnamada';
+  }
+
+  @override
+  String get plGoalScopeOneAttention => '1 maksat · üns talap edýär';
+
+  @override
+  String get plGoalScopeOneOnTrack => '1 maksat · meýilnamada';
+
+  @override
+  String plGoalScopeNeeds(int m, int n) {
+    return 'Üns talap edýär · $n maksatdan $m';
+  }
+
+  @override
+  String plGoalScopeOnTrack(int k, int n) {
+    return 'Meýilnamada · $n maksatdan $k';
+  }
+
+  @override
+  String get plGoalStatus => 'ÝAGDAÝ';
+
+  @override
+  String get plGoalFilterAll => 'Ählisi';
+
+  @override
+  String get plGoalFilterNeeds => 'Üns talap edýär';
+
+  @override
+  String get plGoalFilterOnTrack => 'Meýilnamada';
+
+  @override
+  String get plGoalArchiveNote =>
+      'Ýetilen we ýüz öwrülen maksatlar bu ýerde däl — Arhiwde.';
+
+  @override
+  String get plGoalNoneNeed => 'Üns talap edýän maksat ýok';
+
+  @override
+  String get plGoalNoneOnTrack => 'Meýilnamada barýan maksat ýok';
+
+  @override
+  String get plGoalShowAll => 'Ählisini görkez';
+
+  @override
+  String plGoalRowA11y(Object option, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count maksat',
+      one: '$count maksat',
+    );
+    return '$option, $_temp0';
+  }
+
+  @override
   String goalPerMonth(Object amount) {
     return 'aýda $amount';
   }

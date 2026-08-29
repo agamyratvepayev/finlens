@@ -22,6 +22,7 @@ import 'goal_detail_screen.dart';
 import 'goal_presentation.dart';
 import 'schedule_horizon.dart';
 import 'schedule_tab.dart';
+import 'widgets/goal_scope_sheet.dart';
 import 'widgets/month_picker_sheet.dart';
 
 /// Spec 5 вЂ” the forward-looking module. Three tabs, each answering its own
@@ -45,6 +46,11 @@ class _PlannerScreenState extends State<PlannerScreen> {
   /// writes `_month`, `store.period` or anything global.
   ScheduleHorizon _horizon = ScheduleHorizon.fallback;
 
+  /// Goals' own header filter (§1). Sits beside `_month`: it is Goals' alone,
+  /// survives a tab switch within the session, resets on relaunch (no
+  /// persistence), and never touches `_month`, `store.period` or any other tab.
+  GoalFilter _goalFilter = GoalFilter.all;
+
   void _stepTab(int delta) =>
       setState(() => _tab = (_tab + delta + 3) % 3);
 
@@ -65,6 +71,40 @@ class _PlannerScreenState extends State<PlannerScreen> {
     if (picked != null) setState(() => _horizon = picked);
   }
 
+  Future<void> _openGoalScopeSheet(BuildContext context) async {
+    final picked = await showGoalScopeSheet(
+      context,
+      current: _goalFilter,
+      counts: StoreScope.read(context).goalFilterCounts(),
+    );
+    if (picked != null) setState(() => _goalFilter = picked);
+  }
+
+  /// Row 1's leading control per tab. Budgets shows the month; Schedule shows
+  /// the horizon; Goals shows the filter scope — unless there are no goals, when
+  /// the slot is empty and the tab shows its EmptyState instead (§1/§5).
+  Widget _titleWidget(BuildContext context, AppStore store) => switch (_tab) {
+        0 => _MonthControl(
+            month: _month,
+            onTap: () => showPlannerMonthPicker(
+              context,
+              initial: _month,
+              onPick: (m) => setState(() => _month = m),
+            ),
+          ),
+        2 => ScheduleControl(
+            horizon: _horizon,
+            onTap: () => _openHorizonSheet(context),
+          ),
+        _ => store.goals.isEmpty
+            ? const SizedBox.shrink()
+            : GoalScopeControl(
+                filter: _goalFilter,
+                counts: store.goalFilterCounts(),
+                onTap: () => _openGoalScopeSheet(context),
+              ),
+      };
+
   @override
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
@@ -74,24 +114,11 @@ class _PlannerScreenState extends State<PlannerScreen> {
       bottom: false,
       child: Column(
         children: [
-          // Row 1 вЂ” the period is the title. Budgets shows the month control;
-          // Goals and Schedule have no scope to set, so the slot is empty.
+          // Row 1 вЂ” the period is the title. Budgets shows the month control,
+          // Schedule the horizon, Goals the filter scope; only an empty goal
+          // list leaves the slot empty (§1).
           ScreenHeader(
-            titleWidget: _tab == 0
-                ? _MonthControl(
-                    month: _month,
-                    onTap: () => showPlannerMonthPicker(
-                      context,
-                      initial: _month,
-                      onPick: (m) => setState(() => _month = m),
-                    ),
-                  )
-                : _tab == 2
-                    ? ScheduleControl(
-                        horizon: _horizon,
-                        onTap: () => _openHorizonSheet(context),
-                      )
-                    : const SizedBox.shrink(),
+            titleWidget: _titleWidget(context, store),
             onAdd: () {
               // Goals use their own full-screen form (the WATCHING picker and
               // targetв†”date pair don't fit the numeric-hero sheet); the other
@@ -159,7 +186,11 @@ class _PlannerScreenState extends State<PlannerScreen> {
       };
 
   Widget _content(AppStore store) => switch (_tab) {
-        1 => _GoalsTab(store: store),
+        1 => _GoalsTab(
+            store: store,
+            filter: _goalFilter,
+            onShowAll: () => setState(() => _goalFilter = GoalFilter.all),
+          ),
         2 => ScheduleTab(
             store: store,
             horizon: _horizon,
@@ -770,16 +801,24 @@ class _NoBudgetRow extends StatelessWidget {
 // and carries its own total on the right вЂ” no goal count, no summary block.
 
 class _GoalsTab extends StatelessWidget {
-  const _GoalsTab({required this.store});
+  const _GoalsTab({
+    required this.store,
+    required this.filter,
+    required this.onShowAll,
+  });
 
   final AppStore store;
+  final GoalFilter filter;
+  final VoidCallback onShowAll;
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final sections = store.activeGoalSections;
 
-    if (sections.isEmpty) {
+    // The real "no goals yet" state is unchanged — it owns the New goal button
+    // and the header slot is empty above it (§5). It is keyed on the whole goal
+    // list, never the filtered one.
+    if (store.goals.isEmpty) {
       return Padding(
         padding: const EdgeInsets.only(top: 56),
         child: EmptyState(
@@ -799,6 +838,15 @@ class _GoalsTab extends StatelessWidget {
       );
     }
 
+    final sections = store.activeGoalSections(filter: filter);
+
+    // The filter matched nothing — the user fixed the last goal in this scope
+    // (§3.3). Name the filter and offer a way back; never the EmptyState, which
+    // would falsely claim the user has no goals and offer a New goal button.
+    if (sections.isEmpty) {
+      return _EmptyFilterState(filter: filter, onShowAll: onShowAll);
+    }
+
     return ListView(
       padding: const EdgeInsets.only(bottom: Insets.xxl),
       children: [
@@ -810,7 +858,7 @@ class _GoalsTab extends StatelessWidget {
               style: AppText.label.copyWith(color: AppColors.textSecondary),
             ),
           ),
-          for (final g in store.sortedGoalsInSection(section))
+          for (final g in store.sortedGoalsInSection(section, filter: filter))
             _GoalCard(store: store, goal: g),
         ],
       ],
@@ -818,9 +866,11 @@ class _GoalsTab extends StatelessWidget {
   }
 
   /// Each header carries its own total, formatted per section вЂ” `$2,000 of
-  /// $3,700`, `$3,877 left`, `$3,000 owed` (В§2).
+  /// $3,700`, `$3,877 left`, `$3,000 owed` (В§2). The sums recompute over the
+  /// visible goals under [filter], so a header never carries an unfiltered total
+  /// above a filtered card (§3.2).
   String _sectionTotal(AppLocalizations l, AppStore store, GoalSection s) {
-    final sums = store.goalSectionSums(s);
+    final sums = store.goalSectionSums(s, filter: filter);
     switch (s) {
       case GoalSection.saving:
       case GoalSection.earning:
@@ -830,6 +880,53 @@ class _GoalsTab extends StatelessWidget {
       case GoalSection.waitingOn:
         return l.goalOwedTotal(money(sums.current));
     }
+  }
+}
+
+/// The filter matched no goal (§3.3) — a filter the user reached by fixing the
+/// last goal in scope. One muted line naming the filter and a `Show all ›` back
+/// to the unfiltered list. Never the tab's EmptyState, which would claim the
+/// user has no goals at all.
+class _EmptyFilterState extends StatelessWidget {
+  const _EmptyFilterState({required this.filter, required this.onShowAll});
+
+  final GoalFilter filter;
+  final VoidCallback onShowAll;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final message = filter == GoalFilter.needsAttention
+        ? l.plGoalNoneNeed
+        : l.plGoalNoneOnTrack;
+    return Padding(
+      padding: const EdgeInsets.only(top: 56),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            message,
+            textAlign: TextAlign.center,
+            style: AppText.rowSubtitle.copyWith(color: AppColors.textSecondary),
+          ),
+          const SizedBox(height: Insets.sm),
+          TextButton(
+            onPressed: onShowAll,
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.accentLight,
+              visualDensity: VisualDensity.compact,
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(l.plGoalShowAll),
+                const Icon(Icons.chevron_right_rounded, size: 18),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
