@@ -163,8 +163,6 @@ class TxnRow extends StatelessWidget {
     // row is two lines, not three.
     final hasLine2 = account.isNotEmpty || secondary != null;
 
-    final scaler = MediaQuery.textScalerOf(context);
-
     return Semantics(
       label: _standardSemantics(l, store, signed, account, balance),
       excludeSemantics: true,
@@ -188,13 +186,13 @@ class TxnRow extends StatelessWidget {
                     TitleTagRow(
                       title: _highlighted(title, _titleStyle),
                       titleWidth:
-                          TitleTagRow.measure(title, _titleStyle, scaler),
+                          TitleTagRow.measure(context, title, _titleStyle),
                       tags: store.tagNames(txn.tagIds),
                       tagStyle: _tagStyle,
                       buildTag: (run) => _highlighted(run, _tagStyle),
                       trailing: amount,
                       trailingWidth: TitleTagRow.measure(
-                          amountStr, AppText.amount, scaler),
+                          context, amountStr, AppText.amount),
                     ),
                     if (hasLine2) ...[
                       const SizedBox(height: 1),
@@ -257,7 +255,6 @@ class TxnRow extends StatelessWidget {
     }
 
     final titleStyle = _titleStyle.copyWith(color: AppColors.transferAmount);
-    final scaler = MediaQuery.textScalerOf(context);
 
     return Semantics(
       label: _transferSemantics(l, store, parties, balance),
@@ -279,13 +276,13 @@ class TxnRow extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis),
                   titleWidth:
-                      TitleTagRow.measure(parties.from, titleStyle, scaler),
+                      TitleTagRow.measure(context, parties.from, titleStyle),
                   tags: store.tagNames(txn.tagIds),
                   tagStyle: _tagStyle,
                   buildTag: (run) => _highlighted(run, _tagStyle),
                   trailing: amount,
                   trailingWidth:
-                      TitleTagRow.measure(amountStr, AppText.amount, scaler),
+                      TitleTagRow.measure(context, amountStr, AppText.amount),
                 ),
                 const SizedBox(height: 1),
                 // ↘ destination + secondary. The destination takes the
@@ -353,8 +350,6 @@ class TxnRow extends StatelessWidget {
         balance == null ? null : _balanceWidget(store, balance);
     final hasLine2 = line2Left != null || line2Right != null;
 
-    final scaler = MediaQuery.textScalerOf(context);
-
     return Semantics(
       label: _transferSemantics(l, store, parties, balance),
       excludeSemantics: true,
@@ -373,13 +368,13 @@ class TxnRow extends StatelessWidget {
                       style: _titleStyle,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis),
-                  titleWidth: TitleTagRow.measure(other, _titleStyle, scaler),
+                  titleWidth: TitleTagRow.measure(context, other, _titleStyle),
                   tags: store.tagNames(txn.tagIds),
                   tagStyle: _tagStyle,
                   buildTag: (run) => _highlighted(run, _tagStyle),
                   trailing: amountTop,
                   trailingWidth:
-                      TitleTagRow.measure(amountStr, AppText.amount, scaler),
+                      TitleTagRow.measure(context, amountStr, AppText.amount),
                 ),
                 if (hasLine2) ...[
                   const SizedBox(height: 1),

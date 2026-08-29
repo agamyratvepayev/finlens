@@ -70,22 +70,28 @@ class TitleTagRow extends StatelessWidget {
   /// Gap between the title and its tag — a single space's worth.
   final double tagGap;
 
-  /// Natural single-line width of [s] in [style] at the ambient [scaler].
-  /// Identical to the row's own render path, so the measurement is exact.
-  static double measure(String s, TextStyle style, TextScaler scaler) {
+  /// Natural single-line width of [s] as it will actually render here.
+  ///
+  /// Resolves the ambient [DefaultTextStyle] first: a [Text] merges its style
+  /// into that unless `inherit` is false (nothing in this app sets it), so
+  /// measuring the bare [style] misses whatever the theme contributes —
+  /// letter-spacing above all — and the caller then sizes the title region a
+  /// few pixels short, ellipsizing the title with slack still beside it. The
+  /// text scaler and direction come from the same [context] too, so the
+  /// measurement matches the render exactly.
+  static double measure(BuildContext context, String s, TextStyle style) {
+    final effective = DefaultTextStyle.of(context).style.merge(style);
     final tp = TextPainter(
-      text: TextSpan(text: s, style: style),
-      textDirection: TextDirection.ltr,
+      text: TextSpan(text: s, style: effective),
+      textDirection: Directionality.of(context),
       maxLines: 1,
-      textScaler: scaler,
+      textScaler: MediaQuery.textScalerOf(context),
     )..layout();
     return tp.size.width;
   }
 
   @override
   Widget build(BuildContext context) {
-    final scaler = MediaQuery.textScalerOf(context);
-
     return LayoutBuilder(
       builder: (context, constraints) {
         final avail = constraints.maxWidth;
@@ -97,11 +103,11 @@ class TitleTagRow extends StatelessWidget {
         if (tags.isNotEmpty) {
           final runs = tagRunText(tags);
           final budget = region - titleWidth - tagGap;
-          final fullW = measure(runs.full, tagStyle, scaler);
+          final fullW = measure(context, runs.full, tagStyle);
           if (fullW <= budget) {
             run = runs.full;
           } else {
-            final collapsedW = measure(runs.collapsed, tagStyle, scaler);
+            final collapsedW = measure(context, runs.collapsed, tagStyle);
             if (collapsedW <= budget) run = runs.collapsed;
           }
           // Otherwise run stays null: no room for even the collapsed tag beside

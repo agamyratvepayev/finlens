@@ -416,10 +416,9 @@ class LedgerTxnRow extends StatelessWidget {
     // both screens. The width plumbing below feeds TitleTagRow's measure-first
     // layout, whose rule is the OPPOSITE of the meta line's: the title lays out
     // whole and the tag collapses/drops before the title ellipsizes.
-    final scaler = MediaQuery.textScalerOf(context);
     // The title region must reserve the no-cash pill too, or the tag would eat
     // into it: gap(6) + horizontal padding(5+5) + the pill's own text width.
-    var titleWidth = TitleTagRow.measure(category, titleStyle, scaler);
+    var titleWidth = TitleTagRow.measure(context, category, titleStyle);
     if (!txn.movesCash) {
       const pillStyle = TextStyle(
         fontSize: 9.5,
@@ -428,7 +427,7 @@ class LedgerTxnRow extends StatelessWidget {
         height: 1.2,
       );
       final pillText = AppLocalizations.of(context).ldgNoCash.toUpperCase();
-      titleWidth += 6 + 10 + TitleTagRow.measure(pillText, pillStyle, scaler);
+      titleWidth += 6 + 10 + TitleTagRow.measure(context, pillText, pillStyle);
     }
 
     // When the description is closed and the balance is legible, it pairs with
@@ -445,9 +444,10 @@ class LedgerTxnRow extends StatelessWidget {
             ],
           )
         : amountWidget;
-    var trailingWidth = TitleTagRow.measure(amountStr, amountTextStyle, scaler);
+    var trailingWidth = TitleTagRow.measure(context, amountStr, amountTextStyle);
     if (showBalanceInline) {
-      trailingWidth += 6 + TitleTagRow.measure(balance0, balanceTextStyle, scaler);
+      trailingWidth +=
+          6 + TitleTagRow.measure(context, balance0, balanceTextStyle);
     }
     final tagStyle = metaStyle.copyWith(color: AppColors.tagDot);
 
@@ -732,7 +732,6 @@ class LedgerTxnRow extends StatelessWidget {
     // Line 1 carries the tag on the title line under the same yield order as
     // the standard row: the counterpart/source title wins, the tag rides the
     // slack before the amount and collapses/drops before the title ellipsizes.
-    final scaler = MediaQuery.textScalerOf(context);
     const tagStyle = TextStyle(
       fontSize: 11.5,
       height: 1.2,
@@ -811,14 +810,14 @@ class LedgerTxnRow extends StatelessWidget {
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis),
                               titleWidth: TitleTagRow.measure(
-                                  line1Text, line1Style, scaler),
+                                  context, line1Text, line1Style),
                               tags: store.tagNames(txn.tagIds),
                               tagStyle: tagStyle,
                               buildTag: (run) =>
                                   _highlighted(run, tagStyle, query: highlight),
                               trailing: amountTop,
                               trailingWidth: TitleTagRow.measure(
-                                  amountTopStr, amountStyle, scaler),
+                                  context, amountTopStr, amountStyle),
                               trailingGap: 10,
                             ),
                             // Line 2 can vanish entirely — a tag-less, note-less

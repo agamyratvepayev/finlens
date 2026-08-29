@@ -71,6 +71,7 @@ Future<void> _pumpTxnRow(
   AppStore store,
   Txn txn, {
   double width = 390,
+  String? searchQuery,
 }) async {
   // The row resolves tag ids → names through the store; reify the authored
   // names into real tags so the ids resolve.
@@ -86,6 +87,7 @@ Future<void> _pumpTxnRow(
             width: width,
             child: TxnRow(
               txn: txn,
+              searchQuery: searchQuery,
               onTap: () {},
               onEdit: () {},
               onCopy: () {},
@@ -191,19 +193,18 @@ void main() {
               child: SizedBox(
                 width: width,
                 child: Builder(builder: (context) {
-                  final s = MediaQuery.textScalerOf(context);
                   return TitleTagRow(
                     title: const Text('Groceries',
                         maxLines: 1, overflow: TextOverflow.ellipsis,
                         style: titleStyle),
                     titleWidth:
-                        TitleTagRow.measure('Groceries', titleStyle, s),
+                        TitleTagRow.measure(context, 'Groceries', titleStyle),
                     tags: tags,
                     tagStyle: tagStyle,
                     buildTag: (run) => Text(run, style: tagStyle),
                     trailing: const Text(r'$120', style: amountStyle),
                     trailingWidth:
-                        TitleTagRow.measure(r'$120', amountStyle, s),
+                        TitleTagRow.measure(context, r'$120', amountStyle),
                   );
                 }),
               ),
@@ -221,12 +222,18 @@ void main() {
 
     testWidgets('collapses to "#first +n" when tight, and the title keeps its '
         'full natural width', (tester) async {
-      const scaler = TextScaler.noScaling;
-      final titleW = TitleTagRow.measure('Groceries', titleStyle, scaler);
-      final trailW = TitleTagRow.measure(r'$120', amountStyle, scaler);
+      // Measure against a real element so the ambient DefaultTextStyle — which
+      // the widget merges into its own style before rendering — is the one the
+      // measurement sees too. A first pump at a comfortable width provides that
+      // context; measured widths do not depend on the constraint, so we then
+      // re-pump at the derived boundary width.
+      await tester.pumpWidget(harness(600));
+      final ctx = tester.element(find.byType(TitleTagRow));
+      final titleW = TitleTagRow.measure(ctx, 'Groceries', titleStyle);
+      final trailW = TitleTagRow.measure(ctx, r'$120', amountStyle);
       final fullW =
-          TitleTagRow.measure('#fun #weekend #split', tagStyle, scaler);
-      final collapsedW = TitleTagRow.measure('#fun +2', tagStyle, scaler);
+          TitleTagRow.measure(ctx, '#fun #weekend #split', tagStyle);
+      final collapsedW = TitleTagRow.measure(ctx, '#fun +2', tagStyle);
       // Pick a budget squarely between the two runs, then back out the width
       // (SizedBox width == avail here; no icon/padding around it).
       final budget = (collapsedW + fullW) / 2;
@@ -241,6 +248,16 @@ void main() {
       // make room for the tag (the opposite of the meta line's order).
       expect(tester.getSize(find.text('Groceries')).width,
           closeTo(titleW, 1.0));
+      // And it did not ellipsize: the box holding a whole title must never clip
+      // its glyphs to fit a tag beside it. This is the assertion that the old
+      // box-width-only check missed — it measured the cage, not the bird.
+      expect(
+        tester
+            .renderObject<RenderParagraph>(find.text('Groceries'))
+            .didExceedMaxLines,
+        isFalse,
+        reason: 'the title must never ellipsize to make room for a tag',
+      );
     });
 
     testWidgets('drops the tag entirely rather than truncating the title',
@@ -381,18 +398,18 @@ void main() {
               child: SizedBox(
                 width: width,
                 child: Builder(builder: (context) {
-                  final s = MediaQuery.textScalerOf(context);
                   return TitleTagRow(
                     title: Text(title,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: titleStyle),
-                    titleWidth: TitleTagRow.measure(title, titleStyle, s),
+                    titleWidth: TitleTagRow.measure(context, title, titleStyle),
                     tags: tags,
                     tagStyle: tagStyle,
                     buildTag: (run) => Text(run, style: tagStyle),
                     trailing: Text(amount, style: amountStyle),
-                    trailingWidth: TitleTagRow.measure(amount, amountStyle, s),
+                    trailingWidth:
+                        TitleTagRow.measure(context, amount, amountStyle),
                   );
                 }),
               ),
@@ -414,8 +431,10 @@ void main() {
       expect(find.text('#fun'), findsOneWidget);
       expect(ellipsized(tester, 'Entertainment'), isFalse);
       // Rendered at its full natural width — not pinned short by a measurement.
-      final natural =
-          TitleTagRow.measure('Entertainment', titleStyle, TextScaler.noScaling);
+      // Measured against the row's own element, so the ambient style the render
+      // merges in is the one the measurement sees.
+      final ctx = tester.element(find.byType(TitleTagRow));
+      final natural = TitleTagRow.measure(ctx, 'Entertainment', titleStyle);
       expect(tester.getSize(find.text('Entertainment')).width,
           closeTo(natural, 1.0));
     });
@@ -448,8 +467,10 @@ void main() {
       expect(find.text('Entertainment'), findsOneWidget);
       expect(find.text('#fun'), findsOneWidget);
       expect(ellipsized(tester, 'Entertainment'), isFalse);
-      final natural =
-          TitleTagRow.measure('Entertainment', titleStyle, scale);
+      // The scaler now rides on the widget's own context (MediaQuery 1.3x), so
+      // measuring against that element scales exactly as the render does.
+      final ctx = tester.element(find.byType(TitleTagRow));
+      final natural = TitleTagRow.measure(ctx, 'Entertainment', titleStyle);
       expect(tester.getSize(find.text('Entertainment')).width,
           closeTo(natural, 1.0));
     });
@@ -469,6 +490,75 @@ void main() {
           title: 'Entertainment', tags: const [], scaler: scale));
       expect(find.text('Entertainment'), findsOneWidget);
       expect(ellipsized(tester, 'Entertainment'), isFalse);
+    });
+  });
+
+  // ── The reported bug, exercised through a real TxnRow under AppTheme.dark —
+  //    where the ambient bodyMedium letter-spacing that the render adds (and
+  //    the old bare measurement missed) actually applies. ─────────────────────
+  group('the reported bug — a tagged title renders whole (AppTheme.dark)', () {
+    testWidgets('"Entertainment" + #fun is not truncated at 390pt',
+        (tester) async {
+      await _pumpTxnRow(tester, _store(category: 'Entertainment'),
+          _expense(tags: const ['fun']), width: 390);
+      expect(find.text('Entertainment'), findsOneWidget);
+      expect(find.text('#fun'), findsOneWidget);
+      final para =
+          tester.renderObject<RenderParagraph>(find.text('Entertainment'));
+      expect(para.didExceedMaxLines, isFalse,
+          reason:
+              'a category name must never ellipsize to make room for a tag');
+    });
+
+    testWidgets('a search-highlighted tagged title (Text.rich) is not truncated',
+        (tester) async {
+      await _pumpTxnRow(tester, _store(category: 'Entertainment'),
+          _expense(tags: const ['fun']),
+          width: 390, searchQuery: 'enter');
+      // Highlighting swaps the plain Text for a Text.rich of spans with the same
+      // base style, so the merged measurement still governs. It must not clip.
+      final title = find.textContaining('Entertainment');
+      expect(title, findsOneWidget);
+      expect(find.text('#fun'), findsOneWidget);
+      expect(tester.renderObject<RenderParagraph>(title).didExceedMaxLines,
+          isFalse);
+    });
+  });
+
+  // ── The unit test of the fix itself: a merged measurement is wider than a
+  //    bare one whenever the ambient style contributes letter-spacing. This is
+  //    the exact defect — the old bare TextPainter under-measured the title. ──
+  group('measure resolves the ambient DefaultTextStyle', () {
+    testWidgets('merged width exceeds the bare width under ambient '
+        'letter-spacing', (tester) async {
+      const ambient = TextStyle(fontSize: 14, letterSpacing: 4);
+      const local = TextStyle(fontSize: 14, fontWeight: FontWeight.w600);
+      late BuildContext ctx;
+      await tester.pumpWidget(Directionality(
+        textDirection: TextDirection.ltr,
+        child: MediaQuery(
+          data: const MediaQueryData(),
+          child: DefaultTextStyle(
+            style: ambient,
+            child: Builder(builder: (c) {
+              ctx = c;
+              return const SizedBox.shrink();
+            }),
+          ),
+        ),
+      ));
+      // measure merges the ambient (letterSpacing 4) into `local`, as Text does.
+      final merged = TitleTagRow.measure(ctx, 'Entertainment', local);
+      // The old path: the bare style alone, no ambient — narrower by the
+      // letter-spacing the render adds to every glyph.
+      final bare = (TextPainter(
+        text: const TextSpan(text: 'Entertainment', style: local),
+        textDirection: TextDirection.ltr,
+        maxLines: 1,
+      )..layout())
+          .size
+          .width;
+      expect(merged, greaterThan(bare));
     });
   });
 }
