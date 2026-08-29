@@ -276,7 +276,10 @@ class GoalDetailScreen extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.fromLTRB(Insets.gutter, 0, Insets.gutter, Insets.lg),
       child: AppCard(
-        padding: const EdgeInsets.all(Insets.lg),
+        // §2 — vertical space trimmed (top 16→14, bottom 16→7) to take the card
+        // from ~116 to ~90. Horizontal padding stays Insets.lg so the card's
+        // width and the three columns' geometry are byte-identical to before.
+        padding: const EdgeInsets.fromLTRB(Insets.lg, 14, Insets.lg, 7),
         child: Column(
           children: [
             // §4a — the three columns spread to their own edges (left / centre /
@@ -299,7 +302,10 @@ class GoalDetailScreen extends StatelessWidget {
               ],
             ),
             const Padding(
-              padding: EdgeInsets.symmetric(vertical: Insets.md),
+              // §2.1/§2.2 — was a symmetric 12 both sides; now asymmetric so the
+              // space comes out of the verdict row: 11pt above the rule (value→
+              // divider) and 6pt below it (divider→verdict).
+              padding: EdgeInsets.only(top: 11, bottom: 6),
               child: RowDivider(indent: 0),
             ),
             // §4b — centred beneath the divider, matching the Budgets summary's
@@ -309,7 +315,10 @@ class GoalDetailScreen extends StatelessWidget {
               child: Text(
                 _averagingLine(l, m),
                 textAlign: TextAlign.center,
-                style: AppText.caption.copyWith(fontSize: 12),
+                // §2.2 — 12.5pt with an explicit 15pt line box (was 12pt on
+                // caption's implicit 1.3 leading). The half-point keeps the row
+                // legible while its clearance above the divider drops to 6pt.
+                style: AppText.caption.copyWith(fontSize: 12.5, height: 15 / 12.5),
               ),
             ),
           ],
@@ -861,13 +870,20 @@ class _Col extends StatelessWidget {
       child: Column(
         crossAxisAlignment: align,
         children: [
-          Text(label.toUpperCase(), style: AppText.label, textAlign: _textAlign),
-          const SizedBox(height: 4),
+          // §2.1 — line heights set explicitly (caps key 12, value 21) rather
+          // than left to default leading; that implicit leading is what made the
+          // block measure taller than its padding. Font size, weight, spacing
+          // and colour are untouched.
+          Text(label.toUpperCase(),
+              style: AppText.label.copyWith(height: 12 / 11),
+              textAlign: _textAlign),
+          const SizedBox(height: 3),
           Text(
             value,
             textAlign: _textAlign,
             style: AppText.rowTitle.copyWith(
               fontSize: 14,
+              height: 21 / 14,
               color: color ?? AppColors.textPrimary,
             ),
           ),
