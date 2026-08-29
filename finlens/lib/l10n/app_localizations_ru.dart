@@ -2348,6 +2348,21 @@ class AppLocalizationsRu extends AppLocalizations {
   String get rsEveryYear => 'Каждый год';
 
   @override
+  String get rsShortWeekly => 'еженедельно';
+
+  @override
+  String get rsShortBiweekly => 'раз в 2 недели';
+
+  @override
+  String get rsShortMonthly => 'ежемесячно';
+
+  @override
+  String get rsShortQuarterly => 'ежеквартально';
+
+  @override
+  String get rsShortYearly => 'ежегодно';
+
+  @override
   String rsSummary(Object cadence, Object date) {
     return 'Повтор: $cadence, с $date. Управляется в Планировщике.';
   }

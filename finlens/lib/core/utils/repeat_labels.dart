@@ -51,6 +51,30 @@ String repeatCadenceLabel(
   }
 }
 
+/// The row-sized cadence: the frequency alone, no day detail.
+///
+/// `repeatCadenceLabel` answers "when exactly" ("Every month on the 7th") and
+/// belongs on a form row that owns its whole line; a task row has a date, a
+/// relative label and an account to print first, so it gets the frequency word
+/// and nothing else. The day detail is not lost — it lives on the Task detail
+/// screen's subtitle. See the Schedule spec §4.2.
+String repeatShortLabel(RepeatFrequency freq, AppLocalizations l) {
+  switch (freq) {
+    case RepeatFrequency.none:
+      return l.repeatNever;
+    case RepeatFrequency.weekly:
+      return l.rsShortWeekly;
+    case RepeatFrequency.biweekly:
+      return l.rsShortBiweekly;
+    case RepeatFrequency.monthly:
+      return l.rsShortMonthly;
+    case RepeatFrequency.quarterly:
+      return l.rsShortQuarterly;
+    case RepeatFrequency.yearly:
+      return l.rsShortYearly;
+  }
+}
+
 /// The Repeat button's short label — the day-aware cadence, or "Repeat" when
 /// the frequency is off.
 String repeatButtonLabel(

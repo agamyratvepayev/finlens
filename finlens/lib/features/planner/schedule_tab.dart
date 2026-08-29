@@ -424,7 +424,7 @@ class _TaskRow extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 1),
-                  _subtitle(context, l, overdue, account),
+                  _subtitle(l, overdue, account),
                 ],
               ),
             ),
@@ -453,51 +453,57 @@ class _TaskRow extends StatelessWidget {
     );
   }
 
-  Widget _subtitle(BuildContext context, AppLocalizations l, bool overdue,
-      String? account) {
+  /// One unbreakable line: `date · [N late ·] account [ · won't cover] ⟳ freq`.
+  ///
+  /// It is a single [Text.rich] with [TextOverflow.ellipsis] on purpose — there
+  /// are no rigid siblings to push past the edge, so a stripe is structurally
+  /// impossible, and truncation lands at the line's end, cutting the cadence
+  /// footnote before the account name (§4.2). The cadence is the frequency word
+  /// only ([repeatShortLabel]); the long "on the 7th" form lives on the Task
+  /// detail screen.
+  Widget _subtitle(AppLocalizations l, bool overdue, String? account) {
     final subColor = overdue ? AppColors.negative : AppColors.textSecondary;
+    // Overdue paints the whole line negative, cadence included; otherwise the
+    // ⟳ run keeps its tertiary tone (as before).
+    final cadenceColor = overdue ? AppColors.negative : AppColors.textTertiary;
+    final base = AppText.rowSubtitle
+        .copyWith(fontSize: 11.5, height: 1.15, color: subColor);
+    final cadenceStyle =
+        AppText.caption.copyWith(fontSize: 10.5, color: cadenceColor);
+
     final date = dayMonth(task.dueDate, l);
     final late = overdue
         ? l.schDaysLate(-task.daysUntilDue(AppStore.today))
         : null;
 
-    return Row(
-      children: [
-        Text(date, style: AppText.rowSubtitle.copyWith(fontSize: 11.5, height: 1.15, color: subColor)),
-        if (late != null) ...[
-          Text(' · ', style: AppText.rowSubtitle.copyWith(fontSize: 11.5, color: subColor)),
-          Text(late, style: AppText.rowSubtitle.copyWith(fontSize: 11.5, height: 1.15, color: subColor)),
+    return Text.rich(
+      TextSpan(
+        style: base,
+        children: [
+          TextSpan(text: date),
+          if (late != null) TextSpan(text: ' · $late'),
+          if (account != null) TextSpan(text: ' · $account'),
+          if (isBreach)
+            TextSpan(
+              text: ' · ${l.schWontCover}',
+              style: base.copyWith(
+                  fontWeight: FontWeight.w600, color: AppColors.warning),
+            ),
+          if (task.isRecurring) ...[
+            const TextSpan(text: '  '),
+            WidgetSpan(
+              alignment: PlaceholderAlignment.middle,
+              child: Icon(Icons.repeat_rounded,
+                  size: 10.5, color: cadenceColor),
+            ),
+            TextSpan(
+                text: ' ${repeatShortLabel(task.repeats, l)}',
+                style: cadenceStyle),
+          ],
         ],
-        if (account != null) ...[
-          Text(' · ', style: AppText.rowSubtitle.copyWith(fontSize: 11.5, color: subColor)),
-          Flexible(
-            child: Text(account,
-                style: AppText.rowSubtitle
-                    .copyWith(fontSize: 11.5, height: 1.15, color: subColor),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis),
-          ),
-        ],
-        if (isBreach) ...[
-          Text(' · ', style: AppText.rowSubtitle.copyWith(fontSize: 11.5, color: AppColors.warning)),
-          Text(l.schWontCover,
-              style: AppText.rowSubtitle.copyWith(
-                  fontSize: 11.5,
-                  height: 1.15,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.warning)),
-        ],
-        if (task.isRecurring) ...[
-          const SizedBox(width: 5),
-          const Icon(Icons.repeat_rounded, size: 11, color: AppColors.textTertiary),
-          const SizedBox(width: 3),
-          Text(
-            repeatCadenceLabel(task.repeats, task.weekdays, task.daysOfMonth,
-                task.dueDate, l),
-            style: AppText.caption.copyWith(fontSize: 10.5, color: AppColors.textTertiary),
-          ),
-        ],
-      ],
+      ),
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
     );
   }
 

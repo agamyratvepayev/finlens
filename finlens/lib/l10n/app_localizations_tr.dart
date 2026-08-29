@@ -2290,6 +2290,21 @@ class AppLocalizationsTr extends AppLocalizations {
   String get rsEveryYear => 'Her yıl';
 
   @override
+  String get rsShortWeekly => 'haftalık';
+
+  @override
+  String get rsShortBiweekly => '2 haftada bir';
+
+  @override
+  String get rsShortMonthly => 'aylık';
+
+  @override
+  String get rsShortQuarterly => 'üç aylık';
+
+  @override
+  String get rsShortYearly => 'yıllık';
+
+  @override
   String rsSummary(Object cadence, Object date) {
     return '$cadence tekrarlar, $date tarihinden itibaren. Planlayıcı\'da yönetilir.';
   }

@@ -3702,6 +3702,36 @@ abstract class AppLocalizations {
   /// **'Every year'**
   String get rsEveryYear;
 
+  /// No description provided for @rsShortWeekly.
+  ///
+  /// In en, this message translates to:
+  /// **'weekly'**
+  String get rsShortWeekly;
+
+  /// No description provided for @rsShortBiweekly.
+  ///
+  /// In en, this message translates to:
+  /// **'every 2 weeks'**
+  String get rsShortBiweekly;
+
+  /// No description provided for @rsShortMonthly.
+  ///
+  /// In en, this message translates to:
+  /// **'monthly'**
+  String get rsShortMonthly;
+
+  /// No description provided for @rsShortQuarterly.
+  ///
+  /// In en, this message translates to:
+  /// **'quarterly'**
+  String get rsShortQuarterly;
+
+  /// No description provided for @rsShortYearly.
+  ///
+  /// In en, this message translates to:
+  /// **'yearly'**
+  String get rsShortYearly;
+
   /// No description provided for @rsSummary.
   ///
   /// In en, this message translates to:

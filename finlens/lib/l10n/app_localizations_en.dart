@@ -2299,6 +2299,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get rsEveryYear => 'Every year';
 
   @override
+  String get rsShortWeekly => 'weekly';
+
+  @override
+  String get rsShortBiweekly => 'every 2 weeks';
+
+  @override
+  String get rsShortMonthly => 'monthly';
+
+  @override
+  String get rsShortQuarterly => 'quarterly';
+
+  @override
+  String get rsShortYearly => 'yearly';
+
+  @override
   String rsSummary(Object cadence, Object date) {
     return 'Repeats $cadence, starting $date. Managed in Planner.';
   }

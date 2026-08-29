@@ -2291,6 +2291,21 @@ class AppLocalizationsTk extends AppLocalizations {
   String get rsEveryYear => 'Her ýyl';
 
   @override
+  String get rsShortWeekly => 'hepdelik';
+
+  @override
+  String get rsShortBiweekly => '2 hepdede bir';
+
+  @override
+  String get rsShortMonthly => 'aýlyk';
+
+  @override
+  String get rsShortQuarterly => 'çärýeklik';
+
+  @override
+  String get rsShortYearly => 'ýyllyk';
+
+  @override
   String rsSummary(Object cadence, Object date) {
     return '$cadence gaýtalanýar, $date-den başlap. Meýilnamada dolandyrylýar.';
   }
