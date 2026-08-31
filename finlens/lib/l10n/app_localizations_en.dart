@@ -51,6 +51,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get quickAddRebalance => 'Rebalance';
 
   @override
+  String get quickAddNewBudget => 'New Budget';
+
+  @override
   String get quickAddNewGoal => 'New Goal';
 
   @override
@@ -2228,6 +2231,20 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get qaIncomeCategory => 'Income category';
+
+  @override
+  String get qaBudgetWhichCategory => 'Budget which category?';
+
+  @override
+  String qaThisMonthSpend(Object amount) {
+    return '$amount this month';
+  }
+
+  @override
+  String get qaNothingSpentYet => 'Nothing yet';
+
+  @override
+  String get qaAllCategoriesBudgeted => 'Every category already has a budget';
 
   @override
   String get qaSearchCleared => 'Search cleared';

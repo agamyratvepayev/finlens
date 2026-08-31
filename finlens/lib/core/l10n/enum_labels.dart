@@ -27,6 +27,7 @@ extension QuickAddTypeL10n on QuickAddType {
         QuickAddType.income => l.quickAddIncome,
         QuickAddType.transfer => l.quickAddTransfer,
         QuickAddType.rebalance => l.quickAddRebalance,
+        QuickAddType.newBudget => l.quickAddNewBudget,
         QuickAddType.newGoal => l.quickAddNewGoal,
         QuickAddType.newTask => l.quickAddNewTask,
       };

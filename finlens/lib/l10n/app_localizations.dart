@@ -186,6 +186,12 @@ abstract class AppLocalizations {
   /// **'Rebalance'**
   String get quickAddRebalance;
 
+  /// No description provided for @quickAddNewBudget.
+  ///
+  /// In en, this message translates to:
+  /// **'New Budget'**
+  String get quickAddNewBudget;
+
   /// No description provided for @quickAddNewGoal.
   ///
   /// In en, this message translates to:
@@ -3539,6 +3545,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Income category'**
   String get qaIncomeCategory;
+
+  /// No description provided for @qaBudgetWhichCategory.
+  ///
+  /// In en, this message translates to:
+  /// **'Budget which category?'**
+  String get qaBudgetWhichCategory;
+
+  /// No description provided for @qaThisMonthSpend.
+  ///
+  /// In en, this message translates to:
+  /// **'{amount} this month'**
+  String qaThisMonthSpend(Object amount);
+
+  /// No description provided for @qaNothingSpentYet.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing yet'**
+  String get qaNothingSpentYet;
+
+  /// No description provided for @qaAllCategoriesBudgeted.
+  ///
+  /// In en, this message translates to:
+  /// **'Every category already has a budget'**
+  String get qaAllCategoriesBudgeted;
 
   /// No description provided for @qaSearchCleared.
   ///

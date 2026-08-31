@@ -51,6 +51,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get quickAddRebalance => 'Yeniden dengele';
 
   @override
+  String get quickAddNewBudget => 'Yeni bütçe';
+
+  @override
   String get quickAddNewGoal => 'Yeni hedef';
 
   @override
@@ -2219,6 +2222,20 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get qaIncomeCategory => 'Gelir kategorisi';
+
+  @override
+  String get qaBudgetWhichCategory => 'Hangi kategoriye bütçe?';
+
+  @override
+  String qaThisMonthSpend(Object amount) {
+    return 'bu ay $amount';
+  }
+
+  @override
+  String get qaNothingSpentYet => 'Henüz yok';
+
+  @override
+  String get qaAllCategoriesBudgeted => 'Her kategorinin zaten bir bütçesi var';
 
   @override
   String get qaSearchCleared => 'Arama temizlendi';

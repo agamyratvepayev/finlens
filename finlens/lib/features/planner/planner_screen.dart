@@ -120,9 +120,12 @@ class _PlannerScreenState extends State<PlannerScreen> {
           ScreenHeader(
             titleWidget: _titleWidget(context, store),
             onAdd: () {
-              // Goals use their own full-screen form (the WATCHING picker and
-              // targetв†”date pair don't fit the numeric-hero sheet); the other
-              // types stay on Quick Add.
+              // Each tab's + creates that tab's own thing (§5). Goals use their
+              // own full-screen form (the WATCHING picker and targetв†”date pair
+              // don't fit the numeric-hero sheet); Budgets and Schedule route
+              // through Quick Add, which intercepts newBudget into the
+              // category-first budget flow. Budgets no longer falls through to
+              // an expense form.
               if (_tab == 1) {
                 openGoalEditor(context);
                 return;
@@ -131,7 +134,7 @@ class _PlannerScreenState extends State<PlannerScreen> {
                 context,
                 type: _tab == 2
                     ? QuickAddType.newTask
-                    : QuickAddType.expense,
+                    : QuickAddType.newBudget,
               );
             },
             trailing: IconButton(

@@ -51,6 +51,9 @@ class AppLocalizationsTk extends AppLocalizations {
   String get quickAddRebalance => 'Deňagramlaşdyrma';
 
   @override
+  String get quickAddNewBudget => 'Täze býujet';
+
+  @override
   String get quickAddNewGoal => 'Täze maksat';
 
   @override
@@ -2220,6 +2223,20 @@ class AppLocalizationsTk extends AppLocalizations {
 
   @override
   String get qaIncomeCategory => 'Girdeji kategoriýasy';
+
+  @override
+  String get qaBudgetWhichCategory => 'Haýsy kategoriýa býujet?';
+
+  @override
+  String qaThisMonthSpend(Object amount) {
+    return 'şu aý $amount';
+  }
+
+  @override
+  String get qaNothingSpentYet => 'Entek ýok';
+
+  @override
+  String get qaAllCategoriesBudgeted => 'Her kategoriýanyň eýýäm býujeti bar';
 
   @override
   String get qaSearchCleared => 'Gözleg arassalandy';

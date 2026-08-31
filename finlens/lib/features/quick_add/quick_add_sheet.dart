@@ -12,6 +12,7 @@ import '../../shared/widgets/txn_row.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/app_typography.dart';
+import '../planner/edit_budget_screen.dart';
 import '../planner/edit_goal_screen.dart';
 import 'pickers.dart';
 import 'repeat_sheet.dart';
@@ -40,6 +41,12 @@ Future<void> showQuickAdd(
   if (type == QuickAddType.newGoal && editing == null && copyOf == null) {
     return openGoalEditor(context);
   }
+  // A budget is created on EditBudgetScreen, which requires a category — so like
+  // a goal it leaves the sheet, but it asks a category first (§3). Editing an
+  // existing transaction can never become a budget, hence the same guard.
+  if (type == QuickAddType.newBudget && editing == null && copyOf == null) {
+    return startNewBudgetFlow(context);
+  }
   return Navigator.of(context, rootNavigator: true).push<void>(
     MaterialPageRoute(
       fullscreenDialog: true,
@@ -51,6 +58,55 @@ Future<void> showQuickAdd(
         copyOf: copyOf,
       ),
     ),
+  );
+}
+
+/// New Budget leaves the numeric-hero sheet the way New Goal does (§3), but asks
+/// one question first: a budget needs a category. Lists expense categories that
+/// carry no budget yet — including ones with no spending this month, which is
+/// the whole point — sorted by this month's spend descending then name, and on
+/// a pick pushes [EditBudgetScreen]. Dismissing does nothing. When every
+/// category is already budgeted there is nothing to pick, so a transient
+/// snackbar replaces the empty sheet — no sheet, no editor (§6).
+///
+/// [context] must stay valid after any open Quick Add screen has been popped
+/// and must resolve to the root navigator; the type-menu caller pops Quick Add
+/// first and passes the navigator's overlay context (a descendant of the root
+/// navigator that outlives the pop) for exactly this reason.
+Future<void> startNewBudgetFlow(BuildContext context) async {
+  final store = StoreScope.read(context);
+  // "This month" is the current calendar month — the only month a budget is set
+  // for (§8) — and drives both the spend subtitle and the sort.
+  final month = DateTime(AppStore.today.year, AppStore.today.month);
+  final candidates = store.categories
+      .where((c) =>
+          c.type == CategoryType.expense &&
+          c.monthlyBudget == null &&
+          c.removedOn == null)
+      .toList()
+    ..sort((a, b) {
+      final bySpend = store
+          .spentInCategory(b.id, month)
+          .compareTo(store.spentInCategory(a.id, month));
+      return bySpend != 0
+          ? bySpend
+          : a.name.toLowerCase().compareTo(b.name.toLowerCase());
+    });
+
+  if (candidates.isEmpty) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(
+        content: Text(AppLocalizations.of(context).qaAllCategoriesBudgeted),
+      ));
+    return;
+  }
+
+  final picked =
+      await pickBudgetCategory(context, candidates: candidates, month: month);
+  if (picked == null || !context.mounted) return;
+  Navigator.of(context, rootNavigator: true).push(
+    MaterialPageRoute(builder: (_) => EditBudgetScreen(categoryId: picked.id)),
   );
 }
 
@@ -212,6 +268,8 @@ class _QuickAddScreenState extends State<QuickAddScreen>
         QuickAddType.income => _Slot.incomeCategory,
         QuickAddType.transfer => _Slot.account,
         QuickAddType.rebalance => _Slot.account,
+        // Intercepted before the sheet builds (§4); the slot is never read.
+        QuickAddType.newBudget => _Slot.none,
         QuickAddType.newGoal => _Slot.none,
         QuickAddType.newTask => _Slot.expenseCategory,
       };
@@ -221,6 +279,8 @@ class _QuickAddScreenState extends State<QuickAddScreen>
         QuickAddType.income => _Slot.account,
         QuickAddType.transfer => _Slot.account,
         QuickAddType.rebalance => _Slot.account,
+        // Intercepted before the sheet builds (§4); the slot is never read.
+        QuickAddType.newBudget => _Slot.none,
         QuickAddType.newGoal => _Slot.account,
         QuickAddType.newTask => _Slot.account,
       };
@@ -290,9 +350,10 @@ class _QuickAddScreenState extends State<QuickAddScreen>
         QuickAddType.income => _income(store),
         QuickAddType.transfer => _transfer(store),
         QuickAddType.rebalance => _rebalance(store),
-        // newGoal never renders in the sheet — it is intercepted at entry and
-        // in the type menu, routing to the full-screen goal form. This branch
-        // is unreachable and only keeps the switch exhaustive.
+        // newBudget and newGoal never render in the sheet — both are intercepted
+        // at entry and in the type menu, routing to a full-screen form. These
+        // branches are unreachable and only keep the switch exhaustive (§4).
+        QuickAddType.newBudget => _expense(store),
         QuickAddType.newGoal => _expense(store),
         QuickAddType.newTask => _task(store),
       };
@@ -919,6 +980,19 @@ class _QuickAddScreenState extends State<QuickAddScreen>
           nav.push(MaterialPageRoute(builder: (_) => const EditGoalScreen()));
           return;
         }
+        // A budget also leaves the sheet, but needs a category first (§3): close
+        // the type sheet (above) and the Quick Add screen, then run the flow off
+        // the navigator's overlay context. That context is a descendant of the
+        // root navigator (so `Navigator.of`/`showModalBottomSheet` resolve to it)
+        // and outlives the popped Quick Add screen — the QuickAdd context does
+        // not, and the navigator's own context has no Navigator above it.
+        if (type == QuickAddType.newBudget) {
+          final nav = Navigator.of(context, rootNavigator: true);
+          final overlayContext = nav.overlay!.context;
+          nav.pop();
+          startNewBudgetFlow(overlayContext);
+          return;
+        }
         _switchType(type);
       },
       child: Padding(
@@ -1284,6 +1358,10 @@ class _QuickAddScreenState extends State<QuickAddScreen>
               ? AppLocalizations.of(context).qaBalanceAdjustment
               : _note.text.trim(),
         );
+      case QuickAddType.newBudget:
+        // Unreachable: budgets are created on EditBudgetScreen and are
+        // intercepted before the sheet ever saves one (§4).
+        return;
       case QuickAddType.newGoal:
         // Unreachable: goals are created on their own full-screen form and are
         // intercepted before the sheet ever saves one.

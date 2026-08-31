@@ -17,6 +17,7 @@
   "quickAddIncome": "Доход",
   "quickAddTransfer": "Перевод",
   "quickAddRebalance": "Корректировка",
+  "quickAddNewBudget": "Новый бюджет",
   "quickAddNewGoal": "Новая цель",
   "quickAddNewTask": "Новая задача",
 
@@ -603,6 +604,10 @@
   "qaNoCategoryMatch": "Нет категории по запросу «{query}».",
   "qaExpenseCategory": "Категория расходов",
   "qaIncomeCategory": "Категория доходов",
+  "qaBudgetWhichCategory": "Для какой категории бюджет?",
+  "qaThisMonthSpend": "{amount} в этом месяце",
+  "qaNothingSpentYet": "Пока ничего",
+  "qaAllCategoriesBudgeted": "У каждой категории уже есть бюджет",
   "qaSearchCleared": "Поиск очищен",
   "qaClearSearch": "Очистить поиск",
   "qaCategoryName": "Название категории",

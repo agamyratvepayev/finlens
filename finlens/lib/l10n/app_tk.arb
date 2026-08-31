@@ -17,6 +17,7 @@
   "quickAddIncome": "Girdeji",
   "quickAddTransfer": "Geçirim",
   "quickAddRebalance": "Deňagramlaşdyrma",
+  "quickAddNewBudget": "Täze býujet",
   "quickAddNewGoal": "Täze maksat",
   "quickAddNewTask": "Täze tabşyryk",
 
@@ -603,6 +604,10 @@
   "qaNoCategoryMatch": "\"{query}\" boýunça kategoriýa ýok.",
   "qaExpenseCategory": "Çykdajy kategoriýasy",
   "qaIncomeCategory": "Girdeji kategoriýasy",
+  "qaBudgetWhichCategory": "Haýsy kategoriýa býujet?",
+  "qaThisMonthSpend": "şu aý {amount}",
+  "qaNothingSpentYet": "Entek ýok",
+  "qaAllCategoriesBudgeted": "Her kategoriýanyň eýýäm býujeti bar",
   "qaSearchCleared": "Gözleg arassalandy",
   "qaClearSearch": "Gözlegi arassala",
   "qaCategoryName": "Kategoriýanyň ady",

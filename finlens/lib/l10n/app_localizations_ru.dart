@@ -51,6 +51,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get quickAddRebalance => 'Корректировка';
 
   @override
+  String get quickAddNewBudget => 'Новый бюджет';
+
+  @override
   String get quickAddNewGoal => 'Новая цель';
 
   @override
@@ -2276,6 +2279,20 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get qaIncomeCategory => 'Категория доходов';
+
+  @override
+  String get qaBudgetWhichCategory => 'Для какой категории бюджет?';
+
+  @override
+  String qaThisMonthSpend(Object amount) {
+    return '$amount в этом месяце';
+  }
+
+  @override
+  String get qaNothingSpentYet => 'Пока ничего';
+
+  @override
+  String get qaAllCategoriesBudgeted => 'У каждой категории уже есть бюджет';
 
   @override
   String get qaSearchCleared => 'Поиск очищен';

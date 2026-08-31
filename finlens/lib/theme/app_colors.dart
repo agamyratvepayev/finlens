@@ -53,6 +53,13 @@ abstract final class AppColors {
   static const transferAmount = Color(0xFFEBEBF5);
   static const rebalance = Color(0xFFFF9F0A);
   static const rebalanceDim = Color(0xFF4D3208);
+
+  /// New Budget's dot in the Quick Add type sheet — teal, the one type colour
+  /// not already spoken for (red/green/blue/amber/purple/grey). It only ever
+  /// renders as a 10pt dot; kept clear of transfer's #0A84FF (blue) so the two
+  /// read apart there. New Budget never renders a numeric hero, so unlike the
+  /// other types it needs no dimmed pair.
+  static const budget = Color(0xFF64D2FF);
   static const goal = Color(0xFFBF5AF2);
   static const goalDim = Color(0xFF3D1D4D);
   static const task = Color(0xFF8E8E93);

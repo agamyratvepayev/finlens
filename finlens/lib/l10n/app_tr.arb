@@ -17,6 +17,7 @@
   "quickAddIncome": "Gelir",
   "quickAddTransfer": "Transfer",
   "quickAddRebalance": "Yeniden dengele",
+  "quickAddNewBudget": "Yeni bütçe",
   "quickAddNewGoal": "Yeni hedef",
   "quickAddNewTask": "Yeni görev",
 
@@ -603,6 +604,10 @@
   "qaNoCategoryMatch": "\"{query}\" ile eşleşen kategori yok.",
   "qaExpenseCategory": "Gider kategorisi",
   "qaIncomeCategory": "Gelir kategorisi",
+  "qaBudgetWhichCategory": "Hangi kategoriye bütçe?",
+  "qaThisMonthSpend": "bu ay {amount}",
+  "qaNothingSpentYet": "Henüz yok",
+  "qaAllCategoriesBudgeted": "Her kategorinin zaten bir bütçesi var",
   "qaSearchCleared": "Arama temizlendi",
   "qaClearSearch": "Aramayı temizle",
   "qaCategoryName": "Kategori adı",

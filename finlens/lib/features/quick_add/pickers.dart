@@ -543,6 +543,120 @@ class _CategoryPickerBodyState extends State<_CategoryPickerBody> {
   }
 }
 
+/// New Budget's category picker (§3). Deliberately *not* [pickCategory]: it
+/// lists only expense categories that carry no budget — including ones with no
+/// spending this month, which is the whole point of the flow — shows this
+/// month's spend beneath each as context (not a filter), and offers no
+/// "New category" cell, since creating a category here is a non-goal. The
+/// caller filters and sorts (spend descending, then name) and never opens this
+/// on an empty list, so there is no empty state to render.
+Future<Category?> pickBudgetCategory(
+  BuildContext context, {
+  required List<Category> candidates,
+  required DateTime month,
+}) {
+  return showAppSheet<Category>(
+    context,
+    title: AppLocalizations.of(context).qaBudgetWhichCategory,
+    builder: (context, controller) => _BudgetCategoryPickerBody(
+      controller: controller,
+      candidates: candidates,
+      month: month,
+    ),
+  );
+}
+
+class _BudgetCategoryPickerBody extends StatelessWidget {
+  const _BudgetCategoryPickerBody({
+    required this.controller,
+    required this.candidates,
+    required this.month,
+  });
+
+  final ScrollController controller;
+  final List<Category> candidates;
+  final DateTime month;
+
+  @override
+  Widget build(BuildContext context) {
+    final store = StoreScope.of(context);
+    final l = AppLocalizations.of(context);
+    return ListView(
+      controller: controller,
+      padding: const EdgeInsets.fromLTRB(
+        Insets.gutter,
+        Insets.sm,
+        Insets.gutter,
+        Insets.xxl,
+      ),
+      children: [
+        AppCard(
+          child: Column(
+            children: [
+              for (var i = 0; i < candidates.length; i++) ...[
+                if (i > 0) const RowDivider(indent: Insets.md),
+                _budgetCategoryRow(context, store, l, candidates[i]),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _budgetCategoryRow(
+    BuildContext context,
+    AppStore store,
+    AppLocalizations l,
+    Category c,
+  ) {
+    final spent = store.spentInCategory(c.id, month);
+    final subtitle =
+        spent > 0 ? l.qaThisMonthSpend(money(spent)) : l.qaNothingSpentYet;
+    return InkWell(
+      onTap: () => Navigator.of(context).pop(c),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: Insets.md,
+          vertical: Insets.md,
+        ),
+        child: Row(
+          children: [
+            IconTile(c.icon, color: c.color, size: 36),
+            const SizedBox(width: Insets.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    c.name,
+                    style: AppText.rowTitle.copyWith(fontWeight: FontWeight.w500),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: AppText.caption,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: Insets.sm),
+            const Icon(
+              Icons.chevron_right_rounded,
+              size: 18,
+              color: AppColors.formChevron,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 /// One category in the picker grid (§3): a 46pt colour-tinted tile above a
 /// two-line, centred label. The selected cell is filled with the colour, its
 /// glyph white with a 2pt white ring, and its label white at weight 600.

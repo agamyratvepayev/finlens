@@ -44,13 +44,23 @@ enum AccountGroup {
       values.where((g) => g.isLiability).toList(growable: false);
 }
 
-/// The six Quick Add entry points (spec 3.1). Labels localized — see
+/// The Quick Add entry points (spec 3.1). Labels localized — see
 /// `QuickAddTypeL10n.label`.
+///
+/// The first four write a row to the Ledger; the last three create a standing
+/// thing in the Planner, in the Planner's own tab order (Budgets · Goals ·
+/// Schedule). `newBudget` and `newGoal` never render in the numeric-hero sheet —
+/// both are intercepted at the two entry points and route to a full-screen form.
+///
+/// Nothing persists this enum by index (no persistence layer; seed data and
+/// callers all use named values / `switch`), so inserting `newBudget` mid-enum
+/// is safe — it does not silently rewrite any stored type.
 enum QuickAddType {
   expense(AppColors.expense, Icons.south_west_rounded),
   income(AppColors.income, Icons.north_east_rounded),
   transfer(AppColors.transfer, Icons.swap_horiz_rounded),
   rebalance(AppColors.rebalance, Icons.donut_large_rounded),
+  newBudget(AppColors.budget, Icons.donut_small_rounded),
   newGoal(AppColors.goal, Icons.flag_rounded),
   newTask(AppColors.task, Icons.notifications_rounded);
 
