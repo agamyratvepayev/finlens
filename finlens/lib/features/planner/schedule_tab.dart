@@ -183,12 +183,13 @@ class ScheduleSummary extends StatelessWidget {
             ),
           ],
           if (overdue.isNotEmpty) ...[
-            const SizedBox(height: Insets.md),
+            const SizedBox(height: Insets.sm),
             NoticeBanner(
               margin: EdgeInsets.zero,
               color: AppColors.negative,
               icon: Icons.error_outline_rounded,
               text: _bannerCopy(l),
+              dense: true,
             ),
           ],
         ],

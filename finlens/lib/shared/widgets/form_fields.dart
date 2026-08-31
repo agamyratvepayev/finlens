@@ -261,6 +261,7 @@ class NoticeBanner extends StatelessWidget {
     this.icon = Icons.warning_amber_rounded,
     this.color = AppColors.warning,
     this.margin,
+    this.dense = false,
   });
 
   final String text;
@@ -268,31 +269,39 @@ class NoticeBanner extends StatelessWidget {
   final Color color;
   final EdgeInsetsGeometry? margin;
 
+  /// A one-line pointer, not a paragraph: tighter air around the same type.
+  /// Only the Schedule overdue banner passes this; the default path is
+  /// byte-identical to before. See §1 of the schedule-header spec.
+  final bool dense;
+
   @override
   Widget build(BuildContext context) {
     return Container(
       margin: margin ??
           const EdgeInsets.fromLTRB(Insets.gutter, 0, Insets.gutter, Insets.md),
-      padding: const EdgeInsets.symmetric(
-        horizontal: Insets.md,
-        vertical: Insets.md,
-      ),
+      padding: dense
+          ? const EdgeInsets.symmetric(horizontal: 10, vertical: Insets.sm)
+          : const EdgeInsets.symmetric(
+              horizontal: Insets.md,
+              vertical: Insets.md,
+            ),
       decoration: BoxDecoration(
         color: AppColors.tint(color, 0.12),
-        borderRadius: BorderRadius.circular(Radii.md),
+        borderRadius: BorderRadius.circular(dense ? 10 : Radii.md),
         border: Border.all(color: AppColors.tint(color, 0.28)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 17, color: color),
-          const SizedBox(width: Insets.sm),
+          Icon(icon, size: dense ? 15 : 17, color: color),
+          SizedBox(width: dense ? 7 : Insets.sm),
           Expanded(
             child: Text(
               text,
               style: AppText.caption.copyWith(
                 color: AppColors.textPrimary,
                 fontSize: 12.5,
+                height: dense ? 1.15 : null,
               ),
             ),
           ),
