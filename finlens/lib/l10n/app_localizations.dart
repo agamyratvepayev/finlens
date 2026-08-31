@@ -5016,17 +5016,23 @@ abstract class AppLocalizations {
   /// **'Until {date}'**
   String schUntilControl(Object date);
 
-  /// No description provided for @schCompletedThisMonth.
+  /// No description provided for @schCompletedIn.
   ///
   /// In en, this message translates to:
-  /// **'This month completed'**
-  String get schCompletedThisMonth;
+  /// **'{label} completed'**
+  String schCompletedIn(Object label);
 
-  /// No description provided for @schCompletedLastDays.
+  /// No description provided for @schCompletedEmpty.
   ///
   /// In en, this message translates to:
-  /// **'Last {count} days completed'**
-  String schCompletedLastDays(int count);
+  /// **'Nothing completed in this period.'**
+  String get schCompletedEmpty;
+
+  /// No description provided for @schCompletedLongerPeriod.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a longer period'**
+  String get schCompletedLongerPeriod;
 
   /// No description provided for @schUntilTitle.
   ///
@@ -5171,6 +5177,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count, plural, one{{count} day late} other{{count} days late}}'**
   String schDaysLate(int count);
+
+  /// No description provided for @schOverdueDays.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{{count} day} other{{count} days}}'**
+  String schOverdueDays(int count);
 
   /// No description provided for @schWontCover.
   ///

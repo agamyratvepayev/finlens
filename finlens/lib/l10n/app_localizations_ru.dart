@@ -3239,12 +3239,15 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String get schCompletedThisMonth => 'Выполнено в этом месяце';
+  String schCompletedIn(Object label) {
+    return 'Выполнено · $label';
+  }
 
   @override
-  String schCompletedLastDays(int count) {
-    return 'Выполнено за $count дн.';
-  }
+  String get schCompletedEmpty => 'За этот период ничего не выполнено.';
+
+  @override
+  String get schCompletedLongerPeriod => 'Выбрать более длинный период';
 
   @override
   String get schUntilTitle => 'ДО ДАТЫ';
@@ -3382,6 +3385,18 @@ class AppLocalizationsRu extends AppLocalizations {
       locale: localeName,
       other: 'на $count дн. позже',
       one: 'на $count день позже',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String schOverdueDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count дней',
+      few: '$count дня',
+      one: '$count день',
     );
     return '$_temp0';
   }

@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../l10n/app_localizations.dart';
@@ -169,6 +171,47 @@ Future<PeriodUnit> loadPeriodUnit(String key) async {
     if (u.name == raw) return u;
   }
   return PeriodUnit.month;
+}
+
+/// Persist a [DateRange] chosen from the shared range-picker sheet. A preset
+/// range is stored as its **preset name** so `This month` re-resolves against a
+/// later today (never freezing into a stale window); a custom range is stored as
+/// its two dates. Mirrors `SameRangeChoice`'s shape (spec Part B §B3).
+Future<void> saveScheduleCompletedRange(String key, DateRange range) async {
+  final prefs = await SharedPreferences.getInstance();
+  final json = range.preset != null
+      ? {'preset': range.preset!.name}
+      : {
+          'from': range.start.toIso8601String(),
+          'to': range.end.toIso8601String(),
+        };
+  await prefs.setString(key, jsonEncode(json));
+}
+
+/// Restore what [saveScheduleCompletedRange] wrote, re-resolving a preset
+/// against [today]. Returns null when nothing is stored or the value is corrupt,
+/// so the caller keeps its default.
+Future<DateRange?> loadScheduleCompletedRange(String key, DateTime today) async {
+  final prefs = await SharedPreferences.getInstance();
+  final raw = prefs.getString(key);
+  if (raw == null || raw.isEmpty) return null;
+  try {
+    final json = jsonDecode(raw);
+    if (json is Map) {
+      final from = json['from'], to = json['to'];
+      if (from is String && to is String) {
+        final start = DateTime.tryParse(from), end = DateTime.tryParse(to);
+        if (start != null && end != null) return DateRange(start, end);
+      }
+      final presetName = json['preset'];
+      for (final p in RangePreset.values) {
+        if (p.name == presetName) return p.resolve(today);
+      }
+    }
+  } on FormatException {
+    // Corrupt preference: fall back to the default.
+  }
+  return null;
 }
 
 DateTime _endOfMonth(DateTime d) =>

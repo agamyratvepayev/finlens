@@ -3175,12 +3175,15 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get schCompletedThisMonth => 'This month completed';
+  String schCompletedIn(Object label) {
+    return '$label completed';
+  }
 
   @override
-  String schCompletedLastDays(int count) {
-    return 'Last $count days completed';
-  }
+  String get schCompletedEmpty => 'Nothing completed in this period.';
+
+  @override
+  String get schCompletedLongerPeriod => 'Choose a longer period';
 
   @override
   String get schUntilTitle => 'UNTIL A DATE';
@@ -3318,6 +3321,17 @@ class AppLocalizationsEn extends AppLocalizations {
       locale: localeName,
       other: '$count days late',
       one: '$count day late',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String schOverdueDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count days',
+      one: '$count day',
     );
     return '$_temp0';
   }

@@ -422,6 +422,31 @@ class AppStore extends ChangeNotifier {
     notifyListeners();
   }
 
+  // ── Schedule completed-section range (Part B) ─────────────────────────────
+  // The completed section ranges over the past with its own control, wholly
+  // independent of the forward horizon (spec Part B §B2). Defaults to
+  // `This month` — a preset that is in the shared sheet, so its checkmark is
+  // right on first open. A preset persists as its preset and re-resolves against
+  // today; a custom range persists its dates. Restored before first paint.
+  static const _completedRangeKey = 'schedule_completed_range';
+  DateRange _completedRange = RangePreset.thisMonth.resolve(today);
+  DateRange get completedRange => _completedRange;
+
+  void setCompletedRange(DateRange range) {
+    _completedRange = range;
+    notifyListeners();
+    unawaited(saveScheduleCompletedRange(_completedRangeKey, range));
+  }
+
+  Future<void> loadCompletedRange() async {
+    final loaded =
+        await loadScheduleCompletedRange(_completedRangeKey, today);
+    if (loaded != null) {
+      _completedRange = loaded;
+      notifyListeners();
+    }
+  }
+
   // ── Scoped-ledger period unit (per screen type) ───────────────────────────
   // Only the *unit* persists; the cursor always resets to the period containing
   // today on launch (spec §5). Kept separately for account vs category screens.

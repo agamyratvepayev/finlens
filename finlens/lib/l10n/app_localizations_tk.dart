@@ -3168,12 +3168,15 @@ class AppLocalizationsTk extends AppLocalizations {
   }
 
   @override
-  String get schCompletedThisMonth => 'Şu aý tamamlanan';
+  String schCompletedIn(Object label) {
+    return '$label tamamlanan';
+  }
 
   @override
-  String schCompletedLastDays(int count) {
-    return 'Soňky $count günde tamamlanan';
-  }
+  String get schCompletedEmpty => 'Bu döwürde tamamlanan zat ýok.';
+
+  @override
+  String get schCompletedLongerPeriod => 'Uzynrak döwür saýlaň';
 
   @override
   String get schUntilTitle => 'SENE ÇENLI';
@@ -3271,6 +3274,11 @@ class AppLocalizationsTk extends AppLocalizations {
   @override
   String schDaysLate(int count) {
     return '$count gün gijä galdy';
+  }
+
+  @override
+  String schOverdueDays(int count) {
+    return '$count gün';
   }
 
   @override

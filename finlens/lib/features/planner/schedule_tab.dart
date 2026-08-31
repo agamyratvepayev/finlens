@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/l10n/enum_labels.dart';
 import '../../core/models/models.dart';
 import '../../core/store/app_store.dart';
 import '../../core/utils/date_range.dart';
@@ -9,6 +10,7 @@ import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/amount_text.dart';
 import '../../shared/widgets/app_card.dart';
 import '../../shared/widgets/form_fields.dart';
+import '../../shared/widgets/range_picker_sheet.dart';
 import '../../shared/widgets/screen_header.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
@@ -268,8 +270,10 @@ class _ScheduleTabState extends State<ScheduleTab> {
     final breach = store.firstShortfall(h);
     final breachTask = _breachTask(store, h, breach?.day);
 
-    final completedPeriod = widget.horizon.completedPeriod(today);
-    final events = store.scheduleEvents(completedPeriod);
+    // The completed section ranges over the past with its own stored control,
+    // wholly independent of the forward horizon (§B2).
+    final completedRange = store.completedRange;
+    final events = store.scheduleEvents(completedRange);
 
     return ListView(
       padding: const EdgeInsets.only(bottom: Insets.xxl),
@@ -305,13 +309,35 @@ class _ScheduleTabState extends State<ScheduleTab> {
         _CompletedSection(
           store: store,
           events: events,
-          label: widget.horizon.completedLabel(l, today),
+          range: completedRange,
           expanded: _completedExpanded,
           onToggle: () =>
               setState(() => _completedExpanded = !_completedExpanded),
+          onPickRange: _pickCompletedRange,
         ),
       ],
     );
+  }
+
+  /// Opens the shared range-picker sheet for the completed section and stores the
+  /// choice (§B1, §B3). A preset persists as its preset; a custom range as its
+  /// dates. `disableFuture` is the sheet's default — completed events are past.
+  Future<void> _pickCompletedRange() async {
+    final store = widget.store;
+    final picked = await showRangePickerSheet(
+      context,
+      current: store.completedRange,
+      hasData: (day) => store
+          .scheduleEvents(DateRange(
+            DateTime(day.year, day.month, day.day),
+            DateTime(day.year, day.month, day.day, 23, 59, 59, 999),
+          ))
+          .isNotEmpty,
+      countBetween: (from, to) =>
+          store.scheduleEvents(DateRange(from, to)).length,
+    );
+    if (picked == null || !mounted) return;
+    store.setCompletedRange(picked);
   }
 
   Widget _sectionNet(_Section section) {
@@ -413,30 +439,43 @@ class _TaskRow extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    task.title,
-                    style: const TextStyle(
-                        fontSize: 14.5,
-                        fontWeight: FontWeight.w600,
-                        height: 1.2,
-                        color: AppColors.textPrimary),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                  // Title and amount share line one, so the amount only costs
+                  // width to the line it belongs to; the subtitle then runs the
+                  // full column width (§A1). Baseline alignment because the title
+                  // carries height:1.2 and AmountText does not — centring would
+                  // sit them a hair off each other's baseline.
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.baseline,
+                    textBaseline: TextBaseline.alphabetic,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          task.title,
+                          style: const TextStyle(
+                              fontSize: 14.5,
+                              fontWeight: FontWeight.w600,
+                              height: 1.2,
+                              color: AppColors.textPrimary),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: Insets.sm),
+                      AmountText(
+                        task.expectedAmount.abs(),
+                        style: const TextStyle(
+                            fontSize: 14.5,
+                            fontWeight: FontWeight.w600,
+                            fontFeatures: [FontFeature.tabularFigures()]),
+                        color: color,
+                        forceDecimals: task.expectedAmount.abs() % 1 != 0,
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 1),
                   _subtitle(l, overdue, account),
                 ],
               ),
-            ),
-            const SizedBox(width: Insets.sm),
-            AmountText(
-              task.expectedAmount.abs(),
-              style: const TextStyle(
-                  fontSize: 14.5,
-                  fontWeight: FontWeight.w600,
-                  fontFeatures: [FontFeature.tabularFigures()]),
-              color: color,
-              forceDecimals: task.expectedAmount.abs() % 1 != 0,
             ),
             const SizedBox(width: 6),
             _MarkPaidTick(store: store, task: task),
@@ -472,8 +511,11 @@ class _TaskRow extends StatelessWidget {
         AppText.caption.copyWith(fontSize: 10.5, color: cadenceColor);
 
     final date = dayMonth(task.dueDate, l);
+    // Just the count here — the OVERDUE header, the negative colour and the red
+    // section total already say "late" three times over (§A3). The full "late"
+    // wording moves to the screen reader (§A4), which sees none of those.
     final late = overdue
-        ? l.schDaysLate(-task.daysUntilDue(AppStore.today))
+        ? l.schOverdueDays(-task.daysUntilDue(AppStore.today))
         : null;
 
     return Text.rich(
@@ -514,6 +556,10 @@ class _TaskRow extends StatelessWidget {
       task.title,
       '${payOut ? l.schSemPayingOut : l.schSemComingIn} $amount',
       '${l.schSemDue} ${dayMonth(task.dueDate, l)}',
+      // The eye lost the word "late" (§A3); the screen reader, which cannot see
+      // the red header or total, gains the full phrase here — right after the
+      // due date (§A4).
+      if (overdue) l.schDaysLate(-task.daysUntilDue(AppStore.today)),
       if (account != null)
         '${payOut ? l.schSemFrom : l.schSemInto} $account',
       if (task.isRecurring)
@@ -570,47 +616,109 @@ class _CompletedSection extends StatelessWidget {
   const _CompletedSection({
     required this.store,
     required this.events,
-    required this.label,
+    required this.range,
     required this.expanded,
     required this.onToggle,
+    required this.onPickRange,
   });
 
   final AppStore store;
   final List<ScheduleEvent> events;
-  final String label;
+  final DateRange range;
   final bool expanded;
   final VoidCallback onToggle;
+  final VoidCallback onPickRange;
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final headerStyle = AppText.label.copyWith(color: AppColors.textSecondary);
+    final hasEvents = events.isNotEmpty;
+
+    // The chosen range's own name — a preset by its preset label, a custom range
+    // by its compressed day-range label — folded into "… completed" (§B1).
+    final rangeLabel =
+        range.preset?.label(l) ?? range.label(AppStore.today, l);
+    final headerText = l.schCompletedIn(rangeLabel).toUpperCase();
+
+    final count = Text(l.schItemsCount(events.length), style: headerStyle);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        InkWell(
-          onTap: onToggle,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(
-                Insets.gutter, Insets.lg, Insets.gutter, Insets.sm),
-            child: Row(
-              children: [
-                Text(label.toUpperCase(), style: AppText.label),
-                const SizedBox(width: Insets.xs),
-                AnimatedRotation(
-                  turns: expanded ? 0.25 : 0.0,
-                  duration: const Duration(milliseconds: 160),
-                  child: const Icon(Icons.chevron_right_rounded,
-                      size: 18, color: AppColors.textSecondary),
+        Padding(
+          // Vertical whitespace comes from the two ≥44pt tap targets below, not
+          // the outer padding — keeping the header near its old height (§B4).
+          padding: const EdgeInsets.fromLTRB(Insets.gutter, Insets.xs, Insets.gutter, 0),
+          child: Row(
+            children: [
+              // Left: the period control — a real choice (§B1). Accent, so it
+              // reads as a chooser, not a toggle.
+              Expanded(
+                child: InkWell(
+                  onTap: onPickRange,
+                  borderRadius: BorderRadius.circular(Radii.sm),
+                  child: Container(
+                    constraints: const BoxConstraints(minHeight: 44),
+                    alignment: AlignmentDirectional.centerStart,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Flexible(
+                          child: Text(
+                            headerText,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 10.5,
+                              height: 1.2,
+                              fontWeight: FontWeight.w500,
+                              letterSpacing: 0.63, // 0.06em @ 10.5pt
+                              color: AppColors.accentLight,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        const Icon(Icons.keyboard_arrow_down_rounded,
+                            size: 16, color: AppColors.accentLight),
+                      ],
+                    ),
+                  ),
                 ),
-                const Spacer(),
-                Text(l.schItemsCount(events.length), style: headerStyle),
-              ],
-            ),
+              ),
+              const SizedBox(width: Insets.sm),
+              // Right: the count. Grey, so it reads as expand/collapse rather
+              // than competing with the accent picker (§B4). At zero items there
+              // is nothing to open — no chevron, and the count is not tappable.
+              if (hasEvents)
+                InkWell(
+                  onTap: onToggle,
+                  borderRadius: BorderRadius.circular(Radii.sm),
+                  child: Container(
+                    constraints: const BoxConstraints(minHeight: 44),
+                    alignment: Alignment.center,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        count,
+                        const SizedBox(width: Insets.xs),
+                        AnimatedRotation(
+                          turns: expanded ? 0.25 : 0.0,
+                          duration: const Duration(milliseconds: 160),
+                          child: const Icon(Icons.chevron_right_rounded,
+                              size: 18, color: AppColors.textSecondary),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              else
+                count,
+            ],
           ),
         ),
-        if (expanded && events.isNotEmpty) _expanded(context, l),
+        if (expanded && hasEvents) _expanded(context, l),
+        if (!hasEvents) _emptyLines(context, l),
         if (store.pausedTasks.isNotEmpty)
           Padding(
             padding: const EdgeInsets.fromLTRB(Insets.gutter, Insets.sm, Insets.gutter, 0),
@@ -625,6 +733,31 @@ class _CompletedSection extends StatelessWidget {
             ),
           ),
       ],
+    );
+  }
+
+  /// Zero items: two lines, no card, no divider (§B5). A sentence, then a link
+  /// — no background, no border, no chevron — to the same sheet as the header.
+  Widget _emptyLines(BuildContext context, AppLocalizations l) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(Insets.gutter, 0, Insets.gutter, Insets.sm),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            l.schCompletedEmpty,
+            style: AppText.caption.copyWith(color: AppColors.textSecondary),
+          ),
+          const SizedBox(height: 4),
+          InkWell(
+            onTap: onPickRange,
+            child: Text(
+              l.schCompletedLongerPeriod,
+              style: AppText.caption.copyWith(color: AppColors.accentLight),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

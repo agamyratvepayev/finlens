@@ -30,6 +30,7 @@ Future<void> main() async {
   await store.loadBalanceFilter();
   await store.loadBalanceOrder();
   await store.loadSameListRange();
+  await store.loadCompletedRange();
   await store.loadPeriodUnits();
   await store.loadTransPrefs();
   await store.loadLedgerPrefs();

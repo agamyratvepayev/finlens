@@ -70,32 +70,6 @@ class ScheduleHorizon {
   /// 9 → 19 Aug reads "10 days".
   int spanDays(DateTime today) => _endDay(today).difference(_day(today)).inDays;
 
-  int _mirrorDays(DateTime today) {
-    switch (preset) {
-      case SchedulePreset.thisWeek:
-        return 7;
-      case SchedulePreset.next30:
-        return 30;
-      case SchedulePreset.next3Months:
-        return 90;
-      case SchedulePreset.thisMonth:
-        return 0; // handled by the calendar-month branch
-      case null:
-        return spanDays(today);
-    }
-  }
-
-  /// The mirror of the horizon, backwards, for the completed section (§5).
-  DateRange completedPeriod(DateTime today) {
-    final endOfToday =
-        DateTime(today.year, today.month, today.day, 23, 59, 59, 999);
-    if (preset == SchedulePreset.thisMonth) {
-      return DateRange(DateTime(today.year, today.month, 1), endOfToday);
-    }
-    final start = _day(today).subtract(Duration(days: _mirrorDays(today)));
-    return DateRange(start, endOfToday);
-  }
-
   String controlLabel(AppLocalizations l) {
     switch (preset) {
       case SchedulePreset.thisWeek:
@@ -110,11 +84,6 @@ class ScheduleHorizon {
         return l.schUntilControl(dayMonth(customEnd!, l));
     }
   }
-
-  String completedLabel(AppLocalizations l, DateTime today) =>
-      preset == SchedulePreset.thisMonth
-          ? l.schCompletedThisMonth
-          : l.schCompletedLastDays(_mirrorDays(today));
 
   static DateTime _day(DateTime d) => DateTime(d.year, d.month, d.day);
 }
