@@ -354,10 +354,11 @@
 
   "balSearchAccounts": "Search accounts",
   "balNoResults": "No results",
-  "balNoAccountsYet": "No accounts yet",
+  "balNoAccountsYet": "Start with what you have",
   "balNoAccountMatch": "No account or group matches your search.",
   "balAddFirstAccount": "Add your first account",
-  "balNoAccountsMessage": "Add your accounts and FinLens works out your net worth from the transactions you record.",
+  "balNoAccountsMessage": "Add an account and its balance. Everything else — net worth, budgets, goals — is worked out from there.",
+  "balNothingRecordedYet": "Nothing recorded yet",
   "balAdjustFilter": "Adjust filter",
   "balSortTooltip": "Sort",
   "balSortDefault": "Default order",

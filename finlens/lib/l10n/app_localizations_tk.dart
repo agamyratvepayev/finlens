@@ -1033,7 +1033,7 @@ class AppLocalizationsTk extends AppLocalizations {
   String get balNoResults => 'Netije ýok';
 
   @override
-  String get balNoAccountsYet => 'Entek hasap ýok';
+  String get balNoAccountsYet => 'Eliňizdäki bilen başlaň';
 
   @override
   String get balNoAccountMatch =>
@@ -1044,7 +1044,10 @@ class AppLocalizationsTk extends AppLocalizations {
 
   @override
   String get balNoAccountsMessage =>
-      'Hasaplaryňyzy goşuň, FinLens ýazgy eden amallaryňyzdan arassa baýlygyňyzy hasaplar.';
+      'Hasap we onuň balansyny goşuň. Galan zatlaryň baryny — arassa baýlygy, býujetleri, maksatlary — FinLens şundan hasaplaýar.';
+
+  @override
+  String get balNothingRecordedYet => 'Entek hiç zat ýazylmady';
 
   @override
   String get balAdjustFilter => 'Süzgüji sazla';

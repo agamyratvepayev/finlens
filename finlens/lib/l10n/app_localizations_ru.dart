@@ -1073,7 +1073,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get balNoResults => 'Ничего не найдено';
 
   @override
-  String get balNoAccountsYet => 'Пока нет счетов';
+  String get balNoAccountsYet => 'Начните с того, что есть';
 
   @override
   String get balNoAccountMatch =>
@@ -1084,7 +1084,10 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get balNoAccountsMessage =>
-      'Добавьте счета, и FinLens сам рассчитает капитал по вашим операциям.';
+      'Добавьте счёт и его баланс. Всё остальное — капитал, бюджеты, цели — рассчитается из этого.';
+
+  @override
+  String get balNothingRecordedYet => 'Пока ничего не записано';
 
   @override
   String get balAdjustFilter => 'Настроить фильтр';

@@ -251,10 +251,11 @@
 
   "balSearchAccounts": "Hasap gözle",
   "balNoResults": "Netije ýok",
-  "balNoAccountsYet": "Entek hasap ýok",
+  "balNoAccountsYet": "Eliňizdäki bilen başlaň",
   "balNoAccountMatch": "Gözlegiňize gabat gelýän hasap ýa-da topar ýok.",
   "balAddFirstAccount": "Ilkinji hasabyňyzy goşuň",
-  "balNoAccountsMessage": "Hasaplaryňyzy goşuň, FinLens ýazgy eden amallaryňyzdan arassa baýlygyňyzy hasaplar.",
+  "balNoAccountsMessage": "Hasap we onuň balansyny goşuň. Galan zatlaryň baryny — arassa baýlygy, býujetleri, maksatlary — FinLens şundan hasaplaýar.",
+  "balNothingRecordedYet": "Entek hiç zat ýazylmady",
   "balAdjustFilter": "Süzgüji sazla",
   "balSortTooltip": "Tertiple",
   "balSortDefault": "Adaty tertip",

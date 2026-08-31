@@ -1031,7 +1031,7 @@ class AppLocalizationsTr extends AppLocalizations {
   String get balNoResults => 'Sonuç yok';
 
   @override
-  String get balNoAccountsYet => 'Henüz hesap yok';
+  String get balNoAccountsYet => 'Elinizdekiyle başlayın';
 
   @override
   String get balNoAccountMatch => 'Aramanızla eşleşen hesap veya grup yok.';
@@ -1041,7 +1041,10 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get balNoAccountsMessage =>
-      'Hesaplarınızı ekleyin, FinLens kaydettiğiniz işlemlerden net değerinizi hesaplasın.';
+      'Bir hesap ve bakiyesini ekleyin. Gerisi — net değer, bütçeler, hedefler — bundan hesaplanır.';
+
+  @override
+  String get balNothingRecordedYet => 'Henüz kayıt yok';
 
   @override
   String get balAdjustFilter => 'Filtreyi ayarla';

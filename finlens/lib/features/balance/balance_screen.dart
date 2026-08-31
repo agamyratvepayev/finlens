@@ -142,16 +142,24 @@ class _BalanceScreenState extends State<BalanceScreen> {
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
 
+    // One definition of "empty", computed once and handed to both the header
+    // and the list. Deliberately not netWorth == 0 (two accounts can cancel to
+    // zero and that user is not new) and not "all filtered away" (a filtered
+    // user still has accounts). Only a store with literally no account is a
+    // first run.
+    final hasAccounts =
+        AccountGroup.values.any((g) => store.groupCount(g) > 0);
+
     return SafeArea(
       bottom: false,
       child: Column(
         children: [
-          _header(store),
+          _header(store, hasAccounts),
           Expanded(
             child: HorizontalSectionSwipe(
               onNext: () => _stepSection(1),
               onPrevious: () => _stepSection(-1),
-              child: _list(store),
+              child: _list(store, hasAccounts),
             ),
           ),
         ],
@@ -164,13 +172,15 @@ class _BalanceScreenState extends State<BalanceScreen> {
   /// Header: label + dots + controls, then the hero amount alone, the slim
   /// ratio bar, and a tool row (counter + the four tools). Pinned — only the
   /// list scrolls.
-  Widget _header(AppStore store) {
+  Widget _header(AppStore store, bool hasAccounts) {
     final filter = store.balanceFilter;
     final showRatio = _section == BalanceSection.all && !_searching;
 
     // Height is not hard-coded: the ratio bar shows only on the All section,
     // the "as of" line appears only for a past date, and searching swaps the
-    // tool row for the field. AnimatedSize hands any freed space to the list.
+    // tool row for the field. AnimatedSize hands any freed space to the list —
+    // and, because it also wraps the first-run header below, the whole
+    // apparatus grows in when the first account lands rather than snapping.
     return AnimatedSize(
       duration: const Duration(milliseconds: 180),
       curve: Curves.easeOut,
@@ -180,26 +190,85 @@ class _BalanceScreenState extends State<BalanceScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
-          children: [
-            SizedBox(height: 34, child: _headerRow1(store)),
-            const SizedBox(height: 4),
-            _headerRow2(store),
-            if (showRatio) ...[
-              const SizedBox(height: 8),
-              _RatioBar(
-                assets: filter.sectionTotal(store, assets: true),
-                liabilities: filter.sectionTotal(store, assets: false).abs(),
-              ),
-            ],
-            // The tools left the hero's line for a row of their own, mirroring
-            // the Ledger's counter + tool-cluster grammar. The search field
-            // takes this row's place while searching, so the row never stacks
-            // on top of the field.
-            if (!_searching) _toolRow(store),
-          ],
+          children: hasAccounts
+              ? [
+                  SizedBox(height: 34, child: _headerRow1(store)),
+                  const SizedBox(height: 4),
+                  _headerRow2(store),
+                  if (showRatio) ...[
+                    const SizedBox(height: 8),
+                    _RatioBar(
+                      assets: filter.sectionTotal(store, assets: true),
+                      liabilities:
+                          filter.sectionTotal(store, assets: false).abs(),
+                    ),
+                  ],
+                  // The tools left the hero's line for a row of their own,
+                  // mirroring the Ledger's counter + tool-cluster grammar. The
+                  // search field takes this row's place while searching, so the
+                  // row never stacks on top of the field.
+                  if (!_searching) _toolRow(store),
+                ]
+              : _emptyHeaderChildren(),
         ),
       ),
     );
+  }
+
+  /// The first-run header: only the things that still mean something with zero
+  /// accounts. The NET WORTH label (no dots — Assets/Liabilities are sections
+  /// of a list that does not exist yet) and the + are all that survive from
+  /// row 1; every other control (date pill, eye, sort, collapse, filter,
+  /// search), the ratio bar and the counts line are absent from the tree, not
+  /// merely disabled. The hero is a — rather than a $0, because nothing has
+  /// been added up yet — zero would be a claim, not a blank.
+  List<Widget> _emptyHeaderChildren() {
+    final l = AppLocalizations.of(context);
+    return [
+      SizedBox(
+        height: 34,
+        child: Row(
+          children: [
+            // SectionIndicator without its dots is just its label, so we render
+            // the label directly in the same style at the same position rather
+            // than teaching the indicator a dotless mode.
+            Text(l.balanceSectionAll.toUpperCase(), style: AppText.sectionLabel),
+            const Spacer(),
+            _CircleButton(
+              icon: Icons.add_rounded,
+              accent: true,
+              onTap: () => showQuickAdd(context),
+            ),
+          ],
+        ),
+      ),
+      const SizedBox(height: 4),
+      // Reads as "Net worth, nothing recorded yet" to a screen reader — never a
+      // bare dash. The dash is not an amount, so it does not go through
+      // AmountText and never masks.
+      Semantics(
+        label: '${l.balanceSectionAll}, ${l.balNothingRecordedYet}',
+        child: ExcludeSemantics(
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  '—',
+                  style: AppText.heroAmount
+                      .copyWith(color: AppColors.textTertiary),
+                ),
+                // Same slot the historical "as of …" line uses, so the header
+                // height behaves exactly as it already does.
+                Text(l.balNothingRecordedYet, style: AppText.asOfLine),
+              ],
+            ),
+          ),
+        ),
+      ),
+    ];
   }
 
   Widget _headerRow1(AppStore store) {
@@ -610,7 +679,7 @@ class _BalanceScreenState extends State<BalanceScreen> {
 
   // ── List ──────────────────────────────────────────────────────────────────
 
-  Widget _list(AppStore store) {
+  Widget _list(AppStore store, bool hasAccounts) {
     final assets = _groupsFor(store, AccountGroup.assets);
     final liabilities = _groupsFor(store, AccountGroup.liabilities);
 
@@ -618,9 +687,8 @@ class _BalanceScreenState extends State<BalanceScreen> {
       if (_query.isNotEmpty) return _noResults();
       // No accounts at all is the "add your first account" case; accounts that
       // exist but are all filtered out fall through to per-section empty rows.
-      final anyAccounts =
-          AccountGroup.values.any((g) => store.groupCount(g) > 0);
-      if (!anyAccounts) return _emptyState();
+      // hasAccounts is the same test the header uses — one definition of empty.
+      if (!hasAccounts) return _emptyState();
     }
 
     // Section headers only show on All: on a filtered section the total already

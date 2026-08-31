@@ -251,10 +251,11 @@
 
   "balSearchAccounts": "Поиск по счетам",
   "balNoResults": "Ничего не найдено",
-  "balNoAccountsYet": "Пока нет счетов",
+  "balNoAccountsYet": "Начните с того, что есть",
   "balNoAccountMatch": "Ни один счёт или группа не подходят под запрос.",
   "balAddFirstAccount": "Добавьте первый счёт",
-  "balNoAccountsMessage": "Добавьте счета, и FinLens сам рассчитает капитал по вашим операциям.",
+  "balNoAccountsMessage": "Добавьте счёт и его баланс. Всё остальное — капитал, бюджеты, цели — рассчитается из этого.",
+  "balNothingRecordedYet": "Пока ничего не записано",
   "balAdjustFilter": "Настроить фильтр",
   "balSortTooltip": "Сортировка",
   "balSortDefault": "Порядок по умолчанию",

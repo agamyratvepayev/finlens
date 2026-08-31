@@ -1038,7 +1038,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get balNoResults => 'No results';
 
   @override
-  String get balNoAccountsYet => 'No accounts yet';
+  String get balNoAccountsYet => 'Start with what you have';
 
   @override
   String get balNoAccountMatch => 'No account or group matches your search.';
@@ -1048,7 +1048,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get balNoAccountsMessage =>
-      'Add your accounts and FinLens works out your net worth from the transactions you record.';
+      'Add an account and its balance. Everything else — net worth, budgets, goals — is worked out from there.';
+
+  @override
+  String get balNothingRecordedYet => 'Nothing recorded yet';
 
   @override
   String get balAdjustFilter => 'Adjust filter';

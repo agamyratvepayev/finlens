@@ -1477,7 +1477,7 @@ abstract class AppLocalizations {
   /// No description provided for @balNoAccountsYet.
   ///
   /// In en, this message translates to:
-  /// **'No accounts yet'**
+  /// **'Start with what you have'**
   String get balNoAccountsYet;
 
   /// No description provided for @balNoAccountMatch.
@@ -1495,8 +1495,14 @@ abstract class AppLocalizations {
   /// No description provided for @balNoAccountsMessage.
   ///
   /// In en, this message translates to:
-  /// **'Add your accounts and FinLens works out your net worth from the transactions you record.'**
+  /// **'Add an account and its balance. Everything else — net worth, budgets, goals — is worked out from there.'**
   String get balNoAccountsMessage;
+
+  /// No description provided for @balNothingRecordedYet.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing recorded yet'**
+  String get balNothingRecordedYet;
 
   /// No description provided for @balAdjustFilter.
   ///

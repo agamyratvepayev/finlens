@@ -251,10 +251,11 @@
 
   "balSearchAccounts": "Hesap ara",
   "balNoResults": "Sonuç yok",
-  "balNoAccountsYet": "Henüz hesap yok",
+  "balNoAccountsYet": "Elinizdekiyle başlayın",
   "balNoAccountMatch": "Aramanızla eşleşen hesap veya grup yok.",
   "balAddFirstAccount": "İlk hesabınızı ekleyin",
-  "balNoAccountsMessage": "Hesaplarınızı ekleyin, FinLens kaydettiğiniz işlemlerden net değerinizi hesaplasın.",
+  "balNoAccountsMessage": "Bir hesap ve bakiyesini ekleyin. Gerisi — net değer, bütçeler, hedefler — bundan hesaplanır.",
+  "balNothingRecordedYet": "Henüz kayıt yok",
   "balAdjustFilter": "Filtreyi ayarla",
   "balSortTooltip": "Sırala",
   "balSortDefault": "Varsayılan sıralama",
