@@ -7,6 +7,7 @@ import '../../core/utils/formatters.dart';
 import '../../core/utils/fx.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/amount_text.dart';
+import '../../shared/widgets/detail_row.dart';
 import '../../shared/widgets/swipe_actions.dart';
 import '../../shared/widgets/txn_row.dart' show confirmDeleteTxn;
 import '../../theme/app_colors.dart';
@@ -306,12 +307,12 @@ class _SameTransactionsScreenState extends State<SameTransactionsScreen> {
 
     final note = origin.note.trim();
     if (note.isNotEmpty) {
-      rows.add(_detailRow(l.stDetailNote, note));
+      rows.add(DetailRow(l.stDetailNote, note));
     }
 
     // WHEN — day, month, year and the time, composed through the same
     // locale-aware separator the audit trail uses ("9 Aug 2026, 08:12").
-    rows.add(_detailRow(
+    rows.add(DetailRow(
       l.stDetailWhen,
       l.dateWithTime(dayMonthYear(origin.date, l), hhmm(origin.date)),
     ));
@@ -325,7 +326,7 @@ class _SameTransactionsScreenState extends State<SameTransactionsScreen> {
           origin.type == TxnType.expense ? origin.fromRef : origin.toRef;
       final account = store.accountById(accountId);
       if (account != null) {
-        rows.add(_detailRow(
+        rows.add(DetailRow(
           l.stDetailPaidWith,
           account.name,
           clampValue: true,
@@ -343,7 +344,7 @@ class _SameTransactionsScreenState extends State<SameTransactionsScreen> {
     if (origin.tagIds.isNotEmpty) {
       final names = store.tagNames(origin.tagIds);
       if (names.isNotEmpty) {
-        rows.add(_detailRow(
+        rows.add(DetailRow(
           l.stDetailTags,
           names.map((t) => '#$t').join(' '),
           valueColor: AppColors.tagDot,
@@ -363,70 +364,6 @@ class _SameTransactionsScreenState extends State<SameTransactionsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: rows,
-      ),
-    );
-  }
-
-  /// One `LABEL value` line of the detail card. The caps label is top-aligned so
-  /// that when [value] wraps (a long note) the label stays against the first
-  /// line. [clampValue] ellipsises the value on one line (a long account name),
-  /// leaving [trailing] — the balance-after figure — its intrinsic width.
-  Widget _detailRow(
-    String label,
-    String value, {
-    String? trailing,
-    Color? valueColor,
-    bool clampValue = false,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 62,
-            child: Padding(
-              // Nudge the small caps down onto the value's first line rather
-              // than floating at the very top of the taller value box.
-              padding: const EdgeInsets.only(top: 2),
-              child: Text(
-                label.toUpperCase(),
-                style: const TextStyle(
-                  fontSize: 9.5,
-                  height: 1.2,
-                  fontWeight: FontWeight.w500,
-                  letterSpacing: 0.57, // 0.06em @ 9.5pt
-                  color: AppColors.detailLabel,
-                ),
-              ),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              maxLines: clampValue ? 1 : null,
-              overflow:
-                  clampValue ? TextOverflow.ellipsis : TextOverflow.clip,
-              style: TextStyle(
-                fontSize: 13.5,
-                height: 1.3,
-                color: valueColor ?? AppColors.textPrimary,
-              ),
-            ),
-          ),
-          if (trailing != null) ...[
-            const SizedBox(width: Insets.sm),
-            Text(
-              trailing,
-              style: const TextStyle(
-                fontSize: 12,
-                height: 1.3,
-                color: AppColors.textSecondary,
-                fontFeatures: [FontFeature.tabularFigures()],
-              ),
-            ),
-          ],
-        ],
       ),
     );
   }

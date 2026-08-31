@@ -9,6 +9,7 @@ import '../../shared/widgets/amount_text.dart';
 import '../../shared/widgets/app_card.dart';
 import '../../shared/widgets/change_row.dart';
 import '../../shared/widgets/destructive_sheet.dart';
+import '../../shared/widgets/detail_row.dart';
 import '../../shared/widgets/screen_header.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
@@ -508,7 +509,15 @@ class BudgetDetailScreen extends StatelessWidget {
                 children: [
                   for (var i = 0; i < shown.length; i++) ...[
                     if (i > 0) const RowDivider(indent: Insets.md),
-                    _TxnMiniRow(category: category, txn: shown[i]),
+                    // Keyed by txn id so open/closed state stays with the
+                    // transaction, not the position: adding/editing/deleting a
+                    // txn elsewhere reorders this list, and without the key an
+                    // open row would appear to jump onto a different one.
+                    _TxnMiniRow(
+                      key: ValueKey(shown[i].id),
+                      category: category,
+                      txn: shown[i],
+                    ),
                   ],
                 ],
               ),
@@ -738,44 +747,145 @@ class _HistoryBar extends StatelessWidget {
   }
 }
 
-/// Compact read-only transaction row for the budget screen's preview list.
-class _TxnMiniRow extends StatelessWidget {
-  const _TxnMiniRow({required this.category, required this.txn});
+/// Compact transaction row for the budget screen's preview list. Closed it is a
+/// read-only summary (title · date · amount); a tap expands it in place to
+/// reveal the three facts the closed row cannot — WHEN's time of day, PAID WITH
+/// and its balance-after, and TAGS — and a second tap closes it. No navigation,
+/// no sheet (spec §1/§2). The screen stays stateless; the open flag lives here,
+/// so more than one row can be open at once (intended — five rows at most).
+class _TxnMiniRow extends StatefulWidget {
+  const _TxnMiniRow({super.key, required this.category, required this.txn});
 
   final Category category;
   final Txn txn;
 
   @override
+  State<_TxnMiniRow> createState() => _TxnMiniRowState();
+}
+
+class _TxnMiniRowState extends State<_TxnMiniRow> {
+  bool _open = false;
+
+  /// The tile beside the title, and the gap after it: the detail block indents
+  /// to the title's left edge by clearing exactly these (spec §2). Derived, not
+  /// the hard-coded 54 — the outer [Insets.md] row padding supplies the rest.
+  static const _tileSize = 30.0;
+
+  @override
   Widget build(BuildContext context) {
+    final store = StoreScope.of(context);
+    final category = widget.category;
+    final txn = widget.txn;
     final title = txn.note.isEmpty ? category.name : txn.note;
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: Insets.md,
-        vertical: Insets.sm,
-      ),
-      child: Row(
-        children: [
-          IconTile(category.icon, color: category.color, size: 30),
-          const SizedBox(width: Insets.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: AppText.rowTitle.copyWith(fontSize: 14),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 2),
-                Text(dayMonth(txn.date, AppLocalizations.of(context)),
-                    style: AppText.rowSubtitle),
-              ],
-            ),
+
+    return Semantics(
+      button: true,
+      expanded: _open,
+      child: InkWell(
+        onTap: () => setState(() => _open = !_open),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: Insets.md,
+            vertical: Insets.sm,
           ),
-          const SizedBox(width: Insets.sm),
-          AmountText(Fx.toBase(txn.amount, txn.currency)),
-        ],
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  IconTile(category.icon, color: category.color, size: _tileSize),
+                  const SizedBox(width: Insets.md),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: AppText.rowTitle.copyWith(fontSize: 14),
+                          // The note's clamp lifts on open: a long note becomes
+                          // fully readable, with no NOTE row repeating it (§2).
+                          maxLines: _open ? null : 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(dayMonth(txn.date, AppLocalizations.of(context)),
+                            style: AppText.rowSubtitle),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: Insets.sm),
+                  AmountText(Fx.toBase(txn.amount, txn.currency)),
+                ],
+              ),
+              // The app's one reveal motion — same 180ms easeOut / topLeft as
+              // TxnRow._descriptionLine (spec §2).
+              AnimatedSize(
+                duration: const Duration(milliseconds: 180),
+                curve: Curves.easeOut,
+                alignment: Alignment.topLeft,
+                child: _open
+                    ? _details(context, store)
+                    : const SizedBox(width: double.infinity),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// WHEN · PAID WITH · TAGS, built from [DetailRow] and indented to the title's
+  /// left edge. Insets.sm above; the row's own bottom padding sits below. No
+  /// NOTE row (the title above already is the note) and no CATEGORY row (the
+  /// screen is the category) (spec §2/§3).
+  Widget _details(BuildContext context, AppStore store) {
+    final l = AppLocalizations.of(context);
+    final txn = widget.txn;
+    final rows = <Widget>[
+      // WHEN — always present; the time of day is the one fact the closed row
+      // cannot show. Same composition as the drilldown's detail card.
+      DetailRow(
+        l.stDetailWhen,
+        l.dateWithTime(dayMonthYear(txn.date, l), hhmm(txn.date)),
+      ),
+    ];
+
+    // PAID WITH — this list is expense-only, so fromRef is always the payer.
+    // Omitted when the account will not resolve (deleted). The trailing figure
+    // is the account's balance right after this transaction, in its own
+    // currency, masked with the privacy eye.
+    final account = store.accountById(txn.fromRef);
+    if (account != null) {
+      rows.add(DetailRow(
+        l.stDetailPaidWith,
+        account.name,
+        clampValue: true,
+        trailing: money(
+          store.runningBalanceAt(account.id, txn),
+          currency: account.currency,
+          masked: store.masked,
+        ),
+      ));
+    }
+
+    // TAGS — omitted when there are none.
+    final names = store.tagNames(txn.tagIds);
+    if (names.isNotEmpty) {
+      rows.add(DetailRow(
+        l.stDetailTags,
+        names.map((t) => '#$t').join(' '),
+        valueColor: AppColors.tagDot,
+      ));
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(
+        top: Insets.sm,
+        left: _tileSize + Insets.md,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: rows,
       ),
     );
   }
