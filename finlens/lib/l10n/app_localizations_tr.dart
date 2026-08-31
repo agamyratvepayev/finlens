@@ -428,10 +428,7 @@ class AppLocalizationsTr extends AppLocalizations {
   String get moreTitle => 'Daha';
 
   @override
-  String get moreYourMoney => 'Paranız';
-
-  @override
-  String get morePlannerSection => 'Planlayıcı';
+  String get moreData => 'Veriler';
 
   @override
   String get morePreferences => 'Tercihler';
@@ -440,27 +437,18 @@ class AppLocalizationsTr extends AppLocalizations {
   String get moreCategories => 'Kategoriler';
 
   @override
-  String moreCategoriesInUse(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count kullanımda',
-      one: '$count kullanımda',
-    );
-    return '$_temp0';
-  }
-
-  @override
   String get moreArchive => 'Arşiv';
 
   @override
-  String get morePrivacyMode => 'Gizlilik modu';
-
-  @override
-  String get morePrivacyModeDesc => 'Uygulamadaki tüm tutarları gizle';
+  String get moreMaskAmounts => 'Tüm tutarları gizle';
 
   @override
   String get moreAddAccount => 'Hesap ekle';
+
+  @override
+  String moreVersion(String version, String build) {
+    return '$version ($build)';
+  }
 
   @override
   String get insightTitle => 'Analiz';
@@ -3345,11 +3333,6 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get moreTags => 'Tags';
-
-  @override
-  String tagsSubtitle(int inUse, int archived) {
-    return '$inUse in use · $archived archived';
-  }
 
   @override
   String tagSelectedCount(int count) {

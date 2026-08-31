@@ -428,10 +428,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get moreTitle => 'More';
 
   @override
-  String get moreYourMoney => 'Your money';
-
-  @override
-  String get morePlannerSection => 'Planner';
+  String get moreData => 'Data';
 
   @override
   String get morePreferences => 'Preferences';
@@ -440,27 +437,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get moreCategories => 'Categories';
 
   @override
-  String moreCategoriesInUse(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count in use',
-      one: '$count in use',
-    );
-    return '$_temp0';
-  }
-
-  @override
   String get moreArchive => 'Archive';
 
   @override
-  String get morePrivacyMode => 'Privacy mode';
-
-  @override
-  String get morePrivacyModeDesc => 'Mask every amount across the app';
+  String get moreMaskAmounts => 'Mask all amounts';
 
   @override
   String get moreAddAccount => 'Add an account';
+
+  @override
+  String moreVersion(String version, String build) {
+    return '$version ($build)';
+  }
 
   @override
   String get insightTitle => 'Insight';
@@ -3355,11 +3343,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get moreTags => 'Tags';
-
-  @override
-  String tagsSubtitle(int inUse, int archived) {
-    return '$inUse in use · $archived archived';
-  }
 
   @override
   String tagSelectedCount(int count) {

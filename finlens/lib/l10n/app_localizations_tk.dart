@@ -428,10 +428,7 @@ class AppLocalizationsTk extends AppLocalizations {
   String get moreTitle => 'Ýene';
 
   @override
-  String get moreYourMoney => 'Pullaryňyz';
-
-  @override
-  String get morePlannerSection => 'Meýilnama';
+  String get moreData => 'Maglumatlar';
 
   @override
   String get morePreferences => 'Sazlamalar';
@@ -440,27 +437,18 @@ class AppLocalizationsTk extends AppLocalizations {
   String get moreCategories => 'Kategoriýalar';
 
   @override
-  String moreCategoriesInUse(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count ulanylýar',
-      one: '$count ulanylýar',
-    );
-    return '$_temp0';
-  }
-
-  @override
   String get moreArchive => 'Arhiw';
 
   @override
-  String get morePrivacyMode => 'Gizlinlik tertibi';
-
-  @override
-  String get morePrivacyModeDesc => 'Programmadaky ähli mukdarlary gizle';
+  String get moreMaskAmounts => 'Ähli mukdarlary gizle';
 
   @override
   String get moreAddAccount => 'Hasap goş';
+
+  @override
+  String moreVersion(String version, String build) {
+    return '$version ($build)';
+  }
 
   @override
   String get insightTitle => 'Derňew';
@@ -3348,11 +3336,6 @@ class AppLocalizationsTk extends AppLocalizations {
 
   @override
   String get moreTags => 'Tags';
-
-  @override
-  String tagsSubtitle(int inUse, int archived) {
-    return '$inUse in use · $archived archived';
-  }
 
   @override
   String tagSelectedCount(int count) {

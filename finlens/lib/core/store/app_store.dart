@@ -776,6 +776,12 @@ class AppStore extends ChangeNotifier {
   List<Category> categoriesOfType(CategoryType type) =>
       categories.where((c) => c.type == type).toList(growable: false);
 
+  /// Categories the user can file against today — archived excluded, both types
+  /// included. The More screen's Categories count; the public [categories]
+  /// getter already hides archived, so this is its length by another name, kept
+  /// as a named getter so the screen reads a domain concept rather than a list.
+  int get categoryCount => categories.length;
+
   /// Categories with a limit set — Planner > Budgets reads exactly this
   /// (spec 5.1: budgets are fields on Category, not a separate entity).
   List<Category> get budgetedCategories => categories

@@ -112,14 +112,11 @@
   "daysAgo": "{count, plural, one{{count} gün önce} other{{count} gün önce}}",
 
   "moreTitle": "Daha",
-  "moreYourMoney": "Paranız",
-  "morePlannerSection": "Planlayıcı",
+  "moreData": "Veriler",
   "morePreferences": "Tercihler",
   "moreCategories": "Kategoriler",
-  "moreCategoriesInUse": "{count, plural, one{{count} kullanımda} other{{count} kullanımda}}",
   "moreArchive": "Arşiv",
-  "morePrivacyMode": "Gizlilik modu",
-  "morePrivacyModeDesc": "Uygulamadaki tüm tutarları gizle",
+  "moreMaskAmounts": "Tüm tutarları gizle",
   "moreAddAccount": "Hesap ekle",
 
   "insightTitle": "Analiz",

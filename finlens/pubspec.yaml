@@ -40,6 +40,9 @@ dependencies:
   # Localized month/weekday names (DateFormat) and ICU plural/select support.
   # money() stays hand-rolled — intl is used only for l10n, not amount rendering.
   intl: any
+  # Real app version + build for the More footer (spec §7). The only runtime
+  # source of the pubspec version/build number; read once via FutureBuilder.
+  package_info_plus: ^8.0.0
 
 dev_dependencies:
   flutter_test:

@@ -112,14 +112,11 @@
   "daysAgo": "{count, plural, one{{count} день назад} few{{count} дня назад} many{{count} дней назад} other{{count} дня назад}}",
 
   "moreTitle": "Ещё",
-  "moreYourMoney": "Ваши деньги",
-  "morePlannerSection": "Планы",
+  "moreData": "Данные",
   "morePreferences": "Настройки",
   "moreCategories": "Категории",
-  "moreCategoriesInUse": "{count, plural, one{{count} используется} few{{count} используется} many{{count} используется} other{{count} используется}}",
   "moreArchive": "Архив",
-  "morePrivacyMode": "Приватность",
-  "morePrivacyModeDesc": "Скрывать все суммы в приложении",
+  "moreMaskAmounts": "Скрывать все суммы",
   "moreAddAccount": "Добавить счёт",
 
   "insightTitle": "Аналитика",

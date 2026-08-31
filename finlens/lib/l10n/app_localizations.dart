@@ -660,17 +660,11 @@ abstract class AppLocalizations {
   /// **'More'**
   String get moreTitle;
 
-  /// No description provided for @moreYourMoney.
+  /// No description provided for @moreData.
   ///
   /// In en, this message translates to:
-  /// **'Your money'**
-  String get moreYourMoney;
-
-  /// No description provided for @morePlannerSection.
-  ///
-  /// In en, this message translates to:
-  /// **'Planner'**
-  String get morePlannerSection;
+  /// **'Data'**
+  String get moreData;
 
   /// No description provided for @morePreferences.
   ///
@@ -684,35 +678,29 @@ abstract class AppLocalizations {
   /// **'Categories'**
   String get moreCategories;
 
-  /// No description provided for @moreCategoriesInUse.
-  ///
-  /// In en, this message translates to:
-  /// **'{count, plural, one{{count} in use} other{{count} in use}}'**
-  String moreCategoriesInUse(int count);
-
   /// No description provided for @moreArchive.
   ///
   /// In en, this message translates to:
   /// **'Archive'**
   String get moreArchive;
 
-  /// No description provided for @morePrivacyMode.
+  /// No description provided for @moreMaskAmounts.
   ///
   /// In en, this message translates to:
-  /// **'Privacy mode'**
-  String get morePrivacyMode;
-
-  /// No description provided for @morePrivacyModeDesc.
-  ///
-  /// In en, this message translates to:
-  /// **'Mask every amount across the app'**
-  String get morePrivacyModeDesc;
+  /// **'Mask all amounts'**
+  String get moreMaskAmounts;
 
   /// No description provided for @moreAddAccount.
   ///
   /// In en, this message translates to:
   /// **'Add an account'**
   String get moreAddAccount;
+
+  /// No description provided for @moreVersion.
+  ///
+  /// In en, this message translates to:
+  /// **'{version} ({build})'**
+  String moreVersion(String version, String build);
 
   /// No description provided for @insightTitle.
   ///
@@ -5193,12 +5181,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Tags'**
   String get moreTags;
-
-  /// No description provided for @tagsSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'{inUse} in use · {archived} archived'**
-  String tagsSubtitle(int inUse, int archived);
 
   /// No description provided for @tagSelectedCount.
   ///

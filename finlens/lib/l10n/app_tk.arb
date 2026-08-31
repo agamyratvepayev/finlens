@@ -112,14 +112,11 @@
   "daysAgo": "{count, plural, one{{count} gün öň} other{{count} gün öň}}",
 
   "moreTitle": "Ýene",
-  "moreYourMoney": "Pullaryňyz",
-  "morePlannerSection": "Meýilnama",
+  "moreData": "Maglumatlar",
   "morePreferences": "Sazlamalar",
   "moreCategories": "Kategoriýalar",
-  "moreCategoriesInUse": "{count, plural, one{{count} ulanylýar} other{{count} ulanylýar}}",
   "moreArchive": "Arhiw",
-  "morePrivacyMode": "Gizlinlik tertibi",
-  "morePrivacyModeDesc": "Programmadaky ähli mukdarlary gizle",
+  "moreMaskAmounts": "Ähli mukdarlary gizle",
   "moreAddAccount": "Hasap goş",
 
   "insightTitle": "Derňew",

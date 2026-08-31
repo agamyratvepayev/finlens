@@ -444,10 +444,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get moreTitle => 'Ещё';
 
   @override
-  String get moreYourMoney => 'Ваши деньги';
-
-  @override
-  String get morePlannerSection => 'Планы';
+  String get moreData => 'Данные';
 
   @override
   String get morePreferences => 'Настройки';
@@ -456,29 +453,18 @@ class AppLocalizationsRu extends AppLocalizations {
   String get moreCategories => 'Категории';
 
   @override
-  String moreCategoriesInUse(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count используется',
-      many: '$count используется',
-      few: '$count используется',
-      one: '$count используется',
-    );
-    return '$_temp0';
-  }
-
-  @override
   String get moreArchive => 'Архив';
 
   @override
-  String get morePrivacyMode => 'Приватность';
-
-  @override
-  String get morePrivacyModeDesc => 'Скрывать все суммы в приложении';
+  String get moreMaskAmounts => 'Скрывать все суммы';
 
   @override
   String get moreAddAccount => 'Добавить счёт';
+
+  @override
+  String moreVersion(String version, String build) {
+    return '$version ($build)';
+  }
 
   @override
   String get insightTitle => 'Аналитика';
@@ -3426,11 +3412,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get moreTags => 'Tags';
-
-  @override
-  String tagsSubtitle(int inUse, int archived) {
-    return '$inUse in use · $archived archived';
-  }
 
   @override
   String tagSelectedCount(int count) {

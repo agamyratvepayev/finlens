@@ -327,29 +327,53 @@ class _BalanceScreenState extends State<BalanceScreen> {
         ),
     };
 
+    final amountColumn = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: AmountText.balance(
+            amount,
+            style: AppText.heroAmount,
+            color: color,
+          ),
+        ),
+        // Without this line a user can easily believe a historical view
+        // is live data.
+        if (store.isHistorical)
+          Text(
+            'as of ${dayMonthYear(store.asOf!, AppLocalizations.of(context))}',
+            style: AppText.asOfLine,
+          ),
+      ],
+    );
+
+    // Net worth keeps the ratio bar below it. The assets-only and
+    // liabilities-only views have no bar, so the period-comparison chip that
+    // used to live on the deleted Assets/Liabilities screens renders here — the
+    // only place these two views carry a comparison at all.
+    if (_section == BalanceSection.all) {
+      return Align(
+        key: const ValueKey('amount'),
+        alignment: Alignment.centerLeft,
+        child: amountColumn,
+      );
+    }
     return Align(
       key: const ValueKey('amount'),
       alignment: Alignment.centerLeft,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerLeft,
-            child: AmountText.balance(
-              amount,
-              style: AppText.heroAmount,
-              color: color,
-            ),
+          Expanded(child: amountColumn),
+          const SizedBox(width: Insets.sm),
+          DeltaChip(
+            fraction: store.netWorthDeltaFraction,
+            caption: store.comparePeriod.caption(AppLocalizations.of(context)),
+            isLiability: _section == BalanceSection.liabilities,
           ),
-          // Without this line a user can easily believe a historical view
-          // is live data.
-          if (store.isHistorical)
-            Text(
-              'as of ${dayMonthYear(store.asOf!, AppLocalizations.of(context))}',
-              style: AppText.asOfLine,
-            ),
         ],
       ),
     );

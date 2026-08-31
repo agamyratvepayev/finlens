@@ -162,16 +162,14 @@
   "@daysAgo": { "placeholders": { "count": { "type": "int" } } },
 
   "moreTitle": "More",
-  "moreYourMoney": "Your money",
-  "morePlannerSection": "Planner",
+  "moreData": "Data",
   "morePreferences": "Preferences",
   "moreCategories": "Categories",
-  "moreCategoriesInUse": "{count, plural, one{{count} in use} other{{count} in use}}",
-  "@moreCategoriesInUse": { "placeholders": { "count": { "type": "int" } } },
   "moreArchive": "Archive",
-  "morePrivacyMode": "Privacy mode",
-  "morePrivacyModeDesc": "Mask every amount across the app",
+  "moreMaskAmounts": "Mask all amounts",
   "moreAddAccount": "Add an account",
+  "moreVersion": "{version} ({build})",
+  "@moreVersion": { "placeholders": { "version": { "type": "String" }, "build": { "type": "String" } } },
 
   "insightTitle": "Insight",
 
@@ -1140,8 +1138,6 @@
 
   "tagsTitle": "Tags",
   "moreTags": "Tags",
-  "tagsSubtitle": "{inUse} in use · {archived} archived",
-  "@tagsSubtitle": { "placeholders": { "inUse": { "type": "int" }, "archived": { "type": "int" } } },
   "tagSelectedCount": "{count} selected",
   "@tagSelectedCount": { "placeholders": { "count": { "type": "int" } } },
   "tagSearchOrCreate": "Search or create",
