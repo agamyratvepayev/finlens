@@ -675,12 +675,6 @@ class AppLocalizationsTk extends AppLocalizations {
   }
 
   @override
-  String get insMovements => 'Hereketler';
-
-  @override
-  String get insAverage => 'Ort.';
-
-  @override
   String insAverageValue(String amount) {
     return 'Ortaça $amount';
   }
@@ -694,8 +688,18 @@ class AppLocalizationsTk extends AppLocalizations {
   String get insEmptyMonthsExcluded => 'boş döwürler hasaba alynmady';
 
   @override
-  String insVsLastPeriod(String amount, String percent) {
-    return '$amount geçen döwre görä ($percent)';
+  String insStillRunning(String month) {
+    return '$month dowam edýär';
+  }
+
+  @override
+  String insDaysShort(int count) {
+    return '${count}g';
+  }
+
+  @override
+  String insVsRange(String amount, String range, String percent) {
+    return '$amount · $range ($percent)';
   }
 
   @override
@@ -744,6 +748,100 @@ class AppLocalizationsTk extends AppLocalizations {
 
   @override
   String get insSelectDateRange => 'Sene aralygyny saýla…';
+
+  @override
+  String get insPeriod => 'Döwür';
+
+  @override
+  String insDaysCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count gün',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get insFilterAccountsNote =>
+      'Gizlenen hasaplar ähli sanlary üýtgedýär';
+
+  @override
+  String get insFilterCategoriesNote =>
+      'Gizlenen kategoriýalar diňe sanawdan aýrylýar';
+
+  @override
+  String get insSpendingList => 'Çykdajy sanawy';
+
+  @override
+  String get insIncomeList => 'Girdeji sanawy';
+
+  @override
+  String insOfTotal(String amount) {
+    return 'jemi $amount';
+  }
+
+  @override
+  String insCategoriesShown(int shown, int total) {
+    return '$shown / $total kategoriýa';
+  }
+
+  @override
+  String insAccountsShown(int shown, int total) {
+    return '$shown / $total hasap';
+  }
+
+  @override
+  String get insShowAllAccounts => 'Ähli hasaplary görkez';
+
+  @override
+  String get insEverythingHidden => 'Ähli hasaplar gizlendi';
+
+  @override
+  String get insSpendingHistory => '6 aýlyk çykdajy taryhy';
+
+  @override
+  String insSavedOutsideWindow(String date) {
+    return '$date senesine ýazyldy, bu döwürden daşary';
+  }
+
+  @override
+  String get insGoToDate => 'Senä geç';
+
+  @override
+  String insA11yPresetSelected(String name, String range) {
+    return '$name, $range, saýlanan';
+  }
+
+  @override
+  String insA11yCustomRow(String range, String days) {
+    return 'Sene aralygyny saýla, häzir $range, $days';
+  }
+
+  @override
+  String insA11yChartCol(String label, String amount) {
+    return '$label, $amount';
+  }
+
+  @override
+  String insA11yChartColPartial(String label, String amount, String days) {
+    return '$label, şu wagta çenli $amount, $days';
+  }
+
+  @override
+  String insA11yChartColEmpty(String label) {
+    return '$label, ýazgy ýok';
+  }
+
+  @override
+  String insA11yTxnRow(
+    String title,
+    String amount,
+    String date,
+    String account,
+  ) {
+    return '$title, $amount, $date, $account';
+  }
 
   @override
   String get arcReached => 'Ýetilen';

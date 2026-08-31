@@ -26,6 +26,7 @@ Future<DateRange?> showRangePickerSheet(
   required DateRange current,
   required bool Function(DateTime day) hasData,
   required int Function(DateTime from, DateTime to) countBetween,
+  DateTime? firstData,
   bool disableFuture = true,
 }) {
   return showModalBottomSheet<DateRange>(
@@ -39,34 +40,28 @@ Future<DateRange?> showRangePickerSheet(
       current: current,
       hasData: hasData,
       countBetween: countBetween,
+      firstData: firstData,
       disableFuture: disableFuture,
     ),
   );
 }
-
-/// The seven presets, in the scoped ledger's display order (spec §2.2) so the
-/// two sheets never disagree.
-const _presetOrder = <RangePreset>[
-  RangePreset.thisMonth,
-  RangePreset.lastMonth,
-  RangePreset.thisWeek,
-  RangePreset.lastWeek,
-  RangePreset.last3Months,
-  RangePreset.thisYear,
-  RangePreset.allTime,
-];
 
 class _RangePickerSheet extends StatefulWidget {
   const _RangePickerSheet({
     required this.current,
     required this.hasData,
     required this.countBetween,
+    required this.firstData,
     required this.disableFuture,
   });
 
   final DateRange current;
   final bool Function(DateTime day) hasData;
   final int Function(DateTime from, DateTime to) countBetween;
+
+  /// Earliest data date, so `All time` resolves to `Since Mar 2023` rather than
+  /// the epoch floor (spec §1.1).
+  final DateTime? firstData;
   final bool disableFuture;
 
   @override
@@ -104,6 +99,7 @@ class _RangePickerSheetState extends State<_RangePickerSheet> {
             else
               _PresetList(
                 current: widget.current,
+                firstData: widget.firstData,
                 onPick: (range) => Navigator.of(context).pop(range),
                 onCustom: () => setState(() => _custom = true),
               ),
@@ -142,11 +138,13 @@ class _SheetTitle extends StatelessWidget {
 class _PresetList extends StatelessWidget {
   const _PresetList({
     required this.current,
+    required this.firstData,
     required this.onPick,
     required this.onCustom,
   });
 
   final DateRange current;
+  final DateTime? firstData;
   final ValueChanged<DateRange> onPick;
   final VoidCallback onCustom;
 
@@ -156,40 +154,35 @@ class _PresetList extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        _SheetTitle(l.ldgPeriod),
-        for (final preset in _presetOrder) _presetRow(context, preset, l),
+        // Its own title key — a Ledger string on an Insight surface reads wrong
+        // (spec §1.5).
+        _SheetTitle(l.insPeriod),
+        for (final preset in rangePresetOrder) _presetRow(context, preset, l),
         // The divider is meaningful: above it, one tap finishes; below it, a
         // second screen (the calendar) opens.
         const Divider(height: 1, thickness: 1, color: AppColors.hairline),
-        InkWell(
-          onTap: onCustom,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-                horizontal: Insets.gutter, vertical: 11),
-            child: Row(
-              children: [
-                const Icon(Icons.calendar_today_rounded,
-                    size: 16, color: AppColors.accentLight),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(l.insSelectDateRange,
-                      style: const TextStyle(
-                          fontSize: 15, color: AppColors.accentLight)),
-                ),
-                const Icon(Icons.chevron_right_rounded,
-                    size: 20, color: AppColors.accentLight),
-              ],
-            ),
-          ),
-        ),
+        _customRow(context, l),
       ],
     );
   }
 
   Widget _presetRow(BuildContext context, RangePreset preset, AppLocalizations l) {
     final active = current.preset == preset;
-    return InkWell(
-      onTap: () => onPick(preset.resolve(AppStore.today)),
+    final resolved = preset.resolve(AppStore.today);
+    // `All time` earns its trailing label most: nothing else on the sheet says
+    // when the data begins (spec §1.1).
+    final resolvedLabel =
+        resolved.label(AppStore.today, l, firstEver: firstData);
+    return Semantics(
+      button: true,
+      selected: active,
+      // "This month, 1–31 Aug, selected." (spec §9).
+      label: active
+          ? l.insA11yPresetSelected(preset.label(l), resolvedLabel)
+          : '${preset.label(l)}, $resolvedLabel',
+      child: ExcludeSemantics(
+        child: InkWell(
+      onTap: () => onPick(resolved),
       child: Padding(
         padding:
             const EdgeInsets.symmetric(horizontal: Insets.gutter, vertical: 11),
@@ -197,22 +190,91 @@ class _PresetList extends StatelessWidget {
           children: [
             SizedBox(
               width: 22,
+              // The check alone marks the active row — the old bold weight was a
+              // redundant second signal (spec §1.1). Raised to 18pt to match the
+              // scoped ledger's.
               child: active
                   ? const Icon(Icons.check_rounded,
-                      size: 17, color: AppColors.accentLight)
+                      size: 18, color: AppColors.accentLight)
                   : null,
             ),
+            // The name ellipsizes at 320pt; the resolved range does not — a
+            // truncated date range is read wrong (spec §1.1).
             Expanded(
               child: Text(
                 preset.label(l),
-                style: TextStyle(
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
                   fontSize: 15,
-                  fontWeight: active ? FontWeight.w700 : FontWeight.w400,
+                  fontWeight: FontWeight.w400,
                   color: AppColors.textPrimary,
                 ),
               ),
             ),
+            const SizedBox(width: 10),
+            Text(
+              resolvedLabel,
+              style: const TextStyle(
+                  fontSize: 12.5, color: AppColors.textTertiary),
+            ),
           ],
+        ),
+      ),
+        ),
+      ),
+    );
+  }
+
+  Widget _customRow(BuildContext context, AppLocalizations l) {
+    // While a custom range is live, the row says which one — otherwise the only
+    // way to learn the active custom window is to open the calendar (spec §1.2).
+    final isCustom = current.preset == null;
+    final sub = isCustom
+        ? '${current.label(AppStore.today, l)} · ${l.insDaysCount(current.days)}'
+        : null;
+    return Semantics(
+      button: true,
+      // "Select date range, currently 5–9 Aug, 5 days." (spec §9).
+      label: isCustom
+          ? l.insA11yCustomRow(
+              current.label(AppStore.today, l), l.insDaysCount(current.days))
+          : l.insSelectDateRange,
+      child: ExcludeSemantics(
+        child: InkWell(
+      onTap: onCustom,
+      child: Padding(
+        padding:
+            const EdgeInsets.symmetric(horizontal: Insets.gutter, vertical: 8),
+        child: Row(
+          children: [
+            const Icon(Icons.calendar_today_rounded,
+                size: 16, color: AppColors.accentLight),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(l.insSelectDateRange,
+                      style: const TextStyle(
+                          fontSize: 15, color: AppColors.accentLight)),
+                  if (sub != null) ...[
+                    const SizedBox(height: 2),
+                    Text(sub,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            fontSize: 11.5, color: AppColors.textTertiary)),
+                  ],
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right_rounded,
+                size: 20, color: AppColors.accentLight),
+          ],
+        ),
+      ),
         ),
       ),
     );

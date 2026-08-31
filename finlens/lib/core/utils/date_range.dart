@@ -135,6 +135,21 @@ enum RangePreset {
   }
 }
 
+/// The seven range presets in the app's canonical display order — the single
+/// list both the calendar-shaped range picker (Insight) and the scoped ledger's
+/// preset-only sheet read, so the two can never disagree about what "Last 3
+/// months" means or where "All time" sits (spec §1.4). The two sheets stay
+/// separate widgets; only this list is shared.
+const rangePresetOrder = <RangePreset>[
+  RangePreset.thisMonth,
+  RangePreset.lastMonth,
+  RangePreset.thisWeek,
+  RangePreset.lastWeek,
+  RangePreset.last3Months,
+  RangePreset.thisYear,
+  RangePreset.allTime,
+];
+
 /// The unit `‹` / `›` steps by. A preset belongs to exactly one unit; [allTime]
 /// has none. Only the unit is persisted per screen — the cursor always resets
 /// to the period containing today on launch.

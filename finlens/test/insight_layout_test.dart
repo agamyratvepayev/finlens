@@ -97,8 +97,8 @@ void main() {
           addTearDown(tester.view.reset);
 
           await tester.pumpWidget(_app(
-            buildSeedStore(),
-            CategoryDetailScreen(categoryId: 'c-housing', window: _augustMonth()),
+            buildSeedStore()..setInsightWindow(_augustMonth()),
+            const CategoryDetailScreen(categoryId: 'c-housing'),
             locale: locale,
             scale: scale,
           ));
@@ -114,8 +114,8 @@ void main() {
           addTearDown(tester.view.reset);
 
           await tester.pumpWidget(_app(
-            buildSeedStore(),
-            SeeAllScreen(income: false, window: _augustMonth()),
+            buildSeedStore()..setInsightWindow(_augustMonth()),
+            const SeeAllScreen(income: false),
             locale: locale,
             scale: scale,
           ));
@@ -160,7 +160,8 @@ void main() {
     }
 
     await tester.pumpWidget(_app(
-        buildSeedStore(), SeeAllScreen(income: false, window: _augustMonth())));
+        buildSeedStore()..setInsightWindow(_augustMonth()),
+        const SeeAllScreen(income: false)));
     await tester.pump(const Duration(milliseconds: 300));
     for (final e in find.byType(ClipRRect).evaluate()) {
       expect((e.renderObject as dynamic).size.height, isNot(closeTo(8, 0.1)));
@@ -262,8 +263,9 @@ void main() {
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
 
-    await tester.pumpWidget(_app(buildSeedStore(),
-        CategoryDetailScreen(categoryId: 'c-housing', window: _augustMonth())));
+    await tester.pumpWidget(_app(
+        buildSeedStore()..setInsightWindow(_augustMonth()),
+        const CategoryDetailScreen(categoryId: 'c-housing')));
     await tester.pump(const Duration(milliseconds: 300));
     expect(tester.getSize(find.byKey(const Key('ins-chart'))).height,
         closeTo(104, 1.0));

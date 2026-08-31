@@ -40,6 +40,7 @@ class ScopedLedgerScreen extends StatefulWidget {
     super.key,
     required this.initialScope,
     this.initialRange,
+    this.initialFlow,
   });
 
   final LedgerScope initialScope;
@@ -49,6 +50,13 @@ class ScopedLedgerScreen extends StatefulWidget {
   /// window). No existing caller passes it, so the default is unchanged. Once
   /// open, the period strip steps and picks from here as usual.
   final DateRange? initialRange;
+
+  /// When set, the screen opens with this In/Out flow filter already applied —
+  /// Insight's `Charged to cards`/`Paid to cards` rows open the credit-cards
+  /// ledger already narrowed to out / in (spec §4). Null keeps "no flow filter",
+  /// so every existing caller is unchanged. Cleared, like the range, whenever
+  /// the scope changes from inside.
+  final FlowKind? initialFlow;
 
   @override
   State<ScopedLedgerScreen> createState() => _ScopedLedgerScreenState();
@@ -64,7 +72,7 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
   /// store value and written back on change.
   late bool _showDescriptions;
 
-  FlowKind? _filter;
+  late FlowKind? _filter = widget.initialFlow;
 
   /// True while the period sheet is open, so the chip can tint (spec §4).
   bool _rangeSheetOpen = false;
@@ -1336,18 +1344,6 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
 
   // ── Sheets ────────────────────────────────────────────────────────────────
 
-  /// The sheet rows, in display order: the default (This month) first, the
-  /// extra "All time" kept last (spec §4). Every preset is a whole-period.
-  static const _rangeRows = <RangePreset>[
-    RangePreset.thisMonth,
-    RangePreset.lastMonth,
-    RangePreset.thisWeek,
-    RangePreset.lastWeek,
-    RangePreset.last3Months,
-    RangePreset.thisYear,
-    RangePreset.allTime,
-  ];
-
   Future<void> _pickRange(AppStore store) async {
     setState(() => _rangeSheetOpen = true);
     final today = AppStore.today;
@@ -1388,7 +1384,10 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
                 shrinkWrap: true,
                 padding: EdgeInsets.zero,
                 children: [
-                  for (final p in _rangeRows) _rangeRow(sheetContext, p, today),
+                  // One shared preset list (spec §1.4), so this sheet and
+                  // Insight's calendar-shaped one never disagree on order.
+                  for (final p in rangePresetOrder)
+                    _rangeRow(sheetContext, p, today),
                 ],
               ),
             ),

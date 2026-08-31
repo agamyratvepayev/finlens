@@ -14,12 +14,23 @@ import '../../shared/widgets/screen_header.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/app_typography.dart';
+import '../../core/utils/date_range.dart';
 import '../balance/same_transactions_screen.dart';
+import '../insight/category_detail_screen.dart';
 import 'edit_budget_screen.dart';
 
 /// Spec 5.6 — the screen a budget card opens on a tap: "where did this $560
 /// go?", the recurring question, not "change the limit", the rare one. Editing
 /// the limit moves into the ••• menu here.
+///
+/// **The boundary with [CategoryDetailScreen] (spec §7):** this screen answers
+/// "how did I do against the limit?" — it is month-locked, has a shared limit
+/// line, and is meaningful only for budgeted expenses. The category detail
+/// answers "how much did I spend each period?" — it follows Insight's window
+/// (six weeks for a week window), works for income categories, and has no
+/// reference line. The `6-month spending history ›` row bridges to it; the two
+/// never disagree, because `spentInCategory` delegates to the same
+/// `spentInCategoryWindow` the category detail reads.
 class BudgetDetailScreen extends StatelessWidget {
   const BudgetDetailScreen({
     super.key,
@@ -88,12 +99,54 @@ class BudgetDetailScreen extends StatelessWidget {
                   ),
                   _againstTheLimit(store, category, monthlyBudget, color,
                       AppLocalizations.of(context)),
+                  _spendingHistoryRow(context, AppLocalizations.of(context)),
                   _transactions(context, store, category),
                   _changes(context, store, category),
                 ],
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  // ── Bridge to the category detail (spec §7) ──────────────────────────────────
+
+  Widget _spendingHistoryRow(BuildContext context, AppLocalizations l) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+          Insets.gutter, 0, Insets.gutter, Insets.lg),
+      child: AppCard(
+        child: InkWell(
+          onTap: () {
+            // Open the category detail on this budget's month, so its six-period
+            // history is centred where the reader was looking (the category
+            // detail follows Insight's window, spec §6.1/§7).
+            final start = DateTime(month.year, month.month, 1);
+            final end = DateTime(month.year, month.month + 1, 0, 23, 59, 59, 999);
+            StoreScope.read(context).setInsightWindow(
+                DateRange(start, end, preset: RangePreset.thisMonth));
+            Navigator.of(context, rootNavigator: true).push(
+              MaterialPageRoute(
+                builder: (_) => CategoryDetailScreen(categoryId: categoryId),
+              ),
+            );
+          },
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 12),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(l.insSpendingHistory,
+                      style: const TextStyle(
+                          fontSize: 14, color: AppColors.accentLight)),
+                ),
+                const Icon(Icons.chevron_right_rounded,
+                    size: 18, color: AppColors.accentLight),
+              ],
+            ),
+          ),
         ),
       ),
     );

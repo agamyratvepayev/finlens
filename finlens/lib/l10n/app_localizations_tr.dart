@@ -675,12 +675,6 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
-  String get insMovements => 'Hareketler';
-
-  @override
-  String get insAverage => 'Ort.';
-
-  @override
   String insAverageValue(String amount) {
     return 'Ortalama $amount';
   }
@@ -694,8 +688,18 @@ class AppLocalizationsTr extends AppLocalizations {
   String get insEmptyMonthsExcluded => 'boş dönemler hariç';
 
   @override
-  String insVsLastPeriod(String amount, String percent) {
-    return '$amount geçen döneme göre ($percent)';
+  String insStillRunning(String month) {
+    return '$month sürüyor';
+  }
+
+  @override
+  String insDaysShort(int count) {
+    return '${count}g';
+  }
+
+  @override
+  String insVsRange(String amount, String range, String percent) {
+    return '$amount · $range ($percent)';
   }
 
   @override
@@ -744,6 +748,99 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get insSelectDateRange => 'Tarih aralığı seç…';
+
+  @override
+  String get insPeriod => 'Dönem';
+
+  @override
+  String insDaysCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count gün',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get insFilterAccountsNote => 'Gizli hesaplar tüm rakamları değiştirir';
+
+  @override
+  String get insFilterCategoriesNote =>
+      'Gizli kategoriler yalnızca listeden düşer';
+
+  @override
+  String get insSpendingList => 'Harcama listesi';
+
+  @override
+  String get insIncomeList => 'Gelir listesi';
+
+  @override
+  String insOfTotal(String amount) {
+    return 'toplam $amount';
+  }
+
+  @override
+  String insCategoriesShown(int shown, int total) {
+    return '$shown / $total kategori';
+  }
+
+  @override
+  String insAccountsShown(int shown, int total) {
+    return '$shown / $total hesap';
+  }
+
+  @override
+  String get insShowAllAccounts => 'Tüm hesapları göster';
+
+  @override
+  String get insEverythingHidden => 'Tüm hesaplar gizli';
+
+  @override
+  String get insSpendingHistory => '6 aylık harcama geçmişi';
+
+  @override
+  String insSavedOutsideWindow(String date) {
+    return '$date tarihine kaydedildi, bu dönemin dışında';
+  }
+
+  @override
+  String get insGoToDate => 'Tarihe git';
+
+  @override
+  String insA11yPresetSelected(String name, String range) {
+    return '$name, $range, seçili';
+  }
+
+  @override
+  String insA11yCustomRow(String range, String days) {
+    return 'Tarih aralığı seç, şu an $range, $days';
+  }
+
+  @override
+  String insA11yChartCol(String label, String amount) {
+    return '$label, $amount';
+  }
+
+  @override
+  String insA11yChartColPartial(String label, String amount, String days) {
+    return '$label, şu ana kadar $amount, $days';
+  }
+
+  @override
+  String insA11yChartColEmpty(String label) {
+    return '$label, kayıt yok';
+  }
+
+  @override
+  String insA11yTxnRow(
+    String title,
+    String amount,
+    String date,
+    String account,
+  ) {
+    return '$title, $amount, $date, $account';
+  }
 
   @override
   String get arcReached => 'Ulaşılan';

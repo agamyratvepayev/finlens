@@ -25,6 +25,7 @@ ScaffoldFeatureController<SnackBar, SnackBarClosedReason> showUndoBar(
   BuildContext context, {
   required String message,
   required VoidCallback onUndo,
+  String? actionLabel,
 }) {
   return (ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar())
@@ -40,7 +41,9 @@ ScaffoldFeatureController<SnackBar, SnackBarClosedReason> showUndoBar(
       persist: false,
       duration: undoBarWindow,
       action: SnackBarAction(
-        label: AppLocalizations.of(context).actionUndo,
+        // Defaults to "Undo"; Insight's out-of-window notice passes "Go to date"
+        // — the same transient-bar mechanism carrying a non-undo action (§8).
+        label: actionLabel ?? AppLocalizations.of(context).actionUndo,
         onPressed: onUndo,
       ),
     ),

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -319,6 +320,47 @@ class AppStore extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Insight's category filter (spec §2.4): the set of hidden expense/income
+  /// category ids. Unlike the account filter it moves only the spending/income
+  /// *lists* — a category is a label, not money, so hiding one cannot change net
+  /// worth (spec §2.1). Persistent and shared with the see-all screen (spec §5);
+  /// it never touches Balance.
+  static const _insightCategoryFilterKey = 'insight_category_filter';
+  Set<String> _insightCategoryFilter = <String>{};
+  Set<String> get insightCategoryFilter => _insightCategoryFilter;
+
+  void setInsightCategoryFilter(Set<String> hiddenIds) {
+    _insightCategoryFilter = {...hiddenIds};
+    notifyListeners();
+    unawaited(_saveInsightCategoryFilter());
+  }
+
+  Future<void> _saveInsightCategoryFilter() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+        _insightCategoryFilterKey, jsonEncode(_insightCategoryFilter.toList()));
+  }
+
+  Future<void> loadInsightCategoryFilter() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_insightCategoryFilterKey);
+    if (raw == null || raw.isEmpty) return;
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is List) {
+        // Prune ids that no longer match a live category, mirroring the account
+        // filter's stale-id pruning.
+        _insightCategoryFilter = {
+          for (final v in decoded)
+            if (v is String && categoryById(v) != null) v
+        };
+        notifyListeners();
+      }
+    } on FormatException {
+      // Corrupt preference: leave the filter empty.
+    }
+  }
+
   /// Which sort the Balance list is in, and the user's hand-made order. Held
   /// here (like [balanceFilter]) so both persist and can be restored before the
   /// first frame; the screen does the actual ordering through [CustomOrder]'s
@@ -502,6 +544,21 @@ class AppStore extends ChangeNotifier {
   void setInsightPeriodUnit(PeriodUnit unit) {
     _insightPeriodUnit = unit;
     unawaited(savePeriodUnit('insight_period_unit', unit));
+  }
+
+  /// Insight's live window (spec §6.1). Separate from [period] (Ledger +
+  /// Planner) — writing this never moves theirs, which the isolation test pins.
+  /// Not persisted; only `insight_period_unit` is, and the cursor resets to the
+  /// period containing today on launch. The category detail's bar tap/swipe and
+  /// the main screen's stepper both write here, so returning to the main screen
+  /// shows the period the reader ended on.
+  DateRange? _insightWindow;
+  DateRange get insightWindow => _insightWindow ??=
+      currentPresetFor(_insightPeriodUnit).resolve(AppStore.today);
+
+  void setInsightWindow(DateRange window) {
+    _insightWindow = window;
+    notifyListeners();
   }
 
   Future<void> loadPeriodUnits() async {
@@ -1285,6 +1342,17 @@ class AppStore extends ChangeNotifier {
     var earliest = _txns.first.date.year;
     for (final t in _txns) {
       if (t.date.year < earliest) earliest = t.date.year;
+    }
+    return earliest;
+  }
+
+  /// The earliest transaction date across all accounts, or null when there are
+  /// none — the anchor `All time` prints as `Since {month year}` in the range
+  /// picker rather than the epoch floor (spec §1.1).
+  DateTime? get firstTxnDate {
+    DateTime? earliest;
+    for (final t in _txns) {
+      if (earliest == null || t.date.isBefore(earliest)) earliest = t.date;
     }
     return earliest;
   }

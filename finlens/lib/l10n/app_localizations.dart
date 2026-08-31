@@ -995,18 +995,6 @@ abstract class AppLocalizations {
   /// **'Back to {period}'**
   String insBackToPeriod(String period);
 
-  /// No description provided for @insMovements.
-  ///
-  /// In en, this message translates to:
-  /// **'Movements'**
-  String get insMovements;
-
-  /// No description provided for @insAverage.
-  ///
-  /// In en, this message translates to:
-  /// **'Avg.'**
-  String get insAverage;
-
   /// No description provided for @insAverageValue.
   ///
   /// In en, this message translates to:
@@ -1025,11 +1013,23 @@ abstract class AppLocalizations {
   /// **'empty periods excluded'**
   String get insEmptyMonthsExcluded;
 
-  /// No description provided for @insVsLastPeriod.
+  /// No description provided for @insStillRunning.
   ///
   /// In en, this message translates to:
-  /// **'{amount} vs last period ({percent})'**
-  String insVsLastPeriod(String amount, String percent);
+  /// **'{month} still running'**
+  String insStillRunning(String month);
+
+  /// No description provided for @insDaysShort.
+  ///
+  /// In en, this message translates to:
+  /// **'{count}d'**
+  String insDaysShort(int count);
+
+  /// No description provided for @insVsRange.
+  ///
+  /// In en, this message translates to:
+  /// **'{amount} vs {range} ({percent})'**
+  String insVsRange(String amount, String range, String percent);
 
   /// No description provided for @insTooFewPeriods.
   ///
@@ -1096,6 +1096,131 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Select date range…'**
   String get insSelectDateRange;
+
+  /// No description provided for @insPeriod.
+  ///
+  /// In en, this message translates to:
+  /// **'Period'**
+  String get insPeriod;
+
+  /// No description provided for @insDaysCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 day} other{{count} days}}'**
+  String insDaysCount(int count);
+
+  /// No description provided for @insFilterAccountsNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Hidden accounts leave every figure'**
+  String get insFilterAccountsNote;
+
+  /// No description provided for @insFilterCategoriesNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Hidden categories leave the list only'**
+  String get insFilterCategoriesNote;
+
+  /// No description provided for @insSpendingList.
+  ///
+  /// In en, this message translates to:
+  /// **'Spending list'**
+  String get insSpendingList;
+
+  /// No description provided for @insIncomeList.
+  ///
+  /// In en, this message translates to:
+  /// **'Income list'**
+  String get insIncomeList;
+
+  /// No description provided for @insOfTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'of {amount}'**
+  String insOfTotal(String amount);
+
+  /// No description provided for @insCategoriesShown.
+  ///
+  /// In en, this message translates to:
+  /// **'{shown} of {total} categories'**
+  String insCategoriesShown(int shown, int total);
+
+  /// No description provided for @insAccountsShown.
+  ///
+  /// In en, this message translates to:
+  /// **'{shown} of {total} accounts'**
+  String insAccountsShown(int shown, int total);
+
+  /// No description provided for @insShowAllAccounts.
+  ///
+  /// In en, this message translates to:
+  /// **'Show all accounts'**
+  String get insShowAllAccounts;
+
+  /// No description provided for @insEverythingHidden.
+  ///
+  /// In en, this message translates to:
+  /// **'Every account is hidden'**
+  String get insEverythingHidden;
+
+  /// No description provided for @insSpendingHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'6-month spending history'**
+  String get insSpendingHistory;
+
+  /// No description provided for @insSavedOutsideWindow.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved to {date}, outside this period'**
+  String insSavedOutsideWindow(String date);
+
+  /// No description provided for @insGoToDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Go to date'**
+  String get insGoToDate;
+
+  /// No description provided for @insA11yPresetSelected.
+  ///
+  /// In en, this message translates to:
+  /// **'{name}, {range}, selected'**
+  String insA11yPresetSelected(String name, String range);
+
+  /// No description provided for @insA11yCustomRow.
+  ///
+  /// In en, this message translates to:
+  /// **'Select date range, currently {range}, {days}'**
+  String insA11yCustomRow(String range, String days);
+
+  /// No description provided for @insA11yChartCol.
+  ///
+  /// In en, this message translates to:
+  /// **'{label}, {amount}'**
+  String insA11yChartCol(String label, String amount);
+
+  /// No description provided for @insA11yChartColPartial.
+  ///
+  /// In en, this message translates to:
+  /// **'{label}, {amount} so far, {days}'**
+  String insA11yChartColPartial(String label, String amount, String days);
+
+  /// No description provided for @insA11yChartColEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'{label}, no records'**
+  String insA11yChartColEmpty(String label);
+
+  /// No description provided for @insA11yTxnRow.
+  ///
+  /// In en, this message translates to:
+  /// **'{title}, {amount}, {date}, {account}'**
+  String insA11yTxnRow(
+    String title,
+    String amount,
+    String date,
+    String account,
+  );
 
   /// No description provided for @arcReached.
   ///

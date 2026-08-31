@@ -701,12 +701,6 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String get insMovements => 'Движения';
-
-  @override
-  String get insAverage => 'Сред.';
-
-  @override
   String insAverageValue(String amount) {
     return 'Среднее $amount';
   }
@@ -720,8 +714,18 @@ class AppLocalizationsRu extends AppLocalizations {
   String get insEmptyMonthsExcluded => 'пустые периоды исключены';
 
   @override
-  String insVsLastPeriod(String amount, String percent) {
-    return '$amount к прошлому периоду ($percent)';
+  String insStillRunning(String month) {
+    return '$month ещё идёт';
+  }
+
+  @override
+  String insDaysShort(int count) {
+    return '$countд';
+  }
+
+  @override
+  String insVsRange(String amount, String range, String percent) {
+    return '$amount к $range ($percent)';
   }
 
   @override
@@ -770,6 +774,102 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get insSelectDateRange => 'Выбрать период…';
+
+  @override
+  String get insPeriod => 'Период';
+
+  @override
+  String insDaysCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count дней',
+      many: '$count дней',
+      few: '$count дня',
+      one: '$count день',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get insFilterAccountsNote => 'Скрытые счета убирают все цифры';
+
+  @override
+  String get insFilterCategoriesNote =>
+      'Скрытые категории убирают только из списка';
+
+  @override
+  String get insSpendingList => 'Список расходов';
+
+  @override
+  String get insIncomeList => 'Список доходов';
+
+  @override
+  String insOfTotal(String amount) {
+    return 'из $amount';
+  }
+
+  @override
+  String insCategoriesShown(int shown, int total) {
+    return '$shown из $total категорий';
+  }
+
+  @override
+  String insAccountsShown(int shown, int total) {
+    return '$shown из $total счетов';
+  }
+
+  @override
+  String get insShowAllAccounts => 'Показать все счета';
+
+  @override
+  String get insEverythingHidden => 'Все счета скрыты';
+
+  @override
+  String get insSpendingHistory => 'История трат за 6 месяцев';
+
+  @override
+  String insSavedOutsideWindow(String date) {
+    return 'Сохранено на $date, вне этого периода';
+  }
+
+  @override
+  String get insGoToDate => 'Перейти к дате';
+
+  @override
+  String insA11yPresetSelected(String name, String range) {
+    return '$name, $range, выбрано';
+  }
+
+  @override
+  String insA11yCustomRow(String range, String days) {
+    return 'Выбрать период, сейчас $range, $days';
+  }
+
+  @override
+  String insA11yChartCol(String label, String amount) {
+    return '$label, $amount';
+  }
+
+  @override
+  String insA11yChartColPartial(String label, String amount, String days) {
+    return '$label, пока $amount, $days';
+  }
+
+  @override
+  String insA11yChartColEmpty(String label) {
+    return '$label, нет записей';
+  }
+
+  @override
+  String insA11yTxnRow(
+    String title,
+    String amount,
+    String date,
+    String account,
+  ) {
+    return '$title, $amount, $date, $account';
+  }
 
   @override
   String get arcReached => 'Достигнуто';

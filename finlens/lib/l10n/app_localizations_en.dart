@@ -679,12 +679,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get insMovements => 'Movements';
-
-  @override
-  String get insAverage => 'Avg.';
-
-  @override
   String insAverageValue(String amount) {
     return 'Average $amount';
   }
@@ -698,8 +692,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get insEmptyMonthsExcluded => 'empty periods excluded';
 
   @override
-  String insVsLastPeriod(String amount, String percent) {
-    return '$amount vs last period ($percent)';
+  String insStillRunning(String month) {
+    return '$month still running';
+  }
+
+  @override
+  String insDaysShort(int count) {
+    return '${count}d';
+  }
+
+  @override
+  String insVsRange(String amount, String range, String percent) {
+    return '$amount vs $range ($percent)';
   }
 
   @override
@@ -748,6 +752,99 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get insSelectDateRange => 'Select date range…';
+
+  @override
+  String get insPeriod => 'Period';
+
+  @override
+  String insDaysCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count days',
+      one: '1 day',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get insFilterAccountsNote => 'Hidden accounts leave every figure';
+
+  @override
+  String get insFilterCategoriesNote => 'Hidden categories leave the list only';
+
+  @override
+  String get insSpendingList => 'Spending list';
+
+  @override
+  String get insIncomeList => 'Income list';
+
+  @override
+  String insOfTotal(String amount) {
+    return 'of $amount';
+  }
+
+  @override
+  String insCategoriesShown(int shown, int total) {
+    return '$shown of $total categories';
+  }
+
+  @override
+  String insAccountsShown(int shown, int total) {
+    return '$shown of $total accounts';
+  }
+
+  @override
+  String get insShowAllAccounts => 'Show all accounts';
+
+  @override
+  String get insEverythingHidden => 'Every account is hidden';
+
+  @override
+  String get insSpendingHistory => '6-month spending history';
+
+  @override
+  String insSavedOutsideWindow(String date) {
+    return 'Saved to $date, outside this period';
+  }
+
+  @override
+  String get insGoToDate => 'Go to date';
+
+  @override
+  String insA11yPresetSelected(String name, String range) {
+    return '$name, $range, selected';
+  }
+
+  @override
+  String insA11yCustomRow(String range, String days) {
+    return 'Select date range, currently $range, $days';
+  }
+
+  @override
+  String insA11yChartCol(String label, String amount) {
+    return '$label, $amount';
+  }
+
+  @override
+  String insA11yChartColPartial(String label, String amount, String days) {
+    return '$label, $amount so far, $days';
+  }
+
+  @override
+  String insA11yChartColEmpty(String label) {
+    return '$label, no records';
+  }
+
+  @override
+  String insA11yTxnRow(
+    String title,
+    String amount,
+    String date,
+    String account,
+  ) {
+    return '$title, $amount, $date, $account';
+  }
 
   @override
   String get arcReached => 'Reached';

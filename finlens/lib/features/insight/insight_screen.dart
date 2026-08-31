@@ -10,20 +10,21 @@ import '../../core/utils/date_range.dart';
 import '../../core/utils/formatters.dart';
 import '../../core/utils/fx.dart';
 import '../../l10n/app_localizations.dart';
-import '../../shared/widgets/account_filter_sheet.dart';
 import '../../shared/widgets/amount_text.dart';
 import '../../shared/widgets/app_card.dart';
 import '../../shared/widgets/range_picker_sheet.dart';
 import '../../shared/widgets/screen_header.dart';
 import '../../shared/widgets/section_header.dart';
+import '../../shared/widgets/undo_bar.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/app_typography.dart';
-import '../balance/assets_screen.dart';
+import '../balance/balance_filter.dart';
 import '../ledger/ledger_scope.dart';
 import '../ledger/scoped_ledger_screen.dart';
 import '../quick_add/quick_add_sheet.dart';
 import 'category_detail_screen.dart';
+import 'insight_filter.dart';
 import 'see_all_screen.dart';
 
 /// Insight — the money-flow report.
@@ -53,47 +54,52 @@ class InsightScreen extends StatefulWidget {
 const _kInsightPreviewRows = 5;
 
 class _InsightScreenState extends State<InsightScreen> {
-  DateRange? _window;
-
   /// Whether the group grid is showing every mover (spec §5.2). Resets whenever
   /// the window changes — a set of movers named for August is not the set for
-  /// July, so a stale "expanded" flag would be a lie.
+  /// July, so a stale "expanded" flag would be a lie. Local view state; the
+  /// window itself now lives in the store (spec §6.1).
   bool _gridExpanded = false;
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    // Land on the period containing today for the persisted unit; the cursor is
-    // never persisted (spec §2.5).
-    _window ??= currentPresetFor(StoreScope.read(context).insightPeriodUnit)
-        .resolve(AppStore.today);
-  }
 
   DateTime get _startOfToday =>
       DateTime(AppStore.today.year, AppStore.today.month, AppStore.today.day);
 
   /// A report of the past never looks forward: stepping stops at the period
   /// containing today (spec §2.1).
-  bool get _canStepForward => _window!.end.isBefore(_startOfToday);
+  bool _canStepForward(DateRange w) => w.end.isBefore(_startOfToday);
 
   void _step(int steps) {
-    if (steps > 0 && !_canStepForward) return;
+    final store = StoreScope.read(context);
+    final w = store.insightWindow;
+    if (steps > 0 && !_canStepForward(w)) return;
     HapticFeedback.lightImpact();
-    setState(() {
-      _window = _window!.copyShifted(steps);
-      _gridExpanded = false;
-    });
+    store.setInsightWindow(w.copyShifted(steps));
+    setState(() => _gridExpanded = false);
   }
 
   Future<void> _pickRange() async {
     final store = StoreScope.read(context);
+    // The calendar counts what the report will render, not the raw totals: with
+    // accounts hidden, its dots and bottom-bar count must match the filtered
+    // report (spec §1.3). A txn "counts" when it touches a visible account.
+    final filter = store.insightAccountFilter;
+    final visible = filter.isActive ? filter.visibleAccountIds(store) : null;
+    bool touchesVisible(Txn t) =>
+        visible == null ||
+        visible.contains(t.fromRef) ||
+        visible.contains(t.toRef);
     final picked = await showRangePickerSheet(
       context,
-      current: _window!,
-      hasData: (day) =>
-          store.ledgerDaysWithData(DateTime(day.year, day.month)).contains(day),
+      current: store.insightWindow,
+      firstData: store.firstTxnDate,
+      hasData: (day) {
+        final d = DateTime(day.year, day.month, day.day);
+        return store
+            .txnsInWindow(DateRange(
+                d, DateTime(d.year, d.month, d.day, 23, 59, 59, 999)))
+            .any(touchesVisible);
+      },
       countBetween: (from, to) =>
-          store.txnsInWindow(DateRange(from, to)).length,
+          store.txnsInWindow(DateRange(from, to)).where(touchesVisible).length,
     );
     if (picked == null || !mounted) return;
     // A preset persists its unit; a custom range is a question, not a setting,
@@ -101,25 +107,50 @@ class _InsightScreenState extends State<InsightScreen> {
     // stored unit untouched.
     final unit = picked.preset?.unit;
     if (unit != null) store.setInsightPeriodUnit(unit);
-    setState(() {
-      _window = picked;
-      _gridExpanded = false;
-    });
+    store.setInsightWindow(picked);
+    setState(() => _gridExpanded = false);
   }
 
   void _clearCustom() {
     final store = StoreScope.read(context);
-    setState(() {
-      _window = currentPresetFor(store.insightPeriodUnit).resolve(AppStore.today);
-      _gridExpanded = false;
-    });
+    store.setInsightWindow(
+        currentPresetFor(store.insightPeriodUnit).resolve(AppStore.today));
+    setState(() => _gridExpanded = false);
   }
 
-  void _openFilter() {
-    showAccountFilterSheet(
+  void _openFilter() =>
+      showInsightFilterSheet(context, StoreScope.read(context).insightWindow);
+
+  /// Quick Add records what happened, not what the reader is viewing: the sheet
+  /// keeps its `today` default (spec §8). But a record that lands outside the
+  /// window makes nothing on screen change, which reads as a failed save — so if
+  /// the total grew while the windowed count did not, show a transient bar
+  /// naming the date and offering to move the window to contain it.
+  Future<void> _add() async {
+    final store = StoreScope.read(context);
+    final window = store.insightWindow;
+    final beforeIds = store.txns.map((t) => t.id).toSet();
+    final beforeWindow = store.txnsInWindow(window).length;
+
+    await showQuickAdd(context);
+    if (!mounted) return;
+
+    final added =
+        store.txns.where((t) => !beforeIds.contains(t.id)).toList();
+    final afterWindow = store.txnsInWindow(window).length;
+    if (added.isEmpty || afterWindow != beforeWindow) return;
+
+    // A record landed outside the window. Name its date and offer to go there —
+    // the period (in the current unit) containing it.
+    final landed = added.first.date;
+    final l = AppLocalizations.of(context);
+    final target = currentPresetFor(store.insightPeriodUnit)
+        .resolve(DateTime(landed.year, landed.month, landed.day));
+    showUndoBar(
       context,
-      selector: (store) => store.insightAccountFilter,
-      onApply: (store, filter) => store.setInsightAccountFilter(filter),
+      message: l.insSavedOutsideWindow(dayMonth(landed, l)),
+      actionLabel: l.insGoToDate,
+      onUndo: () => store.setInsightWindow(target),
     );
   }
 
@@ -127,7 +158,7 @@ class _InsightScreenState extends State<InsightScreen> {
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
     final l = AppLocalizations.of(context);
-    final w = _window!;
+    final w = store.insightWindow;
     final report = _Report.of(store, w);
 
     return SafeArea(
@@ -135,7 +166,7 @@ class _InsightScreenState extends State<InsightScreen> {
       child: Column(
         children: [
           _InsightHeader(
-            label: _windowLabel(w, l),
+            label: insightWindowLabel(w, l),
             isCustom: w.preset == null,
             filterActive: report.filterActive,
             hiddenCount: report.hiddenCount,
@@ -144,12 +175,17 @@ class _InsightScreenState extends State<InsightScreen> {
             onPrevious: () => _step(-1),
             onClearCustom: _clearCustom,
             onFilter: _openFilter,
-            onAdd: () => showQuickAdd(context),
+            onAdd: _add,
           ),
           Expanded(
-            child: report.isEmpty
-                ? _EmptyBody(report: report, window: w, onBack: () => _step(-1))
-                : ListView(
+            child: report.everythingHidden
+                ? _EverythingHiddenBody(
+                    onShowAll: () => StoreScope.read(context)
+                        .setInsightAccountFilter(const BalanceFilter()))
+                : report.isEmpty
+                    ? _EmptyBody(
+                        report: report, window: w, onBack: () => _step(-1))
+                    : ListView(
                     padding: const EdgeInsets.only(bottom: Insets.xxl),
                     children: [
                       _Hero(report: report),
@@ -160,8 +196,8 @@ class _InsightScreenState extends State<InsightScreen> {
                         onToggle: () =>
                             setState(() => _gridExpanded = !_gridExpanded),
                       ),
-                      _FlowBlock(report: report, income: false, window: w),
-                      _FlowBlock(report: report, income: true, window: w),
+                      _FlowBlock(report: report, income: false),
+                      _FlowBlock(report: report, income: true),
                       _DebtBlock(report: report, window: w),
                       if (report.revalued != 0)
                         _RevaluationBlock(report: report, window: w),
@@ -174,25 +210,6 @@ class _InsightScreenState extends State<InsightScreen> {
   }
 }
 
-/// The human label for the window: month presets read "August 2026" (not
-/// "1–31 Aug"); the year reads "2026"; all-time reads its own word; everything
-/// else uses the compressed day-range label.
-String _windowLabel(DateRange w, AppLocalizations l) {
-  switch (w.preset) {
-    case RangePreset.thisMonth:
-    case RangePreset.lastMonth:
-      return monthYearLong(w.start, l);
-    case RangePreset.thisYear:
-      return '${w.start.year}';
-    case RangePreset.allTime:
-      return l.rangeAllTime;
-    case RangePreset.thisWeek:
-    case RangePreset.lastWeek:
-    case RangePreset.last3Months:
-    case null:
-      return w.label(AppStore.today, l);
-  }
-}
 
 // ── The report ───────────────────────────────────────────────────────────────
 // Computed once per build (spec §1 performance note) and passed down, so the
@@ -218,6 +235,7 @@ class _Report {
     required this.leak,
     required this.groupChanges,
     required this.maxGroupAbs,
+    required this.everythingHidden,
     required this.incomeRows,
     required this.expenseRows,
     required this.debtNow,
@@ -257,6 +275,10 @@ class _Report {
   /// the grid never rescales a bar (spec §5.1).
   final double maxGroupAbs;
 
+  /// The account filter hid *every* account — a distinct state from an empty
+  /// window (spec §2.6): there are records, the reader hid them.
+  final bool everythingHidden;
+
   /// (category, name, amount) descending.
   final List<(Category?, String, double)> incomeRows;
   final List<(Category?, String, double)> expenseRows;
@@ -280,6 +302,10 @@ class _Report {
     // Null when inactive → every getter takes its unfiltered path, so an empty
     // filter is bit-identical to no filter (spec §9.1 / §15).
     final visible = active ? filter.visibleAccountIds(store) : null;
+    // The active glyph fills for EITHER filter (spec §2.5); the category filter
+    // never reaches these figures (spec §2.1), only the header signal.
+    final catHidden = store.insightCategoryFilter;
+    final anyActive = active || catHidden.isNotEmpty;
 
     final startDay = DateTime(w.start.year, w.start.month, w.start.day);
     final before = startDay.subtract(const Duration(days: 1));
@@ -313,8 +339,10 @@ class _Report {
       store: store,
       window: w,
       visible: visible,
-      filterActive: active,
-      hiddenCount: active ? filter.hiddenItemCount(store) : 0,
+      filterActive: anyActive,
+      hiddenCount:
+          (active ? filter.hiddenItemCount(store) : 0) + catHidden.length,
+      everythingHidden: active && visible != null && visible.isEmpty,
       netChange: store.netWorthChangeInWindow(w, visible: visible),
       nwBefore: store.netWorthOn(before, visible: visible),
       nwAfter: store.netWorthOn(nowAnchor, visible: visible),
@@ -508,6 +536,36 @@ class _CircleButton extends StatelessWidget {
       ),
     );
     return tooltip == null ? button : Tooltip(message: tooltip!, child: button);
+  }
+}
+
+/// The distinct "everything hidden" state (spec §2.6): there are records, the
+/// reader hid them, so this must not fall through to the ordinary empty state.
+class _EverythingHiddenBody extends StatelessWidget {
+  const _EverythingHiddenBody({required this.onShowAll});
+  final VoidCallback onShowAll;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return ListView(
+      padding: const EdgeInsets.only(top: Insets.xxl),
+      children: [
+        Center(
+          child: Text(l.insEverythingHidden,
+              style: const TextStyle(
+                  fontSize: 13, color: AppColors.textSecondary)),
+        ),
+        const SizedBox(height: Insets.md),
+        Center(
+          child: TextButton(
+            onPressed: onShowAll,
+            style: TextButton.styleFrom(foregroundColor: AppColors.accentLight),
+            child: Text(l.insShowAllAccounts),
+          ),
+        ),
+      ],
+    );
   }
 }
 
@@ -1040,10 +1098,17 @@ class _GroupGrid extends StatelessWidget {
       label: sentence,
       child: ExcludeSemantics(
         child: InkWell(
+          // GroupDetailScreen is never opened from Insight (spec §4.2): it
+          // titles itself Assets, heroes a balance where the row showed a
+          // change, and carries a delta from a comparison the reader never
+          // chose. The scoped ledger's window IN/OUT subtract to the change the
+          // row printed — which is the point of the tap.
           onTap: () => Navigator.of(context, rootNavigator: true).push(
             MaterialPageRoute(
-              builder: (_) =>
-                  GroupDetailScreen(isAssets: g.isAsset, groups: [g]),
+              builder: (_) => ScopedLedgerScreen(
+                initialScope: GroupScope(g),
+                initialRange: report.window,
+              ),
             ),
           ),
           borderRadius: BorderRadius.circular(4),
@@ -1137,31 +1202,42 @@ class _FlowBlock extends StatelessWidget {
   const _FlowBlock({
     required this.report,
     required this.income,
-    required this.window,
   });
 
   final _Report report;
   final bool income;
-  final DateRange window;
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final rows = income ? report.incomeRows : report.expenseRows;
-    if (rows.isEmpty) return const SizedBox.shrink();
+    // The full rows (account-filtered, unfiltered by category) are the base for
+    // percentages and the See-all count. The category filter hides *labels*
+    // (spec §2.1/§3): it drops rows from this list and its subtotal, but the
+    // shares stay against the full total — hiding a category never inflates the
+    // others (spec §5).
+    final fullRows = income ? report.incomeRows : report.expenseRows;
+    if (fullRows.isEmpty) return const SizedBox.shrink();
 
-    final total = rows.fold(0.0, (s, r) => s + r.$3);
+    final fullTotal = fullRows.fold(0.0, (s, r) => s + r.$3);
+    final hidden = report.store.insightCategoryFilter;
+    final rows = fullRows
+        .where((r) => r.$1 == null || !hidden.contains(r.$1!.id))
+        .toList();
+    final displayTotal = rows.fold(0.0, (s, r) => s + r.$3);
+
     final previewCount = income ? rows.length : _kInsightPreviewRows;
     final shown = rows.take(previewCount).toList();
-    final hasMore = rows.length > shown.length;
+    // See-all opens the whole list (hidden categories included, with toggles),
+    // so it appears whenever the full list is longer than the preview.
+    final hasMore = fullRows.length > shown.length;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SectionLabel(
           income ? l.insIncome : l.insSpending,
-          trailing:
-              AmountText(total, style: AppText.amount.copyWith(fontSize: 15)),
+          trailing: AmountText(displayTotal,
+              style: AppText.amount.copyWith(fontSize: 15)),
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: Insets.gutter),
@@ -1175,14 +1251,13 @@ class _FlowBlock extends StatelessWidget {
                     cat: shown[i].$1,
                     name: shown[i].$2,
                     amount: shown[i].$3,
-                    total: total,
+                    total: fullTotal,
                     onTap: shown[i].$1 == null
                         ? null
                         : () => Navigator.of(context, rootNavigator: true).push(
                               MaterialPageRoute(
                                 builder: (_) => CategoryDetailScreen(
                                   categoryId: shown[i].$1!.id,
-                                  window: window,
                                 ),
                               ),
                             ),
@@ -1190,13 +1265,10 @@ class _FlowBlock extends StatelessWidget {
                 ],
                 if (hasMore)
                   _InsightFoot(
-                    text: l.insSeeAll(rows.length),
+                    text: l.insSeeAll(fullRows.length),
                     onTap: () => Navigator.of(context, rootNavigator: true).push(
                       MaterialPageRoute(
-                        builder: (_) => SeeAllScreen(
-                          income: income,
-                          window: window,
-                        ),
+                        builder: (_) => SeeAllScreen(income: income),
                       ),
                     ),
                   ),
@@ -1347,6 +1419,8 @@ class _DebtBlock extends StatelessWidget {
           // The debt grew: negative (bad), ▲ (up).
           value: report.charged,
           increased: true,
+          // Charges are money leaving toward the cards (spec §4.2).
+          flow: FlowKind.outflow,
         ));
       }
       if (hasPaid) {
@@ -1356,6 +1430,8 @@ class _DebtBlock extends StatelessWidget {
           // The debt shrank: positive (good), ▼ (down).
           value: -report.paid,
           increased: false,
+          // Payments are money arriving at the cards (spec §4.2).
+          flow: FlowKind.inflow,
         ));
       }
     }
@@ -1459,6 +1535,7 @@ class _DebtBlock extends StatelessWidget {
     required String title,
     required double value,
     required bool increased,
+    required FlowKind flow,
   }) {
     final l = AppLocalizations.of(context);
     final store = report.store;
@@ -1474,12 +1551,13 @@ class _DebtBlock extends StatelessWidget {
       child: ExcludeSemantics(
         child: InkWell(
           // Both card movements drill into the credit-cards ledger, on Insight's
-          // window (spec §10).
+          // window and pre-narrowed to the matching flow (spec §4.2).
           onTap: () => Navigator.of(context, rootNavigator: true).push(
             MaterialPageRoute(
               builder: (_) => ScopedLedgerScreen(
                 initialScope: const GroupScope(AccountGroup.creditCards),
                 initialRange: window,
+                initialFlow: flow,
               ),
             ),
           ),
@@ -1685,7 +1763,7 @@ class _EmptyBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final prevLabel = _windowLabel(window.copyShifted(-1), l);
+    final prevLabel = insightWindowLabel(window.copyShifted(-1), l);
 
     // Zero is an answer: the hero stays, at $0 in the quaternary token. The
     // waterfall is NOT drawn — with before == now and three zero steps it is a
