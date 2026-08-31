@@ -1992,10 +1992,16 @@ class AppLocalizationsTr extends AppLocalizations {
   String get ldgClearFilter => 'Filtreyi temizle';
 
   @override
-  String get ldgNothingHere => 'Burada henüz bir şey yok';
+  String get ldgNothingHere => 'Her işlem burada yaşar';
 
   @override
-  String get ldgNothingHereMsg => 'Eklediğiniz kayıtlar bu listede görünür.';
+  String get ldgNothingHereMsg =>
+      'Harcadığınızı ve aldığınızı kaydedin. Bakiyeler, bütçeler ve hedefler bu listeden okur.';
+
+  @override
+  String ldgNothingRecordedInMonth(Object month) {
+    return '$month ayında kayıt yok';
+  }
 
   @override
   String get ldgAddEntry => 'Kayıt ekle';

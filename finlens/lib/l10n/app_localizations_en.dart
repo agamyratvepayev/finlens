@@ -2002,10 +2002,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ldgClearFilter => 'Clear filter';
 
   @override
-  String get ldgNothingHere => 'Nothing here yet';
+  String get ldgNothingHere => 'Every transaction lives here';
 
   @override
-  String get ldgNothingHereMsg => 'Entries you add will appear in this list.';
+  String get ldgNothingHereMsg =>
+      'Record what you spend and receive. Balances, budgets and goals all read from this list.';
+
+  @override
+  String ldgNothingRecordedInMonth(Object month) {
+    return 'Nothing recorded in $month';
+  }
 
   @override
   String get ldgAddEntry => 'Add an entry';

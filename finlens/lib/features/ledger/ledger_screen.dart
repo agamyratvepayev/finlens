@@ -193,6 +193,15 @@ class _LedgerScreenState extends State<LedgerScreen> {
     final store = StoreScope.of(context);
     final window = store.ledgerWindow;
 
+    // §1 — the one test. Not `days.isEmpty` and not "this window is empty":
+    // a user who recorded one coffee in March and swiped to an empty August
+    // *has* recorded something, and August must keep every control. `store.txns`
+    // holds only user-entered rows — the opening-balance receipt is a
+    // scoped-ledger `OpeningEntry`, deliberately never a Txn — so this is true
+    // exactly when at least one real entry exists anywhere. Computed once here
+    // and threaded down; when false the whole instrument panel goes quiet.
+    final everRecorded = store.txns.isNotEmpty;
+
     // Filter and search are a lens on the current window: any period change —
     // month pick, range apply, or swipe-exit — resets both, so the funnel never
     // silently narrows a period the user just moved to. Keyed by window bounds
@@ -255,16 +264,25 @@ class _LedgerScreenState extends State<LedgerScreen> {
           // horizontal-swipe region that steps the month (§2). The list below
           // keeps its own vertical scroll and row swipe actions.
           HorizontalSectionSwipe(
-            onNext: () {
-              HapticFeedback.lightImpact();
-              store.shiftPeriod(1);
-            },
-            onPrevious: () {
-              HapticFeedback.lightImpact();
-              store.shiftPeriod(-1);
-            },
+            // §2 — with nothing recorded every month is equally empty, so the
+            // swipe must not step off the one screen that has the +. The widget
+            // stays in the tree (stable layout); its callbacks are inert no-ops
+            // until the first entry lands, at which point they resume stepping.
+            onNext: everRecorded
+                ? () {
+                    HapticFeedback.lightImpact();
+                    store.shiftPeriod(1);
+                  }
+                : () {},
+            onPrevious: everRecorded
+                ? () {
+                    HapticFeedback.lightImpact();
+                    store.shiftPeriod(-1);
+                  }
+                : () {},
             child: _HeaderZone(
               store: store,
+              everRecorded: everRecorded,
               income: income,
               expense: expense,
               left: left,
@@ -286,14 +304,18 @@ class _LedgerScreenState extends State<LedgerScreen> {
               builder: (context, showDesc, _) {
                 return Column(
                   children: [
-                    _toolRow(
-                      store,
-                      total: total,
-                      shown: shown,
-                      searching: searching,
-                      showDesc: showDesc,
-                    ),
-                    if (_searching) _searchField(),
+                    // The count and the three tools operate on rows; with nothing
+                    // ever recorded there are none, so the whole row is absent
+                    // from the tree (§2) — not disabled, not transparent.
+                    if (everRecorded)
+                      _toolRow(
+                        store,
+                        total: total,
+                        shown: shown,
+                        searching: searching,
+                        showDesc: showDesc,
+                      ),
+                    if (everRecorded && _searching) _searchField(),
                     const SizedBox(height: Insets.sm),
                     Expanded(
                       child: ListView(
@@ -301,7 +323,8 @@ class _LedgerScreenState extends State<LedgerScreen> {
                         padding: const EdgeInsets.only(bottom: Insets.xxl),
                         children: [
                           if (days.isEmpty)
-                            _empty(store, searching: searching)
+                            _empty(store,
+                                searching: searching, everRecorded: everRecorded)
                           else
                             for (final day in days) ...[
                               const SizedBox(height: 8),
@@ -472,7 +495,31 @@ class _LedgerScreenState extends State<LedgerScreen> {
     );
   }
 
-  Widget _empty(AppStore store, {required bool searching}) {
+  Widget _empty(AppStore store,
+      {required bool searching, required bool everRecorded}) {
+    // §1/§5 — first run wins over every other empty. A filter (or a stale
+    // search) set just before the last entry was deleted must not steal the
+    // screen: a funnel over nothing is still a first run, so this is checked
+    // ahead of the searching / _filterActive branches below.
+    if (!everRecorded) {
+      return Padding(
+        padding: const EdgeInsets.only(top: 64),
+        child: EmptyState(
+          icon: Icons.receipt_long_rounded,
+          title: AppLocalizations.of(context).ldgNothingHere,
+          message: AppLocalizations.of(context).ldgNothingHereMsg,
+          action: FilledButton.icon(
+            onPressed: () => showQuickAdd(context),
+            icon: const Icon(Icons.add_rounded, size: 18),
+            label: Text(AppLocalizations.of(context).ldgAddEntry),
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.accent,
+              foregroundColor: Colors.white,
+            ),
+          ),
+        ),
+      );
+    }
     if (searching) {
       return Padding(
         padding: const EdgeInsets.only(top: 64),
@@ -517,21 +564,18 @@ class _LedgerScreenState extends State<LedgerScreen> {
         ),
       );
     }
+    // §4 — an empty month on a store that has entries elsewhere. The zeros are
+    // the correct answer, not a problem, and the way out (the +) is two lines
+    // up: a large call to action would imply something is wrong. So a single
+    // centred line, matching the searching branch's shape, naming the month the
+    // title already shows.
     return Padding(
       padding: const EdgeInsets.only(top: 64),
-      child: EmptyState(
-        icon: Icons.receipt_long_rounded,
-        title: AppLocalizations.of(context).ldgNothingHere,
-        message: AppLocalizations.of(context).ldgNothingHereMsg,
-        action: FilledButton.icon(
-          onPressed: () => showQuickAdd(context),
-          icon: const Icon(Icons.add_rounded, size: 18),
-          label: Text(AppLocalizations.of(context).ldgAddEntry),
-          style: FilledButton.styleFrom(
-            backgroundColor: AppColors.accent,
-            foregroundColor: Colors.white,
-          ),
-        ),
+      child: Text(
+        AppLocalizations.of(context).ldgNothingRecordedInMonth(
+            monthLong(store.period.month, AppLocalizations.of(context))),
+        textAlign: TextAlign.center,
+        style: const TextStyle(fontSize: 14, color: AppColors.textTertiary),
       ),
     );
   }
@@ -958,6 +1002,7 @@ class _LedgerScreenState extends State<LedgerScreen> {
 class _HeaderZone extends StatelessWidget {
   const _HeaderZone({
     required this.store,
+    required this.everRecorded,
     required this.income,
     required this.expense,
     required this.left,
@@ -967,6 +1012,10 @@ class _HeaderZone extends StatelessWidget {
   });
 
   final AppStore store;
+
+  /// Whether any entry has ever been recorded (§1). False collapses the header
+  /// to just the month title and the +: no chevron, eye, ratio bar or metrics.
+  final bool everRecorded;
   final double income;
   final double expense;
   final double left;
@@ -988,12 +1037,21 @@ class _HeaderZone extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
             child: Row(
               children: [
-                Expanded(child: _PeriodTitle(store: store, onTap: onPickMonth)),
+                Expanded(
+                    child: _PeriodTitle(
+                        store: store,
+                        onTap: onPickMonth,
+                        // Chevron + tap-to-pick go inert on first run (§2): with
+                        // nothing recorded the period sheet only moves the user
+                        // from one empty month to another.
+                        enabled: everRecorded)),
                 // The way out of the range lens sits beside the state it undoes
                 // (§1): a third circle, purple like the title it clears, present
                 // only while a lens is active — so in month mode this row is
-                // byte-identical to before.
-                if (store.isRangeLensActive) ...[
+                // byte-identical to before. Its clear button is hidden on first
+                // run alongside the eye, so a lens (were one somehow active) is
+                // not clearable here.
+                if (everRecorded && store.isRangeLensActive) ...[
                   const SizedBox(width: Insets.sm),
                   Semantics(
                     button: true,
@@ -1006,14 +1064,19 @@ class _HeaderZone extends StatelessWidget {
                     ),
                   ),
                 ],
-                const SizedBox(width: Insets.sm),
-                // Eye + `+`, cloned from ScreenHeader (same size/colour/behaviour).
-                _CircleButton(
-                  icon: store.masked
-                      ? Icons.visibility_off_rounded
-                      : Icons.visibility_rounded,
-                  onTap: store.toggleMasked,
-                ),
+                // Eye — hidden on first run (nothing money-shaped is drawn, so
+                // masking has nothing to hide). The `+` always stays: it is the
+                // one control that still does something, and the button a user
+                // must not have to re-find the moment their first entry lands.
+                if (everRecorded) ...[
+                  const SizedBox(width: Insets.sm),
+                  _CircleButton(
+                    icon: store.masked
+                        ? Icons.visibility_off_rounded
+                        : Icons.visibility_rounded,
+                    onTap: store.toggleMasked,
+                  ),
+                ],
                 const SizedBox(width: Insets.sm),
                 _CircleButton(
                   icon: Icons.add_rounded,
@@ -1023,6 +1086,11 @@ class _HeaderZone extends StatelessWidget {
               ],
             ),
           ),
+          // Ratio bar + metrics strip — the figures the screen answers with.
+          // Both are absent from the tree until something is recorded (§2):
+          // nothing replaces them, because the Ledger's numbers live in a strip
+          // that simply should not be drawn (unlike Balance's hero figure).
+          if (everRecorded) ...[
           // Ratio bar — passive, 3pt, full width (§1).
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
@@ -1079,6 +1147,7 @@ class _HeaderZone extends StatelessWidget {
               ),
             ),
           ),
+          ],
           const SizedBox(height: Insets.md),
         ],
       ),
@@ -1092,10 +1161,16 @@ class _HeaderZone extends StatelessWidget {
 /// unchanged in both states; the range form shrinks/ellipsizes before it can
 /// reach the eye/`+` buttons.
 class _PeriodTitle extends StatelessWidget {
-  const _PeriodTitle({required this.store, required this.onTap});
+  const _PeriodTitle(
+      {required this.store, required this.onTap, this.enabled = true});
 
   final AppStore store;
   final VoidCallback onTap;
+
+  /// When false (first run, §2) the title is the screen's name only: the chevron
+  /// is gone, the tap is inert, and semantics drop to a plain header — every
+  /// month is equally empty, so there is nowhere to pick.
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
@@ -1111,12 +1186,13 @@ class _PeriodTitle extends StatelessWidget {
         : monthYearLong(store.period, l);
 
     return Semantics(
-      button: true,
+      button: enabled,
+      header: !enabled,
       label: semanticLabel,
-      hint: AppLocalizations.of(context).ldgChangePeriod,
+      hint: enabled ? AppLocalizations.of(context).ldgChangePeriod : null,
       excludeSemantics: true,
       child: GestureDetector(
-        onTap: onTap,
+        onTap: enabled ? onTap : null,
         behavior: HitTestBehavior.opaque,
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -1140,11 +1216,14 @@ class _PeriodTitle extends StatelessWidget {
                     ),
                   ),
                 ),
-                const Icon(
-                  Icons.keyboard_arrow_down_rounded,
-                  size: 15,
-                  color: AppColors.textSecondary,
-                ),
+                // The chevron is the affordance for tap-to-pick; with picking
+                // inert it goes too (§2).
+                if (enabled)
+                  const Icon(
+                    Icons.keyboard_arrow_down_rounded,
+                    size: 15,
+                    color: AppColors.textSecondary,
+                  ),
               ],
             ),
             // The lens's only new vertical cost (~13pt); absent in month mode.

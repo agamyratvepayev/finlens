@@ -2947,14 +2947,20 @@ abstract class AppLocalizations {
   /// No description provided for @ldgNothingHere.
   ///
   /// In en, this message translates to:
-  /// **'Nothing here yet'**
+  /// **'Every transaction lives here'**
   String get ldgNothingHere;
 
   /// No description provided for @ldgNothingHereMsg.
   ///
   /// In en, this message translates to:
-  /// **'Entries you add will appear in this list.'**
+  /// **'Record what you spend and receive. Balances, budgets and goals all read from this list.'**
   String get ldgNothingHereMsg;
+
+  /// No description provided for @ldgNothingRecordedInMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing recorded in {month}'**
+  String ldgNothingRecordedInMonth(Object month);
 
   /// No description provided for @ldgAddEntry.
   ///

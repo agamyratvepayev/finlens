@@ -1994,10 +1994,16 @@ class AppLocalizationsTk extends AppLocalizations {
   String get ldgClearFilter => 'Süzgüji arassala';
 
   @override
-  String get ldgNothingHere => 'Bu ýerde entek hiç zat ýok';
+  String get ldgNothingHere => 'Her amal şu ýerde ýaşaýar';
 
   @override
-  String get ldgNothingHereMsg => 'Goşan ýazgylaryňyz şu sanawda görüner.';
+  String get ldgNothingHereMsg =>
+      'Näme harçlanyňyzy we alanyňyzy ýazyň. Balanslar, býudjetler we maksatlar şu sanawdan okaýar.';
+
+  @override
+  String ldgNothingRecordedInMonth(Object month) {
+    return '$month aýynda hiç zat ýazylmady';
+  }
 
   @override
   String get ldgAddEntry => 'Ýazgy goş';

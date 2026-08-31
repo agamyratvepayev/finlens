@@ -2057,10 +2057,16 @@ class AppLocalizationsRu extends AppLocalizations {
   String get ldgClearFilter => 'Сбросить фильтр';
 
   @override
-  String get ldgNothingHere => 'Здесь пока пусто';
+  String get ldgNothingHere => 'Здесь живёт каждая операция';
 
   @override
-  String get ldgNothingHereMsg => 'Добавленные записи появятся в этом списке.';
+  String get ldgNothingHereMsg =>
+      'Записывайте расходы и поступления. Балансы, бюджеты и цели берут данные из этого списка.';
+
+  @override
+  String ldgNothingRecordedInMonth(Object month) {
+    return 'Нет записей за $month';
+  }
 
   @override
   String get ldgAddEntry => 'Добавить запись';
