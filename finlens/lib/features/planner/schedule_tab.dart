@@ -262,8 +262,12 @@ class _ScheduleTabState extends State<ScheduleTab> {
     final today = AppStore.today;
     final h = widget.horizon.range(today);
 
-    final hasAnyOpen = store.openTasks.isNotEmpty;
-    if (!hasAnyOpen && store.overdueTasks.isEmpty) {
+    // "No tasks at all" (§3), named so the header can gate on the same test:
+    // openTasks is empty ⇒ overdue (a subset) is empty too. Paused tasks are not
+    // in openTasks, so a paused-only store also reads as no tasks. Distinct from
+    // `_nothingDue`, which fires on an empty section list within this horizon.
+    final noTasksAtAll = store.openTasks.isEmpty;
+    if (noTasksAtAll) {
       return _emptyState(context, l);
     }
 

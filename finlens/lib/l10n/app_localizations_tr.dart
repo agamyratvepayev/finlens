@@ -1308,11 +1308,11 @@ class AppLocalizationsTr extends AppLocalizations {
   String get plTabSchedule => 'Takvim';
 
   @override
-  String get plNoBudgetsYet => 'Henüz bütçe yok';
+  String get plNoBudgetsYet => 'Bütçe bir kategoriyi sınırlar';
 
   @override
   String get plNoBudgetsMsg =>
-      'Bir kategoriye aylık limit verin, burada görünsün.';
+      'Bir kategoriye aylık limit verin; içindeki her işlem o limitten düşer.';
 
   @override
   String get plBudgeted => 'Bütçelenen';
@@ -1324,7 +1324,7 @@ class AppLocalizationsTr extends AppLocalizations {
   String get plSet => 'Ayarla';
 
   @override
-  String get plNoGoalsYet => 'Henüz hedef yok';
+  String get plNoGoalsYet => 'Hedefler “ne zaman” sorusunu yanıtlar';
 
   @override
   String get plNoGoalsMsg =>
@@ -1335,6 +1335,9 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get plNewTask => 'Yeni görev';
+
+  @override
+  String get plNewBudget => 'Yeni bütçe';
 
   @override
   String get plCompleteReady => 'Tamamlandı · arşive hazır';
@@ -1358,11 +1361,11 @@ class AppLocalizationsTr extends AppLocalizations {
   String get schThisWeek => 'Bu hafta';
 
   @override
-  String get plNothingScheduled => 'Planlanmış bir şey yok';
+  String get plNothingScheduled => 'Yaklaşanları planlayın';
 
   @override
   String get plNothingSchedMsg =>
-      'Planladığınız faturalar, maaşlar ve abonelikler burada görünür.';
+      'Planladığınız faturalar, maaşlar ve abonelikler, gerçekleşmeden önce burada belirir.';
 
   @override
   String get plLeftThisMonth => 'Bu ay kalan';

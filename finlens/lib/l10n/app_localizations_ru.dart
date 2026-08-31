@@ -1360,11 +1360,11 @@ class AppLocalizationsRu extends AppLocalizations {
   String get plTabSchedule => 'График';
 
   @override
-  String get plNoBudgetsYet => 'Пока нет бюджетов';
+  String get plNoBudgetsYet => 'Бюджет — это лимит категории';
 
   @override
   String get plNoBudgetsMsg =>
-      'Задайте категории месячный лимит, и она появится здесь.';
+      'Задайте категории месячный лимит — и каждая трата по ней пойдёт в счёт этого лимита.';
 
   @override
   String get plBudgeted => 'В бюджете';
@@ -1376,7 +1376,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get plSet => 'Задать';
 
   @override
-  String get plNoGoalsYet => 'Пока нет целей';
+  String get plNoGoalsYet => 'Цели отвечают на «когда»';
 
   @override
   String get plNoGoalsMsg =>
@@ -1387,6 +1387,9 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get plNewTask => 'Новая задача';
+
+  @override
+  String get plNewBudget => 'Новый бюджет';
 
   @override
   String get plCompleteReady => 'Готово · можно в архив';
@@ -1410,11 +1413,11 @@ class AppLocalizationsRu extends AppLocalizations {
   String get schThisWeek => 'На этой неделе';
 
   @override
-  String get plNothingScheduled => 'Ничего не запланировано';
+  String get plNothingScheduled => 'Планируйте, что впереди';
 
   @override
   String get plNothingSchedMsg =>
-      'Счета, зарплаты и подписки, которые вы запланируете, появятся здесь.';
+      'Счета, зарплаты и подписки, которые вы планируете, появятся здесь до того, как случатся.';
 
   @override
   String get plLeftThisMonth => 'Осталось за месяц';

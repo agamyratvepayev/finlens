@@ -141,7 +141,7 @@ void main() {
     expect(find.text('No goals need attention'), findsOneWidget);
     expect(find.text('Show all'), findsOneWidget);
     // Not the tab's real EmptyState (the user still has goals).
-    expect(find.text('No goals yet'), findsNothing);
+    expect(find.text('Goals answer “when”'), findsNothing);
   });
 
   testWidgets('no goals → the header slot is empty and EmptyState is unchanged',
@@ -158,7 +158,7 @@ void main() {
     await openGoalsTab(tester);
 
     expect(find.byType(GoalScopeControl), findsNothing);
-    expect(find.text('No goals yet'), findsOneWidget);
+    expect(find.text('Goals answer “when”'), findsOneWidget);
   });
 
   // The Goals tab label per locale — the three header buttons keep their size

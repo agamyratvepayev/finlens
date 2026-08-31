@@ -1311,11 +1311,11 @@ class AppLocalizationsTk extends AppLocalizations {
   String get plTabSchedule => 'Meýilnama';
 
   @override
-  String get plNoBudgetsYet => 'Entek býujet ýok';
+  String get plNoBudgetsYet => 'Býujet kategoriýany çäklendirýär';
 
   @override
   String get plNoBudgetsMsg =>
-      'Kategoriýa aýlyk çäk beriň, ol şu ýerde görüner.';
+      'Kategoriýa aýlyk çäk beriň — ondaky her amal şol çäkden hasaplanar.';
 
   @override
   String get plBudgeted => 'Býujetlenen';
@@ -1327,7 +1327,7 @@ class AppLocalizationsTk extends AppLocalizations {
   String get plSet => 'Belle';
 
   @override
-  String get plNoGoalsYet => 'Entek maksat ýok';
+  String get plNoGoalsYet => 'Maksatlar «haçan» diýen soraga jogap berýär';
 
   @override
   String get plNoGoalsMsg => 'Maksat belläň, FinLens aýlyk depgini hasaplar.';
@@ -1337,6 +1337,9 @@ class AppLocalizationsTk extends AppLocalizations {
 
   @override
   String get plNewTask => 'Täze tabşyryk';
+
+  @override
+  String get plNewBudget => 'Täze býujet';
 
   @override
   String get plCompleteReady => 'Taýýar · arhiwe geçirmäge taýýar';
@@ -1360,11 +1363,11 @@ class AppLocalizationsTk extends AppLocalizations {
   String get schThisWeek => 'Şu hepde';
 
   @override
-  String get plNothingScheduled => 'Meýilnama ýok';
+  String get plNothingScheduled => 'Öňde boljaklary meýilleşdiriň';
 
   @override
   String get plNothingSchedMsg =>
-      'Meýilleşdiren hasaplaryňyz, aýlyklaryňyz we abunalaryňyz şu ýerde görüner.';
+      'Meýilleşdiren hasaplaryňyz, aýlyklaryňyz we abunalaryňyz, bolmazyndan öň şu ýerde görüner.';
 
   @override
   String get plLeftThisMonth => 'Şu aý galan';

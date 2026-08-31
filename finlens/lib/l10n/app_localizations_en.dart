@@ -1317,11 +1317,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get plTabSchedule => 'Schedule';
 
   @override
-  String get plNoBudgetsYet => 'No budgets yet';
+  String get plNoBudgetsYet => 'Budgets cap a category';
 
   @override
   String get plNoBudgetsMsg =>
-      'Give a category a monthly limit and it will show up here.';
+      'Give one a monthly limit and every transaction in it counts against that limit.';
 
   @override
   String get plBudgeted => 'Budgeted';
@@ -1333,7 +1333,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get plSet => 'Set';
 
   @override
-  String get plNoGoalsYet => 'No goals yet';
+  String get plNoGoalsYet => 'Goals answer “when”';
 
   @override
   String get plNoGoalsMsg =>
@@ -1344,6 +1344,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get plNewTask => 'New task';
+
+  @override
+  String get plNewBudget => 'New budget';
 
   @override
   String get plCompleteReady => 'Complete · ready to archive';
@@ -1367,11 +1370,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get schThisWeek => 'This week';
 
   @override
-  String get plNothingScheduled => 'Nothing scheduled';
+  String get plNothingScheduled => 'Plan what\'s coming';
 
   @override
   String get plNothingSchedMsg =>
-      'Bills, salaries and subscriptions you plan will land here.';
+      'Bills, salaries and subscriptions you schedule land here before they happen.';
 
   @override
   String get plLeftThisMonth => 'Left this month';

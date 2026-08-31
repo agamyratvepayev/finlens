@@ -80,22 +80,41 @@ class _PlannerScreenState extends State<PlannerScreen> {
     if (picked != null) setState(() => _goalFilter = picked);
   }
 
+  /// Budgets is empty when there is nothing to cap and nothing uncovered — the
+  /// exact test `_BudgetsTab` uses for its own empty branch (§1/§5), so the month
+  /// control and the panel below it derive from one condition and cannot disagree
+  /// (a month above a "no budgets" panel is exactly that disagreement).
+  bool _budgetsEmpty(AppStore store) =>
+      store.budgetedCategories.isEmpty &&
+      store.unbudgetedSpendingCategories(_month).isEmpty;
+
   /// Row 1's leading control per tab. Budgets shows the month; Schedule shows
-  /// the horizon; Goals shows the filter scope — unless there are no goals, when
-  /// the slot is empty and the tab shows its EmptyState instead (§1/§5).
+  /// the horizon; Goals shows the filter scope. Each slot collapses to empty when
+  /// its own tab is empty (§1/§5) — a control that could only step from one empty
+  /// view to another is not drawn.
   Widget _titleWidget(BuildContext context, AppStore store) => switch (_tab) {
-        0 => _MonthControl(
-            month: _month,
-            onTap: () => showPlannerMonthPicker(
-              context,
-              initial: _month,
-              onPick: (m) => setState(() => _month = m),
-            ),
-          ),
-        2 => ScheduleControl(
-            horizon: _horizon,
-            onTap: () => _openHorizonSheet(context),
-          ),
+        // Hidden with no budgeted and no unbudgeted-spending categories. A month
+        // with spending but no budgets keeps the control — the NO BUDGET SET panel
+        // renders and stepping the month is meaningful.
+        0 => _budgetsEmpty(store)
+            ? const SizedBox.shrink()
+            : _MonthControl(
+                month: _month,
+                onTap: () => showPlannerMonthPicker(
+                  context,
+                  initial: _month,
+                  onPick: (m) => setState(() => _month = m),
+                ),
+              ),
+        // Hidden only with no tasks at all — the same test `_emptyState` fires on
+        // (`openTasks.isEmpty`). Tasks that all fall past the horizon keep the
+        // control: it is how `_nothingDue`'s own "next 3 months" link reaches them.
+        2 => store.openTasks.isEmpty
+            ? const SizedBox.shrink()
+            : ScheduleControl(
+                horizon: _horizon,
+                onTap: () => _openHorizonSheet(context),
+              ),
         _ => store.goals.isEmpty
             ? const SizedBox.shrink()
             : GoalScopeControl(
@@ -463,12 +482,27 @@ class _BudgetsTab extends StatelessWidget {
     final unbudgeted = store.unbudgetedSpendingCategories(month);
 
     if (budgets.isEmpty && unbudgeted.isEmpty) {
+      final l = AppLocalizations.of(context);
       return Padding(
         padding: const EdgeInsets.only(top: 56),
         child: EmptyState(
           icon: Icons.donut_small_rounded,
-          title: AppLocalizations.of(context).plNoBudgetsYet,
-          message: AppLocalizations.of(context).plNoBudgetsMsg,
+          title: l.plNoBudgetsYet,
+          message: l.plNoBudgetsMsg,
+          // The way out, matching New goal and New task (§2): same shape, colour
+          // and icon size. Routes through the category-first budget flow — Quick
+          // Add intercepts newBudget before the sheet builds — so this button and
+          // this tab's + do the same thing (§2.1).
+          action: FilledButton.icon(
+            onPressed: () =>
+                showQuickAdd(context, type: QuickAddType.newBudget),
+            icon: const Icon(Icons.add_rounded, size: 18),
+            label: Text(l.plNewBudget),
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.accent,
+              foregroundColor: Colors.white,
+            ),
+          ),
         ),
       );
     }

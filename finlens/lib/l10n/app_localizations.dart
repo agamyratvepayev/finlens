@@ -1915,13 +1915,13 @@ abstract class AppLocalizations {
   /// No description provided for @plNoBudgetsYet.
   ///
   /// In en, this message translates to:
-  /// **'No budgets yet'**
+  /// **'Budgets cap a category'**
   String get plNoBudgetsYet;
 
   /// No description provided for @plNoBudgetsMsg.
   ///
   /// In en, this message translates to:
-  /// **'Give a category a monthly limit and it will show up here.'**
+  /// **'Give one a monthly limit and every transaction in it counts against that limit.'**
   String get plNoBudgetsMsg;
 
   /// No description provided for @plBudgeted.
@@ -1945,7 +1945,7 @@ abstract class AppLocalizations {
   /// No description provided for @plNoGoalsYet.
   ///
   /// In en, this message translates to:
-  /// **'No goals yet'**
+  /// **'Goals answer “when”'**
   String get plNoGoalsYet;
 
   /// No description provided for @plNoGoalsMsg.
@@ -1965,6 +1965,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'New task'**
   String get plNewTask;
+
+  /// No description provided for @plNewBudget.
+  ///
+  /// In en, this message translates to:
+  /// **'New budget'**
+  String get plNewBudget;
 
   /// No description provided for @plCompleteReady.
   ///
@@ -2011,13 +2017,13 @@ abstract class AppLocalizations {
   /// No description provided for @plNothingScheduled.
   ///
   /// In en, this message translates to:
-  /// **'Nothing scheduled'**
+  /// **'Plan what\'s coming'**
   String get plNothingScheduled;
 
   /// No description provided for @plNothingSchedMsg.
   ///
   /// In en, this message translates to:
-  /// **'Bills, salaries and subscriptions you plan will land here.'**
+  /// **'Bills, salaries and subscriptions you schedule land here before they happen.'**
   String get plNothingSchedMsg;
 
   /// No description provided for @plLeftThisMonth.
