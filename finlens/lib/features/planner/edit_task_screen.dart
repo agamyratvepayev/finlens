@@ -128,16 +128,18 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
             FormRow(
               icon: Icons.swap_vert_rounded,
               label: l.fieldDirection,
-              trailing: SegmentedPicker<bool>(
-                values: const [true, false],
-                labelOf: (v) => v ? l.etPayOut : l.etPayIn,
-                selected: _payOut,
-                onChanged: (v) => setState(() {
-                  _payOut = v;
-                  // Pay-in can only book into an income category, never a
-                  // liability account (§10.4).
-                  if (!v) _payToAccountId = null;
-                }),
+              trailing: Flexible(
+                child: SegmentedPicker<bool>(
+                  values: const [true, false],
+                  labelOf: (v) => v ? l.etPayOut : l.etPayIn,
+                  selected: _payOut,
+                  onChanged: (v) => setState(() {
+                    _payOut = v;
+                    // Pay-in can only book into an income category, never a
+                    // liability account (§10.4).
+                    if (!v) _payToAccountId = null;
+                  }),
+                ),
               ),
             ),
             TextFieldRow(
