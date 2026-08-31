@@ -1801,9 +1801,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get ldgAmount => 'Сумма';
 
   @override
-  String get ldgAny => 'Любая';
-
-  @override
   String get ldgClearCustomRange => 'Сбросить период';
 
   @override
@@ -1911,6 +1908,75 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get ldgResetFilter => 'Сбросить фильтр';
+
+  @override
+  String get ldgSelectOthers => 'Выбрать остальные';
+
+  @override
+  String ldgNSelected(Object n) {
+    return '$n выбрано';
+  }
+
+  @override
+  String get ldgAllSelected => 'все';
+
+  @override
+  String ldgClearSection(Object section) {
+    return 'Очистить выбор: $section';
+  }
+
+  @override
+  String ldgMoreCategories(Object n) {
+    return 'ещё $n категорий';
+  }
+
+  @override
+  String ldgMoreAccounts(Object n) {
+    return 'ещё $n счетов';
+  }
+
+  @override
+  String ldgMoreTags(Object n) {
+    return 'ещё $n тегов';
+  }
+
+  @override
+  String ldgNHiddenSelected(Object n) {
+    return '$n выбрано';
+  }
+
+  @override
+  String ldgNMatches(Object n) {
+    return '$n совпадений';
+  }
+
+  @override
+  String ldgNResults(Object n) {
+    return '$n результатов';
+  }
+
+  @override
+  String get ldgExpenses => 'Расходы';
+
+  @override
+  String get ldgIncomes => 'Доходы';
+
+  @override
+  String get ldgExpenseCategoriesA11y => 'категории расходов';
+
+  @override
+  String get ldgIncomeSourcesA11y => 'источники дохода';
+
+  @override
+  String get ldgTransfersHaveNoCategory => 'У переводов нет категории.';
+
+  @override
+  String get ldgRevaluationsMoveNoCash => 'Переоценка не двигает деньги.';
+
+  @override
+  String ldgAmountRange(Object min, Object max) {
+    return '$min – $max';
+  }
 
   @override
   String get tdFrom => 'Откуда';

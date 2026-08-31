@@ -1744,9 +1744,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String get ldgAmount => 'Tutar';
 
   @override
-  String get ldgAny => 'Herhangi';
-
-  @override
   String get ldgClearCustomRange => 'Özel aralığı temizle';
 
   @override
@@ -1854,6 +1851,75 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get ldgResetFilter => 'Filtreyi sıfırla';
+
+  @override
+  String get ldgSelectOthers => 'Diğerlerini seç';
+
+  @override
+  String ldgNSelected(Object n) {
+    return '$n seçili';
+  }
+
+  @override
+  String get ldgAllSelected => 'hepsi';
+
+  @override
+  String ldgClearSection(Object section) {
+    return '$section seçimini temizle';
+  }
+
+  @override
+  String ldgMoreCategories(Object n) {
+    return '$n kategori daha';
+  }
+
+  @override
+  String ldgMoreAccounts(Object n) {
+    return '$n hesap daha';
+  }
+
+  @override
+  String ldgMoreTags(Object n) {
+    return '$n etiket daha';
+  }
+
+  @override
+  String ldgNHiddenSelected(Object n) {
+    return '$n’i seçili';
+  }
+
+  @override
+  String ldgNMatches(Object n) {
+    return '$n eşleşme';
+  }
+
+  @override
+  String ldgNResults(Object n) {
+    return '$n sonuç';
+  }
+
+  @override
+  String get ldgExpenses => 'Giderler';
+
+  @override
+  String get ldgIncomes => 'Gelirler';
+
+  @override
+  String get ldgExpenseCategoriesA11y => 'gider kategorileri';
+
+  @override
+  String get ldgIncomeSourcesA11y => 'gelir kaynakları';
+
+  @override
+  String get ldgTransfersHaveNoCategory => 'Transferlerin kategorisi yoktur.';
+
+  @override
+  String get ldgRevaluationsMoveNoCash => 'Yeniden değerleme nakit taşımaz.';
+
+  @override
+  String ldgAmountRange(Object min, Object max) {
+    return '$min – $max';
+  }
 
   @override
   String get tdFrom => 'Kaynak';

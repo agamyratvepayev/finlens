@@ -2682,12 +2682,6 @@ abstract class AppLocalizations {
   /// **'Amount'**
   String get ldgAmount;
 
-  /// No description provided for @ldgAny.
-  ///
-  /// In en, this message translates to:
-  /// **'Any'**
-  String get ldgAny;
-
   /// No description provided for @ldgClearCustomRange.
   ///
   /// In en, this message translates to:
@@ -2873,6 +2867,108 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Reset filter'**
   String get ldgResetFilter;
+
+  /// No description provided for @ldgSelectOthers.
+  ///
+  /// In en, this message translates to:
+  /// **'Select others'**
+  String get ldgSelectOthers;
+
+  /// No description provided for @ldgNSelected.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} selected'**
+  String ldgNSelected(Object n);
+
+  /// No description provided for @ldgAllSelected.
+  ///
+  /// In en, this message translates to:
+  /// **'all'**
+  String get ldgAllSelected;
+
+  /// No description provided for @ldgClearSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear {section} selection'**
+  String ldgClearSection(Object section);
+
+  /// No description provided for @ldgMoreCategories.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} more categories'**
+  String ldgMoreCategories(Object n);
+
+  /// No description provided for @ldgMoreAccounts.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} more accounts'**
+  String ldgMoreAccounts(Object n);
+
+  /// No description provided for @ldgMoreTags.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} more tags'**
+  String ldgMoreTags(Object n);
+
+  /// No description provided for @ldgNHiddenSelected.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} selected'**
+  String ldgNHiddenSelected(Object n);
+
+  /// No description provided for @ldgNMatches.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} matches'**
+  String ldgNMatches(Object n);
+
+  /// No description provided for @ldgNResults.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} results'**
+  String ldgNResults(Object n);
+
+  /// No description provided for @ldgExpenses.
+  ///
+  /// In en, this message translates to:
+  /// **'Expenses'**
+  String get ldgExpenses;
+
+  /// No description provided for @ldgIncomes.
+  ///
+  /// In en, this message translates to:
+  /// **'Income'**
+  String get ldgIncomes;
+
+  /// No description provided for @ldgExpenseCategoriesA11y.
+  ///
+  /// In en, this message translates to:
+  /// **'expense categories'**
+  String get ldgExpenseCategoriesA11y;
+
+  /// No description provided for @ldgIncomeSourcesA11y.
+  ///
+  /// In en, this message translates to:
+  /// **'income sources'**
+  String get ldgIncomeSourcesA11y;
+
+  /// No description provided for @ldgTransfersHaveNoCategory.
+  ///
+  /// In en, this message translates to:
+  /// **'Transfers have no category.'**
+  String get ldgTransfersHaveNoCategory;
+
+  /// No description provided for @ldgRevaluationsMoveNoCash.
+  ///
+  /// In en, this message translates to:
+  /// **'Revaluations move no cash.'**
+  String get ldgRevaluationsMoveNoCash;
+
+  /// No description provided for @ldgAmountRange.
+  ///
+  /// In en, this message translates to:
+  /// **'{min} – {max}'**
+  String ldgAmountRange(Object min, Object max);
 
   /// No description provided for @tdFrom.
   ///

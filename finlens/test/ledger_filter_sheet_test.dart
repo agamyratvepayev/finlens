@@ -9,9 +9,15 @@ import 'package:finlens/theme/app_theme.dart';
 // flutter test hangs on the author's machine — run these yourself:
 //   flutter test test/ledger_filter_sheet_test.dart
 //
-// The unified filter sheet on the MAIN Ledger tab. Fixture: 24 August-2026
-// transactions — Groceries 4, Eating out 5, Housing 0, tags #fun · 2,
-// #coffee · 1 — so the acceptance numbers (spec §6) are exact.
+// The *truthful* unified filter sheet on the MAIN Ledger tab (spec §0–§13).
+// Fixture: 24 August-2026 transactions —
+//   expenses: Groceries 4, Eating out 5, Housing 0, Transport 3, Shopping 8  (20)
+//   income:   Salary 2
+//   transfers 2
+//   accounts: Main Checking 17, Card 7, Savings 2   (26 incidences; transfers
+//             touch two accounts each, so per-account ≤ footer but the sum may
+//             exceed it — the real anti-lie invariant is per-item, spec §3)
+//   tags:     #fun 2, #coffee 1
 
 Account _acc(String id, String name) => Account(
       id: id,
@@ -100,7 +106,7 @@ AppStore _store() => AppStore(
           toRef: 'a2',
           date: DateTime(2026, 8, 15, 9),
         ),
-        // Transfers · 2
+        // Transfers · 2 (a1→a2, a1→a3)
         Txn(
           id: 't23',
           type: TxnType.transfer,
@@ -119,6 +125,22 @@ AppStore _store() => AppStore(
           toRef: 'a3',
           date: DateTime(2026, 8, 17, 9),
         ),
+      ],
+      goals: const [],
+      tasks: const [],
+    );
+
+/// Seven equal-weight expense categories (Cat A … Cat G) so the EXPENSES section
+/// truncates at 5 and the strip reads "2 more categories".
+AppStore _manyStore() => AppStore(
+      accounts: [_acc('a1', 'Main Checking')],
+      categories: [
+        for (final n in ['A', 'B', 'C', 'D', 'E', 'F', 'G'])
+          _cat('c-$n', 'Cat $n', CategoryType.expense),
+      ],
+      txns: [
+        for (final n in ['A', 'B', 'C', 'D', 'E', 'F', 'G'])
+          _exp('t-$n', 10, 'a1', 'c-$n', 5),
       ],
       goals: const [],
       tasks: const [],
@@ -155,69 +177,226 @@ double _resetOpacity(WidgetTester tester) => tester
     )
     .opacity;
 
-/// A one-category / no-transfer store, so selecting the sole category is a
-/// *complete* selection that still matches every transaction.
-AppStore _singleCatStore() => AppStore(
-      accounts: [_acc('a1', 'Main Checking')],
-      categories: [_cat('c-food', 'Groceries', CategoryType.expense)],
-      txns: [
-        _exp('t1', 10, 'a1', 'c-food', 2),
-        _exp('t2', 20, 'a1', 'c-food', 3),
-      ],
-      goals: const [],
-      tasks: const [],
-    );
-
 void main() {
-  testWidgets('funnel opens the unified sheet in spec order (§6)',
+  testWidgets('opens with split categories, no All chip, no Select all (§4/§5/§6)',
       (tester) async {
     await _pump(tester, _store());
     await _openSheet(tester);
 
     expect(find.text('Filter'), findsOneWidget);
     expect(find.text('DIRECTION'), findsOneWidget);
-    expect(find.text('CATEGORIES'), findsOneWidget);
+    // Two category sections replace the single CATEGORIES list (§4).
+    expect(find.text('EXPENSES'), findsOneWidget);
+    expect(find.text('INCOME'), findsOneWidget);
+    expect(find.text('CATEGORIES'), findsNothing);
     expect(find.text('ACCOUNTS'), findsOneWidget);
     expect(find.text('TAGS'), findsOneWidget);
     expect(find.text('AMOUNT'), findsOneWidget);
-    // Nothing selected → the result is everything, so the button reads Done, not
-    // "Show 24 of 24" (spec §3: the count returns only when it means something).
+
+    // The All chip is gone (§5.2); Select all is gone everywhere (§6).
+    expect(find.text('All'), findsNothing);
+    expect(find.text('Select all'), findsNothing);
+
+    // Nothing selected → the result is everything → Done, not "Show 24 of 24".
     expect(find.text('Done'), findsOneWidget);
     expect(find.text('Show 24 of 24'), findsNothing);
   });
 
-  testWidgets('per-item counts: Groceries 4, Eating out 5, Housing 0 dimmed',
+  testWidgets('hideEmpty drops zero-count rows; header counts are item counts (§1)',
       (tester) async {
     await _pump(tester, _store());
     await _openSheet(tester);
 
-    expect(_rowCount('Groceries', '4'), findsOneWidget);
-    expect(_rowCount('Eating out', '5'), findsOneWidget);
+    // Housing (0 this month) is not drawn at all — not dimmed, not behind an
+    // expander (§1). The four non-zero expense categories show.
+    expect(find.text('Housing'), findsNothing);
+    expect(find.text('Groceries'), findsOneWidget);
+    expect(find.text('Eating out'), findsOneWidget);
 
-    // 6 categories → the first 5 (by count) show; Housing (0) sits behind the
-    // per-section expander. Expand to reveal it.
-    await tester.tap(find.text('Show all 6'));
-    await tester.pump();
-    expect(_rowCount('Housing', '0'), findsOneWidget);
+    // "· n" beside the label is the visible item count (§7).
+    expect(find.text('· 4'), findsOneWidget); // EXPENSES · 4
+    expect(find.text('· 3'), findsOneWidget); // ACCOUNTS · 3 (all non-empty)
 
-    // Housing (0) is wrapped in a 40%-opacity layer but stays a live row.
-    final housingOpacity = tester.widget<Opacity>(
-      find.ancestor(
-          of: find.text('Housing'), matching: find.byType(Opacity)).first,
-    );
-    expect(housingOpacity.opacity, 0.4);
-
-    // Tag chips carry counts too.
-    expect(find.text('#fun'), findsOneWidget);
-    expect(find.text('#coffee'), findsOneWidget);
+    // Account rows carry their period counts (17 / 7 / 2).
+    expect(_rowCount('Main Checking', '17'), findsOneWidget);
+    expect(_rowCount('Card', '7'), findsOneWidget);
+    expect(_rowCount('Savings', '2'), findsOneWidget);
   });
 
-  testWidgets('live count across Expenses + Groceries + #fun + min 10 → 1 of 24',
+  testWidgets('DIRECTION filters membership + counts; per-item ≤ footer (§2/§3)',
       (tester) async {
     await _pump(tester, _store());
     await _openSheet(tester);
 
-    await tester.tap(find.text('Expenses'));
+    await tester.tap(find.text('Income'));
+    await tester.pump();
+
+    // The expense section is *absent* (not dimmed) under Income (§2).
+    expect(find.text('EXPENSES'), findsNothing);
+    expect(find.text('INCOME'), findsOneWidget);
+
+    // Accounts follow the direction: Main Checking 1, Savings 1, Card hidden.
+    expect(_rowCount('Main Checking', '1'), findsOneWidget);
+    expect(_rowCount('Savings', '1'), findsOneWidget);
+    expect(find.text('Card'), findsNothing);
+
+    // Tags carry no income rows → the whole TAGS section is gone.
+    expect(find.text('TAGS'), findsNothing);
+
+    // Footer counts the 2 income rows; both visible account counts (1, 1) are
+    // ≤ 2 — the old bug gave 21 vs 2.
+    expect(find.text('Show 2 of 24'), findsOneWidget);
+    expect(_resetOpacity(tester), 1.0);
+  });
+
+  testWidgets('Transfers: category sections gone, one note line, no tags (§5.3)',
+      (tester) async {
+    await _pump(tester, _store());
+    await _openSheet(tester);
+
+    await tester.tap(find.text('Transfer'));
+    await tester.pump();
+
+    expect(find.text('EXPENSES'), findsNothing);
+    expect(find.text('INCOME'), findsNothing);
+    expect(find.text('Transfers have no category.'), findsOneWidget);
+    expect(find.text('TAGS'), findsNothing);
+
+    // Two transfers touch a1 twice, a2 once, a3 once — each ≤ footer 2.
+    expect(_rowCount('Main Checking', '2'), findsOneWidget);
+    expect(find.text('Show 2 of 24'), findsOneWidget);
+  });
+
+  testWidgets('Revaluation exists as a direction even with no rebalance rows (§5.1)',
+      (tester) async {
+    await _pump(tester, _store());
+    await _openSheet(tester);
+
+    expect(find.text('Rebalance'), findsOneWidget); // the fourth chip
+    await tester.tap(find.text('Rebalance'));
+    await tester.pump();
+
+    expect(find.text('Revaluations move no cash.'), findsOneWidget);
+    expect(find.text('EXPENSES'), findsNothing);
+  });
+
+  testWidgets('direction chips toggle: re-tapping the selected chip clears it (§5.2)',
+      (tester) async {
+    await _pump(tester, _store());
+    await _openSheet(tester);
+
+    await tester.tap(find.text('Expense'));
+    await tester.pump();
+    expect(find.text('Show 20 of 24'), findsOneWidget);
+
+    // Re-tap clears the direction → back to everything → Done.
+    await tester.tap(find.text('Expense'));
+    await tester.pump();
+    expect(find.text('Done'), findsOneWidget);
+  });
+
+  testWidgets('THE §0 REGRESSION: every expense category still filters (§8/§13)',
+      (tester) async {
+    // On the OLD code, selecting a complete category set left _isActive false —
+    // Reset greyed, funnel dark — while the footer dropped below the total.
+    // Assert the truthful behaviour: Reset live, footer < 24.
+    await _pump(tester, _store());
+    await _openSheet(tester);
+
+    for (final c in ['Shopping', 'Eating out', 'Groceries', 'Transport']) {
+      await tester.tap(find.text(c));
+      await tester.pump();
+    }
+
+    // All 20 expenses match; income + transfers drop.
+    expect(find.text('Show 20 of 24'), findsOneWidget);
+    expect(_resetOpacity(tester), 1.0); // ← the fix: a complete cat set IS a filter
+    // Housing is hidden, so 4 of 5 expense categories are selected → not "all".
+    expect(find.text('4 selected'), findsOneWidget);
+  });
+
+  testWidgets('Select others inverts the visible selection (§6)', (tester) async {
+    await _pump(tester, _store());
+    await _openSheet(tester);
+
+    await tester.tap(find.text('Groceries'));
+    await tester.pump();
+    expect(find.text('1 selected'), findsOneWidget);
+    expect(find.text('Select others'), findsOneWidget);
+
+    await tester.tap(find.text('Select others'));
+    await tester.pump();
+
+    // Groceries off, the other three on → 3 selected (Eating 5 + Transport 3 +
+    // Shopping 8 = 16 rows).
+    expect(find.text('3 selected'), findsOneWidget);
+    expect(find.text('Show 16 of 24'), findsOneWidget);
+  });
+
+  testWidgets('the badge clears only its own section (§7)', (tester) async {
+    await _pump(tester, _store());
+    await _openSheet(tester);
+
+    await tester.tap(find.text('Groceries')); // EXPENSES · 1 selected
+    await tester.pump();
+    await tester.tap(find.widgetWithText(InkWell, 'Savings')); // ACCOUNTS · 1
+    await tester.pump();
+    expect(find.text('1 selected'), findsNWidgets(2));
+
+    // Tap the first "1 selected" badge (EXPENSES, above ACCOUNTS in the tree).
+    await tester.tap(find.text('1 selected').first);
+    await tester.pump();
+
+    // Only the ACCOUNTS selection survives; direction/amount untouched.
+    expect(find.text('1 selected'), findsOneWidget);
+    // Savings touches t22 (income) + t23 (transfer) = 2 rows.
+    expect(find.text('Show 2 of 24'), findsOneWidget);
+  });
+
+  testWidgets('complete account selection normalises away (§8)', (tester) async {
+    await _pump(tester, _store());
+    await _openSheet(tester);
+
+    for (final a in ['Main Checking', 'Savings', 'Card']) {
+      await tester.tap(find.widgetWithText(InkWell, a));
+      await tester.pump();
+    }
+
+    // Every txn touches one of the three accounts, so the result is unchanged →
+    // the badge reads "all", the footer stays Done, Reset stays disabled.
+    expect(find.text('all'), findsOneWidget);
+    expect(find.text('Done'), findsOneWidget);
+    expect(_resetOpacity(tester), 0.35);
+  });
+
+  testWidgets('search: results count, match headers, sections hide (§11)',
+      (tester) async {
+    await _pump(tester, _store());
+    await _openSheet(tester);
+
+    await tester.enterText(find.byKey(const ValueKey('filter-search')), 'sa');
+    await tester.pump();
+
+    // "Salary" (income) + "Savings" (account) match → 2 results.
+    expect(find.text('2 results'), findsOneWidget);
+    expect(find.text('Salary'), findsOneWidget);
+    expect(find.text('Savings'), findsOneWidget);
+    expect(find.text('Groceries'), findsNothing);
+
+    // Each surviving section shows a match count; empty sections + DIRECTION +
+    // AMOUNT + TAGS hide while a query is active.
+    expect(find.text('· 1 matches'), findsNWidgets(2));
+    expect(find.text('EXPENSES'), findsNothing);
+    expect(find.text('DIRECTION'), findsNothing);
+    expect(find.text('AMOUNT'), findsNothing);
+  });
+
+  testWidgets('live count across Expense + Groceries + #fun + min 10 → 1 of 24',
+      (tester) async {
+    await _pump(tester, _store());
+    await _openSheet(tester);
+
+    await tester.tap(find.text('Expense'));
     await tester.pump();
     await tester.tap(find.text('Groceries'));
     await tester.pump();
@@ -235,251 +414,69 @@ void main() {
     expect(find.text('Show 1 of 24'), findsOneWidget);
   });
 
-  testWidgets('Select all on ACCOUNTS, then untick one → everything-except',
-      (tester) async {
-    await _pump(tester, _store());
-    await _openSheet(tester);
-
-    // ACCOUNTS' Select all (CATEGORIES also has one — take the 2nd control).
-    final selectAll = find.text('Select all');
-    await tester.tap(selectAll.at(1));
-    await tester.pump();
-
-    // A complete selection is not a filter (spec §1/§4): the result is still
-    // everything → the button stays on Done, the header reads "· all", and the
-    // control flips to Clear. Reset stays disabled.
-    expect(find.text('Done'), findsOneWidget);
-    expect(find.text('· all'), findsOneWidget);
-    expect(find.text('· 3 selected'), findsNothing);
-    expect(find.text('Clear'), findsWidgets);
-
-    // Untick the Card account → the everything-except-Card lens; a real filter
-    // now, so the header switches to a count and the button to "Show N of 24".
-    await tester.tap(find.widgetWithText(InkWell, 'Card'));
-    await tester.pump();
-    expect(find.text('· all'), findsNothing);
-    expect(find.text('· 2 selected'), findsOneWidget);
-    expect(find.text('Done'), findsNothing);
-    expect(find.textContaining('of 24'), findsOneWidget);
-  });
-
-  testWidgets('in-sheet search narrows to matches; empty sections hide',
-      (tester) async {
-    await _pump(tester, _store());
-    await _openSheet(tester);
-
-    await tester.enterText(
-      find.byKey(const ValueKey('filter-search')),
-      'ca',
-    );
-    await tester.pump();
-
-    // Only "Card" matches — CATEGORIES and TAGS hide entirely.
-    expect(find.text('Card'), findsOneWidget);
-    expect(find.text('Groceries'), findsNothing);
-    expect(find.text('CATEGORIES'), findsNothing);
-    expect(find.text('Main Checking'), findsNothing);
-
-    // Select all with the query active selects only the visible match.
-    await tester.tap(find.text('Select all'));
-    await tester.pump();
-    // Clear the query (field ✕) — the single selection persists.
-    await tester.enterText(
-      find.byKey(const ValueKey('filter-search')),
-      '',
-    );
-    await tester.pump();
-    expect(find.text('· 1 selected'), findsOneWidget);
-  });
-
-  testWidgets('direction switch dims categories without clearing selections',
+  testWidgets('a selected item that falls to 0 stays visible, dimmed (§1)',
       (tester) async {
     await _pump(tester, _store());
     await _openSheet(tester);
 
     await tester.tap(find.text('Groceries'));
     await tester.pump();
-    // A selection is now present in CATEGORIES.
-    expect(find.text('· 1 selected'), findsOneWidget);
+    expect(find.text('1 selected'), findsOneWidget);
 
+    // Switch to Income: Groceries' contextual count is 0, but it is still
+    // filtering, so it stays on screen (dimmed) rather than vanishing.
     await tester.tap(find.text('Income'));
     await tester.pump();
-
-    // Groceries (an expense category) now reads 0 in the income context and
-    // dims — but the selection is preserved (still · 1 selected).
-    expect(_rowCount('Groceries', '0'), findsOneWidget);
-    expect(find.text('· 1 selected'), findsOneWidget);
+    expect(find.text('Groceries'), findsOneWidget);
+    final housingOpacity = tester.widget<Opacity>(
+      find.ancestor(of: find.text('Groceries'), matching: find.byType(Opacity))
+          .first,
+    );
+    expect(housingOpacity.opacity, 0.4);
   });
 
-  testWidgets('Reset clears every dimension and disables when empty',
-      (tester) async {
-    await _pump(tester, _store());
+  testWidgets('masked mode: the amount range reads — (§10)', (tester) async {
+    final store = _store();
+    await _pump(tester, store);
+    // Hide amounts via the Ledger header eye, then open the sheet.
+    await tester.tap(find.byIcon(Icons.visibility_rounded));
+    await tester.pump();
     await _openSheet(tester);
 
-    await tester.tap(find.text('Expenses'));
-    await tester.pump();
-    await tester.tap(find.text('Groceries'));
-    await tester.pump();
-    await tester.enterText(
-      find.descendant(
-          of: find.byKey(const ValueKey('filter-max')),
-          matching: find.byType(EditableText)),
-      '100',
-    );
-    await tester.pump();
-
-    await tester.tap(find.text('Reset'));
-    await tester.pump();
-
-    // Back to the unfiltered lens: the result is everything → button reads Done.
-    expect(find.text('Done'), findsOneWidget);
-    expect(find.text('· 1 selected'), findsNothing);
+    // Two em-dashes: the fixed field separator, plus the header range that has
+    // fallen back to — rather than leaking a bound (unmasked it would show the
+    // money range instead, leaving only the separator).
+    expect(find.text('—'), findsNWidgets(2));
   });
 
-  testWidgets('a period change resets the filter (tags + amount too)',
+  testWidgets('truncation strip shows the remaining count inside the card (§9)',
       (tester) async {
+    await _pump(tester, _manyStore());
+    await _openSheet(tester);
+
+    // 7 equal categories, 5 shown → "2 more categories".
+    expect(find.textContaining('2 more categories'), findsOneWidget);
+    expect(find.text('Cat A'), findsOneWidget);
+    expect(find.text('Cat G'), findsNothing); // behind the strip
+
+    await tester.tap(find.textContaining('2 more categories'));
+    await tester.pump();
+    expect(find.text('Cat G'), findsOneWidget); // expanded
+  });
+
+  testWidgets('a period change resets the filter (spec §2.2)', (tester) async {
     final store = _store();
     await _pump(tester, store);
     await _openSheet(tester);
 
-    await tester.ensureVisible(find.text('#fun'));
-    await tester.tap(find.text('#fun'));
+    await tester.tap(find.text('Groceries'));
     await tester.pump();
-    await tester.enterText(
-      find.descendant(
-          of: find.byKey(const ValueKey('filter-min')),
-          matching: find.byType(EditableText)),
-      '5',
-    );
-    await tester.pump();
-    // Close via the header ✕ (the only close_rounded while the query is empty).
-    await tester.tap(find.byIcon(Icons.close_rounded));
+    await tester.tap(find.byIcon(Icons.close_rounded)); // header ✕ closes
     await tester.pumpAndSettle();
-
-    // The funnel is now active.
     expect(find.byIcon(Icons.filter_alt_rounded), findsOneWidget);
 
-    // Move to the previous month — the lens (incl. tags + amount) resets.
     store.shiftPeriod(-1);
     await tester.pump();
     expect(find.byIcon(Icons.filter_alt_outlined), findsOneWidget);
-
-    // Reopening shows an empty filter over the new (empty) period: 0 of 0 is
-    // still "everything", so the button reads Done (spec §3), not "Show 0 of 0".
-    await _openSheet(tester);
-    expect(find.text('Done'), findsOneWidget);
-  });
-
-  // ── §1/§3/§4 — a complete selection is not a filter ────────────────────────
-
-  testWidgets('empty state: Reset dim in the header, footer button reads Done',
-      (tester) async {
-    await _pump(tester, _store());
-    await _openSheet(tester);
-
-    // Reset moved into the header (spec §2) and is disabled while nothing filters.
-    expect(find.text('Reset'), findsOneWidget);
-    expect(_resetOpacity(tester), 0.35);
-    // The single full-width footer button (no second control beside it).
-    expect(find.text('Done'), findsOneWidget);
-    expect(find.textContaining('Show'), findsNothing);
-  });
-
-  testWidgets(
-      'Select all (accounts) is complete, not a filter: Reset stays disabled, '
-      'button stays Done, header reads · all', (tester) async {
-    await _pump(tester, _store());
-    await _openSheet(tester);
-
-    // ACCOUNTS Select all (2nd control); all three accounts touch every txn.
-    await tester.tap(find.text('Select all').at(1));
-    await tester.pump();
-
-    expect(find.text('· all'), findsOneWidget);
-    expect(find.text('Done'), findsOneWidget); // result is still everything
-    expect(_resetOpacity(tester), 0.35); // complete → not a filter → Reset dim
-  });
-
-  testWidgets(
-      'unticking one item wakes Reset, header count and button together',
-      (tester) async {
-    await _pump(tester, _store());
-    await _openSheet(tester);
-
-    await tester.tap(find.text('Select all').at(1)); // accounts → complete
-    await tester.pump();
-    // Sanity: nothing narrows yet.
-    expect(_resetOpacity(tester), 0.35);
-
-    // Untick Card → a proper subset → a real filter exists now.
-    await tester.tap(find.widgetWithText(InkWell, 'Card'));
-    await tester.pump();
-
-    expect(_resetOpacity(tester), 1.0); // Reset live
-    expect(find.text('· 2 selected'), findsOneWidget); // header count returns
-    expect(find.text('· all'), findsNothing);
-    expect(find.text('Show 18 of 24'), findsOneWidget); // button shows the count
-    expect(find.text('Done'), findsNothing);
-  });
-
-  testWidgets('single-item section: selecting the sole item is not a filter',
-      (tester) async {
-    await _pump(tester, _singleCatStore());
-    await _openSheet(tester);
-
-    // One category → Select all fills it (complete). Every txn is that category
-    // and there are no transfers, so the result stays everything.
-    await tester.tap(find.text('Select all').first);
-    await tester.pump();
-
-    expect(find.text('· all'), findsOneWidget);
-    expect(find.text('Done'), findsOneWidget);
-    expect(_resetOpacity(tester), 0.35);
-  });
-
-  testWidgets('button reads Done at N == total, Show N of M below it',
-      (tester) async {
-    await _pump(tester, _store());
-    await _openSheet(tester);
-
-    // Nothing selected → everything → Done.
-    expect(find.text('Done'), findsOneWidget);
-
-    // A direction narrows to the 20 expenses → the count returns.
-    await tester.tap(find.text('Expenses'));
-    await tester.pump();
-    expect(find.text('Done'), findsNothing);
-    expect(find.text('Show 20 of 24'), findsOneWidget);
-    expect(_resetOpacity(tester), 1.0); // direction set → a filter → Reset live
-  });
-
-  testWidgets('Clear under an active query deselects only the visible matches',
-      (tester) async {
-    await _pump(tester, _store());
-    await _openSheet(tester);
-
-    // Select Savings with no query.
-    await tester.tap(find.widgetWithText(InkWell, 'Savings'));
-    await tester.pump();
-    expect(find.text('· 1 selected'), findsOneWidget);
-
-    // Query "ca" → only the Card account matches; Savings is hidden.
-    await tester.enterText(find.byKey(const ValueKey('filter-search')), 'ca');
-    await tester.pump();
-    expect(find.text('Card'), findsOneWidget);
-    expect(find.text('Savings'), findsNothing);
-
-    // Select the visible match, then Clear — which must touch Card only, not the
-    // hidden Savings selection (spec §4).
-    await tester.tap(find.widgetWithText(InkWell, 'Card'));
-    await tester.pump();
-    await tester.tap(find.text('Clear'));
-    await tester.pump();
-
-    // Drop the query — the Savings selection made earlier has survived.
-    await tester.enterText(find.byKey(const ValueKey('filter-search')), '');
-    await tester.pump();
-    expect(find.text('· 1 selected'), findsOneWidget);
-    expect(find.text('· all'), findsNothing);
   });
 }

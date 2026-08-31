@@ -56,8 +56,12 @@ class FilterSection {
     required this.itemsFor,
     this.showCount = false,
     this.showControls = false,
+    this.rich = false,
+    this.hideEmpty = false,
     this.dot = false,
     this.truncateAt = 1 << 30,
+    this.moreLabel,
+    this.a11yLabel,
   });
 
   /// Snapshot key the selected ids live under (e.g. 'categories', 'tags').
@@ -68,16 +72,38 @@ class FilterSection {
   /// Whether each item shows its count (and dims to 40% when the count is 0).
   final bool showCount;
 
-  /// Whether the header carries a `· n selected` count and a Select all / Clear
-  /// text button (spec §3).
+  /// Whether the header carries a `· n selected` count and a control. The
+  /// *legacy* path (scoped sheet) draws a Select all / Clear text button; see
+  /// [rich] for the truthful replacement.
   final bool showControls;
+
+  /// Opt-in to the truthful header anatomy (spec §6/§7/§9): the count sits
+  /// beside the label, the `[n selected ✕]` badge clears the section, the single
+  /// right-hand link is `Select others` (invert), and the truncation strip moves
+  /// inside the card. The scoped sheet leaves this false, so its chrome is
+  /// byte-for-byte unchanged.
+  final bool rich;
+
+  /// Drop items whose count is 0 for the current context instead of dimming
+  /// them (spec §1). A filter option guaranteed to return nothing is not an
+  /// option. Off by default so the scoped sheet — which shows no counts — is
+  /// untouched. The one exception: an already-selected item is always drawn
+  /// (dimmed) even at count 0, so a hidden live filter never goes silent.
+  final bool hideEmpty;
 
   /// Chips only: whether to draw the item's colour dot.
   final bool dot;
 
-  /// Beyond this many items the section collapses behind a `Show all {n}` /
-  /// `+{n} more` expander (bypassed while an in-sheet query is active).
+  /// Beyond this many items the section collapses behind a truncation strip
+  /// (bypassed while an in-sheet query is active).
   final int truncateAt;
+
+  /// Builds the `{n} more …` truncation-strip copy (rich sections only).
+  final String Function(int hidden)? moreLabel;
+
+  /// Long-form accessibility label for the header (rich sections); the visible
+  /// [label] stays short so §7's one-line anatomy fits at 320pt.
+  final String? a11yLabel;
 
   /// The items for the current direction context — counts already
   /// contextualised, order stable across direction changes. [direction] is null
@@ -85,11 +111,13 @@ class FilterSection {
   final List<FilterChipItem> Function(TxnType? direction) itemsFor;
 }
 
-/// A single-select DIRECTION pill (main Ledger). [type] null == "All".
+/// A single-select DIRECTION pill (main Ledger). [type] is never null now — the
+/// `All` pseudo-option is gone (spec §5.2); the chips toggle, so re-tapping the
+/// selected chip clears the direction.
 class DirectionOption {
   const DirectionOption(this.label, this.type);
   final String label;
-  final TxnType? type;
+  final TxnType type;
 }
 
 /// An ordered slice of the sheet body.
@@ -102,27 +130,44 @@ class SectionFilterBlock extends FilterBlock {
   final FilterSection section;
 }
 
+/// A single explanatory line rendered where a section would be, for a direction
+/// that carries no such dimension (spec §5.3 — "Transfers have no category").
+/// Renders nothing when [noteFor] returns null for the current direction.
+class NoteFilterBlock extends FilterBlock {
+  const NoteFilterBlock(this.noteFor);
+  final String? Function(TxnType? direction) noteFor;
+}
+
 class AmountFilterBlock extends FilterBlock {
   const AmountFilterBlock({
     required this.rangeMin,
     required this.rangeMax,
     this.maxHint = '—',
     this.rangeHint,
+    this.hintsFor,
   });
 
   final double rangeMin;
   final double rangeMax;
 
-  /// Placeholder for an empty MAX field ('Any' on the main Ledger, '—' scoped).
+  /// Placeholder for an empty MAX field on the *legacy* (scoped) path ('—').
   final String maxHint;
 
-  /// Optional caption under the fields (scoped shows the period's range).
+  /// Optional caption under the fields on the legacy path (scoped shows the
+  /// period's range).
   final String? rangeHint;
+
+  /// Ledger opt-in (spec §10): direction-contextual, masked-aware placeholder
+  /// and header strings. When set, MIN and MAX show the real window bounds, the
+  /// range moves to the section header's right slot, and the caption is dropped;
+  /// [maxHint]/[rangeHint] are ignored.
+  final ({String min, String max, String? header}) Function(TxnType? direction)?
+      hintsFor;
 }
 
 /// The in-progress filter the sheet owns and emits. [selections] is keyed by
 /// each section's [FilterSection.key]; [direction] is the single-select
-/// DIRECTION value (null == All / no direction block).
+/// DIRECTION value (null == no direction block / cleared).
 @immutable
 class FilterSnapshot {
   const FilterSnapshot({
@@ -149,7 +194,10 @@ class FilterSnapshot {
 /// The scoped-ledger filter sheet (spec §2). Signature-compatible with the
 /// original: the scoped call sites are unchanged. Internally it builds the
 /// generic [showFilterSheet] with one group section + the TYPE / AMOUNT / TAGS
-/// blocks, mapping the [FilterSnapshot] to and from [TransFilter].
+/// blocks, mapping the [FilterSnapshot] to and from [TransFilter]. None of the
+/// Ledger-only capabilities (DIRECTION, hideEmpty, the rich header, real-bound
+/// amount placeholders) is opted into here, so the scoped sheet renders exactly
+/// as before.
 Future<void> showTransFilterSheet(
   BuildContext context, {
   required String groupSectionLabel,
@@ -236,7 +284,8 @@ Future<void> showTransFilterSheet(
 
 /// The unified filter sheet. Both the main Ledger and the scoped screens drive
 /// it; every capability beyond the scoped baseline (DIRECTION row, in-sheet
-/// search, row sections, per-item counts) is opt-in through the parameters.
+/// search, row sections, per-item counts, the rich truthful header) is opt-in
+/// through the parameters.
 Future<void> showFilterSheet(
   BuildContext context, {
   required List<FilterBlock> blocks,
@@ -333,46 +382,82 @@ class _FilterSheetState extends State<_FilterSheet> {
     return v == v.roundToDouble() ? v.toInt().toString() : v.toString();
   }
 
-  FilterSnapshot _snapshot() => FilterSnapshot(
+  Set<String> _selFor(String key) => _sel.putIfAbsent(key, () => {});
+
+  bool get _querying =>
+      widget.searchable && foldSearch(_query.trim()).isNotEmpty;
+
+  FilterSection? _sectionByKey(String key) {
+    for (final b in widget.blocks) {
+      if (b is SectionFilterBlock && b.section.key == key) return b.section;
+    }
+    return null;
+  }
+
+  /// The raw working selection as a snapshot — the truth used for counting and
+  /// the "is this filtering?" test. [drop] empties one section's selection for
+  /// the derived-active test (spec §8).
+  FilterSnapshot _rawSnapshot({String? drop}) => FilterSnapshot(
         direction: _direction,
-        selections: {for (final e in _sel.entries) e.key: {...e.value}},
+        selections: {
+          for (final e in _sel.entries)
+            e.key: (e.key == drop ? <String>{} : {...e.value}),
+        },
         min: _min,
         max: _max,
       );
+
+  /// The snapshot handed to the caller (persisted / applied to the list behind).
+  /// A section whose selection covers *every* item for the current direction is
+  /// normalised to an empty set **iff** emptying it does not change the result
+  /// (spec §8). That collapses a complete account selection (which never
+  /// narrows anything) so a later-added account is not silently excluded, while
+  /// leaving a complete *category* selection intact — emptying it would re-admit
+  /// transfers/revaluations, so it is a real filter and must persist as one.
+  FilterSnapshot _emitSnapshot() {
+    final live = widget.matchCount(_rawSnapshot());
+    final out = <String, Set<String>>{};
+    for (final e in _sel.entries) {
+      var ids = {...e.value};
+      final section = _sectionByKey(e.key);
+      if (section != null && ids.isNotEmpty) {
+        final all = {for (final i in section.itemsFor(_direction)) i.id};
+        final complete = all.isNotEmpty && ids.length == all.length &&
+            ids.containsAll(all);
+        if (complete &&
+            widget.matchCount(_rawSnapshot(drop: e.key)) == live) {
+          ids = {};
+        }
+      }
+      out[e.key] = ids;
+    }
+    return FilterSnapshot(
+      direction: _direction,
+      selections: out,
+      min: _min,
+      max: _max,
+    );
+  }
 
   /// Every change applies immediately to the screen behind (spec §2) and
   /// redraws the sheet's own controls.
   void _apply(VoidCallback change, {bool haptic = true}) {
     if (haptic) HapticFeedback.selectionClick();
     setState(change);
-    widget.onChanged(_snapshot());
+    widget.onChanged(_emitSnapshot());
   }
 
-  int get _liveCount => widget.matchCount(_snapshot());
+  int get _liveCount => widget.matchCount(_rawSnapshot());
 
-  /// A section narrows the list only when its selection is a *proper, non-empty
-  /// subset* of the items available for the current direction. Both an empty
-  /// selection and a complete one show every item, so neither is a filter —
-  /// counting a complete selection as active is exactly the Select-all defect
-  /// this removes: the list stays at "24 of 24" while Reset and the funnel light
-  /// up over a selection that changed nothing.
-  ///
-  /// Completeness is measured against [FilterSection.itemsFor] — the same list
-  /// Select all fills from — so the two can never disagree. A section with no
-  /// items for the current direction has an empty selection (n == 0) and never
-  /// filters, so a zero length is safe.
-  ///
-  /// Known limitation (accepted, per spec §1): a selection saved while complete
-  /// is stored as an explicit id set, not as "all". If a category/account is
-  /// created afterwards the stored set is no longer complete, so it silently
-  /// becomes a real filter and hides the new item. On the Ledger tab this is
-  /// short-lived — the filter is a session lens reset on every period change; on
-  /// the scoped screens it persists. Normalising a complete selection to an
-  /// empty one on write would fix it but would make Select all visibly inert
-  /// again — the defect being removed — so the behaviour is left as-is.
+  /// Whether removing this section's selection would change the result (spec
+  /// §8). Derived rather than declared: the old rule (`n > 0 && n < total`)
+  /// guessed from the selection's shape and was wrong for categories and tags,
+  /// where a complete selection still drops the rows that carry no category/tag
+  /// at all. One extra count per section per build — at fixture size this is not
+  /// measurable, and it is right for every section without a per-section flag.
   bool _sectionFilters(FilterSection s) {
-    final n = _selFor(s.key).length;
-    return n > 0 && n < s.itemsFor(_direction).length;
+    if (_selFor(s.key).isEmpty) return false;
+    return widget.matchCount(_rawSnapshot(drop: s.key)) != _liveCount;
   }
 
   bool get _isActive =>
@@ -383,8 +468,6 @@ class _FilterSheetState extends State<_FilterSheet> {
           (b) => b is SectionFilterBlock && _sectionFilters(b.section));
 
   bool get _rangeError => _min != null && _max != null && _min! > _max!;
-
-  Set<String> _selFor(String key) => _sel.putIfAbsent(key, () => {});
 
   void _reset() {
     _minCtrl.clear();
@@ -408,10 +491,41 @@ class _FilterSheetState extends State<_FilterSheet> {
   String get _searchPlaceholder {
     final labels = [
       for (final b in widget.blocks)
-        if (b is SectionFilterBlock) b.section.label.toLowerCase(),
+        if (b is SectionFilterBlock &&
+            b.section.kind == FilterSectionKind.rows)
+          b.section.label.toLowerCase(),
     ];
     final l = AppLocalizations.of(context);
     return labels.isEmpty ? l.actionSearch : l.ldgSearchWithin(labels.join(', '));
+  }
+
+  /// Total item matches across the searchable (row) sections — the `N results`
+  /// count shown on the field (spec §11).
+  int _searchResultCount() {
+    final folded = foldSearch(_query.trim());
+    var n = 0;
+    for (final b in widget.blocks) {
+      if (b is! SectionFilterBlock) continue;
+      final s = b.section;
+      if (s.kind != FilterSectionKind.rows) continue;
+      for (final i in _visibleBase(s)) {
+        if (foldSearch(i.label).contains(folded)) n++;
+      }
+    }
+    return n;
+  }
+
+  /// Whether a body block is drawn given the current query. While a query is
+  /// active only the searchable (row) sections show — DIRECTION, TAGS, AMOUNT
+  /// and the note line hide, because a query narrows *lists*, not transactions
+  /// (spec §11).
+  bool _showBlock(FilterBlock b) {
+    if (_querying) {
+      return b is SectionFilterBlock &&
+          b.section.kind == FilterSectionKind.rows;
+    }
+    if (b is NoteFilterBlock) return b.noteFor(_direction) != null;
+    return true;
   }
 
   @override
@@ -437,8 +551,10 @@ class _FilterSheetState extends State<_FilterSheet> {
                   child: ListView(
                     padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
                     children: [
-                      if (widget.direction != null) _directionSection(),
-                      for (final b in widget.blocks) _block(b),
+                      if (widget.direction != null && !_querying)
+                        _directionSection(),
+                      for (final b in widget.blocks)
+                        if (_showBlock(b)) _block(b),
                     ],
                   ),
                 ),
@@ -476,10 +592,7 @@ class _FilterSheetState extends State<_FilterSheet> {
           ),
           const Spacer(),
           // Reset lives in the header — matching the Balance filter sheet's
-          // placement and disabled treatment (spec §2). A dim text button reads
-          // as "unavailable" here; dimming it in the footer beside the loud
-          // filled button read as "broken", and hiding it there resized the
-          // primary button on the first selection.
+          // placement and disabled treatment (spec §2).
           _resetButton(),
           const SizedBox(width: 12),
           // Immediate-apply means there is no cancel: ✕ closes with the current
@@ -510,9 +623,7 @@ class _FilterSheetState extends State<_FilterSheet> {
     );
   }
 
-  /// The header Reset — same text style and accent as before, 35% opacity and
-  /// non-interactive when nothing filters. Placement, size and disabled
-  /// treatment match [balance_filter_sheet]'s header Reset (spec §2).
+  /// The header Reset — 35% opacity and non-interactive when nothing filters.
   Widget _resetButton() {
     final canReset = _isActive;
     return Semantics(
@@ -539,6 +650,7 @@ class _FilterSheetState extends State<_FilterSheet> {
   }
 
   Widget _searchField() {
+    final results = _querying ? _searchResultCount() : 0;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
       child: Container(
@@ -571,17 +683,26 @@ class _FilterSheetState extends State<_FilterSheet> {
                 onChanged: (v) => setState(() => _query = v),
               ),
             ),
+            if (_querying) ...[
+              // The running result count across every searchable section (§11).
+              Text(
+                AppLocalizations.of(context).ldgNResults('$results'),
+                style: const TextStyle(
+                    fontSize: 12, color: AppColors.textTertiary),
+              ),
+              const SizedBox(width: 6),
+            ],
             if (_query.isNotEmpty)
               GestureDetector(
                 behavior: HitTestBehavior.opaque,
-                // The field's own ✕ clears the query only (two controls, two
-                // jobs — the header ✕ closes the sheet).
+                // The field's own ✕ clears the query only (the header ✕ closes
+                // the sheet).
                 onTap: () {
                   _searchCtrl.clear();
                   setState(() => _query = '');
                 },
                 child: const Padding(
-                  padding: EdgeInsets.only(left: 6),
+                  padding: EdgeInsets.only(left: 2),
                   child: Icon(Icons.close_rounded,
                       size: 16, color: AppColors.textTertiary),
                 ),
@@ -595,6 +716,7 @@ class _FilterSheetState extends State<_FilterSheet> {
   Widget _block(FilterBlock b) => switch (b) {
         SectionFilterBlock(:final section) => _section(section),
         AmountFilterBlock() => _amountSection(b),
+        NoteFilterBlock() => _noteLine(b),
       };
 
   Widget _sectionLabel(String text, {bool first = false}) => Padding(
@@ -616,7 +738,8 @@ class _FilterSheetState extends State<_FilterSheet> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _sectionLabel(AppLocalizations.of(context).ldgDirection.toUpperCase(), first: true),
+        _sectionLabel(AppLocalizations.of(context).ldgDirection.toUpperCase(),
+            first: true),
         Wrap(
           spacing: 8,
           runSpacing: 8,
@@ -628,11 +751,16 @@ class _FilterSheetState extends State<_FilterSheet> {
     );
   }
 
+  /// A DIRECTION pill (spec §5.2): the chips are toggles now — re-tapping the
+  /// selected one clears the direction, so there is no separate `All` cell. The
+  /// selected chip carries a trailing ✕ so the way back is visible where the
+  /// selection is.
   Widget _dirChip(DirectionOption o) {
     final selected = _direction == o.type;
-    final color = o.type?.color ?? AppColors.accentSoft;
+    final color = o.type.color;
     return GestureDetector(
-      onTap: () => _apply(() => _direction = o.type),
+      onTap: () =>
+          _apply(() => _direction = _direction == o.type ? null : o.type),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
@@ -640,78 +768,267 @@ class _FilterSheetState extends State<_FilterSheet> {
           borderRadius: BorderRadius.circular(999),
           border: Border.all(color: selected ? color : AppColors.divider),
         ),
-        child: Text(
-          o.label,
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
-            color: selected ? AppColors.textPrimary : AppColors.textSecondary,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              o.label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                color:
+                    selected ? AppColors.textPrimary : AppColors.textSecondary,
+              ),
+            ),
+            if (selected) ...[
+              const SizedBox(width: 5),
+              Opacity(
+                opacity: 0.75,
+                child: Icon(Icons.close_rounded,
+                    size: 11, color: AppColors.textPrimary),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Note line (spec §5.3) ──────────────────────────────────────────────────
+
+  Widget _noteLine(NoteFilterBlock b) {
+    final text = b.noteFor(_direction);
+    if (text == null) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(2, 16, 2, 2),
+      child: Text(
+        text,
+        style: const TextStyle(fontSize: 11.5, color: AppColors.textTertiary),
+      ),
+    );
+  }
+
+  // ── Group / TAGS / row sections ────────────────────────────────────────────
+
+  /// The section's items after [FilterSection.hideEmpty] but before any query —
+  /// count-0 items are dropped unless selected (the live-filter exception, §1).
+  List<FilterChipItem> _visibleBase(FilterSection s) {
+    final all = s.itemsFor(_direction);
+    if (!s.hideEmpty) return all;
+    final sel = _selFor(s.key);
+    return all.where((i) => i.count > 0 || sel.contains(i.id)).toList();
+  }
+
+  Widget _section(FilterSection s) {
+    final folded = foldSearch(_query.trim());
+    final querying = widget.searchable && folded.isNotEmpty;
+    final base = _visibleBase(s);
+    final items = querying
+        ? base.where((i) => foldSearch(i.label).contains(folded)).toList()
+        : base;
+
+    // A section with no visible items disappears with its header (spec §1) — and
+    // likewise while a query is active with no match.
+    if (items.isEmpty) return const SizedBox.shrink();
+
+    final selected = _selFor(s.key);
+    final expanded = _expanded[s.key] ?? false;
+    // Truncation is bypassed while querying so every match shows.
+    final showAll = querying || expanded || items.length <= s.truncateAt;
+    final shown = showAll ? items : items.take(s.truncateAt).toList();
+    final hiddenItems = showAll ? const <FilterChipItem>[] : items.sublist(shown.length);
+    final hiddenSelected =
+        hiddenItems.where((i) => selected.contains(i.id)).length;
+
+    final highlight = querying ? folded : null;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _sectionHeader(s, items, selected),
+        if (s.kind == FilterSectionKind.chips)
+          _chips(s, shown, selected, highlight)
+        else
+          _rows(s, shown, selected, highlight,
+              strip: (s.rich && hiddenItems.isNotEmpty)
+                  ? _truncationStrip(s, hiddenItems.length, hiddenSelected)
+                  : null),
+        // Non-rich (legacy scoped) truncation, and rich *chips*, keep the strip
+        // below the section. Rich *rows* carry it inside the card (above).
+        if (hiddenItems.isNotEmpty &&
+            !querying &&
+            (!s.rich || s.kind == FilterSectionKind.chips))
+          if (s.rich)
+            _truncationStrip(s, hiddenItems.length, hiddenSelected)
+          else
+            Padding(
+              padding: const EdgeInsets.only(top: 5, left: 2),
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => setState(() => _expanded[s.key] = true),
+                child: Text(
+                  s.kind == FilterSectionKind.rows
+                      ? AppLocalizations.of(context).ldgShowAll('${items.length}')
+                      : '+${hiddenItems.length} more',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.accent,
+                  ),
+                ),
+              ),
+            ),
+      ],
+    );
+  }
+
+  /// The card-bottom / below-section truncation strip (spec §9): the *remaining*
+  /// count, centred, quiet; a `· N selected` accent tail when hidden rows carry
+  /// selections, so nothing is ever selected silently off-screen.
+  Widget _truncationStrip(FilterSection s, int hidden, int hiddenSelected) {
+    final more = s.moreLabel?.call(hidden) ?? '+$hidden more';
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => setState(() => _expanded[s.key] = true),
+      child: Container(
+        height: 34,
+        alignment: Alignment.center,
+        margin: EdgeInsets.only(top: s.kind == FilterSectionKind.chips ? 4 : 0),
+        child: Text.rich(
+          TextSpan(
+            children: [
+              TextSpan(text: '$more '),
+              const TextSpan(text: '⌄'),
+              if (hiddenSelected > 0)
+                TextSpan(
+                  text:
+                      '  · ${AppLocalizations.of(context).ldgNHiddenSelected('$hiddenSelected')}',
+                  style: const TextStyle(color: AppColors.accent),
+                ),
+            ],
+          ),
+          style: const TextStyle(
+            fontSize: 12.5,
+            fontWeight: FontWeight.w500,
+            color: AppColors.textSecondary,
           ),
         ),
       ),
     );
   }
 
-  // ── Group / TAGS sections ──────────────────────────────────────────────────
+  Widget _sectionHeader(
+      FilterSection s, List<FilterChipItem> items, Set<String> selected) {
+    if (s.rich) return _richHeader(s, items, selected);
+    if (!s.showControls) return _sectionLabel(s.label);
+    return _legacyControlHeader(s, selected.length);
+  }
 
-  Widget _section(FilterSection s) {
-    final all = s.itemsFor(_direction);
-    final folded = foldSearch(_query.trim());
-    final querying = widget.searchable && folded.isNotEmpty;
-    final items = querying
-        ? all.where((i) => foldSearch(i.label).contains(folded)).toList()
-        : all;
+  /// Spec §7 anatomy: `LABEL · n [badge]` on the left, one link (`Select
+  /// others`) or nothing on the right.
+  Widget _richHeader(
+      FilterSection s, List<FilterChipItem> items, Set<String> selected) {
+    final l = AppLocalizations.of(context);
+    final querying = widget.searchable && foldSearch(_query.trim()).isNotEmpty;
 
-    // A section with no matches hides entirely while a query is active.
-    if (querying && items.isEmpty) return const SizedBox.shrink();
+    // The count beside the label: item count normally, match count under query.
+    final countText = querying ? l.ldgNMatches('${items.length}') : '${items.length}';
 
-    final selected = _sel[s.key] ?? const {};
-    final expanded = _expanded[s.key] ?? false;
-    // Truncation is bypassed while querying so every match shows.
-    final showAll = querying || expanded || items.length <= s.truncateAt;
-    final shown = showAll ? items : items.take(s.truncateAt).toList();
-    final hidden = items.length - shown.length;
+    // Completeness is measured against the section's full item list for the
+    // current direction (the same list "all" would fill).
+    final allIds = {for (final i in s.itemsFor(_direction)) i.id};
+    final complete = allIds.isNotEmpty &&
+        selected.length >= allIds.length &&
+        allIds.every(selected.contains);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _sectionHeader(s, selected.length, querying ? items.length : null),
-        if (s.kind == FilterSectionKind.chips)
-          _chips(s, shown, selected)
-        else
-          _rows(s, shown, selected),
-        if (hidden > 0 && !querying)
-          Padding(
-            padding: const EdgeInsets.only(top: 5, left: 2),
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: () => setState(() => _expanded[s.key] = true),
+    // The visible ids the Select-others link inverts over (matches under a
+    // query, every visible item otherwise). Shown only for a non-empty proper
+    // subset — from empty it would be "select all" and from complete "clear".
+    final visibleIds = [for (final i in items) i.id];
+    final visSelected = visibleIds.where(selected.contains).length;
+    final showOthers = visSelected > 0 && visSelected < visibleIds.length;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(2, 13, 2, 6),
+      child: Row(
+        children: [
+          // Label and count are separate Text widgets (not one rich span) so
+          // the count sits beside the label yet the label stays findable on its
+          // own. The count belongs here, never pushed to the right edge where it
+          // would align with the amount column and read as an amount (spec §7).
+          Flexible(
+            child: Semantics(
+              label: s.a11yLabel,
               child: Text(
-                s.kind == FilterSectionKind.rows
-                    ? AppLocalizations.of(context).ldgShowAll('${items.length}')
-                    : '+$hidden more',
+                s.label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                  color: AppColors.accent,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.07 * 11,
+                  color: AppColors.textSecondary,
                 ),
               ),
             ),
           ),
-      ],
+          Padding(
+            padding: const EdgeInsets.only(left: 5),
+            child: Text(
+              '· $countText',
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textTertiary,
+              ),
+            ),
+          ),
+          // The badge is a button: tapping it clears only this section. Hidden
+          // while a query is up (§7) — the selection it would clear may be
+          // off-screen behind the query.
+          if (selected.isNotEmpty && !querying) ...[
+            const SizedBox(width: 6),
+            _SectionBadge(
+              label: complete
+                  ? l.ldgAllSelected
+                  : l.ldgNSelected('${selected.length}'),
+              semanticsLabel: l.ldgClearSection(s.label),
+              onTap: () => _apply(() => _selFor(s.key).clear()),
+            ),
+          ],
+          const Spacer(),
+          if (showOthers)
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => _apply(() {
+                final sel = _selFor(s.key);
+                for (final id in visibleIds) {
+                  sel.contains(id) ? sel.remove(id) : sel.add(id);
+                }
+              }),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
+                child: Text(
+                  l.ldgSelectOthers,
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.accentLight,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 
-  Widget _sectionHeader(FilterSection s, int selectedCount, int? matchCount) {
-    if (!s.showControls) {
-      return _sectionLabel(matchCount == null ? s.label : '${s.label} · $matchCount');
-    }
+  /// The legacy scoped header — Select all / Clear + `· all` / `· n selected`.
+  /// Kept byte-for-byte so the scoped sheet is unchanged.
+  Widget _legacyControlHeader(FilterSection s, int selectedCount) {
     final all = s.itemsFor(_direction);
     final folded = foldSearch(_query.trim());
     final querying = widget.searchable && folded.isNotEmpty;
-    // Select all / Clear target the *visible* items — every item normally, only
-    // the matches while a query is active (spec §3/§4, the "select everything
-    // named X" workflow).
     final visibleIds = (querying
             ? all.where((i) => foldSearch(i.label).contains(folded))
             : all)
@@ -719,12 +1036,7 @@ class _FilterSheetState extends State<_FilterSheet> {
         .toList();
 
     final sel = _sel[s.key] ?? const <String>{};
-    // Complete against the same list Select all fills from, so "· all" and
-    // "not a filter" (see [_sectionFilters]) agree. Partial otherwise.
     final complete = selectedCount > 0 && selectedCount >= all.length;
-    // With a query up, the toggle follows the visible matches: Select all while
-    // any visible match is unselected, Clear once they all are — mirroring how
-    // the two operate. Without a query, any selection offers Clear (spec §4).
     final showClear = querying
         ? visibleIds.isNotEmpty && visibleIds.every(sel.contains)
         : selectedCount > 0;
@@ -735,7 +1047,7 @@ class _FilterSheetState extends State<_FilterSheet> {
         children: [
           Flexible(
             child: Text(
-              matchCount == null ? s.label : '${s.label} · $matchCount',
+              s.label,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
@@ -749,9 +1061,6 @@ class _FilterSheetState extends State<_FilterSheet> {
           if (selectedCount > 0)
             Padding(
               padding: const EdgeInsets.only(left: 6),
-              // "· all" over "· 14 selected": the number carries nothing when it
-              // equals the total, and the word says this section isn't narrowing
-              // anything (spec §4).
               child: Text(
                 complete ? '· all' : '· $selectedCount selected',
                 style: const TextStyle(
@@ -771,21 +1080,19 @@ class _FilterSheetState extends State<_FilterSheet> {
               behavior: HitTestBehavior.opaque,
               onTap: () {
                 if (showClear) {
-                  // Clear only the visible matches under a query, so selections
-                  // the query is hiding survive (spec §4); otherwise clear all.
                   _apply(() => querying
                       ? _selFor(s.key).removeAll(visibleIds)
                       : _selFor(s.key).clear());
                 } else {
-                  // Add (not replace) so selections hidden by the query survive:
-                  // Select all adds the remaining visible matches only.
                   _apply(() => _selFor(s.key).addAll(visibleIds));
                 }
               },
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
                 child: Text(
-                  showClear ? AppLocalizations.of(context).ldgClear : AppLocalizations.of(context).ldgSelectAll,
+                  showClear
+                      ? AppLocalizations.of(context).ldgClear
+                      : AppLocalizations.of(context).ldgSelectAll,
                   style: const TextStyle(
                     fontSize: 12.5,
                     fontWeight: FontWeight.w600,
@@ -800,7 +1107,8 @@ class _FilterSheetState extends State<_FilterSheet> {
     );
   }
 
-  Widget _chips(FilterSection s, List<FilterChipItem> items, Set<String> sel) {
+  Widget _chips(FilterSection s, List<FilterChipItem> items, Set<String> sel,
+      String? highlight) {
     return Wrap(
       spacing: 6,
       runSpacing: 0,
@@ -808,11 +1116,10 @@ class _FilterSheetState extends State<_FilterSheet> {
         for (final i in items)
           _FilterChip(
             label: i.label,
+            highlight: highlight,
             selected: sel.contains(i.id),
             dotColor: s.dot ? i.color : null,
             count: s.showCount ? i.count : null,
-            // Archived tags stay in the list but read one step dimmer — the
-            // subtle mark the spec asks for, reusing the count==0 dim state.
             dim: (s.showCount && i.count == 0) || i.archived,
             onTap: () => _apply(() => _toggle(_selFor(s.key), i.id)),
           ),
@@ -820,7 +1127,9 @@ class _FilterSheetState extends State<_FilterSheet> {
     );
   }
 
-  Widget _rows(FilterSection s, List<FilterChipItem> items, Set<String> sel) {
+  Widget _rows(FilterSection s, List<FilterChipItem> items, Set<String> sel,
+      String? highlight,
+      {Widget? strip}) {
     return AppCard(
       child: Column(
         children: [
@@ -828,10 +1137,15 @@ class _FilterSheetState extends State<_FilterSheet> {
             if (i > 0) const RowDivider(indent: 48),
             _PickRow(
               item: items[i],
+              highlight: highlight,
               selected: sel.contains(items[i].id),
               dim: items[i].count == 0,
               onTap: () => _apply(() => _toggle(_selFor(s.key), items[i].id)),
             ),
+          ],
+          if (strip != null) ...[
+            const RowDivider(indent: 0),
+            strip,
           ],
         ],
       ),
@@ -844,21 +1158,54 @@ class _FilterSheetState extends State<_FilterSheet> {
   // ── AMOUNT ─────────────────────────────────────────────────────────────────
 
   Widget _amountSection(AmountFilterBlock b) {
+    final hints = b.hintsFor?.call(_direction);
+    final minHint = hints?.min ?? '—';
+    final maxHint = hints?.max ?? b.maxHint;
+    final headerRange = hints?.header;
+    final l = AppLocalizations.of(context);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _sectionLabel(AppLocalizations.of(context).ldgAmount.toUpperCase()),
+        // AMOUNT · $min – $max — the range moves here (spec §10), replacing the
+        // separate caption below the fields.
+        Padding(
+          padding: const EdgeInsets.fromLTRB(2, 13, 2, 6),
+          child: Row(
+            children: [
+              Text(
+                l.ldgAmount.toUpperCase(),
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.07 * 11,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              if (headerRange != null) ...[
+                const Spacer(),
+                Text(
+                  headerRange,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: AppColors.textTertiary,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
         Row(
           children: [
             Expanded(
               child: _AmountField(
                 key: const ValueKey('filter-min'),
-                keyLabel: AppLocalizations.of(context).ldgMin.toUpperCase(),
+                keyLabel: l.ldgMin.toUpperCase(),
                 controller: _minCtrl,
                 focusNode: _minFocus,
                 focused: _minFocus.hasFocus,
                 error: false,
-                hint: '—',
+                hint: minHint,
                 onChanged: (v) => _apply(() => _min = _parse(v), haptic: false),
               ),
             ),
@@ -870,18 +1217,20 @@ class _FilterSheetState extends State<_FilterSheet> {
             Expanded(
               child: _AmountField(
                 key: const ValueKey('filter-max'),
-                keyLabel: AppLocalizations.of(context).ldgMax.toUpperCase(),
+                keyLabel: l.ldgMax.toUpperCase(),
                 controller: _maxCtrl,
                 focusNode: _maxFocus,
                 focused: _maxFocus.hasFocus,
                 error: _rangeError,
-                hint: b.maxHint,
+                hint: maxHint,
                 onChanged: (v) => _apply(() => _max = _parse(v), haptic: false),
               ),
             ),
           ],
         ),
-        if (b.rangeHint != null)
+        // Legacy caption (scoped only — the rich path carries the range in the
+        // header instead).
+        if (b.hintsFor == null && b.rangeHint != null)
           Padding(
             padding: const EdgeInsets.only(top: 6, left: 2),
             child: Text(
@@ -899,11 +1248,6 @@ class _FilterSheetState extends State<_FilterSheet> {
   Widget _footer() {
     final bottom = MediaQuery.paddingOf(context).bottom;
     final l = AppLocalizations.of(context);
-    // When the result is everything the button's only job is to close, so it
-    // says Done; the count returns the moment it means something (spec §3).
-    // Keyed off the outcome (_liveCount), not _isActive, on purpose: an amount
-    // range that happens to match every transaction leaves Reset live (a filter
-    // is set) while the button reads Done (the result is everything).
     final label = _liveCount < widget.total
         ? l.ldgShowCountOf('$_liveCount', '${widget.total}')
         : l.actionDone;
@@ -916,8 +1260,6 @@ class _FilterSheetState extends State<_FilterSheet> {
         width: double.infinity,
         height: 47,
         child: FilledButton(
-          // Closing on a zero result is legitimate — the list's empty state
-          // explains — so the button stays enabled at 0.
           onPressed: () => Navigator.of(context).pop(),
           style: FilledButton.styleFrom(
             backgroundColor: AppColors.accent,
@@ -937,17 +1279,107 @@ class _FilterSheetState extends State<_FilterSheet> {
   }
 }
 
+/// The `[n selected ✕]` / `[all ✕]` pill in a rich section header — a button
+/// that clears its section (spec §7).
+class _SectionBadge extends StatelessWidget {
+  const _SectionBadge({
+    required this.label,
+    required this.semanticsLabel,
+    required this.onTap,
+  });
+
+  final String label;
+  final String semanticsLabel;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: semanticsLabel,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: Container(
+          height: 18,
+          padding: const EdgeInsets.symmetric(horizontal: 7),
+          decoration: BoxDecoration(
+            color: AppColors.tint(AppColors.accent, 0.16),
+            borderRadius: BorderRadius.circular(9),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.accentLight,
+                ),
+              ),
+              const SizedBox(width: 3),
+              const Icon(Icons.close_rounded,
+                  size: 11, color: AppColors.accentLight),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A label with the matched run highlighted behind [AppColors.accent] at 32%
+/// (spec §11). Falls back to a plain [Text] when there is no query — so the row
+/// stays findable by its label and only the search path pays for the rich span.
+/// [foldSearch] preserves offsets 1:1, so the folded index is a valid offset
+/// into the original label.
+Widget _highlightLabel(
+  String label,
+  String? highlightFolded, {
+  required TextStyle style,
+  int? maxLines,
+  TextOverflow overflow = TextOverflow.clip,
+}) {
+  final idx = (highlightFolded == null || highlightFolded.isEmpty)
+      ? -1
+      : foldSearch(label).indexOf(highlightFolded);
+  if (idx < 0) {
+    return Text(label, style: style, maxLines: maxLines, overflow: overflow);
+  }
+  final end = idx + highlightFolded!.length;
+  return Text.rich(
+    TextSpan(
+      children: [
+        if (idx > 0) TextSpan(text: label.substring(0, idx)),
+        TextSpan(
+          text: label.substring(idx, end),
+          style: TextStyle(
+            backgroundColor: AppColors.tint(AppColors.accent, 0.32),
+          ),
+        ),
+        if (end < label.length) TextSpan(text: label.substring(end)),
+      ],
+    ),
+    style: style,
+    maxLines: maxLines,
+    overflow: overflow,
+  );
+}
+
 class _FilterChip extends StatelessWidget {
   const _FilterChip({
     required this.label,
     required this.selected,
     required this.onTap,
+    this.highlight,
     this.dotColor,
     this.count,
     this.dim = false,
   });
 
   final String label;
+  final String? highlight;
   final bool selected;
   final VoidCallback onTap;
   final Color? dotColor;
@@ -963,7 +1395,6 @@ class _FilterChip extends StatelessWidget {
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
-        // 4pt transparent inset provides the 8pt inter-row gap (see original).
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 4),
           child: Container(
@@ -984,8 +1415,9 @@ class _FilterChip extends StatelessWidget {
                   ),
                   const SizedBox(width: 5),
                 ],
-                Text(
+                _highlightLabel(
                   label,
+                  highlight,
                   style: TextStyle(
                     fontSize: 13,
                     height: 1.2,
@@ -1025,9 +1457,11 @@ class _PickRow extends StatelessWidget {
     required this.selected,
     required this.dim,
     required this.onTap,
+    this.highlight,
   });
 
   final FilterChipItem item;
+  final String? highlight;
   final bool selected;
   final bool dim;
   final VoidCallback onTap;
@@ -1048,8 +1482,9 @@ class _PickRow extends StatelessWidget {
             ),
             const SizedBox(width: 8),
             Expanded(
-              child: Text(
+              child: _highlightLabel(
                 item.label,
+                highlight,
                 style: const TextStyle(
                     fontSize: 15, color: AppColors.textPrimary),
                 maxLines: 1,
@@ -1075,7 +1510,7 @@ class _PickRow extends StatelessWidget {
       ),
     );
     // Dim the visuals only — Opacity does not absorb taps, so the InkWell
-    // stays live and the row remains selectable (spec §4/§5).
+    // stays live and the row remains selectable (the count-0-but-selected case).
     return dim ? Opacity(opacity: 0.4, child: row) : row;
   }
 }

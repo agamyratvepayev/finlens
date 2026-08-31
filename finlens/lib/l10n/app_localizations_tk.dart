@@ -1745,9 +1745,6 @@ class AppLocalizationsTk extends AppLocalizations {
   String get ldgAmount => 'Möçber';
 
   @override
-  String get ldgAny => 'Islendik';
-
-  @override
   String get ldgClearCustomRange => 'Öz aralygyny arassala';
 
   @override
@@ -1855,6 +1852,75 @@ class AppLocalizationsTk extends AppLocalizations {
 
   @override
   String get ldgResetFilter => 'Süzgüji täzele';
+
+  @override
+  String get ldgSelectOthers => 'Beýlekileri saýla';
+
+  @override
+  String ldgNSelected(Object n) {
+    return '$n saýlandy';
+  }
+
+  @override
+  String get ldgAllSelected => 'ählisi';
+
+  @override
+  String ldgClearSection(Object section) {
+    return '$section saýlawyny arassala';
+  }
+
+  @override
+  String ldgMoreCategories(Object n) {
+    return 'ýene $n kategoriýa';
+  }
+
+  @override
+  String ldgMoreAccounts(Object n) {
+    return 'ýene $n hasap';
+  }
+
+  @override
+  String ldgMoreTags(Object n) {
+    return 'ýene $n bellik';
+  }
+
+  @override
+  String ldgNHiddenSelected(Object n) {
+    return '$n saýlandy';
+  }
+
+  @override
+  String ldgNMatches(Object n) {
+    return '$n gabat';
+  }
+
+  @override
+  String ldgNResults(Object n) {
+    return '$n netije';
+  }
+
+  @override
+  String get ldgExpenses => 'Çykdajylar';
+
+  @override
+  String get ldgIncomes => 'Girdejiler';
+
+  @override
+  String get ldgExpenseCategoriesA11y => 'çykdajy kategoriýalary';
+
+  @override
+  String get ldgIncomeSourcesA11y => 'girdeji çeşmeleri';
+
+  @override
+  String get ldgTransfersHaveNoCategory => 'Geçirimleriň kategoriýasy ýok.';
+
+  @override
+  String get ldgRevaluationsMoveNoCash => 'Deňagramlaşdyrma nagt geçirmeýär.';
+
+  @override
+  String ldgAmountRange(Object min, Object max) {
+    return '$min – $max';
+  }
 
   @override
   String get tdFrom => 'Nireden';

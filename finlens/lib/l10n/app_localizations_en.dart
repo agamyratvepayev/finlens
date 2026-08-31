@@ -1753,9 +1753,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ldgAmount => 'Amount';
 
   @override
-  String get ldgAny => 'Any';
-
-  @override
   String get ldgClearCustomRange => 'Clear custom range';
 
   @override
@@ -1863,6 +1860,75 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get ldgResetFilter => 'Reset filter';
+
+  @override
+  String get ldgSelectOthers => 'Select others';
+
+  @override
+  String ldgNSelected(Object n) {
+    return '$n selected';
+  }
+
+  @override
+  String get ldgAllSelected => 'all';
+
+  @override
+  String ldgClearSection(Object section) {
+    return 'Clear $section selection';
+  }
+
+  @override
+  String ldgMoreCategories(Object n) {
+    return '$n more categories';
+  }
+
+  @override
+  String ldgMoreAccounts(Object n) {
+    return '$n more accounts';
+  }
+
+  @override
+  String ldgMoreTags(Object n) {
+    return '$n more tags';
+  }
+
+  @override
+  String ldgNHiddenSelected(Object n) {
+    return '$n selected';
+  }
+
+  @override
+  String ldgNMatches(Object n) {
+    return '$n matches';
+  }
+
+  @override
+  String ldgNResults(Object n) {
+    return '$n results';
+  }
+
+  @override
+  String get ldgExpenses => 'Expenses';
+
+  @override
+  String get ldgIncomes => 'Income';
+
+  @override
+  String get ldgExpenseCategoriesA11y => 'expense categories';
+
+  @override
+  String get ldgIncomeSourcesA11y => 'income sources';
+
+  @override
+  String get ldgTransfersHaveNoCategory => 'Transfers have no category.';
+
+  @override
+  String get ldgRevaluationsMoveNoCash => 'Revaluations move no cash.';
+
+  @override
+  String ldgAmountRange(Object min, Object max) {
+    return '$min – $max';
+  }
 
   @override
   String get tdFrom => 'From';

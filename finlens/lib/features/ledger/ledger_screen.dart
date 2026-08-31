@@ -664,12 +664,29 @@ class _LedgerScreenState extends State<LedgerScreen> {
     final accountIds = {for (final a in store.accounts) a.id};
 
     // One O(n) pass over the period for the per-item counts (spec §4, §7 —
-    // never per-row queries).
-    final catCount = <String, int>{};
-    final accCount = <String, int>{};
-    final tagCount = <String, int>{};
-    var rangeMin = double.infinity;
-    var rangeMax = 0.0;
+    // never per-row queries). Accounts and tags need a *per-direction* tally so
+    // the sheet tells the truth under a DIRECTION toggle (spec §3) — recorded in
+    // the same walk rather than re-walking the window per toggle. `null` holds
+    // the direction-agnostic totals used for ordering.
+    const dirs = <TxnType?>[
+      null,
+      TxnType.expense,
+      TxnType.income,
+      TxnType.transfer,
+      TxnType.rebalance,
+    ];
+    final catCount = <String, int>{}; // period-wide; drives the stable order
+    final accCountDir = {for (final d in dirs) d: <String, int>{}};
+    final tagCountDir = {for (final d in dirs) d: <String, int>{}};
+    final dMin = <TxnType?, double>{};
+    final dMax = <TxnType?, double>{};
+    void bound(TxnType? k, double amt) {
+      final lo = dMin[k];
+      if (lo == null || amt < lo) dMin[k] = amt;
+      final hi = dMax[k];
+      if (hi == null || amt > hi) dMax[k] = amt;
+    }
+
     for (final t in all) {
       final cref = switch (t.type) {
         TxnType.expense => t.toRef,
@@ -678,19 +695,27 @@ class _LedgerScreenState extends State<LedgerScreen> {
       };
       if (cref != null) catCount[cref] = (catCount[cref] ?? 0) + 1;
       for (final id in {t.fromRef, t.toRef}) {
-        if (accountIds.contains(id)) accCount[id] = (accCount[id] ?? 0) + 1;
+        if (accountIds.contains(id)) {
+          accCountDir[null]![id] = (accCountDir[null]![id] ?? 0) + 1;
+          accCountDir[t.type]![id] = (accCountDir[t.type]![id] ?? 0) + 1;
+        }
       }
       for (final id in t.tagIds) {
-        tagCount[id] = (tagCount[id] ?? 0) + 1;
+        tagCountDir[null]![id] = (tagCountDir[null]![id] ?? 0) + 1;
+        tagCountDir[t.type]![id] = (tagCountDir[t.type]![id] ?? 0) + 1;
       }
       final amt = Fx.toBase(t.amount, t.currency).abs();
-      if (amt < rangeMin) rangeMin = amt;
-      if (amt > rangeMax) rangeMax = amt;
+      bound(null, amt);
+      bound(t.type, amt);
     }
-    if (rangeMin == double.infinity) rangeMin = 0;
+    final accCount = accCountDir[null]!;
+    final tagCount = tagCountDir[null]!;
+    final rangeMin = dMin[null] ?? 0.0;
+    final rangeMax = dMax[null] ?? 0.0;
 
     // Order fixed once from the period counts (non-zero desc, then zeros
-    // alphabetically) so a direction toggle re-dims without reflowing (§4).
+    // alphabetically). Hiding empties (§1) removes rows; it never reorders the
+    // survivors, so the relative order is stable across a direction change.
     int order(String aId, String aName, String bId, String bName,
         Map<String, int> counts) {
       final ca = counts[aId] ?? 0, cb = counts[bId] ?? 0;
@@ -699,12 +724,21 @@ class _LedgerScreenState extends State<LedgerScreen> {
       return aName.toLowerCase().compareTo(bName.toLowerCase());
     }
 
-    final cats = [...store.categories]
-      ..sort((a, b) => order(a.id, a.name, b.id, b.name, catCount));
+    // Categories become two sections (spec §4): where money went vs where it
+    // came from. The model stays CategoryType; only the split and the words
+    // change, and ledger_screen unions the two id sets back into _categoryIds.
+    final expenseCats = [
+      for (final c in store.categories)
+        if (c.type == CategoryType.expense) c
+    ]..sort((a, b) => order(a.id, a.name, b.id, b.name, catCount));
+    final incomeCats = [
+      for (final c in store.categories)
+        if (c.type == CategoryType.income) c
+    ]..sort((a, b) => order(a.id, a.name, b.id, b.name, catCount));
     final accs = [...store.accounts]
       ..sort((a, b) => order(a.id, a.name, b.id, b.name, accCount));
     // Tag ids present in the window, ordered by count then folded name. Archived
-    // tags are kept (past rows carry them) and marked subtly in the sheet (§6).
+    // tags are kept (past rows carry them) and marked subtly in the sheet.
     String tagName(String id) => store.tagById(id)?.name ?? '';
     final tags = tagCount.keys.toList()
       ..sort((a, b) {
@@ -715,8 +749,8 @@ class _LedgerScreenState extends State<LedgerScreen> {
       });
 
     // A category's count is contextual to the DIRECTION: a category of the
-    // opposite kind (or any category under Transfers) contributes 0 in that
-    // context and so dims to 40% by the sheet's single count==0 rule (§4).
+    // opposite kind (or any category under Transfers/Revaluations) contributes
+    // 0 in that context, so hideEmpty drops it and the whole section vanishes.
     int catCtx(Category c, TxnType? dir) {
       final base = catCount[c.id] ?? 0;
       return switch (dir) {
@@ -727,8 +761,8 @@ class _LedgerScreenState extends State<LedgerScreen> {
       };
     }
 
-    List<FilterChipItem> catItems(TxnType? dir) => [
-          for (final c in cats)
+    List<FilterChipItem> catItems(List<Category> list, TxnType? dir) => [
+          for (final c in list)
             FilterChipItem(
               id: c.id,
               label: c.name,
@@ -737,28 +771,47 @@ class _LedgerScreenState extends State<LedgerScreen> {
               count: catCtx(c, dir),
             ),
         ];
-    List<FilterChipItem> accItems(TxnType? _) => [
-          for (final a in accs)
-            FilterChipItem(
-              id: a.id,
-              label: a.name,
-              icon: a.displayIcon,
-              color: a.color,
-              count: accCount[a.id] ?? 0,
-            ),
-        ];
-    List<FilterChipItem> tagItems(TxnType? _) => [
-          for (final id in tags)
-            FilterChipItem(
-              id: id,
-              label: '#${tagName(id)}',
-              count: tagCount[id]!,
-              archived: store.tagById(id)?.archived ?? false,
-            ),
-        ];
+    List<FilterChipItem> accItems(TxnType? dir) {
+      final counts = accCountDir[dir] ?? const <String, int>{};
+      return [
+        for (final a in accs)
+          FilterChipItem(
+            id: a.id,
+            label: a.name,
+            icon: a.displayIcon,
+            color: a.color,
+            count: counts[a.id] ?? 0,
+          ),
+      ];
+    }
+
+    List<FilterChipItem> tagItems(TxnType? dir) {
+      final counts = tagCountDir[dir] ?? const <String, int>{};
+      return [
+        for (final id in tags)
+          FilterChipItem(
+            id: id,
+            label: '#${tagName(id)}',
+            count: counts[id] ?? 0,
+            archived: store.tagById(id)?.archived ?? false,
+          ),
+      ];
+    }
+
+    // Direction-contextual, masked-aware amount placeholders + header range
+    // (spec §10). A placeholder must never leak an amount the eye is hiding.
+    ({String min, String max, String? header}) amountHints(TxnType? dir) {
+      if (store.masked) return (min: '—', max: '—', header: '—');
+      final mn = money(dMin[dir] ?? 0.0, signless: true);
+      final mx = money(dMax[dir] ?? 0.0, signless: true);
+      return (min: mn, max: mx, header: l.ldgAmountRange(mn, mx));
+    }
 
     int countMatches(FilterSnapshot s) {
-      final cat = s.sel('categories');
+      // The two category sub-sections are one dimension to the matcher; a
+      // transfer/revaluation carries no category and so drops out whenever any
+      // category is selected (unchanged semantics, spec Hard boundary).
+      final cat = {...s.sel('expenseCategories'), ...s.sel('incomeCategories')};
       final acc = s.sel('accounts');
       final tg = s.sel('tags');
       var n = 0;
@@ -786,20 +839,30 @@ class _LedgerScreenState extends State<LedgerScreen> {
       return n;
     }
 
+    // Split the current _categoryIds by kind for the two sections' initial sets.
+    final catType = {for (final c in store.categories) c.id: c.type};
+
     await showFilterSheet(
       context,
       total: all.length,
       searchable: true,
       direction: [
-        DirectionOption(l.filterAll, null),
         DirectionOption(l.txnTypeIncome, TxnType.income),
         DirectionOption(l.txnTypeExpense, TxnType.expense),
-        DirectionOption('Transfers', TxnType.transfer),
+        DirectionOption(l.txnTypeTransfer, TxnType.transfer),
+        DirectionOption(l.txnTypeRebalance, TxnType.rebalance),
       ],
       initial: FilterSnapshot(
         direction: _direction,
         selections: {
-          'categories': {..._categoryIds},
+          'expenseCategories': {
+            for (final id in _categoryIds)
+              if (catType[id] == CategoryType.expense) id
+          },
+          'incomeCategories': {
+            for (final id in _categoryIds)
+              if (catType[id] == CategoryType.income) id
+          },
           'accounts': {..._accountIds},
           'tags': {..._tagIds},
         },
@@ -811,7 +874,8 @@ class _LedgerScreenState extends State<LedgerScreen> {
         _direction = s.direction;
         _categoryIds
           ..clear()
-          ..addAll(s.sel('categories'));
+          ..addAll(s.sel('expenseCategories'))
+          ..addAll(s.sel('incomeCategories'));
         _accountIds
           ..clear()
           ..addAll(s.sel('accounts'));
@@ -822,22 +886,46 @@ class _LedgerScreenState extends State<LedgerScreen> {
         _max = s.max;
       }),
       blocks: [
+        // A direction that carries no category replaces both category sections
+        // with one explanatory line (spec §5.3).
+        NoteFilterBlock((dir) => switch (dir) {
+              TxnType.transfer => l.ldgTransfersHaveNoCategory,
+              TxnType.rebalance => l.ldgRevaluationsMoveNoCash,
+              _ => null,
+            }),
         SectionFilterBlock(FilterSection(
-          key: 'categories',
-          label: l.ldgCategories.toUpperCase(),
+          key: 'expenseCategories',
+          label: l.ldgExpenses.toUpperCase(),
+          a11yLabel: l.ldgExpenseCategoriesA11y,
           kind: FilterSectionKind.rows,
           showCount: true,
-          showControls: true,
+          rich: true,
+          hideEmpty: true,
           truncateAt: 5,
-          itemsFor: catItems,
+          moreLabel: (n) => l.ldgMoreCategories('$n'),
+          itemsFor: (dir) => catItems(expenseCats, dir),
+        )),
+        SectionFilterBlock(FilterSection(
+          key: 'incomeCategories',
+          label: l.ldgIncomes.toUpperCase(),
+          a11yLabel: l.ldgIncomeSourcesA11y,
+          kind: FilterSectionKind.rows,
+          showCount: true,
+          rich: true,
+          hideEmpty: true,
+          truncateAt: 5,
+          moreLabel: (n) => l.ldgMoreCategories('$n'),
+          itemsFor: (dir) => catItems(incomeCats, dir),
         )),
         SectionFilterBlock(FilterSection(
           key: 'accounts',
           label: l.ldgAccounts.toUpperCase(),
           kind: FilterSectionKind.rows,
           showCount: true,
-          showControls: true,
+          rich: true,
+          hideEmpty: true,
           truncateAt: 5,
+          moreLabel: (n) => l.ldgMoreAccounts('$n'),
           itemsFor: accItems,
         )),
         if (tags.isNotEmpty)
@@ -846,14 +934,16 @@ class _LedgerScreenState extends State<LedgerScreen> {
             label: l.ldgTags.toUpperCase(),
             kind: FilterSectionKind.chips,
             showCount: true,
-            showControls: true,
+            rich: true,
+            hideEmpty: true,
             truncateAt: 6,
+            moreLabel: (n) => l.ldgMoreTags('$n'),
             itemsFor: tagItems,
           )),
         AmountFilterBlock(
           rangeMin: rangeMin,
           rangeMax: rangeMax,
-          maxHint: l.ldgAny,
+          hintsFor: amountHints,
         ),
       ],
     );
