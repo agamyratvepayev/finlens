@@ -8,8 +8,10 @@ import 'package:finlens/core/store/app_store.dart';
 import 'package:finlens/core/utils/formatters.dart';
 import 'package:finlens/features/planner/budget_detail_screen.dart';
 import 'package:finlens/features/planner/planner_screen.dart';
+import 'package:finlens/l10n/app_localizations.dart';
 import 'package:finlens/shared/widgets/amount_text.dart';
 import 'package:finlens/shared/widgets/app_card.dart';
+import 'package:finlens/theme/app_colors.dart';
 
 /// Planner Budgets tab + budget detail screen (spec 5.1 rework).
 ///
@@ -20,9 +22,14 @@ import 'package:finlens/shared/widgets/app_card.dart';
 void main() {
   final aug = DateTime(2026, 8);
 
-  Widget wrap(AppStore store, Widget child) => StoreScope(
+  Widget wrap(AppStore store, Widget child, {Locale? locale}) => StoreScope(
         store: store,
-        child: MaterialApp(home: child),
+        child: MaterialApp(
+          locale: locale,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: child,
+        ),
       );
 
   void bigScreen(WidgetTester tester) {
@@ -194,30 +201,83 @@ void main() {
 
   // ── The dense budget row (spec §3/§4) ────────────────────────────────────────
 
-  testWidgets('a budget row is dense (≤52pt) and its 4pt bar starts at the '
-      'text column', (tester) async {
+  testWidgets('each budgeted category is its own card, 8pt apart, with no '
+      'dividers anywhere in the list', (tester) async {
     bigScreen(tester);
     final store = buildSeedStore();
     await tester.pumpWidget(wrap(store, const PlannerScreen()));
 
-    // The InkWell wrapping Groceries' row, and the icon + bar inside it.
+    // Every budgeted category sits in its own AppCard (spec §1) — the ancestor
+    // AppCard of each name is that budget's card, not one shared container.
+    for (final c in store.budgetedCategories) {
+      final card = find.ancestor(
+          of: find.text(c.name), matching: find.byType(AppCard));
+      expect(card, findsOneWidget, reason: c.name);
+    }
+    // No hairline anywhere in the budget list: a gap and a rule would say the
+    // same thing twice (§1). The NO BUDGET SET section is collapsed by default,
+    // so its dividers are absent too.
+    expect(find.byType(RowDivider), findsNothing);
+
+    // 8pt between consecutive cards: the gap is one card's top minus the card
+    // above it (each card owns an 8pt bottom margin).
+    final first = tester.getRect(find
+        .ancestor(of: find.text('Entertainment'), matching: find.byType(AppCard))
+        .first);
+    final second = tester.getRect(find
+        .ancestor(of: find.text('Groceries'), matching: find.byType(AppCard))
+        .first);
+    expect(second.top - first.bottom, closeTo(8, 0.5));
+  });
+
+  testWidgets('a budget card measures 56.5pt — the same as a goal card',
+      (tester) async {
+    bigScreen(tester);
+    await tester.pumpWidget(wrap(buildSeedStore(), const PlannerScreen()));
+
+    final budgetCard = find
+        .ancestor(of: find.text('Groceries'), matching: find.byType(AppCard))
+        .first;
+    final budgetHeight = tester.getSize(budgetCard).height;
+    expect(budgetHeight, closeTo(56.5, 1));
+
+    // Switch to Goals and measure a goal card: the two tabs are one segmented
+    // control apart and must be the same card (§3).
+    await tester.tap(find.text('Goals'));
+    await tester.pumpAndSettle();
+    final goalCard = find
+        .ancestor(of: find.text('House Deposit'), matching: find.byType(AppCard))
+        .first;
+    final goalHeight = tester.getSize(goalCard).height;
+    expect(budgetHeight, closeTo(goalHeight, 1));
+  });
+
+  testWidgets("the 4pt bar starts at the text column and the spent figure is "
+      'white', (tester) async {
+    bigScreen(tester);
+    final store = buildSeedStore();
+    await tester.pumpWidget(wrap(store, const PlannerScreen()));
+
     final row = find
         .ancestor(of: find.text('Groceries'), matching: find.byType(InkWell))
         .first;
     final icon = find.descendant(of: row, matching: find.byType(IconTile));
     final bar = find.descendant(of: row, matching: find.byType(ProgressBar));
 
-    final rowRect = tester.getRect(row);
     final iconRect = tester.getRect(icon);
     final barRect = tester.getRect(bar);
 
-    // 48pt of pitch — the bar costs no row height (spec §3).
-    expect(rowRect.height, lessThanOrEqualTo(52));
-    // The bar is 4pt and spans the text column: its left edge sits at the
-    // icon's right edge plus the 12pt gap, not under the icon.
+    // The bar is still 4pt and spans the text column: its left edge sits at the
+    // icon's right edge plus the 12pt gap, not under the icon (§2).
     expect(barRect.height, closeTo(4, 0.6));
     expect(barRect.left, greaterThanOrEqualTo(iconRect.right - 0.5));
     expect(barRect.left, lessThanOrEqualTo(iconRect.right + 14));
+
+    // The spent figure carries no colour override → textPrimary (§4): green
+    // here would read as money in, and the bar already carries the state.
+    final spent = tester.widget<AmountText>(
+        find.descendant(of: row, matching: find.byType(AmountText)));
+    expect(spent.color, isNull);
   });
 
   testWidgets('the over glyph renders only above the effective limit',
@@ -236,6 +296,91 @@ void main() {
     expect(find.byIcon(Icons.warning_amber_rounded), findsNWidgets(overCount));
   });
 
+  testWidgets('an over-budget row: triangle, red bar, and a textPrimary amount',
+      (tester) async {
+    bigScreen(tester);
+    final store = buildSeedStore();
+    await tester.pumpWidget(wrap(store, const PlannerScreen()));
+
+    // Entertainment is the seed's only over-limit budget.
+    final row = find
+        .ancestor(of: find.text('Entertainment'), matching: find.byType(InkWell))
+        .first;
+    expect(find.descendant(of: row, matching: find.byIcon(Icons.warning_amber_rounded)),
+        findsOneWidget);
+    final bar = tester.widget<ProgressBar>(
+        find.descendant(of: row, matching: find.byType(ProgressBar)));
+    expect(bar.color, AppColors.negative);
+    // The figure stays white even over budget — the red is on the bar, not the
+    // amount (§4).
+    final spent = tester.widget<AmountText>(
+        find.descendant(of: row, matching: find.byType(AmountText)));
+    expect(spent.color, isNull);
+  });
+
+  testWidgets('a near-limit row renders no glyph and an amber bar',
+      (tester) async {
+    bigScreen(tester);
+    final store = buildSeedStore();
+    // Push Groceries into the warn band (0.8 ≤ ratio < 1) by pinning its limit
+    // to spent / 0.9 — near, but not over.
+    final groceries =
+        store.budgetedCategories.firstWhere((c) => c.id == 'c-groceries');
+    final spent = store.spentInCategory('c-groceries', aug);
+    expect(spent, greaterThan(0));
+    groceries.monthlyBudget = spent / 0.9;
+
+    await tester.pumpWidget(wrap(store, const PlannerScreen()));
+
+    final row = find
+        .ancestor(of: find.text('Groceries'), matching: find.byType(InkWell))
+        .first;
+    // Near-limit's only signal is the bar's colour and length — no glyph (§4).
+    expect(find.descendant(of: row, matching: find.byIcon(Icons.warning_amber_rounded)),
+        findsNothing);
+    final bar = tester.widget<ProgressBar>(
+        find.descendant(of: row, matching: find.byType(ProgressBar)));
+    expect(bar.color, AppColors.warning);
+  });
+
+  testWidgets('320pt in tr: long name + seven-figure limit, no overflow',
+      (tester) async {
+    tester.view.physicalSize = const Size(320 * 3.0, 900 * 3.0);
+    tester.view.devicePixelRatio = 3.0;
+    addTearDown(tester.view.reset);
+
+    final store = buildSeedStore();
+    // The tightest case (spec §7): a long name, the over-budget triangle, and
+    // seven-figure spent + limit, in Turkmen. Entertainment is already over;
+    // pin the limit to $1,000,000 and push spend to ~$1,240,000 so both figures
+    // render whole while the triangle and red bar still show.
+    final ent =
+        store.budgetedCategories.firstWhere((c) => c.id == 'c-entertainment');
+    ent.name = 'Güýmenje we dynç alyş hyzmatlary üçin aýlyk býudžet';
+    ent.monthlyBudget = 1000000;
+    final spent = store.spentInCategory('c-entertainment', aug);
+    store.addTxn(
+      type: TxnType.expense,
+      amount: 1240000 - spent,
+      currency: 'USD',
+      fromRef: 'a-checking',
+      toRef: 'c-entertainment',
+      date: DateTime(2026, 8, 9),
+    );
+    expect(store.spentInCategory('c-entertainment', aug),
+        greaterThan(ent.effectiveLimit ?? 0));
+
+    await tester.pumpWidget(
+        wrap(store, const PlannerScreen(), locale: const Locale('tk')));
+    await tester.pumpAndSettle();
+
+    // No RenderFlex overflow was thrown while laying the row out.
+    expect(tester.takeException(), isNull);
+    // The name ellipsised rather than forcing the row wider.
+    final name = tester.renderObject<RenderParagraph>(find.text(ent.name));
+    expect(name.didExceedMaxLines, isTrue);
+  });
+
   // A 402pt-wide viewport — the width the row layout is specified against
   // (spec §1/§4). Tall enough that the Budgets list lays out unclipped.
   void narrowScreen(WidgetTester tester) {
@@ -244,13 +389,21 @@ void main() {
     addTearDown(tester.view.reset);
   }
 
-  // The trailing " / $limit" Text inside a named category's row. It is the only
-  // child in the row carrying a slash, so textContaining('/') isolates it.
-  Finder limitTextOf(WidgetTester tester, String categoryName) {
-    final row = find
-        .ancestor(of: find.text(categoryName), matching: find.byType(InkWell))
-        .first;
-    return find.descendant(of: row, matching: find.textContaining('/'));
+  Finder rowOf(String categoryName) => find
+      .ancestor(of: find.text(categoryName), matching: find.byType(InkWell))
+      .first;
+
+  // The spent figure is the row's only AmountText (the limit is a plain Text
+  // now that the "/" connector is gone, spec §2).
+  Finder spentOf(String categoryName) =>
+      find.descendant(of: rowOf(categoryName), matching: find.byType(AmountText));
+
+  // The limit Text, matched by its rendered value inside the row.
+  Finder limitOf(AppStore store, String categoryName) {
+    final c = store.budgetedCategories.firstWhere((c) => c.name == categoryName);
+    return find.descendant(
+        of: rowOf(categoryName),
+        matching: find.text(money(c.effectiveLimit ?? 0)));
   }
 
   testWidgets('Entertainment renders in full — no ellipsis — at 402pt',
@@ -268,18 +421,37 @@ void main() {
     expect(trans.didExceedMaxLines, isFalse);
   });
 
-  testWidgets('rows with different amount widths end on one right edge',
+  testWidgets('down a list, spent figures share a right edge and limits share a '
+      'right edge', (tester) async {
+    narrowScreen(tester);
+    final store = buildSeedStore();
+    await tester.pumpWidget(wrap(store, const PlannerScreen()));
+
+    // Housing ($1,200 limit, four-figure spend) is the widest; Personal ($200)
+    // the narrowest. Each row's spent figure is right-aligned in the same text
+    // column, so despite different widths the two terminate at one x (spec §2).
+    final wideSpent = tester.getRect(spentOf('Housing').first);
+    final narrowSpent = tester.getRect(spentOf('Personal').first);
+    expect(wideSpent.width, isNot(closeTo(narrowSpent.width, 1)));
+    expect(wideSpent.right, closeTo(narrowSpent.right, 0.5));
+
+    // The limits form their own right-aligned column directly beneath.
+    final wideLimit = tester.getRect(limitOf(store, 'Housing'));
+    final narrowLimit = tester.getRect(limitOf(store, 'Personal'));
+    expect(wideLimit.right, closeTo(narrowLimit.right, 0.5));
+    // And the limit sits under its own spent figure, sharing that right edge.
+    expect(wideLimit.right, closeTo(wideSpent.right, 0.5));
+  });
+
+  testWidgets('no "/", "of" or connector appears between spent and limit',
       (tester) async {
     narrowScreen(tester);
     await tester.pumpWidget(wrap(buildSeedStore(), const PlannerScreen()));
 
-    // Housing ($1,200 limit) is the widest pair; Personal ($200) the narrowest.
-    // Both amounts sit flush to the text column's trailing edge, so the two
-    // limit Texts terminate at the same x (spec §2).
-    final wide = tester.getRect(limitTextOf(tester, 'Housing').first);
-    final narrow = tester.getRect(limitTextOf(tester, 'Personal').first);
-    expect(wide.width, isNot(closeTo(narrow.width, 1)));
-    expect(wide.right, closeTo(narrow.right, 0.5));
+    // The stacking and shared right edge carry the relation; the old
+    // " / $limit" Text is gone (spec §2).
+    expect(find.textContaining('/'), findsNothing);
+    expect(find.textContaining(' of '), findsNothing);
   });
 
   testWidgets('an over-budget row with a very long name keeps the triangle',

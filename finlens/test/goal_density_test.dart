@@ -87,18 +87,24 @@ void main() {
     expect(goalBar.markerWidth, lessThan(summary.markerWidth));
   });
 
-  testWidgets('the Budgets tab row height is unchanged (dense ~47pt)',
+  testWidgets('a budget card now matches a goal card (~56.5pt, one per budget)',
       (tester) async {
     bigScreen(tester);
     await tester.pumpWidget(wrap(buildSeedStore(), const PlannerScreen()));
 
-    // The InkWell wrapping the Groceries budget row — untouched by this change.
-    final row = find
-        .ancestor(of: find.text('Groceries'), matching: find.byType(InkWell))
+    // The Budgets tab was reworked to one card per budget, the same standing as
+    // a goal card (radius 14, ~56.5pt) — no longer a dense ~47pt ledger row.
+    final card = find
+        .ancestor(of: find.text('Groceries'), matching: find.byType(AppCard))
         .first;
-    final height = tester.getSize(row).height;
-    expect(height, lessThanOrEqualTo(52));
-    expect(height, closeTo(47, 6));
+    final budgetHeight = tester.getSize(card).height;
+    expect(budgetHeight, closeTo(56.5, 1.5));
+
+    await openGoals(tester);
+    final goalCard = find
+        .ancestor(of: find.text('House Deposit'), matching: find.byType(AppCard))
+        .first;
+    expect(budgetHeight, closeTo(tester.getSize(goalCard).height, 1));
   });
 
   testWidgets('the seed goal cards read their verb-led verdicts', (tester) async {

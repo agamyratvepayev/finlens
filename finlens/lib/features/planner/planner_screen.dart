@@ -496,23 +496,14 @@ class _BudgetsTab extends StatelessWidget {
               ],
             ),
           ),
-          // One card holding every budgeted category, split by the standard 1pt
-          // rule (the pattern the Balance list and Ledger day cards use) вЂ” no
-          // per-budget card, no inter-card gap (spec В§3). The divider indents
-          // past the icon column (13 pad + 30 icon + 12 gap).
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: Insets.gutter),
-            child: AppCard(
-              child: Column(
-                children: [
-                  for (var i = 0; i < ordered.length; i++) ...[
-                    if (i > 0) const RowDivider(indent: 55),
-                    _BudgetRow(store: store, category: ordered[i], month: month),
-                  ],
-                ],
-              ),
-            ),
-          ),
+          // Each budgeted category is its own card (spec §1), the way the Goals
+          // tab next door renders a goal — separate AppCards at radius 14, 8pt
+          // apart, no dividers anywhere. A budget is a standing commitment with
+          // its own limit, history and detail screen, so it gets a goal's
+          // standing, not a ledger row's. Each _BudgetRow carries its own gutter
+          // padding and the 8pt inter-card gap, so the ordered list drops in raw.
+          for (final c in ordered)
+            _BudgetRow(store: store, category: c, month: month),
         ],
         if (unbudgeted.isNotEmpty)
           _NoBudgetSection(store: store, month: month, categories: unbudgeted),
@@ -561,85 +552,123 @@ class _BudgetRow extends StatelessWidget {
             ? l.plSemRowNear(category.name, spentStr, limitStr)
             : l.plSemRowNormal(category.name, spentStr, limitStr);
 
-    return Semantics(
-      container: true,
-      button: true,
-      label: semantics,
-      child: ExcludeSemantics(
-        child: InkWell(
-          // A tap opens the budget screen ("where did this go?"), never the
-          // editor вЂ” a stray tap must not land on financial editing (spec В§6).
-          // A tap opens the budget detail ("where did this go?"), never the
-          // editor — a stray tap must not land on financial editing (spec 6).
-          onTap: () => Navigator.of(context, rootNavigator: true).push(
-            MaterialPageRoute(
-              builder: (_) =>
-                  BudgetDetailScreen(categoryId: category.id, month: month),
-            ),
-          ),
-          // padding 9 / 13; the bar lives in the text column's second line, so
-          // it costs no extra row height вЂ” 48pt of pitch, not 80 (spec В§3).
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 13),
-            child: Row(
-              children: [
-                IconTile(category.icon, color: category.color, size: 30),
-                const SizedBox(width: Insets.md),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Row(
+    return Padding(
+      // Own gutter padding + the 8pt inter-card gap (spec §1), exactly the
+      // goal card's outer margin so the two tabs share a rhythm.
+      padding: const EdgeInsets.fromLTRB(Insets.gutter, 0, Insets.gutter, 8),
+      child: Semantics(
+        container: true,
+        button: true,
+        label: semantics,
+        child: ExcludeSemantics(
+          // AppCard is shared, so its 14pt radius (down from Radii.card) is
+          // passed in here, matching a goal card; a fuller radius reads too
+          // round on a one-row card.
+          child: AppCard(
+            radius: 14,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(14),
+              // A tap opens the budget detail ("where did this go?"), never the
+              // editor — a stray tap must not land on financial editing (spec §6).
+              onTap: () => Navigator.of(context, rootNavigator: true).push(
+                MaterialPageRoute(
+                  builder: (_) =>
+                      BudgetDetailScreen(categoryId: category.id, month: month),
+                ),
+              ),
+              // 8 top / 11 bottom / 12 sides. The bottom is 11, not the goal
+              // card's 8: its last element is a 3pt bar over 8pt of air, ours is
+              // a line of text whose descenders reach its box floor, so it needs
+              // the extra 3pt to sit level beside a goal card at 56.5 (spec §3).
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(12, 8, 12, 11),
+                child: Row(
+                  children: [
+                    IconTile(category.icon, color: category.color, size: 30),
+                    const SizedBox(width: Insets.md),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          Expanded(
-                            child: Text(
-                              category.name,
-                              style: AppText.rowTitle,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          // The one glyph: a red triangle, only over budget.
-                          // Near-limit's signal is the bar's length; it needs
-                          // none, and a second glyph would clutter the list
-                          // (spec В§4).
-                          if (over)
-                            const Padding(
-                              padding: EdgeInsets.only(left: 5),
-                              child: Icon(
-                                Icons.warning_amber_rounded,
-                                size: 15,
-                                color: AppColors.negative,
+                          // Line one: name, then the over-budget glyph, then the
+                          // spent figure right-aligned so the figures form a
+                          // column down the list. Explicit 1.15 line height
+                          // matches the name to the amount box (spec §3).
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  category.name,
+                                  style: AppText.rowTitle.copyWith(height: 1.15),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               ),
-                            ),
-                          const SizedBox(width: Insets.sm),
-                          // $560 / $500 вЂ” the amount pair sits on the name line,
-                          // freeing the second line for a full-width bar. Prints
-                          // the effectiveLimit the maths uses, so a rollover row
-                          // shows $742 / $1,080 and needs no caption (spec В§4b).
-                          AmountText(spent, color: color),
-                          Text(
-                            ' / $limitStr',
-                            style: AppText.amount.copyWith(
-                              color: AppColors.textSecondary,
-                            ),
+                              // The one glyph: a red triangle, only over budget.
+                              // Near-limit's signal is the bar's length; it needs
+                              // none, and a second glyph would clutter the list
+                              // (spec §4).
+                              if (over)
+                                const Padding(
+                                  padding: EdgeInsets.only(left: 5),
+                                  child: Icon(
+                                    Icons.warning_amber_rounded,
+                                    size: 15,
+                                    color: AppColors.negative,
+                                  ),
+                                ),
+                              const SizedBox(width: Insets.sm),
+                              // White, not tinted: green here would read as money
+                              // in, and the bar below already carries the three
+                              // states (spec §4). Prints the spent magnitude; the
+                              // effectiveLimit sits under it on line two.
+                              AmountText(
+                                spent,
+                                style: AppText.amount.copyWith(height: 1.15),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 7),
+                          // Line two: the bar takes the width, the limit sits
+                          // right-aligned directly under the spent figure — no
+                          // "/" or "of", the shared right edge carries the
+                          // relation (spec §2). The bar loses the limit's width
+                          // plus this 10pt gap and is fine: a fill is
+                          // proportional to whatever track it gets.
+                          Row(
+                            children: [
+                              Expanded(
+                                // 4pt so the fill reads clear of the pace marker;
+                                // the same unlabelled marker as the summary bar.
+                                child: ProgressBar(
+                                  value: ratio,
+                                  color: color,
+                                  height: 4,
+                                  paceMarker: isCurrent
+                                      ? store.monthProgressFor(month)
+                                      : null,
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              // The goal card's denominator style: 11.5pt in
+                              // textTertiary, its 1.15 height sets the line-two
+                              // box (13.2) the bar centres in.
+                              Text(
+                                limitStr,
+                                style: AppText.rowSubtitle.copyWith(
+                                  fontSize: 11.5,
+                                  height: 1.15,
+                                  color: AppColors.textTertiary,
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
-                      const SizedBox(height: 7),
-                      // 4pt so the fill reads clear of the 2pt pace marker; the
-                      // same unlabelled marker as the summary bar (spec В§3).
-                      ProgressBar(
-                        value: ratio,
-                        color: color,
-                        height: 4,
-                        paceMarker:
-                            isCurrent ? store.monthProgressFor(month) : null,
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
         ),
