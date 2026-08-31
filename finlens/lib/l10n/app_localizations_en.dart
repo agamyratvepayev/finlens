@@ -671,11 +671,105 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get insNoRecords => 'No records in this period';
+  String get insEmptyNoAccountsTitle => 'Nothing to report yet';
 
   @override
-  String insBackToPeriod(String period) {
-    return 'Back to $period';
+  String get insEmptyNoAccountsBody =>
+      'Insight shows what your money did — where it came from, where it went, and what it left you with.';
+
+  @override
+  String get insEmptyNoRecordsTitle => 'Nothing has moved yet';
+
+  @override
+  String insEmptyHoldings(String amount, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count accounts',
+      one: '1 account',
+    );
+    return 'Your accounts hold $amount · $_temp0';
+  }
+
+  @override
+  String insEmptyHoldingsNoAmount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count accounts',
+      one: '1 account',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get insEmptyRecordSomething => 'Record something';
+
+  @override
+  String get insEmptyAllHiddenTitle => 'Every account is hidden';
+
+  @override
+  String insEmptyAllHiddenBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count accounts',
+      one: '1 account',
+    );
+    return 'The filter is hiding $_temp0';
+  }
+
+  @override
+  String get insEmptyShowAll => 'Show all accounts';
+
+  @override
+  String insEmptyWindow(String period) {
+    return 'No records in $period';
+  }
+
+  @override
+  String insEmptyHiddenByFilter(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count records are hidden by the filter',
+      one: '1 record is hidden by the filter',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String insGoToPeriodBack(String period) {
+    return '← Go to $period';
+  }
+
+  @override
+  String insGoToPeriodForward(String period) {
+    return '→ Go to $period';
+  }
+
+  @override
+  String get insA11yEmptyNoAccounts =>
+      'Nothing to report yet. Insight shows what your money did. Add an account.';
+
+  @override
+  String insA11yEmptyNoRecords(String amount, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count accounts',
+      one: '1 account',
+    );
+    return 'Net worth unchanged. Nothing has moved yet. Your accounts hold $amount across $_temp0.';
+  }
+
+  @override
+  String get insA11yEmptyAllHidden =>
+      'Net worth unchanged. Every account is hidden by the filter.';
+
+  @override
+  String insA11yEmptyWindow(String period) {
+    return 'Net worth unchanged. No records in $period.';
   }
 
   @override
@@ -793,12 +887,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String insAccountsShown(int shown, int total) {
     return '$shown of $total accounts';
   }
-
-  @override
-  String get insShowAllAccounts => 'Show all accounts';
-
-  @override
-  String get insEverythingHidden => 'Every account is hidden';
 
   @override
   String get insSpendingHistory => '6-month spending history';

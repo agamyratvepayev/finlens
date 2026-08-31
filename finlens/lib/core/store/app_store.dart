@@ -1357,6 +1357,53 @@ class AppStore extends ChangeNotifier {
     return earliest;
   }
 
+  /// The window nearest to [from] that contains at least one record, searching
+  /// backwards first and then forwards, in the same unit as [from]. Null when
+  /// the ledger is empty (or no reachable window holds a visible record). The
+  /// search is bounded by the dates of the first and last transaction, so an
+  /// empty ledger, or a window centuries away from the data, always terminates.
+  ///
+  /// The Insight empty-state back link's destination (spec §5): stepping back
+  /// exactly one period lands the reader on another empty screen when two or
+  /// more periods are quiet, so this finds the first window that actually has
+  /// data. [visible], when non-null, restricts a "hit" to windows holding a
+  /// record the reader can currently see — the account filter (spec §5) — so the
+  /// link never lands on a screen that is empty for a different reason.
+  DateRange? nearestWindowWithRecords(DateRange from, {Set<String>? visible}) {
+    if (_txns.isEmpty) return null;
+    // An all-time window cannot step (copyShifted returns itself) and already
+    // spans the whole ledger, so there is never a nearer window to find.
+    if (from.preset == RangePreset.allTime) return null;
+
+    var first = _txns.first.date;
+    var last = _txns.first.date;
+    for (final t in _txns) {
+      if (t.date.isBefore(first)) first = t.date;
+      if (t.date.isAfter(last)) last = t.date;
+    }
+
+    bool hits(DateRange w) => txnsInWindow(w).any((t) =>
+        visible == null ||
+        visible.contains(t.fromRef) ||
+        visible.contains(t.toRef));
+
+    // Backwards: each step lowers the window's end by a fixed amount; stop once
+    // it slips past the earliest record.
+    for (var w = from.copyShifted(-1);
+        !w.end.isBefore(first);
+        w = w.copyShifted(-1)) {
+      if (hits(w)) return w;
+    }
+    // Forwards: each step raises the window's start; stop once it passes the
+    // latest record.
+    for (var w = from.copyShifted(1);
+        !w.start.isAfter(last);
+        w = w.copyShifted(1)) {
+      if (hits(w)) return w;
+    }
+    return null;
+  }
+
   /// Left over = (In − Out) / In (spec 2.1).
   double monthLeftOverFraction(DateTime month) {
     final income = monthIncome(month);

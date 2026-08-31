@@ -983,17 +983,107 @@ abstract class AppLocalizations {
   /// **'{count, plural, =1{1 category} other{{count} categories}}'**
   String insCategoriesCount(int count);
 
-  /// No description provided for @insNoRecords.
+  /// No description provided for @insEmptyNoAccountsTitle.
   ///
   /// In en, this message translates to:
-  /// **'No records in this period'**
-  String get insNoRecords;
+  /// **'Nothing to report yet'**
+  String get insEmptyNoAccountsTitle;
 
-  /// No description provided for @insBackToPeriod.
+  /// No description provided for @insEmptyNoAccountsBody.
   ///
   /// In en, this message translates to:
-  /// **'Back to {period}'**
-  String insBackToPeriod(String period);
+  /// **'Insight shows what your money did — where it came from, where it went, and what it left you with.'**
+  String get insEmptyNoAccountsBody;
+
+  /// No description provided for @insEmptyNoRecordsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing has moved yet'**
+  String get insEmptyNoRecordsTitle;
+
+  /// No description provided for @insEmptyHoldings.
+  ///
+  /// In en, this message translates to:
+  /// **'Your accounts hold {amount} · {count, plural, =1{1 account} other{{count} accounts}}'**
+  String insEmptyHoldings(String amount, int count);
+
+  /// No description provided for @insEmptyHoldingsNoAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 account} other{{count} accounts}}'**
+  String insEmptyHoldingsNoAmount(int count);
+
+  /// No description provided for @insEmptyRecordSomething.
+  ///
+  /// In en, this message translates to:
+  /// **'Record something'**
+  String get insEmptyRecordSomething;
+
+  /// No description provided for @insEmptyAllHiddenTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Every account is hidden'**
+  String get insEmptyAllHiddenTitle;
+
+  /// No description provided for @insEmptyAllHiddenBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The filter is hiding {count, plural, =1{1 account} other{{count} accounts}}'**
+  String insEmptyAllHiddenBody(int count);
+
+  /// No description provided for @insEmptyShowAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Show all accounts'**
+  String get insEmptyShowAll;
+
+  /// No description provided for @insEmptyWindow.
+  ///
+  /// In en, this message translates to:
+  /// **'No records in {period}'**
+  String insEmptyWindow(String period);
+
+  /// No description provided for @insEmptyHiddenByFilter.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 record is hidden by the filter} other{{count} records are hidden by the filter}}'**
+  String insEmptyHiddenByFilter(int count);
+
+  /// No description provided for @insGoToPeriodBack.
+  ///
+  /// In en, this message translates to:
+  /// **'← Go to {period}'**
+  String insGoToPeriodBack(String period);
+
+  /// No description provided for @insGoToPeriodForward.
+  ///
+  /// In en, this message translates to:
+  /// **'→ Go to {period}'**
+  String insGoToPeriodForward(String period);
+
+  /// No description provided for @insA11yEmptyNoAccounts.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing to report yet. Insight shows what your money did. Add an account.'**
+  String get insA11yEmptyNoAccounts;
+
+  /// No description provided for @insA11yEmptyNoRecords.
+  ///
+  /// In en, this message translates to:
+  /// **'Net worth unchanged. Nothing has moved yet. Your accounts hold {amount} across {count, plural, =1{1 account} other{{count} accounts}}.'**
+  String insA11yEmptyNoRecords(String amount, int count);
+
+  /// No description provided for @insA11yEmptyAllHidden.
+  ///
+  /// In en, this message translates to:
+  /// **'Net worth unchanged. Every account is hidden by the filter.'**
+  String get insA11yEmptyAllHidden;
+
+  /// No description provided for @insA11yEmptyWindow.
+  ///
+  /// In en, this message translates to:
+  /// **'Net worth unchanged. No records in {period}.'**
+  String insA11yEmptyWindow(String period);
 
   /// No description provided for @insAverageValue.
   ///
@@ -1150,18 +1240,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{shown} of {total} accounts'**
   String insAccountsShown(int shown, int total);
-
-  /// No description provided for @insShowAllAccounts.
-  ///
-  /// In en, this message translates to:
-  /// **'Show all accounts'**
-  String get insShowAllAccounts;
-
-  /// No description provided for @insEverythingHidden.
-  ///
-  /// In en, this message translates to:
-  /// **'Every account is hidden'**
-  String get insEverythingHidden;
 
   /// No description provided for @insSpendingHistory.
   ///

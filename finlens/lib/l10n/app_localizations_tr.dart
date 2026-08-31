@@ -667,11 +667,105 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
-  String get insNoRecords => 'Bu dönemde kayıt yok';
+  String get insEmptyNoAccountsTitle => 'Henüz gösterilecek bir şey yok';
 
   @override
-  String insBackToPeriod(String period) {
-    return '$period dönemine dön';
+  String get insEmptyNoAccountsBody =>
+      'Insight paranızın ne yaptığını gösterir — nereden geldi, nereye gitti ve geriye ne kaldı.';
+
+  @override
+  String get insEmptyNoRecordsTitle => 'Henüz hiçbir şey hareket etmedi';
+
+  @override
+  String insEmptyHoldings(String amount, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count hesap',
+      one: '$count hesap',
+    );
+    return 'Hesaplarınızda $amount · $_temp0';
+  }
+
+  @override
+  String insEmptyHoldingsNoAmount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count hesap',
+      one: '$count hesap',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get insEmptyRecordSomething => 'Bir şey kaydet';
+
+  @override
+  String get insEmptyAllHiddenTitle => 'Her hesap gizli';
+
+  @override
+  String insEmptyAllHiddenBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count hesabı',
+      one: '$count hesabı',
+    );
+    return 'Filtre $_temp0 gizliyor';
+  }
+
+  @override
+  String get insEmptyShowAll => 'Tüm hesapları göster';
+
+  @override
+  String insEmptyWindow(String period) {
+    return '$period için kayıt yok';
+  }
+
+  @override
+  String insEmptyHiddenByFilter(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count kayıt filtreyle gizlendi',
+      one: '$count kayıt filtreyle gizlendi',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String insGoToPeriodBack(String period) {
+    return '← $period dönemine git';
+  }
+
+  @override
+  String insGoToPeriodForward(String period) {
+    return '→ $period dönemine git';
+  }
+
+  @override
+  String get insA11yEmptyNoAccounts =>
+      'Henüz gösterilecek bir şey yok. Insight paranızın ne yaptığını gösterir. Bir hesap ekleyin.';
+
+  @override
+  String insA11yEmptyNoRecords(String amount, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count hesap',
+      one: '$count hesap',
+    );
+    return 'Net değer değişmedi. Henüz hiçbir şey hareket etmedi. Hesaplarınızda $amount, $_temp0.';
+  }
+
+  @override
+  String get insA11yEmptyAllHidden =>
+      'Net değer değişmedi. Her hesap filtreyle gizli.';
+
+  @override
+  String insA11yEmptyWindow(String period) {
+    return 'Net değer değişmedi. $period için kayıt yok.';
   }
 
   @override
@@ -789,12 +883,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String insAccountsShown(int shown, int total) {
     return '$shown / $total hesap';
   }
-
-  @override
-  String get insShowAllAccounts => 'Tüm hesapları göster';
-
-  @override
-  String get insEverythingHidden => 'Tüm hesaplar gizli';
 
   @override
   String get insSpendingHistory => '6 aylık harcama geçmişi';

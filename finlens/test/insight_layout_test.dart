@@ -251,11 +251,11 @@ void main() {
     }
     await tester.pump(const Duration(milliseconds: 300));
 
-    if (find.text('No records in this period').evaluate().isNotEmpty) {
-      expect(find.byKey(const Key('ins-waterfall')), findsNothing);
-      expect(find.byKey(const Key('ins-gridcell')), findsNothing);
-      expect(find.textContaining('Back to'), findsOneWidget);
-    }
+    // The empty window keeps the hero but drops the waterfall and grid, and
+    // offers a "Go to {period}" link to the nearest window with records.
+    expect(find.byKey(const Key('ins-waterfall')), findsNothing);
+    expect(find.byKey(const Key('ins-gridcell')), findsNothing);
+    expect(find.textContaining('Go to'), findsOneWidget);
   });
 
   testWidgets('the category chart is 104 pt', (tester) async {

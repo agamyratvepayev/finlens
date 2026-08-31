@@ -161,6 +161,16 @@ class _InsightScreenState extends State<InsightScreen> {
     final w = store.insightWindow;
     final report = _Report.of(store, w);
 
+    // The state selection, in §1's order. Both the body and the header read it:
+    // an empty screen has to say WHY it is empty (spec §1), and a control that
+    // cannot do anything is worse than no control (spec §2).
+    final state = insightEmptyState(
+      noAccounts: report.noAccounts,
+      noRecords: report.noRecords,
+      everythingHidden: report.everythingHidden,
+      windowEmptyForVisible: report.isEmpty,
+    );
+
     return SafeArea(
       bottom: false,
       child: Column(
@@ -170,6 +180,11 @@ class _InsightScreenState extends State<InsightScreen> {
             isCustom: w.preset == null,
             filterActive: report.filterActive,
             hiddenCount: report.hiddenCount,
+            // The filter appears only once a transaction exists — filtering a
+            // report with no figures does nothing visible (spec §2). The eye
+            // appears once there is money on screen; in state 1 there is none.
+            showFilter: !report.noRecords,
+            showEye: !report.noAccounts,
             onTapTitle: _pickRange,
             onNext: () => _step(1),
             onPrevious: () => _step(-1),
@@ -178,31 +193,39 @@ class _InsightScreenState extends State<InsightScreen> {
             onAdd: _add,
           ),
           Expanded(
-            child: report.everythingHidden
-                ? _EverythingHiddenBody(
-                    onShowAll: () => StoreScope.read(context)
-                        .setInsightAccountFilter(const BalanceFilter()))
-                : report.isEmpty
-                    ? _EmptyBody(
-                        report: report, window: w, onBack: () => _step(-1))
-                    : ListView(
-                    padding: const EdgeInsets.only(bottom: Insets.xxl),
-                    children: [
-                      _Hero(report: report),
-                      _Waterfall(report: report),
-                      _GroupGrid(
-                        report: report,
-                        expanded: _gridExpanded,
-                        onToggle: () =>
-                            setState(() => _gridExpanded = !_gridExpanded),
-                      ),
-                      _FlowBlock(report: report, income: false),
-                      _FlowBlock(report: report, income: true),
-                      _DebtBlock(report: report, window: w),
-                      if (report.revalued != 0)
-                        _RevaluationBlock(report: report, window: w),
-                    ],
-                  ),
+            child: switch (state) {
+              InsightEmpty.noAccounts => const _NoAccountsBody(),
+              InsightEmpty.noRecords => _NoRecordsBody(report: report),
+              InsightEmpty.allHidden => _AllHiddenBody(
+                  report: report,
+                  onShowAll: () => StoreScope.read(context)
+                      .setInsightAccountFilter(const BalanceFilter())),
+              InsightEmpty.emptyWindow => _EmptyWindowBody(
+                  report: report,
+                  window: w,
+                  onGoTo: (target) =>
+                      StoreScope.read(context).setInsightWindow(target),
+                  onShowAll: () => StoreScope.read(context)
+                      .setInsightAccountFilter(const BalanceFilter())),
+              InsightEmpty.none => ListView(
+                  padding: const EdgeInsets.only(bottom: Insets.xxl),
+                  children: [
+                    _Hero(report: report),
+                    _Waterfall(report: report),
+                    _GroupGrid(
+                      report: report,
+                      expanded: _gridExpanded,
+                      onToggle: () =>
+                          setState(() => _gridExpanded = !_gridExpanded),
+                    ),
+                    _FlowBlock(report: report, income: false),
+                    _FlowBlock(report: report, income: true),
+                    _DebtBlock(report: report, window: w),
+                    if (report.revalued != 0)
+                      _RevaluationBlock(report: report, window: w),
+                  ],
+                ),
+            },
           ),
         ],
       ),
@@ -246,6 +269,10 @@ class _Report {
     required this.paid,
     required this.revaluations,
     required this.empty,
+    required this.noAccounts,
+    required this.noRecords,
+    required this.windowEmptyOnlyByFilter,
+    required this.hiddenInWindowCount,
   });
 
   final AppStore store;
@@ -291,8 +318,26 @@ class _Report {
   final double paid;
   final List<Txn> revaluations;
 
+  /// The window holds no record the reader can currently see — the ordinary
+  /// empty window (spec §1 state 4). Filtered: with the account filter active,
+  /// this is about the visible set, so a window whose only records are hidden
+  /// still reads as empty (and §6 explains why).
   final bool empty;
   bool get isEmpty => empty;
+
+  /// No account exists at all (spec §1 state 1).
+  final bool noAccounts;
+
+  /// Accounts exist but nothing has ever been recorded (spec §1 state 2).
+  final bool noRecords;
+
+  /// The visible window is empty *only* because the filter hides its records —
+  /// the unfiltered window has some (spec §6). Distinguishes the filter sub-case
+  /// of state 4 from a genuinely quiet period.
+  final bool windowEmptyOnlyByFilter;
+
+  /// How many records in the window the account filter is hiding (spec §6).
+  final int hiddenInWindowCount;
 
   static const eps = 0.005;
 
@@ -335,6 +380,19 @@ class _Report {
       }
     }
 
+    // Emptiness is measured on what the reader can SEE (spec §1 state 4): a
+    // window whose only records touch hidden accounts is empty for this reader.
+    // The unfiltered count separates a genuinely quiet period from one the
+    // filter emptied (spec §6).
+    final windowTxns = store.txnsInWindow(w);
+    bool touchesVisible(Txn t) =>
+        visible == null ||
+        visible.contains(t.fromRef) ||
+        visible.contains(t.toRef);
+    final visibleWindowCount =
+        visible == null ? windowTxns.length : windowTxns.where(touchesVisible).length;
+    final windowEmptyForVisible = visibleWindowCount == 0;
+
     return _Report(
       store: store,
       window: w,
@@ -364,10 +422,36 @@ class _Report {
       charged: store.chargedToCardsInWindow(w, visible: visible),
       paid: store.paidToLiabilitiesInWindow(w, visible: visible),
       revaluations: store.revaluationsInWindow(w, visible: visible),
-      // Empty is about the window, not the filter — zero is an answer (spec §12).
-      empty: store.txnsInWindow(w).isEmpty,
+      // Empty is about what the reader can see (spec §1 state 4); zero is an
+      // answer (spec §12).
+      empty: windowEmptyForVisible,
+      noAccounts: store.accounts.isEmpty,
+      noRecords: store.txns.isEmpty,
+      windowEmptyOnlyByFilter:
+          active && windowEmptyForVisible && windowTxns.isNotEmpty,
+      hiddenInWindowCount: windowTxns.length - visibleWindowCount,
     );
   }
+}
+
+/// The four causes an Insight screen can be empty, and the one action each
+/// offers (spec §1). Evaluated in a fixed order — a reader with no accounts
+/// cannot have a filter problem, and a filter that hides everything explains an
+/// empty window better than the window does — so this is where §1's ordering
+/// lives. Pure and top-level so the ordering is tested directly.
+enum InsightEmpty { none, noAccounts, noRecords, allHidden, emptyWindow }
+
+InsightEmpty insightEmptyState({
+  required bool noAccounts,
+  required bool noRecords,
+  required bool everythingHidden,
+  required bool windowEmptyForVisible,
+}) {
+  if (noAccounts) return InsightEmpty.noAccounts;
+  if (noRecords) return InsightEmpty.noRecords;
+  if (everythingHidden) return InsightEmpty.allHidden;
+  if (windowEmptyForVisible) return InsightEmpty.emptyWindow;
+  return InsightEmpty.none;
 }
 
 // ── Header (spec §2) ─────────────────────────────────────────────────────────
@@ -382,6 +466,8 @@ class _InsightHeader extends StatelessWidget {
     required this.isCustom,
     required this.filterActive,
     required this.hiddenCount,
+    required this.showFilter,
+    required this.showEye,
     required this.onTapTitle,
     required this.onNext,
     required this.onPrevious,
@@ -394,6 +480,12 @@ class _InsightHeader extends StatelessWidget {
   final bool isCustom;
   final bool filterActive;
   final int hiddenCount;
+
+  /// The filter button renders only once a transaction exists (spec §2).
+  final bool showFilter;
+
+  /// The eye renders only once there is money on screen (spec §2).
+  final bool showEye;
   final VoidCallback onTapTitle;
   final VoidCallback onNext;
   final VoidCallback onPrevious;
@@ -466,29 +558,34 @@ class _InsightHeader extends StatelessWidget {
             ),
             const SizedBox(width: 7),
           ],
-          Semantics(
-            value: filterActive ? l.insFilterActive(hiddenCount) : l.insFilterOff,
-            child: _CircleButton(
-              icon: filterActive
-                  ? Icons.filter_alt_rounded
-                  : Icons.filter_alt_outlined,
-              // Active mirrors the `+` treatment: accent fill, white glyph — the
-              // only visual cue that the report is filtered (spec §2).
-              accent: filterActive,
-              tint: filterActive ? Colors.white : AppColors.textSecondary,
-              tooltip: l.insFilterAccounts,
-              onTap: onFilter,
+          if (showFilter) ...[
+            Semantics(
+              value:
+                  filterActive ? l.insFilterActive(hiddenCount) : l.insFilterOff,
+              child: _CircleButton(
+                icon: filterActive
+                    ? Icons.filter_alt_rounded
+                    : Icons.filter_alt_outlined,
+                // Active mirrors the `+` treatment: accent fill, white glyph —
+                // the only visual cue that the report is filtered (spec §2).
+                accent: filterActive,
+                tint: filterActive ? Colors.white : AppColors.textSecondary,
+                tooltip: l.insFilterAccounts,
+                onTap: onFilter,
+              ),
             ),
-          ),
-          const SizedBox(width: 7),
-          _CircleButton(
-            icon: store.masked
-                ? Icons.visibility_off_rounded
-                : Icons.visibility_rounded,
-            tint: AppColors.textSecondary,
-            onTap: store.toggleMasked,
-          ),
-          const SizedBox(width: 7),
+            const SizedBox(width: 7),
+          ],
+          if (showEye) ...[
+            _CircleButton(
+              icon: store.masked
+                  ? Icons.visibility_off_rounded
+                  : Icons.visibility_rounded,
+              tint: AppColors.textSecondary,
+              onTap: store.toggleMasked,
+            ),
+            const SizedBox(width: 7),
+          ],
           _CircleButton(
             icon: Icons.add_rounded,
             accent: true,
@@ -539,32 +636,346 @@ class _CircleButton extends StatelessWidget {
   }
 }
 
-/// The distinct "everything hidden" state (spec §2.6): there are records, the
-/// reader hid them, so this must not fall through to the ordinary empty state.
-class _EverythingHiddenBody extends StatelessWidget {
-  const _EverythingHiddenBody({required this.onShowAll});
+// ── Empty and first-run states (empty-states spec §1–§6) ─────────────────────
+// Four causes, four answers. An empty screen has to say WHY it is empty and
+// offer the one action that fills it. Selected by [insightEmptyState]; each body
+// is centred vertically between the header and the tab bar, 34pt gutters, text
+// centred, and is one Semantics node for the reader plus its own for the action
+// (spec §3/§8). No opacity on text anywhere — the quaternary token is the fade
+// (spec §4).
+
+const double _emptyGutter = 34;
+
+/// Centres its child vertically in the space it is given, and scrolls when the
+/// child cannot fit (Russian at 130% on 320pt — spec §9). 34pt gutters.
+class _EmptyScaffold extends StatelessWidget {
+  const _EmptyScaffold({required this.child});
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: _emptyGutter),
+            child: Center(child: child),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The $0 hero for states 2–4: figure and caption both in the quaternary token
+/// (spec §4). Zero is true and useful here — the accounts exist, the window
+/// moved nothing — so the ordinary net-worth caption stays.
+class _EmptyHero extends StatelessWidget {
+  const _EmptyHero();
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.baseline,
+        textBaseline: TextBaseline.alphabetic,
+        children: [
+          AmountText.balance(0,
+              style: AppText.hero.copyWith(fontSize: 34),
+              color: AppColors.textQuaternary),
+          const SizedBox(width: Insets.sm),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 4),
+            child: Text(l.insNetWorthCaption,
+                style: const TextStyle(
+                    fontSize: 11.5, color: AppColors.textQuaternary)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The accent-filled primary button for states 1–3 (spec §9): 12pt vertical /
+/// 24pt horizontal padding, 13pt radius, 22pt below the text.
+class _EmptyButton extends StatelessWidget {
+  const _EmptyButton({required this.label, required this.onTap});
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 22),
+      child: FilledButton(
+        onPressed: onTap,
+        style: FilledButton.styleFrom(
+          backgroundColor: AppColors.accent,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(13)),
+          textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+        ),
+        child: Text(label),
+      ),
+    );
+  }
+}
+
+/// A text link for state 4 / §6 (spec §9): 13pt accentLight, moves the window —
+/// it does not create anything, so it is never a filled button.
+class _EmptyLink extends StatelessWidget {
+  const _EmptyLink({required this.label, required this.onTap});
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(Radii.sm),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
+        child: Text(label,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 13, color: AppColors.accentLight)),
+      ),
+    );
+  }
+}
+
+Widget _emptyTitle(String text) => Text(text,
+    textAlign: TextAlign.center,
+    style: const TextStyle(
+        fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textPrimary));
+
+Widget _emptyBodyLine(String text) => Text(text,
+    textAlign: TextAlign.center,
+    style: const TextStyle(
+        fontSize: 12.5, height: 1.45, color: AppColors.textTertiary));
+
+/// State 1 — no accounts (spec §3.1). No hero: a confident $0 on a screen that
+/// knows nothing about the reader is the one lie this tab must not tell.
+class _NoAccountsBody extends StatelessWidget {
+  const _NoAccountsBody();
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return _EmptyScaffold(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Semantics(
+            container: true,
+            label: l.insA11yEmptyNoAccounts,
+            child: ExcludeSemantics(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.bar_chart_rounded,
+                      size: 40, color: AppColors.textQuaternary),
+                  const SizedBox(height: 16),
+                  _emptyTitle(l.insEmptyNoAccountsTitle),
+                  const SizedBox(height: 7),
+                  _emptyBodyLine(l.insEmptyNoAccountsBody),
+                ],
+              ),
+            ),
+          ),
+          // showNewAccountSheet, not EditAccountScreen — that edits an account
+          // that already exists (spec §3.1). Reuses moreAddAccount (spec §10).
+          _EmptyButton(
+            label: l.moreAddAccount,
+            onTap: () => showNewAccountSheet(context),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// State 2 — accounts, no records yet (spec §3.2). The standing total is the one
+/// fact the reader has already given the app, reflected back.
+class _NoRecordsBody extends StatelessWidget {
+  const _NoRecordsBody({required this.report});
+  final _Report report;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final store = report.store;
+    final today =
+        DateTime(AppStore.today.year, AppStore.today.month, AppStore.today.day);
+    final holdings = store.netWorthOn(today);
+    final count = store.accounts.length;
+    // When every account opens at zero, "$0 · 3 accounts" reads as a fault, so
+    // the second line drops the amount (spec §3.2).
+    final noAmount = holdings.abs() < _Report.eps;
+    final holdingsLine = noAmount
+        ? l.insEmptyHoldingsNoAmount(count)
+        : l.insEmptyHoldings(money(holdings, masked: store.masked), count);
+    final a11y = l.insA11yEmptyNoRecords(
+        money(holdings, masked: store.masked), count);
+
+    return _EmptyScaffold(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Semantics(
+            container: true,
+            label: a11y,
+            child: ExcludeSemantics(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const _EmptyHero(),
+                  const SizedBox(height: 16),
+                  _emptyTitle(l.insEmptyNoRecordsTitle),
+                  const SizedBox(height: 6),
+                  _emptyBodyLine(holdingsLine),
+                ],
+              ),
+            ),
+          ),
+          _EmptyButton(
+            label: l.insEmptyRecordSomething,
+            onTap: () => showQuickAdd(context),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// State 3 — the filter hides every account (spec §3.3). There are records; the
+/// reader hid them, and the screen owns that — never "no records" here.
+class _AllHiddenBody extends StatelessWidget {
+  const _AllHiddenBody({required this.report, required this.onShowAll});
+  final _Report report;
   final VoidCallback onShowAll;
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    return ListView(
-      padding: const EdgeInsets.only(top: Insets.xxl),
-      children: [
-        Center(
-          child: Text(l.insEverythingHidden,
-              style: const TextStyle(
-                  fontSize: 13, color: AppColors.textSecondary)),
-        ),
-        const SizedBox(height: Insets.md),
-        Center(
-          child: TextButton(
-            onPressed: onShowAll,
-            style: TextButton.styleFrom(foregroundColor: AppColors.accentLight),
-            child: Text(l.insShowAllAccounts),
+    // The count is every account the filter hides — the whole set, since none
+    // are visible.
+    final hidden = report.store.accounts.length;
+
+    return _EmptyScaffold(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Semantics(
+            container: true,
+            label: l.insA11yEmptyAllHidden,
+            child: ExcludeSemantics(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const _EmptyHero(),
+                  const SizedBox(height: 16),
+                  _emptyTitle(l.insEmptyAllHiddenTitle),
+                  const SizedBox(height: 6),
+                  _emptyBodyLine(l.insEmptyAllHiddenBody(hidden)),
+                ],
+              ),
+            ),
           ),
-        ),
-      ],
+          // Clears the account filter only — the category filter is not the
+          // cause (spec §3.3).
+          _EmptyButton(label: l.insEmptyShowAll, onTap: onShowAll),
+        ],
+      ),
+    );
+  }
+}
+
+/// State 4 — an empty window with data elsewhere (spec §3.4), plus the §6
+/// filter sub-case. The back link names its destination and points the way it
+/// travels, and lands on a window that actually has visible records.
+class _EmptyWindowBody extends StatelessWidget {
+  const _EmptyWindowBody({
+    required this.report,
+    required this.window,
+    required this.onGoTo,
+    required this.onShowAll,
+  });
+  final _Report report;
+  final DateRange window;
+  final ValueChanged<DateRange> onGoTo;
+  final VoidCallback onShowAll;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final store = report.store;
+    // A period counts as a hit only if it has records the reader can see
+    // (spec §5), so the link honours the account filter.
+    final target = store.nearestWindowWithRecords(window, visible: report.visible);
+    final byFilter = report.windowEmptyOnlyByFilter;
+
+    Widget? goLink;
+    if (target != null) {
+      final label = insightWindowLabel(target, l);
+      // ← for a past window, → for a future one (spec §5).
+      final back = target.start.isBefore(window.start);
+      goLink = _EmptyLink(
+        label: back ? l.insGoToPeriodBack(label) : l.insGoToPeriodForward(label),
+        onTap: () => onGoTo(target),
+      );
+    }
+
+    return _EmptyScaffold(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Semantics(
+            container: true,
+            label: l.insA11yEmptyWindow(insightWindowLabel(window, l)),
+            child: ExcludeSemantics(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const _EmptyHero(),
+                  const SizedBox(height: 16),
+                  _emptyTitle(l.insEmptyWindow(insightWindowLabel(window, l))),
+                  // §6: the window is empty only because the filter hides its
+                  // records. Name the count and offer the second action.
+                  if (byFilter) ...[
+                    const SizedBox(height: 6),
+                    _emptyBodyLine(
+                        l.insEmptyHiddenByFilter(report.hiddenInWindowCount)),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          if (byFilter)
+            // Two genuine reasons, two actions, separated by a · (spec §6).
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (goLink != null) ...[
+                  Flexible(child: goLink),
+                  const Text(' · ',
+                      style: TextStyle(
+                          fontSize: 13, color: AppColors.textQuaternary)),
+                ],
+                Flexible(
+                    child: _EmptyLink(label: l.insEmptyShowAll, onTap: onShowAll)),
+              ],
+            )
+          else
+            ?goLink,
+        ],
+      ),
     );
   }
 }
@@ -1751,43 +2162,3 @@ class _RevaluationBlock extends StatelessWidget {
   }
 }
 
-// ── Empty state (spec §12) ───────────────────────────────────────────────────
-
-class _EmptyBody extends StatelessWidget {
-  const _EmptyBody(
-      {required this.report, required this.window, required this.onBack});
-  final _Report report;
-  final DateRange window;
-  final VoidCallback onBack;
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    final prevLabel = insightWindowLabel(window.copyShifted(-1), l);
-
-    // Zero is an answer: the hero stays, at $0 in the quaternary token. The
-    // waterfall is NOT drawn — with before == now and three zero steps it is a
-    // flat line pretending to be a chart. No opacity on text (forbidden by the
-    // design system); the quaternary colour is the fade.
-    return ListView(
-      padding: const EdgeInsets.only(bottom: Insets.xxl),
-      children: [
-        _Hero(report: report),
-        const SizedBox(height: Insets.xl),
-        Center(
-          child: Text(l.insNoRecords,
-              style: const TextStyle(fontSize: 13, color: AppColors.textSecondary)),
-        ),
-        const SizedBox(height: Insets.md),
-        Center(
-          child: TextButton.icon(
-            onPressed: onBack,
-            icon: const Icon(Icons.arrow_back_rounded, size: 16),
-            label: Text(l.insBackToPeriod(prevLabel)),
-            style: TextButton.styleFrom(foregroundColor: AppColors.accentLight),
-          ),
-        ),
-      ],
-    );
-  }
-}

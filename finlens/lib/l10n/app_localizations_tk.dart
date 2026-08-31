@@ -667,11 +667,105 @@ class AppLocalizationsTk extends AppLocalizations {
   }
 
   @override
-  String get insNoRecords => 'Bu döwürde ýazgy ýok';
+  String get insEmptyNoAccountsTitle => 'Görkezere zat ýok';
 
   @override
-  String insBackToPeriod(String period) {
-    return '$period döwrüne dolan';
+  String get insEmptyNoAccountsBody =>
+      'Insight puluňyzyň nä bolandygyny görkezýär — nireden geldi, nirä gitdi we näme galdy.';
+
+  @override
+  String get insEmptyNoRecordsTitle => 'Entek hiç zat üýtgänok';
+
+  @override
+  String insEmptyHoldings(String amount, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count hasap',
+      one: '$count hasap',
+    );
+    return 'Hasaplaryňyzda $amount · $_temp0';
+  }
+
+  @override
+  String insEmptyHoldingsNoAmount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count hasap',
+      one: '$count hasap',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get insEmptyRecordSomething => 'Bir zat ýaz';
+
+  @override
+  String get insEmptyAllHiddenTitle => 'Ähli hasap gizlendi';
+
+  @override
+  String insEmptyAllHiddenBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count hasaby',
+      one: '$count hasaby',
+    );
+    return 'Filtr $_temp0 gizleýär';
+  }
+
+  @override
+  String get insEmptyShowAll => 'Ähli hasaplary görkez';
+
+  @override
+  String insEmptyWindow(String period) {
+    return '$period üçin ýazgy ýok';
+  }
+
+  @override
+  String insEmptyHiddenByFilter(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ýazgy filtr bilen gizlendi',
+      one: '$count ýazgy filtr bilen gizlendi',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String insGoToPeriodBack(String period) {
+    return '← $period geç';
+  }
+
+  @override
+  String insGoToPeriodForward(String period) {
+    return '→ $period geç';
+  }
+
+  @override
+  String get insA11yEmptyNoAccounts =>
+      'Görkezere zat ýok. Insight puluňyzyň nä bolandygyny görkezýär. Hasap goşuň.';
+
+  @override
+  String insA11yEmptyNoRecords(String amount, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count hasap',
+      one: '$count hasap',
+    );
+    return 'Arassa baýlyk üýtgemedi. Entek hiç zat üýtgänok. Hasaplaryňyzda $amount, $_temp0.';
+  }
+
+  @override
+  String get insA11yEmptyAllHidden =>
+      'Arassa baýlyk üýtgemedi. Ähli hasap filtr bilen gizlendi.';
+
+  @override
+  String insA11yEmptyWindow(String period) {
+    return 'Arassa baýlyk üýtgemedi. $period üçin ýazgy ýok.';
   }
 
   @override
@@ -790,12 +884,6 @@ class AppLocalizationsTk extends AppLocalizations {
   String insAccountsShown(int shown, int total) {
     return '$shown / $total hasap';
   }
-
-  @override
-  String get insShowAllAccounts => 'Ähli hasaplary görkez';
-
-  @override
-  String get insEverythingHidden => 'Ähli hasaplar gizlendi';
 
   @override
   String get insSpendingHistory => '6 aýlyk çykdajy taryhy';

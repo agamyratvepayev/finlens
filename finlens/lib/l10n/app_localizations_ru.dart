@@ -693,11 +693,115 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String get insNoRecords => 'Нет записей за этот период';
+  String get insEmptyNoAccountsTitle => 'Пока нечего показать';
 
   @override
-  String insBackToPeriod(String period) {
-    return 'Назад к $period';
+  String get insEmptyNoAccountsBody =>
+      'Insight показывает, куда ушли деньги, откуда пришли и что осталось.';
+
+  @override
+  String get insEmptyNoRecordsTitle => 'Пока ничего не менялось';
+
+  @override
+  String insEmptyHoldings(String amount, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count счёта',
+      many: '$count счетов',
+      few: '$count счёта',
+      one: '$count счёт',
+    );
+    return 'На счетах $amount · $_temp0';
+  }
+
+  @override
+  String insEmptyHoldingsNoAmount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count счёта',
+      many: '$count счетов',
+      few: '$count счёта',
+      one: '$count счёт',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get insEmptyRecordSomething => 'Записать операцию';
+
+  @override
+  String get insEmptyAllHiddenTitle => 'Все счета скрыты';
+
+  @override
+  String insEmptyAllHiddenBody(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count счетов',
+      many: '$count счетов',
+      few: '$count счёта',
+      one: '$count счёт',
+    );
+    return 'Фильтр скрывает $_temp0';
+  }
+
+  @override
+  String get insEmptyShowAll => 'Показать все счета';
+
+  @override
+  String insEmptyWindow(String period) {
+    return 'Нет записей за $period';
+  }
+
+  @override
+  String insEmptyHiddenByFilter(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count записи скрыты фильтром',
+      many: '$count записей скрыто фильтром',
+      few: '$count записи скрыты фильтром',
+      one: '$count запись скрыта фильтром',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String insGoToPeriodBack(String period) {
+    return '← Перейти к $period';
+  }
+
+  @override
+  String insGoToPeriodForward(String period) {
+    return '→ Перейти к $period';
+  }
+
+  @override
+  String get insA11yEmptyNoAccounts =>
+      'Пока нечего показать. Insight показывает, что стало с деньгами. Добавьте счёт.';
+
+  @override
+  String insA11yEmptyNoRecords(String amount, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count счёта',
+      many: '$count счетов',
+      few: '$count счёта',
+      one: '$count счёт',
+    );
+    return 'Стоимость не изменилась. Пока ничего не менялось. На счетах $amount, $_temp0.';
+  }
+
+  @override
+  String get insA11yEmptyAllHidden =>
+      'Стоимость не изменилась. Все счета скрыты фильтром.';
+
+  @override
+  String insA11yEmptyWindow(String period) {
+    return 'Стоимость не изменилась. Нет записей за $period.';
   }
 
   @override
@@ -818,12 +922,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String insAccountsShown(int shown, int total) {
     return '$shown из $total счетов';
   }
-
-  @override
-  String get insShowAllAccounts => 'Показать все счета';
-
-  @override
-  String get insEverythingHidden => 'Все счета скрыты';
 
   @override
   String get insSpendingHistory => 'История трат за 6 месяцев';

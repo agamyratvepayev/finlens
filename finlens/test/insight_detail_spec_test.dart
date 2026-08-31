@@ -136,14 +136,14 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
 
     final l = await AppLocalizations.delegate.load(const Locale('en'));
-    expect(find.text(l.insEverythingHidden), findsOneWidget);
+    expect(find.text(l.insEmptyAllHiddenTitle), findsOneWidget);
 
-    await tester.tap(find.text(l.insShowAllAccounts));
+    await tester.tap(find.text(l.insEmptyShowAll));
     await tester.pump(const Duration(milliseconds: 300));
 
     // The account filter is cleared; the report is no longer everything-hidden.
     expect(store.insightAccountFilter.isActive, isFalse);
-    expect(find.text(l.insEverythingHidden), findsNothing);
+    expect(find.text(l.insEmptyAllHiddenTitle), findsNothing);
   });
 
   // ── Widget — chart navigation writes the window, not the period (spec §6.5) ─
