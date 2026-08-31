@@ -18,10 +18,18 @@ import '../ledger/scoped_ledger_screen.dart';
 import 'goal_detail_screen.dart';
 import 'task_detail_screen.dart';
 
-/// Spec 5.8 — reached goals, abandoned goals and removed budgets on one page.
+/// The Archive (§6), grouped by *what you can do*, not by entity:
 ///
-/// Reached goals are deliberately *not* restorable: a completed goal is part of
-/// your history. The other two groups come back with Restore.
+///   FINISHED         reached goals · paid one-offs        — read (amount)
+///   UNFINISHED       abandoned goals · cancelled tasks    — read (amount or —)
+///   CAN COME BACK    paused tasks · removed budgets · accounts — one action pill
+///   RECENTLY DELETED deleted tasks                        — Undo
+///
+/// Settled outcomes are read; pending things are brought back. Entity type moved
+/// from the section header into the subtitle's first token (`Goal · reached …`,
+/// `Account · Spendable · 24 transactions`), so nothing is lost — it just sits on
+/// the row it describes. Archived categories are gone entirely: they live in the
+/// category management screen now (§2.4), and dropped out of [archivedCount].
 class ArchiveScreen extends StatelessWidget {
   const ArchiveScreen({super.key});
 
@@ -29,26 +37,28 @@ class ArchiveScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
     final l = AppLocalizations.of(context);
+
     final reached = store.archivedGoals
         .where((g) => g.status == GoalStatus.reached)
         .toList();
     final gaveUp = store.archivedGoals
         .where((g) => g.status == GoalStatus.abandoned)
         .toList();
+    final paidTasks = store.completedTasks
+        .where((t) => t.status == TaskStatus.paid)
+        .toList();
+    final skippedTasks = store.completedTasks
+        .where((t) => t.status == TaskStatus.skipped)
+        .toList();
+    final pausedTasks = store.pausedTasks;
     final budgets = store.removedBudgets;
     final accounts = store.archivedAccounts;
-    final cats = store.archivedCategories;
-    final pausedTasks = store.pausedTasks;
-    final completedTasks = store.completedTasks;
     final deletedTasks = store.deletedTasks;
-    final total = reached.length +
-        gaveUp.length +
-        budgets.length +
-        accounts.length +
-        cats.length +
-        pausedTasks.length +
-        completedTasks.length +
-        deletedTasks.length;
+
+    final finished = reached.length + paidTasks.length;
+    final unfinished = gaveUp.length + skippedTasks.length;
+    final canComeBack = pausedTasks.length + budgets.length + accounts.length;
+    final total = finished + unfinished + canComeBack + deletedTasks.length;
 
     return Scaffold(
       body: SafeArea(
@@ -74,208 +84,179 @@ class ArchiveScreen extends StatelessWidget {
                   : ListView(
                       padding: const EdgeInsets.only(bottom: Insets.xxl),
                       children: [
-                        // Goal performance moved here from Insight (§7): a
-                        // statistic about finished goals belongs next to the
-                        // goals it describes, where it turns into advice. Hidden
-                        // when no goal has finished.
                         if (reached.isNotEmpty || gaveUp.isNotEmpty)
                           _GoalPerformanceCard(reached: reached, gaveUp: gaveUp),
                         Padding(
-                          padding: const EdgeInsets.fromLTRB(
-                            Insets.gutter,
-                            0,
-                            Insets.gutter,
-                            Insets.md,
-                          ),
-                          child: Text(
-                            l.arFootnote,
-                            style: AppText.caption.copyWith(fontSize: 12.5),
-                          ),
+                          padding: const EdgeInsets.fromLTRB(Insets.gutter, 0,
+                              Insets.gutter, Insets.md),
+                          child: Text(l.arFootnote,
+                              style: AppText.caption.copyWith(fontSize: 12.5)),
                         ),
-                        // Task sections sit at the top (§9), above goals/budgets.
-                        if (pausedTasks.isNotEmpty) ...[
-                          SectionLabel(l.arPausedTasks),
-                          _card([
-                            for (final t in pausedTasks)
-                              _taskRow(
-                                context,
-                                store,
-                                t,
-                                subtitle: l.arPausedLine(
-                                    dayMonth(t.statusChangedAt ?? t.dueDate, l),
-                                    store.paymentsForTask(t.id).length,
-                                    money(store.paymentTotalForTask(t.id))),
-                                trailing: _pillWithChevron(_RestoreButton(
-                                    onTap: () => store.resumeTask(t),
-                                    label: l.actionResume)),
-                              ),
-                          ]),
-                        ],
-                        if (completedTasks.isNotEmpty) ...[
-                          SectionLabel(l.arCompletedTasks),
-                          _card([
-                            for (final t in completedTasks)
-                              _taskRow(
-                                context,
-                                store,
-                                t,
-                                subtitle: t.status == TaskStatus.skipped
-                                    ? l.arCancelledLine(
-                                        dayMonth(t.statusChangedAt ?? t.dueDate, l))
-                                    : l.arCompletedLine(
-                                        dayMonth(t.statusChangedAt ?? t.dueDate, l),
-                                        money(store.paymentTotalForTask(t.id))),
-                                trailing: const Icon(Icons.chevron_right_rounded,
-                                    size: 18, color: AppColors.textTertiary),
-                              ),
-                          ]),
-                        ],
-                        if (deletedTasks.isNotEmpty) ...[
-                          SectionLabel(l.arDeletedTasks),
-                          _card([
-                            for (final t in deletedTasks)
-                              _taskRow(
-                                context,
-                                store,
-                                t,
-                                subtitle: l.arDeletedLineTask(
-                                    dayMonth(t.statusChangedAt ?? t.dueDate, l),
-                                    store.paymentsForTask(t.id).length,
-                                    money(store.paymentTotalForTask(t.id))),
-                                trailing: _pillWithChevron(
-                                    _UndoButton(onTap: () => store.undoDeleteTask(t))),
-                              ),
-                          ]),
-                        ],
-                        if (reached.isNotEmpty) ...[
-                          SectionLabel(l.arReachedGoals),
+
+                        // FINISHED — read-only, amount + chevron.
+                        if (finished > 0) ...[
+                          SectionLabel(
+                            l.arGroupFinished,
+                            trailing: _ClearLink(
+                              label: l.arClearFinished,
+                              color: AppColors.accentLight,
+                              onTap: () => _confirmClear(context, store,
+                                  count: finished,
+                                  confirmLabel: l.arClearFinished,
+                                  action: store.clearFinished),
+                            ),
+                          ),
                           _card([
                             for (final g in reached)
-                              _ArchiveRow(
-                                icon: Icons.check_rounded,
-                                color: AppColors.positive,
-                                title: g.name,
-                                subtitle: l.arReachedLine(
-                                    dayMonthYear(g.completedAt!, l),
-                                    g.durationMonths ?? 0),
-                                onTap: () => _openGoal(context, g, l),
-                                trailing: AmountText(
-                                  g.targetAmount,
-                                  style: AppText.amountLarge,
-                                ),
-                              ),
+                              _row(context,
+                                  icon: Icons.check_rounded,
+                                  color: AppColors.positive,
+                                  title: g.name,
+                                  subtitle:
+                                      '${l.arTypeGoal} · ${l.arReachedLine(dayMonthYear(g.completedAt!, l), g.durationMonths ?? 0)}',
+                                  trailing: _readTrailing(
+                                      AmountText(g.targetAmount,
+                                          style: AppText.amount)),
+                                  onTap: () => _openGoal(context, g, l)),
+                            for (final t in paidTasks)
+                              _row(context,
+                                  icon: t.icon,
+                                  color: t.isPayOut
+                                      ? AppColors.negative
+                                      : AppColors.positive,
+                                  title: t.title,
+                                  subtitle:
+                                      '${l.arTypeTask} · ${l.arCompletedLine(dayMonth(t.statusChangedAt ?? t.dueDate, l), money(store.paymentTotalForTask(t.id)))}',
+                                  trailing: _readTrailing(AmountText(
+                                      store.paymentTotalForTask(t.id),
+                                      style: AppText.amount)),
+                                  onTap: () => _openTask(context, t)),
                           ]),
                         ],
-                        if (gaveUp.isNotEmpty) ...[
-                          SectionLabel(l.arGaveUp),
+
+                        // UNFINISHED — read-only, amount or —.
+                        if (unfinished > 0) ...[
+                          SectionLabel(
+                            l.arGroupUnfinished,
+                            trailing: _ClearLink(
+                              label: l.arClearUnfinished,
+                              color: AppColors.accentLight,
+                              onTap: () => _confirmClear(context, store,
+                                  count: unfinished,
+                                  confirmLabel: l.arClearUnfinished,
+                                  action: store.clearUnfinished),
+                            ),
+                          ),
                           _card([
                             for (final g in gaveUp)
-                              _ArchiveRow(
-                                icon: store.goalIcon(g),
-                                color: AppColors.textSecondary,
-                                title: g.name,
-                                subtitle: l.arStoppedLine(
-                                    dayMonth(g.stoppedAt!, l),
-                                    // `saved` is gone, and the figure is frozen:
-                                    // what the source held on the day the goal
-                                    // stopped, not what it holds today (§3).
-                                    money(store
-                                        .goalMetrics(g, asOf: g.stoppedAt!)
-                                        .current),
-                                    money(g.targetAmount)),
-                                onTap: () => _openGoal(context, g, l),
-                                trailing: _RestoreButton(
-                                  onTap: () => store.restoreGoal(g),
-                                ),
-                              ),
+                              _row(context,
+                                  icon: store.goalIcon(g),
+                                  color: AppColors.textSecondary,
+                                  title: g.name,
+                                  subtitle:
+                                      '${l.arTypeGoal} · ${l.arStoppedLine(dayMonth(g.stoppedAt!, l), money(store.goalMetrics(g, asOf: g.stoppedAt!).current), money(g.targetAmount))}',
+                                  trailing: _readTrailing(
+                                      AmountText(g.targetAmount,
+                                          style: AppText.amount)),
+                                  onTap: () => _openGoal(context, g, l)),
+                            for (final t in skippedTasks)
+                              _row(context,
+                                  icon: t.icon,
+                                  color: AppColors.textSecondary,
+                                  title: t.title,
+                                  subtitle:
+                                      '${l.arTypeTask} · ${l.arCancelledLine(dayMonth(t.statusChangedAt ?? t.dueDate, l))}',
+                                  trailing: _readTrailing(Text('—',
+                                      style: AppText.amount.copyWith(
+                                          color: AppColors.textTertiary))),
+                                  onTap: () => _openTask(context, t)),
                           ]),
                         ],
-                        if (budgets.isNotEmpty) ...[
-                          SectionLabel(l.arRemovedBudgets),
+
+                        // CAN COME BACK — one action pill, no clear link.
+                        if (canComeBack > 0) ...[
+                          SectionLabel(l.arGroupCanComeBack),
                           _card([
+                            for (final t in pausedTasks)
+                              _row(context,
+                                  icon: t.icon,
+                                  color: t.isPayOut
+                                      ? AppColors.negative
+                                      : AppColors.positive,
+                                  title: t.title,
+                                  subtitle:
+                                      '${l.arTypeTask} · ${l.arPausedLine(dayMonth(t.statusChangedAt ?? t.dueDate, l), store.paymentsForTask(t.id).length, money(store.paymentTotalForTask(t.id)))}',
+                                  trailing: _ActionPill(
+                                      label: l.actionResume,
+                                      onTap: () => store.resumeTask(t)),
+                                  onTap: () => _openTask(context, t)),
                             for (final c in budgets)
-                              _ArchiveRow(
-                                icon: c.icon,
-                                color: c.color,
-                                title: c.name,
-                                subtitle: l.arRemovedLine(
-                                    dayMonth(c.removedOn!, l)),
-                                trailing: _RestoreButton(
-                                  // The old limit is not retained once cleared,
-                                  // so restoring seeds a sensible default from
-                                  // recent spend.
-                                  onTap: () => store.restoreBudget(
-                                    c,
-                                    _suggestLimit(store, c),
-                                  ),
-                                ),
-                              ),
-                          ]),
-                        ],
-                        // Archived accounts and categories — restore is the
-                        // reversal of an archive and destroys nothing, so it is
-                        // one tap with no confirmation (§2). An account returns
-                        // to its group with its balance and history; a category
-                        // reappears in every picker (its old budget does not —
-                        // that has its own Restore above).
-                        if (accounts.isNotEmpty) ...[
-                          SectionLabel(l.arAccounts),
-                          _card([
+                              _row(context,
+                                  icon: c.icon,
+                                  color: c.color,
+                                  title: c.name,
+                                  subtitle:
+                                      '${l.arTypeBudget} · ${l.arRemovedLine(dayMonth(c.removedOn!, l))}',
+                                  trailing: _ActionPill(
+                                      label: l.actionRestore,
+                                      onTap: () => store.restoreBudget(
+                                          c, _suggestLimit(store, c)))),
                             for (final a in accounts)
-                              _ArchiveRow(
-                                icon: a.displayIcon,
-                                color: a.color,
-                                title: a.name,
-                                subtitle: l.arAccountLine(
-                                  a.group.label(l),
-                                  store.txnsForAccount(a.id).length,
-                                ),
-                                onTap: () =>
-                                    Navigator.of(context, rootNavigator: true)
-                                        .push(MaterialPageRoute(
-                                  builder: (_) => ScopedLedgerScreen(
-                                    initialScope: AccountScope(a.id),
-                                  ),
-                                )),
-                                trailing: _RestoreButton(
-                                  onTap: () => store.restoreAccount(a),
-                                ),
-                              ),
+                              _row(context,
+                                  icon: a.displayIcon,
+                                  color: a.color,
+                                  title: a.name,
+                                  subtitle:
+                                      '${l.arTypeAccount} · ${l.arAccountLine(a.group.label(l), store.txnsForAccount(a.id).length)}',
+                                  trailing: _ActionPill(
+                                      label: l.actionRestore,
+                                      onTap: () => store.restoreAccount(a)),
+                                  onTap: () => Navigator.of(context,
+                                          rootNavigator: true)
+                                      .push(MaterialPageRoute(
+                                    builder: (_) => ScopedLedgerScreen(
+                                      initialScope: AccountScope(a.id),
+                                    ),
+                                  ))),
                           ]),
                         ],
-                        if (cats.isNotEmpty) ...[
-                          SectionLabel(l.arCategories),
+
+                        // RECENTLY DELETED — Undo.
+                        if (deletedTasks.isNotEmpty) ...[
+                          SectionLabel(
+                            l.arGroupRecentlyDeleted,
+                            trailing: _ClearLink(
+                              label: l.arDeleteNow,
+                              color: AppColors.negative,
+                              onTap: () => _confirmClear(context, store,
+                                  count: deletedTasks.length,
+                                  confirmLabel: l.arDeleteNow,
+                                  action: store.deleteRecycledTasks),
+                            ),
+                          ),
                           _card([
-                            for (final c in cats)
-                              _ArchiveRow(
-                                icon: c.icon,
-                                color: c.color,
-                                title: c.name,
-                                subtitle: l.countTransactions(
-                                    store.txnCountForCategory(c.id)),
-                                trailing: _RestoreButton(
-                                  onTap: () => store.restoreCategory(c),
-                                ),
-                              ),
+                            for (final t in deletedTasks)
+                              _row(context,
+                                  icon: t.icon,
+                                  color: t.isPayOut
+                                      ? AppColors.negative
+                                      : AppColors.positive,
+                                  title: t.title,
+                                  subtitle:
+                                      '${l.arTypeTask} · ${l.arDeletedLineTask(dayMonth(t.statusChangedAt ?? t.dueDate, l), store.paymentsForTask(t.id).length, money(store.paymentTotalForTask(t.id)))}',
+                                  trailing: _ActionPill(
+                                      label: l.actionUndo,
+                                      onTap: () => store.undoDeleteTask(t)),
+                                  onTap: () => _openTask(context, t)),
                           ]),
                         ],
+
                         const SizedBox(height: Insets.xl),
                         Center(
-                          child: Text(
-                            AppLocalizations.of(context).countArchivedItems(total),
-                            style: AppText.caption,
-                          ),
+                          child: Text(l.countArchivedItems(total),
+                              style: AppText.caption),
                         ),
-                        const SizedBox(height: Insets.lg),
-                        Center(
-                          child: TextButton(
-                            onPressed: () => _clear(context, store, total),
-                            style: TextButton.styleFrom(
-                              foregroundColor: AppColors.negative,
-                            ),
-                            child: Text(l.arClearPermanently),
-                          ),
-                        ),
+                        const SizedBox(height: Insets.md),
                       ],
                     ),
             ),
@@ -285,141 +266,47 @@ class ArchiveScreen extends StatelessWidget {
     );
   }
 
-  /// A task archive row — the §4.1-shaped [_ArchiveRow], made tappable so it
-  /// pushes the read-only Task detail (§9). Reuses `_ArchiveRow`, not a fork.
-  Widget _taskRow(
-    BuildContext context,
-    AppStore store,
-    Task task, {
-    required String subtitle,
-    required Widget trailing,
-  }) {
-    final color = task.isPayOut ? AppColors.negative : AppColors.positive;
-    return InkWell(
-      onTap: () => Navigator.of(context, rootNavigator: true).push(
-        MaterialPageRoute(builder: (_) => TaskDetailScreen(taskId: task.id)),
-      ),
-      child: _ArchiveRow(
-        icon: task.icon,
-        color: color,
-        title: task.title,
-        subtitle: subtitle,
-        trailing: trailing,
-      ),
-    );
-  }
-
-  /// Opens the goal detail in its archived mode (§2). The back label is this
-  /// screen's own title, so the detail reads `‹ Archive`, not `‹ Goals`.
-  void _openGoal(BuildContext context, Goal g, AppLocalizations l) =>
-      Navigator.of(context, rootNavigator: true).push(
-        MaterialPageRoute(
-          builder: (_) =>
-              GoalDetailScreen(goalId: g.id, backLabel: l.moreArchive),
-        ),
-      );
-
-  Widget _pillWithChevron(Widget pill) => Row(
+  /// Read-only trailing: a value hugging a chevron.
+  Widget _readTrailing(Widget value) => Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          pill,
-          const Icon(Icons.chevron_right_rounded,
-              size: 18, color: AppColors.textTertiary),
+          value,
+          const Padding(
+            padding: EdgeInsets.only(left: 2),
+            child: Icon(Icons.chevron_right_rounded,
+                size: 18, color: AppColors.textTertiary),
+          ),
         ],
       );
 
-  double _suggestLimit(AppStore store, Category c) {
-    final spend = store.spentInCategory(
-      c.id,
-      DateTime(store.period.year, store.period.month - 1),
-    );
-    return spend > 0 ? (spend / 50).ceil() * 50 : 100;
-  }
-
-  Widget _card(List<Widget> rows) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: Insets.gutter),
-      child: AppCard(
-        child: Column(
-          children: [
-            for (var i = 0; i < rows.length; i++) ...[
-              if (i > 0) const RowDivider(indent: Insets.md),
-              rows[i],
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Future<void> _clear(BuildContext context, AppStore store, int total) async {
-    final l = AppLocalizations.of(context);
-    final ok = await showDestructiveConfirm(
-      context,
-      title: l.arClearTitle,
-      message: l.arClearMsg(total),
-      impact: [
-        ImpactLine.kept(l.arTxnStay),
-        ImpactLine.kept(l.arBalancesUnaffected),
-        ImpactLine.lost(l.arRestoreImpossible),
-        ImpactLine.lost(l.arStatsDisappear),
-      ],
-      confirmLabel: l.arClearArchive,
-    );
-    if (!ok || !context.mounted) return;
-    store.clearArchive();
-  }
-}
-
-class _ArchiveRow extends StatelessWidget {
-  const _ArchiveRow({
-    required this.icon,
-    required this.color,
-    required this.title,
-    required this.subtitle,
-    required this.trailing,
-    this.onTap,
-  });
-
-  final IconData icon;
-  final Color color;
-  final String title;
-  final String subtitle;
-  final Widget trailing;
-
-  /// When non-null the whole row becomes tappable (§1); when null it renders
-  /// exactly as before — no ripple, no chevron. `_RestoreButton` absorbs its own
-  /// hits, so a tap on Restore never also fires this.
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _row(
+    BuildContext context, {
+    required IconData icon,
+    required Color color,
+    required String title,
+    required String subtitle,
+    required Widget trailing,
+    VoidCallback? onTap,
+  }) {
     final row = Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: Insets.md,
-        vertical: Insets.md,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
       child: Row(
         children: [
-          IconTile(icon, color: color, size: 34),
+          IconTile(icon, color: color, size: 28),
           const SizedBox(width: Insets.md),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  title,
-                  style: AppText.rowTitle,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
+                Text(title,
+                    style: AppText.rowTitle.copyWith(height: 1.25),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis),
                 const SizedBox(height: 2),
-                Text(
-                  subtitle,
-                  style: AppText.rowSubtitle.copyWith(fontSize: 11.5),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
+                Text(subtitle,
+                    style: AppText.rowSubtitle.copyWith(fontSize: 11.5),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis),
               ],
             ),
           ),
@@ -428,7 +315,6 @@ class _ArchiveRow extends StatelessWidget {
         ],
       ),
     );
-
     if (onTap == null) return row;
     return Semantics(
       button: true,
@@ -440,53 +326,124 @@ class _ArchiveRow extends StatelessWidget {
       ),
     );
   }
+
+  Widget _card(List<Widget> rows) => Padding(
+        padding: const EdgeInsets.symmetric(horizontal: Insets.gutter),
+        child: AppCard(
+          child: Column(
+            children: [
+              for (var i = 0; i < rows.length; i++) ...[
+                if (i > 0) const RowDivider(indent: 52),
+                rows[i],
+              ],
+            ],
+          ),
+        ),
+      );
+
+  void _openGoal(BuildContext context, Goal g, AppLocalizations l) =>
+      Navigator.of(context, rootNavigator: true).push(
+        MaterialPageRoute(
+          builder: (_) =>
+              GoalDetailScreen(goalId: g.id, backLabel: l.moreArchive),
+        ),
+      );
+
+  void _openTask(BuildContext context, Task t) =>
+      Navigator.of(context, rootNavigator: true).push(
+        MaterialPageRoute(builder: (_) => TaskDetailScreen(taskId: t.id)),
+      );
+
+  double _suggestLimit(AppStore store, Category c) {
+    // The old limit is not retained once a budget is cleared (§6.5, reported —
+    // not fixed here), so restoring seeds a sensible default from recent spend.
+    final spend = store.spentInCategory(
+      c.id,
+      DateTime(store.period.year, store.period.month - 1),
+    );
+    return spend > 0 ? (spend / 50).ceil() * 50 : 100;
+  }
+
+  Future<void> _confirmClear(
+    BuildContext context,
+    AppStore store, {
+    required int count,
+    required String confirmLabel,
+    required VoidCallback action,
+  }) async {
+    final l = AppLocalizations.of(context);
+    final ok = await showDestructiveConfirm(
+      context,
+      title: l.arClearScopedTitle,
+      message: l.arClearScopedMsg(count),
+      impact: [ImpactLine.lost(l.arRestoreImpossible)],
+      confirmLabel: confirmLabel,
+    );
+    if (!ok || !context.mounted) return;
+    action();
+  }
 }
 
-class _RestoreButton extends StatelessWidget {
-  const _RestoreButton({required this.onTap, this.label});
+/// A section-header clear link, living in [SectionLabel]'s trailing slot (§6.3).
+class _ClearLink extends StatelessWidget {
+  const _ClearLink(
+      {required this.label, required this.color, required this.onTap});
 
+  final String label;
+  final Color color;
   final VoidCallback onTap;
-  final String? label;
 
   @override
   Widget build(BuildContext context) {
-    return TextButton(
-      onPressed: onTap,
-      style: TextButton.styleFrom(
-        foregroundColor: AppColors.accentSoft,
-        visualDensity: VisualDensity.compact,
-        textStyle: AppText.button.copyWith(fontSize: 13.5),
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+        child: Text(label,
+            style: TextStyle(
+                fontSize: 13, fontWeight: FontWeight.w500, color: color)),
       ),
-      child: Text(label ?? AppLocalizations.of(context).actionRestore),
     );
   }
 }
 
-/// The Undo pill on a deleted-task row (§9) — restores the previous status.
-class _UndoButton extends StatelessWidget {
-  const _UndoButton({required this.onTap});
+/// The single action affordance in CAN COME BACK / RECENTLY DELETED (§6.1): a
+/// chip pill that absorbs its own hits so a tap on it never also fires the row.
+class _ActionPill extends StatelessWidget {
+  const _ActionPill({required this.label, required this.onTap});
 
+  final String label;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return TextButton(
-      onPressed: onTap,
-      style: TextButton.styleFrom(
-        foregroundColor: AppColors.accentSoft,
-        visualDensity: VisualDensity.compact,
-        textStyle: AppText.button.copyWith(fontSize: 13.5),
+    return Semantics(
+      button: true,
+      label: label,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(Radii.pill),
+        child: Container(
+          decoration: BoxDecoration(
+            color: AppColors.chipBg,
+            borderRadius: BorderRadius.circular(Radii.pill),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 4),
+          child: Text(label,
+              style: const TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.accentLight)),
+        ),
       ),
-      child: Text(AppLocalizations.of(context).actionUndo),
     );
   }
 }
 
-/// Goal performance (spec §7) — reached count, success rate and average duration
-/// of finished goals, at the §4 density (76 pt). Moved here from Insight: in a
-/// money-flow report it was a statistic; next to the goals it describes it turns
-/// into advice ("your goals take about five months") worth reading while setting
-/// the next one's date.
+/// The goal-performance card, collapsed to one centred line (§6.2, ~32 pt inside
+/// the same AppCard). It replaces the old 76 pt three-up-stat-over-strip card,
+/// whose bottom strip repeated the AVG TIME cell above it. `insight-spec` §4/§12
+/// are updated to this height.
 class _GoalPerformanceCard extends StatelessWidget {
   const _GoalPerformanceCard({required this.reached, required this.gaveUp});
 
@@ -502,64 +459,57 @@ class _GoalPerformanceCard extends StatelessWidget {
     final avg =
         durs.isEmpty ? 0 : (durs.reduce((a, b) => a + b) / durs.length).round();
 
+    final reachedStr = '${reached.length}';
+    final rateStr = finished == 0 ? '—' : percent(rate, decimals: 0);
+    final avgStr = durs.isEmpty ? '—' : l.arcMonthsShort(avg);
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(
           Insets.gutter, Insets.sm, Insets.gutter, Insets.md),
       child: AppCard(
         key: const Key('arc-perfcard'),
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(Insets.lg, 11, Insets.lg, 10),
+        child: Semantics(
+          label: l.arcOneLine(reachedStr, rateStr, avgStr),
+          child: Container(
+            height: 32,
+            alignment: Alignment.center,
+            padding: const EdgeInsets.symmetric(horizontal: Insets.md),
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
               child: Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  _stat(l.arcReached, '${reached.length}', AppColors.positive),
-                  _stat(l.arcSuccess,
-                      finished == 0 ? '—' : percent(rate, decimals: 0),
-                      AppColors.goal),
-                  _stat(l.arcAvgTime,
-                      durs.isEmpty ? '—' : l.arcMonthsShort(avg), AppColors.info),
+                  _seg(reachedStr, l.arcReachedLabel, AppColors.positive),
+                  _sep(),
+                  _seg(rateStr, l.arcSuccessLabel, AppColors.goal),
+                  _sep(),
+                  _seg(avgStr, l.arcAverageLabel, AppColors.info),
                 ],
               ),
             ),
-            if (durs.isNotEmpty) _foot(l.arcGoalsTakeAbout(avg)),
-          ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _stat(String label, String value, Color color) => Expanded(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(label.toUpperCase(),
-                style: AppText.label.copyWith(fontSize: 10)),
-            const SizedBox(height: 3),
-            Text(value,
-                style: AppText.amountLarge.copyWith(fontSize: 17, color: color)),
-          ],
-        ),
+  Widget _seg(String value, String label, Color color) => Text.rich(
+        TextSpan(children: [
+          TextSpan(
+              text: value,
+              style: TextStyle(
+                  fontSize: 14, fontWeight: FontWeight.w700, color: color)),
+          const TextSpan(text: ' '),
+          TextSpan(
+              text: label,
+              style: const TextStyle(
+                  fontSize: 12.5, color: AppColors.textSecondary)),
+        ]),
       );
 
-  /// The centred, one-line §4 card-bottom strip.
-  Widget _foot(String text) => Container(
-        decoration: const BoxDecoration(
-          border: Border(top: BorderSide(color: AppColors.divider, width: 0.5)),
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Flexible(
-              child: Text(text,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                      fontSize: 11, height: 1.45, color: AppColors.textSecondary)),
-            ),
-          ],
-        ),
+  Widget _sep() => const Padding(
+        padding: EdgeInsets.symmetric(horizontal: 8),
+        child: Text('·',
+            style: TextStyle(fontSize: 13, color: AppColors.textQuaternary)),
       );
 }

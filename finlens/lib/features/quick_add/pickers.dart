@@ -10,6 +10,7 @@ import '../../core/utils/fx.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/amount_text.dart';
 import '../../shared/widgets/app_card.dart';
+import '../../shared/widgets/category_cell.dart';
 import '../../shared/widgets/destructive_sheet.dart';
 import '../../shared/widgets/form_fields.dart';
 import '../../theme/app_colors.dart';
@@ -511,7 +512,7 @@ class _CategoryPickerBodyState extends State<_CategoryPickerBody> {
                         for (final c in items)
                           SizedBox(
                             width: cellWidth,
-                            child: _CategoryCell(
+                            child: CategoryCell(
                               category: c,
                               selected: c.id == widget.selectedId,
                               onTap: () => Navigator.of(context).pop(c),
@@ -519,7 +520,7 @@ class _CategoryPickerBodyState extends State<_CategoryPickerBody> {
                           ),
                         SizedBox(
                           width: cellWidth,
-                          child: _NewCategoryCell(
+                          child: NewCategoryCell(
                             onTap: () async {
                               final created = await showNewCategorySheet(
                                   context,
@@ -655,168 +656,6 @@ class _BudgetCategoryPickerBody extends StatelessWidget {
       ),
     );
   }
-}
-
-/// One category in the picker grid (§3): a 46pt colour-tinted tile above a
-/// two-line, centred label. The selected cell is filled with the colour, its
-/// glyph white with a 2pt white ring, and its label white at weight 600.
-class _CategoryCell extends StatelessWidget {
-  const _CategoryCell({
-    required this.category,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final Category category;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
-      selected: selected,
-      label: category.name,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 46,
-              height: 46,
-              decoration: BoxDecoration(
-                color: selected
-                    ? category.color
-                    : Color.alphaBlend(
-                        category.color.withValues(alpha: 0.18),
-                        AppColors.surfaceAlt),
-                borderRadius: BorderRadius.circular(13),
-                border:
-                    selected ? Border.all(color: Colors.white, width: 2) : null,
-              ),
-              child: Icon(
-                category.icon,
-                size: 22,
-                color: selected ? Colors.white : category.color,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              category.name,
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 12,
-                height: 1.25,
-                color: selected ? Colors.white : AppColors.sheetAccountName,
-                fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// The create cell, last in the grid (§3): a dashed accent tile + "New".
-class _NewCategoryCell extends StatelessWidget {
-  const _NewCategoryCell({required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
-      label: AppLocalizations.of(context).qaNewCategory,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            CustomPaint(
-              painter: _DashedRRectPainter(
-                color: AppColors.accent,
-                radius: 13,
-                strokeWidth: 1.5,
-              ),
-              child: Container(
-                width: 46,
-                height: 46,
-                decoration: BoxDecoration(
-                  color: AppColors.sheetCard,
-                  borderRadius: BorderRadius.circular(13),
-                ),
-                child: const Icon(Icons.add_rounded,
-                    size: 22, color: AppColors.accentLight),
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              AppLocalizations.of(context).qaNewShort,
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              style: TextStyle(
-                fontSize: 12,
-                height: 1.25,
-                color: AppColors.accentLight,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Strokes a dashed rounded rectangle — Flutter has no dashed border built in.
-class _DashedRRectPainter extends CustomPainter {
-  const _DashedRRectPainter({
-    required this.color,
-    required this.radius,
-    required this.strokeWidth,
-  });
-
-  final Color color;
-  final double radius;
-  final double strokeWidth;
-
-  static const _dash = 4.0;
-  static const _gap = 3.0;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = strokeWidth;
-    final inset = strokeWidth / 2;
-    final rrect = RRect.fromRectAndRadius(
-      Rect.fromLTWH(inset, inset, size.width - strokeWidth,
-          size.height - strokeWidth),
-      Radius.circular(radius),
-    );
-    final path = Path()..addRRect(rrect);
-    for (final metric in path.computeMetrics()) {
-      var distance = 0.0;
-      while (distance < metric.length) {
-        final next = (distance + _dash).clamp(0.0, metric.length);
-        canvas.drawPath(metric.extractPath(distance, next), paint);
-        distance += _dash + _gap;
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(_DashedRRectPainter old) =>
-      old.color != color ||
-      old.radius != radius ||
-      old.strokeWidth != strokeWidth;
 }
 
 Widget _pickRow(

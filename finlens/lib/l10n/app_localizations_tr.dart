@@ -12,9 +12,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String get language => 'Dil';
 
   @override
-  String get languageSystemDefault => 'Cihaz varsayılanı';
-
-  @override
   String get accountGroupSpendable => 'Harcanabilir';
 
   @override
@@ -443,12 +440,73 @@ class AppLocalizationsTr extends AppLocalizations {
   String get moreMaskAmounts => 'Tüm tutarları gizle';
 
   @override
-  String get moreAddAccount => 'Hesap ekle';
-
-  @override
   String moreVersion(String version, String build) {
     return '$version ($build)';
   }
+
+  @override
+  String get moreAddAccount => 'Hesap ekle';
+
+  @override
+  String get actionDeletePermanent => 'Kalıcı olarak sil';
+
+  @override
+  String plusNMore(int count) {
+    return '+$count daha';
+  }
+
+  @override
+  String get catManageTitle => 'Kategoriler';
+
+  @override
+  String get catEditTitle => 'Kategoriyi düzenle';
+
+  @override
+  String get catSectionExpense => 'Gider';
+
+  @override
+  String get catSectionIncome => 'Gelir';
+
+  @override
+  String get catSectionArchived => 'Arşivlenmiş';
+
+  @override
+  String get catArchiveFootnote =>
+      'Arşivlenen kategoriler geçmiş işlemlerinde kalır. Sadece yeni bir şey kaydederken görünmezler.';
+
+  @override
+  String get catTypeLocked =>
+      'Bunu değiştirmek buraya kaydedilmiş her işlemi ters çevirir';
+
+  @override
+  String get catArchiveThis => 'Kategoriyi arşivle';
+
+  @override
+  String catArchiveMsg(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Buraya $count işlem kaydedilmiş, bu yüzden silinmek yerine arşivlenir',
+      one:
+          'Buraya $count işlem kaydedilmiş, bu yüzden silinmek yerine arşivlenir',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get catDeleteThis => 'Kategoriyi sil';
+
+  @override
+  String get catDeleteMsg =>
+      'Buraya henüz bir şey kaydedilmedi, bu yüzden tamamen kaldırılabilir';
+
+  @override
+  String get catDeleteBudgeted =>
+      'Bu kategorinin Planlayıcı\'da bir bütçesi var. Önce bütçeyi kaldırın ya da kategoriyi arşivleyin.';
+
+  @override
+  String get catRestoreThis => 'Kategoriyi geri yükle';
 
   @override
   String get insightTitle => 'Analiz';
@@ -919,13 +977,13 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
-  String get arcReached => 'Ulaşılan';
+  String get arcReachedLabel => 'ulaşılan';
 
   @override
-  String get arcSuccess => 'Başarı';
+  String get arcSuccessLabel => 'başarı';
 
   @override
-  String get arcAvgTime => 'Ort. süre';
+  String get arcAverageLabel => 'ortalama';
 
   @override
   String arcMonthsShort(int count) {
@@ -933,13 +991,8 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
-  String arcGoalsTakeAbout(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count ay',
-    );
-    return 'Hedeflerin ortalama $_temp0 sürüyor';
+  String arcOneLine(String reached, String rate, String avg) {
+    return '$reached ulaşılan · $rate başarı · $avg ortalama';
   }
 
   @override
@@ -1863,7 +1916,28 @@ class AppLocalizationsTr extends AppLocalizations {
       'Arşivlenen öğeler Planlayıcı\'da görünmez ve toplamlarınızı etkilemez. Geçmiş işlemleri Defter\'de kalır.';
 
   @override
-  String get arReachedGoals => 'Ulaşılan hedefler';
+  String get arGroupFinished => 'Tamamlandı';
+
+  @override
+  String get arGroupUnfinished => 'Tamamlanmadı';
+
+  @override
+  String get arGroupCanComeBack => 'Geri gelebilir';
+
+  @override
+  String get arGroupRecentlyDeleted => 'Yakında silinenler';
+
+  @override
+  String get arTypeGoal => 'Hedef';
+
+  @override
+  String get arTypeTask => 'Görev';
+
+  @override
+  String get arTypeBudget => 'Bütçe';
+
+  @override
+  String get arTypeAccount => 'Hesap';
 
   @override
   String arReachedLine(Object date, int count) {
@@ -1873,25 +1947,13 @@ class AppLocalizationsTr extends AppLocalizations {
       other: '$count ay',
       one: '$count ay',
     );
-    return 'Ulaşıldı $date · $_temp0 sürdü';
+    return 'ulaşıldı $date · $_temp0 sürdü';
   }
-
-  @override
-  String get arGaveUp => 'Vazgeçildi';
 
   @override
   String arStoppedLine(Object date, Object saved, Object target) {
-    return 'Durduruldu $date · $target hedefin $saved kadarı';
+    return 'durduruldu $date · $target hedefin $saved kadarı';
   }
-
-  @override
-  String get arRemovedBudgets => 'Kaldırılan bütçeler';
-
-  @override
-  String get arAccounts => 'Accounts';
-
-  @override
-  String get arCategories => 'Categories';
 
   @override
   String arAccountLine(String group, int count) {
@@ -1906,22 +1968,28 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String arRemovedLine(Object date) {
-    return 'Kaldırıldı $date';
+    return 'kaldırıldı $date';
   }
 
   @override
-  String get arClearPermanently => 'Arşivi kalıcı olarak temizle';
+  String get arClearFinished => 'Temizle';
 
   @override
-  String get arClearTitle => 'Arşiv temizlensin mi?';
+  String get arClearUnfinished => 'Temizle';
 
   @override
-  String arClearMsg(int count) {
+  String get arDeleteNow => 'Şimdi sil';
+
+  @override
+  String get arClearScopedTitle => 'Bunlar kalıcı olarak temizlensin mi?';
+
+  @override
+  String arClearScopedMsg(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count arşivlenmiş öğe kalıcı olarak silinir.',
-      one: '$count arşivlenmiş öğe kalıcı olarak silinir.',
+      other: '$count öğe kalıcı olarak kaldırılır. Bu geri alınamaz.',
+      one: '$count öğe kalıcı olarak kaldırılır. Bu geri alınamaz.',
     );
     return '$_temp0';
   }
@@ -3413,6 +3481,33 @@ class AppLocalizationsTr extends AppLocalizations {
   String get tagArchivedBadge => 'archived';
 
   @override
+  String get tagEditTitle => 'Etiketi düzenle';
+
+  @override
+  String get tagArchiveThis => 'Etiketi arşivle';
+
+  @override
+  String tagArchiveMsg(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count işleminde kalır ve aranabilir olmayı sürdürür',
+      one: '$count işleminde kalır ve aranabilir olmayı sürdürür',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get tagDeleteThis => 'Etiketi sil';
+
+  @override
+  String get tagDeleteMsg =>
+      'Henüz hiçbir şey onu taşımıyor, bu yüzden tamamen kaldırılabilir';
+
+  @override
+  String get tagRestoreThis => 'Etiketi geri yükle';
+
+  @override
   String get plTitle => 'Planlayıcı';
 
   @override
@@ -3887,15 +3982,6 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get etPaidTo => 'Nereye ödenir';
-
-  @override
-  String get arPausedTasks => 'DURAKLATILMIŞ GÖREVLER';
-
-  @override
-  String get arCompletedTasks => 'TAMAMLANMIŞ GÖREVLER';
-
-  @override
-  String get arDeletedTasks => 'SİLİNMİŞ GÖREVLER';
 
   @override
   String arPausedLine(Object date, int payments, Object total) {

@@ -1,69 +1,120 @@
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
-import '../../core/models/models.dart';
 import '../../core/store/app_store.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/app_card.dart';
-import '../../shared/widgets/form_fields.dart';
 import '../../shared/widgets/screen_header.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/app_typography.dart';
 import '../planner/archive_screen.dart';
-import '../quick_add/pickers.dart';
+import 'category_management_screen.dart';
 import 'tag_management_screen.dart';
 import 'widgets/split_count_row.dart';
 
-/// Selectable UI languages. `null` = follow the device locale. Endonyms are
-/// intentionally shown in each language's own script and are NOT translated.
-const _languageOptions = <(Locale?, String)>[
-  (null, ''),
+/// Selectable UI languages (§7.1). Every entry is a real language: the "System
+/// default" row is gone, because the stored locale is never null — the device
+/// only seeds it once, at first launch. Endonyms are shown in each language's
+/// own script and are NOT translated.
+const _languageOptions = <(Locale, String)>[
   (Locale('en'), 'English'),
   (Locale('ru'), 'Русский'),
   (Locale('tr'), 'Türkçe'),
   (Locale('tk'), 'Türkmençe'),
 ];
 
-String _languageLabel(BuildContext context, Locale? locale) {
-  if (locale == null) return AppLocalizations.of(context).languageSystemDefault;
+String _languageLabel(Locale locale) {
   for (final (loc, endonym) in _languageOptions) {
-    if (loc?.languageCode == locale.languageCode) return endonym;
+    if (loc.languageCode == locale.languageCode) return endonym;
   }
   return locale.languageCode;
 }
 
+/// §7.2/§7.3 — a content-sized sheet built from a local card, not a fractional
+/// [showAppSheet] with a [FormSection]. These rows have no leading icon, so the
+/// shared FormSection's `indent: 52` divider would start 40 pt past the text;
+/// the local card draws its own `indent: 12` hairline and its rows sit at 37 pt
+/// (padding 10), matching More's own Language row rather than the 41 pt default.
 void _pickLanguage(BuildContext context, AppStore store) {
   final l = AppLocalizations.of(context);
-  showAppSheet(
-    context,
-    title: l.language,
-    initialSize: 0.5,
-    builder: (sheetContext, controller) {
-      final current = store.locale?.languageCode;
-      return ListView(
-        controller: controller,
-        padding: const EdgeInsets.fromLTRB(
-            Insets.gutter, 0, Insets.gutter, Insets.xxl),
-        children: [
-          FormSection(
-            margin: EdgeInsets.zero,
+  showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (sheetContext) {
+      final current = store.locale.languageCode;
+      final rows = <Widget>[
+        for (final (loc, endonym) in _languageOptions)
+          InkWell(
+            onTap: () {
+              store.setLocale(loc);
+              Navigator.of(sheetContext).pop();
+            },
+            child: Padding(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      endonym,
+                      style: AppText.body.copyWith(
+                          fontSize: 14.5, color: AppColors.textPrimary),
+                    ),
+                  ),
+                  if (loc.languageCode == current)
+                    const Icon(Icons.check_rounded,
+                        size: 20, color: AppColors.accent),
+                ],
+              ),
+            ),
+          ),
+      ];
+      return Container(
+        decoration: const BoxDecoration(
+          color: AppColors.surfaceAlt,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(Radii.sheet)),
+        ),
+        child: SafeArea(
+          top: false,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              for (final (loc, endonym) in _languageOptions)
-                FormRow(
-                  label: loc == null ? l.languageSystemDefault : endonym,
-                  trailing: (loc?.languageCode == current)
-                      ? const Icon(Icons.check_rounded,
-                          size: 20, color: AppColors.accent)
-                      : null,
-                  onTap: () {
-                    store.setLocale(loc);
-                    Navigator.of(sheetContext).pop();
-                  },
+              const SizedBox(height: Insets.md),
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceHigh,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                    Insets.gutter, Insets.lg, Insets.gutter, Insets.md),
+                child: Text(l.language, style: AppText.title.copyWith(fontSize: 19)),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                    Insets.gutter, 0, Insets.gutter, Insets.md),
+                child: AppCard(
+                  child: Column(
+                    children: [
+                      for (var i = 0; i < rows.length; i++) ...[
+                        if (i > 0) const RowDivider(indent: 12),
+                        rows[i],
+                      ],
+                    ],
+                  ),
+                ),
+              ),
             ],
           ),
-        ],
+        ),
       );
     },
   );
@@ -116,18 +167,13 @@ class MoreScreen extends StatelessWidget {
                   SplitCountRow(
                     leftLabel: l.moreCategories,
                     // The live count (archived excluded) — never a total that
-                    // includes archived. A row that says 16 above a picker
+                    // includes archived. A row that says 16 above a screen
                     // listing 14 is the defect this screen exists to kill.
                     leftCount: store.categoryCount,
-                    // Knowingly wrong, and out of scope to fix: this opens Quick
-                    // Add's *selection* sheet, pinned to expense, because
-                    // CategoryManagementScreen does not exist yet. It gets its
-                    // own spec.
-                    onLeftTap: () => pickCategory(
-                      context,
-                      type: CategoryType.expense,
-                      title: l.moreCategories,
-                    ),
+                    onLeftTap: () => Navigator.of(context, rootNavigator: true)
+                        .push(MaterialPageRoute(
+                      builder: (_) => const CategoryManagementScreen(),
+                    )),
                     rightLabel: l.moreTags,
                     rightCount: store.tagsInUseCount,
                     onRightTap: () => Navigator.of(context, rootNavigator: true)
@@ -151,7 +197,7 @@ class MoreScreen extends StatelessWidget {
                 SectionLabel(l.morePreferences),
                 _card([
                   _LanguageRow(
-                    value: _languageLabel(context, store.locale),
+                    value: _languageLabel(store.locale),
                     onTap: () => _pickLanguage(context, store),
                   ),
                   // Indent 48 (= 12 padding + 24 icon + 12 gap) so the hairline

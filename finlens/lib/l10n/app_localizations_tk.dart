@@ -12,9 +12,6 @@ class AppLocalizationsTk extends AppLocalizations {
   String get language => 'Dil';
 
   @override
-  String get languageSystemDefault => 'Enjam sazlamasy';
-
-  @override
   String get accountGroupSpendable => 'Sarp ediljek';
 
   @override
@@ -443,12 +440,71 @@ class AppLocalizationsTk extends AppLocalizations {
   String get moreMaskAmounts => 'Ähli mukdarlary gizle';
 
   @override
-  String get moreAddAccount => 'Hasap goş';
-
-  @override
   String moreVersion(String version, String build) {
     return '$version ($build)';
   }
+
+  @override
+  String get moreAddAccount => 'Hasap goş';
+
+  @override
+  String get actionDeletePermanent => 'Hemişelik poz';
+
+  @override
+  String plusNMore(int count) {
+    return '+$count ýene';
+  }
+
+  @override
+  String get catManageTitle => 'Kategoriýalar';
+
+  @override
+  String get catEditTitle => 'Kategoriýany üýtget';
+
+  @override
+  String get catSectionExpense => 'Çykdajy';
+
+  @override
+  String get catSectionIncome => 'Girdeji';
+
+  @override
+  String get catSectionArchived => 'Arhiwlenen';
+
+  @override
+  String get catArchiveFootnote =>
+      'Arhiwlenen kategoriýalar geçmiş amallarynda galýar. Diňe täze bir zat ýazanyňyzda görünmeýär.';
+
+  @override
+  String get catTypeLocked =>
+      'Muny üýtgetmek bu ýere ýazylan ähli amaly tersine öwrer';
+
+  @override
+  String get catArchiveThis => 'Kategoriýany arhiwle';
+
+  @override
+  String catArchiveMsg(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Bu ýere $count amal ýazylan, şonuň üçin pozulman arhiwlenýär',
+      one: 'Bu ýere $count amal ýazylan, şonuň üçin pozulman arhiwlenýär',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get catDeleteThis => 'Kategoriýany poz';
+
+  @override
+  String get catDeleteMsg =>
+      'Bu ýere entek hiç zat ýazylmady, şonuň üçin doly aýrylyp bilner';
+
+  @override
+  String get catDeleteBudgeted =>
+      'Bu kategoriýanyň Meýilnamada býujeti bar. Ilki býujeti aýryň ýa-da kategoriýany arhiwläň.';
+
+  @override
+  String get catRestoreThis => 'Kategoriýany dikelt';
 
   @override
   String get insightTitle => 'Derňew';
@@ -920,13 +976,13 @@ class AppLocalizationsTk extends AppLocalizations {
   }
 
   @override
-  String get arcReached => 'Ýetilen';
+  String get arcReachedLabel => 'ýetilen';
 
   @override
-  String get arcSuccess => 'Üstünlik';
+  String get arcSuccessLabel => 'üstünlik';
 
   @override
-  String get arcAvgTime => 'Ort. wagt';
+  String get arcAverageLabel => 'ortaça';
 
   @override
   String arcMonthsShort(int count) {
@@ -934,13 +990,8 @@ class AppLocalizationsTk extends AppLocalizations {
   }
 
   @override
-  String arcGoalsTakeAbout(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count aý',
-    );
-    return 'Maksatlaryň ortaça $_temp0 dowam edýär';
+  String arcOneLine(String reached, String rate, String avg) {
+    return '$reached ýetilen · $rate üstünlik · $avg ortaça';
   }
 
   @override
@@ -1865,7 +1916,28 @@ class AppLocalizationsTk extends AppLocalizations {
       'Arhiwlenen elementler Meýilnamada görünmeýär we jemleriňize täsir etmeýär. Geçmiş amallary Hasapda galýar.';
 
   @override
-  String get arReachedGoals => 'Ýetilen maksatlar';
+  String get arGroupFinished => 'Tamamlandy';
+
+  @override
+  String get arGroupUnfinished => 'Tamamlanmadyk';
+
+  @override
+  String get arGroupCanComeBack => 'Yzyna gelip biler';
+
+  @override
+  String get arGroupRecentlyDeleted => 'Ýaňy pozulanlar';
+
+  @override
+  String get arTypeGoal => 'Maksat';
+
+  @override
+  String get arTypeTask => 'Tabşyryk';
+
+  @override
+  String get arTypeBudget => 'Býujet';
+
+  @override
+  String get arTypeAccount => 'Hasap';
 
   @override
   String arReachedLine(Object date, int count) {
@@ -1875,25 +1947,13 @@ class AppLocalizationsTk extends AppLocalizations {
       other: '$count aý',
       one: '$count aý',
     );
-    return 'Ýetildi $date · $_temp0 gerek boldy';
+    return 'ýetildi $date · $_temp0 gerek boldy';
   }
-
-  @override
-  String get arGaveUp => 'Ýüz öwrüldi';
 
   @override
   String arStoppedLine(Object date, Object saved, Object target) {
-    return 'Duruzyldy $date · $target maksadyň $saved';
+    return 'duruzyldy $date · $target maksadyň $saved';
   }
-
-  @override
-  String get arRemovedBudgets => 'Aýrylan býujetler';
-
-  @override
-  String get arAccounts => 'Accounts';
-
-  @override
-  String get arCategories => 'Categories';
 
   @override
   String arAccountLine(String group, int count) {
@@ -1908,22 +1968,28 @@ class AppLocalizationsTk extends AppLocalizations {
 
   @override
   String arRemovedLine(Object date) {
-    return 'Aýryldy $date';
+    return 'aýryldy $date';
   }
 
   @override
-  String get arClearPermanently => 'Arhiwi hemişelik arassala';
+  String get arClearFinished => 'Arassala';
 
   @override
-  String get arClearTitle => 'Arhiw arassalansynmy?';
+  String get arClearUnfinished => 'Arassala';
 
   @override
-  String arClearMsg(int count) {
+  String get arDeleteNow => 'Häzir poz';
+
+  @override
+  String get arClearScopedTitle => 'Bular hemişelik arassalansynmy?';
+
+  @override
+  String arClearScopedMsg(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count arhiw elementi hemişelik pozulýar.',
-      one: '$count arhiw elementi hemişelik pozulýar.',
+      other: '$count element hemişelik aýrylýar. Muny yzyna gaýtaryp bolmaýar.',
+      one: '$count element hemişelik aýrylýar. Muny yzyna gaýtaryp bolmaýar.',
     );
     return '$_temp0';
   }
@@ -3416,6 +3482,33 @@ class AppLocalizationsTk extends AppLocalizations {
   String get tagArchivedBadge => 'archived';
 
   @override
+  String get tagEditTitle => 'Belligi üýtget';
+
+  @override
+  String get tagArchiveThis => 'Belligi arhiwle';
+
+  @override
+  String tagArchiveMsg(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Ol öz $count amalynda galýar we gözlegde tapylýar',
+      one: 'Ol öz $count amalynda galýar we gözlegde tapylýar',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get tagDeleteThis => 'Belligi poz';
+
+  @override
+  String get tagDeleteMsg =>
+      'Ony entek hiç zat götermeýär, şonuň üçin doly aýrylyp bilner';
+
+  @override
+  String get tagRestoreThis => 'Belligi dikelt';
+
+  @override
   String get plTitle => 'Meýilleşdiriji';
 
   @override
@@ -3854,15 +3947,6 @@ class AppLocalizationsTk extends AppLocalizations {
 
   @override
   String get etPaidTo => 'Nirä tölenýär';
-
-  @override
-  String get arPausedTasks => 'DURUZYLAN IŞLER';
-
-  @override
-  String get arCompletedTasks => 'TAMAMLANAN IŞLER';
-
-  @override
-  String get arDeletedTasks => 'POZULAN IŞLER';
 
   @override
   String arPausedLine(Object date, int payments, Object total) {

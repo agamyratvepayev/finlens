@@ -12,9 +12,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get language => 'Язык';
 
   @override
-  String get languageSystemDefault => 'Как на устройстве';
-
-  @override
   String get accountGroupSpendable => 'Расходные';
 
   @override
@@ -459,12 +456,77 @@ class AppLocalizationsRu extends AppLocalizations {
   String get moreMaskAmounts => 'Скрывать все суммы';
 
   @override
-  String get moreAddAccount => 'Добавить счёт';
-
-  @override
   String moreVersion(String version, String build) {
     return '$version ($build)';
   }
+
+  @override
+  String get moreAddAccount => 'Добавить счёт';
+
+  @override
+  String get actionDeletePermanent => 'Удалить навсегда';
+
+  @override
+  String plusNMore(int count) {
+    return '+$count ещё';
+  }
+
+  @override
+  String get catManageTitle => 'Категории';
+
+  @override
+  String get catEditTitle => 'Изменить категорию';
+
+  @override
+  String get catSectionExpense => 'Расходы';
+
+  @override
+  String get catSectionIncome => 'Доходы';
+
+  @override
+  String get catSectionArchived => 'Архив';
+
+  @override
+  String get catArchiveFootnote =>
+      'Архивные категории остаются в прошлых операциях. Они просто не появляются, когда вы записываете что-то новое.';
+
+  @override
+  String get catTypeLocked =>
+      'Изменение перевернёт все операции, уже записанные сюда';
+
+  @override
+  String get catArchiveThis => 'Архивировать категорию';
+
+  @override
+  String catArchiveMsg(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Сюда записано $count операции, поэтому она архивируется, а не удаляется',
+      many:
+          'Сюда записано $count операций, поэтому она архивируется, а не удаляется',
+      few:
+          'Сюда записаны $count операции, поэтому она архивируется, а не удаляется',
+      one:
+          'Сюда записана $count операция, поэтому она архивируется, а не удаляется',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get catDeleteThis => 'Удалить категорию';
+
+  @override
+  String get catDeleteMsg =>
+      'Сюда ещё ничего не записано, поэтому её можно удалить полностью';
+
+  @override
+  String get catDeleteBudgeted =>
+      'У этой категории есть бюджет в Планировщике. Сначала удалите бюджет или архивируйте категорию.';
+
+  @override
+  String get catRestoreThis => 'Восстановить категорию';
 
   @override
   String get insightTitle => 'Аналитика';
@@ -956,13 +1018,13 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String get arcReached => 'Достигнуто';
+  String get arcReachedLabel => 'достигнуто';
 
   @override
-  String get arcSuccess => 'Успех';
+  String get arcSuccessLabel => 'успех';
 
   @override
-  String get arcAvgTime => 'Ср. время';
+  String get arcAverageLabel => 'в среднем';
 
   @override
   String arcMonthsShort(int count) {
@@ -970,15 +1032,8 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String arcGoalsTakeAbout(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count месяцев',
-      few: '$count месяцев',
-      one: '$count месяца',
-    );
-    return 'Твои цели в среднем занимают около $_temp0';
+  String arcOneLine(String reached, String rate, String avg) {
+    return '$reached достигнуто · $rate успех · $avg в среднем';
   }
 
   @override
@@ -1922,7 +1977,28 @@ class AppLocalizationsRu extends AppLocalizations {
       'Архивные элементы не показываются в Планировщике и не влияют на итоги. Их прошлые операции остаются в журнале.';
 
   @override
-  String get arReachedGoals => 'Достигнутые цели';
+  String get arGroupFinished => 'Завершено';
+
+  @override
+  String get arGroupUnfinished => 'Не завершено';
+
+  @override
+  String get arGroupCanComeBack => 'Можно вернуть';
+
+  @override
+  String get arGroupRecentlyDeleted => 'Недавно удалённые';
+
+  @override
+  String get arTypeGoal => 'Цель';
+
+  @override
+  String get arTypeTask => 'Задача';
+
+  @override
+  String get arTypeBudget => 'Бюджет';
+
+  @override
+  String get arTypeAccount => 'Счёт';
 
   @override
   String arReachedLine(Object date, int count) {
@@ -1934,25 +2010,13 @@ class AppLocalizationsRu extends AppLocalizations {
       few: '$count месяца',
       one: '$count месяц',
     );
-    return 'Достигнуто $date · за $_temp0';
+    return 'достигнуто $date · за $_temp0';
   }
-
-  @override
-  String get arGaveUp => 'Заброшено';
 
   @override
   String arStoppedLine(Object date, Object saved, Object target) {
-    return 'Остановлено $date · $saved из $target';
+    return 'остановлено $date · $saved из $target';
   }
-
-  @override
-  String get arRemovedBudgets => 'Удалённые бюджеты';
-
-  @override
-  String get arAccounts => 'Accounts';
-
-  @override
-  String get arCategories => 'Categories';
 
   @override
   String arAccountLine(String group, int count) {
@@ -1967,24 +2031,30 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String arRemovedLine(Object date) {
-    return 'Удалено $date';
+    return 'удалено $date';
   }
 
   @override
-  String get arClearPermanently => 'Очистить архив навсегда';
+  String get arClearFinished => 'Очистить';
 
   @override
-  String get arClearTitle => 'Очистить архив?';
+  String get arClearUnfinished => 'Очистить';
 
   @override
-  String arClearMsg(int count) {
+  String get arDeleteNow => 'Удалить сейчас';
+
+  @override
+  String get arClearScopedTitle => 'Очистить это навсегда?';
+
+  @override
+  String arClearScopedMsg(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count архивных элемента удаляются навсегда.',
-      many: '$count архивных элементов удаляются навсегда.',
-      few: '$count архивных элемента удаляются навсегда.',
-      one: '$count архивный элемент удаляется навсегда.',
+      other: '$count элемента удаляются навсегда. Это нельзя отменить.',
+      many: '$count элементов удаляются навсегда. Это нельзя отменить.',
+      few: '$count элемента удаляются навсегда. Это нельзя отменить.',
+      one: '$count элемент удаляется навсегда. Это нельзя отменить.',
     );
     return '$_temp0';
   }
@@ -3492,6 +3562,35 @@ class AppLocalizationsRu extends AppLocalizations {
   String get tagArchivedBadge => 'archived';
 
   @override
+  String get tagEditTitle => 'Изменить метку';
+
+  @override
+  String get tagArchiveThis => 'Архивировать метку';
+
+  @override
+  String tagArchiveMsg(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Она остаётся на своих $count операциях и доступна для поиска',
+      many: 'Она остаётся на своих $count операциях и доступна для поиска',
+      few: 'Она остаётся на своих $count операциях и доступна для поиска',
+      one: 'Она остаётся на своей $count операции и доступна для поиска',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get tagDeleteThis => 'Удалить метку';
+
+  @override
+  String get tagDeleteMsg =>
+      'Её пока ничто не несёт, поэтому её можно удалить полностью';
+
+  @override
+  String get tagRestoreThis => 'Восстановить метку';
+
+  @override
   String get plTitle => 'Планер';
 
   @override
@@ -3999,31 +4098,22 @@ class AppLocalizationsRu extends AppLocalizations {
   String get etPaidTo => 'Куда платить';
 
   @override
-  String get arPausedTasks => 'ПРИОСТАНОВЛЕННЫЕ ЗАДАЧИ';
-
-  @override
-  String get arCompletedTasks => 'ВЫПОЛНЕННЫЕ ЗАДАЧИ';
-
-  @override
-  String get arDeletedTasks => 'УДАЛЁННЫЕ ЗАДАЧИ';
-
-  @override
   String arPausedLine(Object date, int payments, Object total) {
-    return 'Приостановлено $date · $payments платежей · $total';
+    return 'приостановлено $date · $payments платежей · $total';
   }
 
   @override
   String arCompletedLine(Object date, Object amount) {
-    return 'Оплачено $date · $amount';
+    return 'оплачено $date · $amount';
   }
 
   @override
   String arCancelledLine(Object date) {
-    return 'Отменено $date';
+    return 'отменено $date';
   }
 
   @override
   String arDeletedLineTask(Object date, int payments, Object total) {
-    return 'Удалено $date · $payments платежей · $total';
+    return 'удалено $date · $payments платежей · $total';
   }
 }

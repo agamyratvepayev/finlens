@@ -108,12 +108,6 @@ abstract class AppLocalizations {
   /// **'Language'**
   String get language;
 
-  /// Language picker option: follow the device locale.
-  ///
-  /// In en, this message translates to:
-  /// **'System default'**
-  String get languageSystemDefault;
-
   /// No description provided for @accountGroupSpendable.
   ///
   /// In en, this message translates to:
@@ -690,17 +684,107 @@ abstract class AppLocalizations {
   /// **'Mask all amounts'**
   String get moreMaskAmounts;
 
+  /// No description provided for @moreVersion.
+  ///
+  /// In en, this message translates to:
+  /// **'{version} ({build})'**
+  String moreVersion(String version, String build);
+
   /// No description provided for @moreAddAccount.
   ///
   /// In en, this message translates to:
   /// **'Add an account'**
   String get moreAddAccount;
 
-  /// No description provided for @moreVersion.
+  /// No description provided for @actionDeletePermanent.
   ///
   /// In en, this message translates to:
-  /// **'{version} ({build})'**
-  String moreVersion(String version, String build);
+  /// **'Delete permanently'**
+  String get actionDeletePermanent;
+
+  /// No description provided for @plusNMore.
+  ///
+  /// In en, this message translates to:
+  /// **'+{count} more'**
+  String plusNMore(int count);
+
+  /// No description provided for @catManageTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Categories'**
+  String get catManageTitle;
+
+  /// No description provided for @catEditTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit category'**
+  String get catEditTitle;
+
+  /// No description provided for @catSectionExpense.
+  ///
+  /// In en, this message translates to:
+  /// **'Expense'**
+  String get catSectionExpense;
+
+  /// No description provided for @catSectionIncome.
+  ///
+  /// In en, this message translates to:
+  /// **'Income'**
+  String get catSectionIncome;
+
+  /// No description provided for @catSectionArchived.
+  ///
+  /// In en, this message translates to:
+  /// **'Archived'**
+  String get catSectionArchived;
+
+  /// No description provided for @catArchiveFootnote.
+  ///
+  /// In en, this message translates to:
+  /// **'Archived categories stay on their past transactions. They just don\'t appear when you record something new.'**
+  String get catArchiveFootnote;
+
+  /// No description provided for @catTypeLocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Changing this would flip every transaction already filed here'**
+  String get catTypeLocked;
+
+  /// No description provided for @catArchiveThis.
+  ///
+  /// In en, this message translates to:
+  /// **'Archive category'**
+  String get catArchiveThis;
+
+  /// No description provided for @catArchiveMsg.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{{count} transaction is filed here, so it is archived rather than erased} other{{count} transactions are filed here, so it is archived rather than erased}}'**
+  String catArchiveMsg(int count);
+
+  /// No description provided for @catDeleteThis.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete category'**
+  String get catDeleteThis;
+
+  /// No description provided for @catDeleteMsg.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing has been filed here yet, so it can be removed outright'**
+  String get catDeleteMsg;
+
+  /// No description provided for @catDeleteBudgeted.
+  ///
+  /// In en, this message translates to:
+  /// **'This category has a budget in Planner. Remove the budget first, or archive the category instead.'**
+  String get catDeleteBudgeted;
+
+  /// No description provided for @catRestoreThis.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore category'**
+  String get catRestoreThis;
 
   /// No description provided for @insightTitle.
   ///
@@ -1288,23 +1372,23 @@ abstract class AppLocalizations {
     String account,
   );
 
-  /// No description provided for @arcReached.
+  /// No description provided for @arcReachedLabel.
   ///
   /// In en, this message translates to:
-  /// **'Reached'**
-  String get arcReached;
+  /// **'reached'**
+  String get arcReachedLabel;
 
-  /// No description provided for @arcSuccess.
+  /// No description provided for @arcSuccessLabel.
   ///
   /// In en, this message translates to:
-  /// **'Success'**
-  String get arcSuccess;
+  /// **'success'**
+  String get arcSuccessLabel;
 
-  /// No description provided for @arcAvgTime.
+  /// No description provided for @arcAverageLabel.
   ///
   /// In en, this message translates to:
-  /// **'Avg. time'**
-  String get arcAvgTime;
+  /// **'average'**
+  String get arcAverageLabel;
 
   /// No description provided for @arcMonthsShort.
   ///
@@ -1312,11 +1396,11 @@ abstract class AppLocalizations {
   /// **'{count} mo'**
   String arcMonthsShort(int count);
 
-  /// No description provided for @arcGoalsTakeAbout.
+  /// No description provided for @arcOneLine.
   ///
   /// In en, this message translates to:
-  /// **'Your goals take about {count, plural, =1{1 month} other{{count} months}} on average'**
-  String arcGoalsTakeAbout(int count);
+  /// **'{reached} reached · {rate} success · {avg} average'**
+  String arcOneLine(String reached, String rate, String avg);
 
   /// No description provided for @actionCancel.
   ///
@@ -2764,47 +2848,65 @@ abstract class AppLocalizations {
   /// **'Archived items don\'t appear in Planner and don\'t affect your totals. Their past transactions stay in Ledger.'**
   String get arFootnote;
 
-  /// No description provided for @arReachedGoals.
+  /// No description provided for @arGroupFinished.
   ///
   /// In en, this message translates to:
-  /// **'Reached goals'**
-  String get arReachedGoals;
+  /// **'Finished'**
+  String get arGroupFinished;
+
+  /// No description provided for @arGroupUnfinished.
+  ///
+  /// In en, this message translates to:
+  /// **'Unfinished'**
+  String get arGroupUnfinished;
+
+  /// No description provided for @arGroupCanComeBack.
+  ///
+  /// In en, this message translates to:
+  /// **'Can come back'**
+  String get arGroupCanComeBack;
+
+  /// No description provided for @arGroupRecentlyDeleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Recently deleted'**
+  String get arGroupRecentlyDeleted;
+
+  /// No description provided for @arTypeGoal.
+  ///
+  /// In en, this message translates to:
+  /// **'Goal'**
+  String get arTypeGoal;
+
+  /// No description provided for @arTypeTask.
+  ///
+  /// In en, this message translates to:
+  /// **'Task'**
+  String get arTypeTask;
+
+  /// No description provided for @arTypeBudget.
+  ///
+  /// In en, this message translates to:
+  /// **'Budget'**
+  String get arTypeBudget;
+
+  /// No description provided for @arTypeAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Account'**
+  String get arTypeAccount;
 
   /// No description provided for @arReachedLine.
   ///
   /// In en, this message translates to:
-  /// **'Reached {date} · took {count, plural, one{{count} month} other{{count} months}}'**
+  /// **'reached {date} · took {count, plural, one{{count} month} other{{count} months}}'**
   String arReachedLine(Object date, int count);
-
-  /// No description provided for @arGaveUp.
-  ///
-  /// In en, this message translates to:
-  /// **'Gave up'**
-  String get arGaveUp;
 
   /// No description provided for @arStoppedLine.
   ///
   /// In en, this message translates to:
-  /// **'Stopped {date} · {saved} of {target}'**
+  /// **'stopped {date} · {saved} of {target}'**
   String arStoppedLine(Object date, Object saved, Object target);
-
-  /// No description provided for @arRemovedBudgets.
-  ///
-  /// In en, this message translates to:
-  /// **'Removed budgets'**
-  String get arRemovedBudgets;
-
-  /// No description provided for @arAccounts.
-  ///
-  /// In en, this message translates to:
-  /// **'Accounts'**
-  String get arAccounts;
-
-  /// No description provided for @arCategories.
-  ///
-  /// In en, this message translates to:
-  /// **'Categories'**
-  String get arCategories;
 
   /// No description provided for @arAccountLine.
   ///
@@ -2815,26 +2917,38 @@ abstract class AppLocalizations {
   /// No description provided for @arRemovedLine.
   ///
   /// In en, this message translates to:
-  /// **'Removed {date}'**
+  /// **'removed {date}'**
   String arRemovedLine(Object date);
 
-  /// No description provided for @arClearPermanently.
+  /// No description provided for @arClearFinished.
   ///
   /// In en, this message translates to:
-  /// **'Clear archive permanently'**
-  String get arClearPermanently;
+  /// **'Clear'**
+  String get arClearFinished;
 
-  /// No description provided for @arClearTitle.
+  /// No description provided for @arClearUnfinished.
   ///
   /// In en, this message translates to:
-  /// **'Clear the archive?'**
-  String get arClearTitle;
+  /// **'Clear'**
+  String get arClearUnfinished;
 
-  /// No description provided for @arClearMsg.
+  /// No description provided for @arDeleteNow.
   ///
   /// In en, this message translates to:
-  /// **'{count, plural, one{All {count} archived item is erased for good.} other{All {count} archived items are erased for good.}}'**
-  String arClearMsg(int count);
+  /// **'Delete now'**
+  String get arDeleteNow;
+
+  /// No description provided for @arClearScopedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear these permanently?'**
+  String get arClearScopedTitle;
+
+  /// No description provided for @arClearScopedMsg.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{{count} item is removed for good. This can\'t be undone.} other{{count} items are removed for good. This can\'t be undone.}}'**
+  String arClearScopedMsg(int count);
 
   /// No description provided for @arTxnStay.
   ///
@@ -5284,6 +5398,42 @@ abstract class AppLocalizations {
   /// **'archived'**
   String get tagArchivedBadge;
 
+  /// No description provided for @tagEditTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit tag'**
+  String get tagEditTitle;
+
+  /// No description provided for @tagArchiveThis.
+  ///
+  /// In en, this message translates to:
+  /// **'Archive tag'**
+  String get tagArchiveThis;
+
+  /// No description provided for @tagArchiveMsg.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{It stays on its {count} transaction and stays searchable} other{It stays on its {count} transactions and stays searchable}}'**
+  String tagArchiveMsg(int count);
+
+  /// No description provided for @tagDeleteThis.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete tag'**
+  String get tagDeleteThis;
+
+  /// No description provided for @tagDeleteMsg.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing carries it yet, so it can be removed outright'**
+  String get tagDeleteMsg;
+
+  /// No description provided for @tagRestoreThis.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore tag'**
+  String get tagRestoreThis;
+
   /// No description provided for @plTitle.
   ///
   /// In en, this message translates to:
@@ -5980,46 +6130,28 @@ abstract class AppLocalizations {
   /// **'Paid to'**
   String get etPaidTo;
 
-  /// No description provided for @arPausedTasks.
-  ///
-  /// In en, this message translates to:
-  /// **'PAUSED TASKS'**
-  String get arPausedTasks;
-
-  /// No description provided for @arCompletedTasks.
-  ///
-  /// In en, this message translates to:
-  /// **'COMPLETED TASKS'**
-  String get arCompletedTasks;
-
-  /// No description provided for @arDeletedTasks.
-  ///
-  /// In en, this message translates to:
-  /// **'DELETED TASKS'**
-  String get arDeletedTasks;
-
   /// No description provided for @arPausedLine.
   ///
   /// In en, this message translates to:
-  /// **'Paused {date} · {payments} payments · {total}'**
+  /// **'paused {date} · {payments} payments · {total}'**
   String arPausedLine(Object date, int payments, Object total);
 
   /// No description provided for @arCompletedLine.
   ///
   /// In en, this message translates to:
-  /// **'Paid {date} · {amount}'**
+  /// **'paid {date} · {amount}'**
   String arCompletedLine(Object date, Object amount);
 
   /// No description provided for @arCancelledLine.
   ///
   /// In en, this message translates to:
-  /// **'Cancelled {date}'**
+  /// **'cancelled {date}'**
   String arCancelledLine(Object date);
 
   /// No description provided for @arDeletedLineTask.
   ///
   /// In en, this message translates to:
-  /// **'Deleted {date} · {payments} payments · {total}'**
+  /// **'deleted {date} · {payments} payments · {total}'**
   String arDeletedLineTask(Object date, int payments, Object total);
 }
 

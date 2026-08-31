@@ -60,7 +60,7 @@ class FinLensApp extends StatelessWidget {
             title: 'FinLens',
             debugShowCheckedModeBanner: false,
             theme: AppTheme.dark,
-            locale: locale, // null ⇒ follow the device locale (see callback)
+            locale: locale, // §7.1 — always a real language, never null
             supportedLocales: AppLocalizations.supportedLocales,
             localizationsDelegates: const [
               AppLocalizations.delegate,
@@ -72,16 +72,20 @@ class FinLensApp extends StatelessWidget {
               GlobalCupertinoLocalizations.delegate,
               GlobalWidgetsLocalizations.delegate,
             ],
-            // When following the device locale, fall back to Turkmen (the target
-            // market) rather than the first supported locale, if the device
-            // language isn't one we support.
+            // `locale` is always set now (§7.1), so this resolves `[locale]`
+            // against the supported set. The fallback is English: the language
+            // is seeded from the device once at first launch (see
+            // AppStore.resolveInitialLocale) and is a stored value thereafter,
+            // so there is no longer a live device-follow path to default to
+            // Turkmen for. A Turkmen phone still opens in Turkmen — its locale
+            // seeds the stored value; an unrecognised locale opens in English.
             localeListResolutionCallback: (deviceLocales, supported) {
               for (final device in deviceLocales ?? const <Locale>[]) {
                 for (final s in supported) {
                   if (s.languageCode == device.languageCode) return s;
                 }
               }
-              return const Locale('tk');
+              return const Locale('en');
             },
             home: const AppShell(),
           );

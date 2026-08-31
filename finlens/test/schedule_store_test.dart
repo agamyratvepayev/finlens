@@ -290,13 +290,15 @@ void main() {
       expect(task.status, TaskStatus.open);
     });
 
-    test('clearing the archive nulls recurrenceTaskId on orphaned payments', () {
+    test('emptying recently-deleted nulls recurrenceTaskId on orphaned payments',
+        () {
       final store = buildSeedStore();
       final task = store.taskById('k-internet')!;
       final r = store.markTaskPaid(task,
           amount: 40, date: today, fromAccountId: 'a-checking', toRef: 'c-housing');
       store.deleteTask(task);
-      store.clearArchive();
+      // A deleted task lands in RECENTLY DELETED; deleteRecycledTasks empties it.
+      store.deleteRecycledTasks();
       expect(store.taskById('k-internet'), isNull);
       expect(r.txn.recurrenceTaskId, isNull);
     });

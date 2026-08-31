@@ -12,9 +12,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get language => 'Language';
 
   @override
-  String get languageSystemDefault => 'System default';
-
-  @override
   String get accountGroupSpendable => 'Spendable';
 
   @override
@@ -443,12 +440,73 @@ class AppLocalizationsEn extends AppLocalizations {
   String get moreMaskAmounts => 'Mask all amounts';
 
   @override
-  String get moreAddAccount => 'Add an account';
-
-  @override
   String moreVersion(String version, String build) {
     return '$version ($build)';
   }
+
+  @override
+  String get moreAddAccount => 'Add an account';
+
+  @override
+  String get actionDeletePermanent => 'Delete permanently';
+
+  @override
+  String plusNMore(int count) {
+    return '+$count more';
+  }
+
+  @override
+  String get catManageTitle => 'Categories';
+
+  @override
+  String get catEditTitle => 'Edit category';
+
+  @override
+  String get catSectionExpense => 'Expense';
+
+  @override
+  String get catSectionIncome => 'Income';
+
+  @override
+  String get catSectionArchived => 'Archived';
+
+  @override
+  String get catArchiveFootnote =>
+      'Archived categories stay on their past transactions. They just don\'t appear when you record something new.';
+
+  @override
+  String get catTypeLocked =>
+      'Changing this would flip every transaction already filed here';
+
+  @override
+  String get catArchiveThis => 'Archive category';
+
+  @override
+  String catArchiveMsg(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          '$count transactions are filed here, so it is archived rather than erased',
+      one:
+          '$count transaction is filed here, so it is archived rather than erased',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get catDeleteThis => 'Delete category';
+
+  @override
+  String get catDeleteMsg =>
+      'Nothing has been filed here yet, so it can be removed outright';
+
+  @override
+  String get catDeleteBudgeted =>
+      'This category has a budget in Planner. Remove the budget first, or archive the category instead.';
+
+  @override
+  String get catRestoreThis => 'Restore category';
 
   @override
   String get insightTitle => 'Insight';
@@ -923,13 +981,13 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get arcReached => 'Reached';
+  String get arcReachedLabel => 'reached';
 
   @override
-  String get arcSuccess => 'Success';
+  String get arcSuccessLabel => 'success';
 
   @override
-  String get arcAvgTime => 'Avg. time';
+  String get arcAverageLabel => 'average';
 
   @override
   String arcMonthsShort(int count) {
@@ -937,14 +995,8 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String arcGoalsTakeAbout(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count months',
-      one: '1 month',
-    );
-    return 'Your goals take about $_temp0 on average';
+  String arcOneLine(String reached, String rate, String avg) {
+    return '$reached reached · $rate success · $avg average';
   }
 
   @override
@@ -1873,7 +1925,28 @@ class AppLocalizationsEn extends AppLocalizations {
       'Archived items don\'t appear in Planner and don\'t affect your totals. Their past transactions stay in Ledger.';
 
   @override
-  String get arReachedGoals => 'Reached goals';
+  String get arGroupFinished => 'Finished';
+
+  @override
+  String get arGroupUnfinished => 'Unfinished';
+
+  @override
+  String get arGroupCanComeBack => 'Can come back';
+
+  @override
+  String get arGroupRecentlyDeleted => 'Recently deleted';
+
+  @override
+  String get arTypeGoal => 'Goal';
+
+  @override
+  String get arTypeTask => 'Task';
+
+  @override
+  String get arTypeBudget => 'Budget';
+
+  @override
+  String get arTypeAccount => 'Account';
 
   @override
   String arReachedLine(Object date, int count) {
@@ -1883,25 +1956,13 @@ class AppLocalizationsEn extends AppLocalizations {
       other: '$count months',
       one: '$count month',
     );
-    return 'Reached $date · took $_temp0';
+    return 'reached $date · took $_temp0';
   }
-
-  @override
-  String get arGaveUp => 'Gave up';
 
   @override
   String arStoppedLine(Object date, Object saved, Object target) {
-    return 'Stopped $date · $saved of $target';
+    return 'stopped $date · $saved of $target';
   }
-
-  @override
-  String get arRemovedBudgets => 'Removed budgets';
-
-  @override
-  String get arAccounts => 'Accounts';
-
-  @override
-  String get arCategories => 'Categories';
 
   @override
   String arAccountLine(String group, int count) {
@@ -1916,22 +1977,28 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String arRemovedLine(Object date) {
-    return 'Removed $date';
+    return 'removed $date';
   }
 
   @override
-  String get arClearPermanently => 'Clear archive permanently';
+  String get arClearFinished => 'Clear';
 
   @override
-  String get arClearTitle => 'Clear the archive?';
+  String get arClearUnfinished => 'Clear';
 
   @override
-  String arClearMsg(int count) {
+  String get arDeleteNow => 'Delete now';
+
+  @override
+  String get arClearScopedTitle => 'Clear these permanently?';
+
+  @override
+  String arClearScopedMsg(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: 'All $count archived items are erased for good.',
-      one: 'All $count archived item is erased for good.',
+      other: '$count items are removed for good. This can\'t be undone.',
+      one: '$count item is removed for good. This can\'t be undone.',
     );
     return '$_temp0';
   }
@@ -3423,6 +3490,33 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tagArchivedBadge => 'archived';
 
   @override
+  String get tagEditTitle => 'Edit tag';
+
+  @override
+  String get tagArchiveThis => 'Archive tag';
+
+  @override
+  String tagArchiveMsg(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'It stays on its $count transactions and stays searchable',
+      one: 'It stays on its $count transaction and stays searchable',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get tagDeleteThis => 'Delete tag';
+
+  @override
+  String get tagDeleteMsg =>
+      'Nothing carries it yet, so it can be removed outright';
+
+  @override
+  String get tagRestoreThis => 'Restore tag';
+
+  @override
   String get plTitle => 'Planner';
 
   @override
@@ -3930,31 +4024,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get etPaidTo => 'Paid to';
 
   @override
-  String get arPausedTasks => 'PAUSED TASKS';
-
-  @override
-  String get arCompletedTasks => 'COMPLETED TASKS';
-
-  @override
-  String get arDeletedTasks => 'DELETED TASKS';
-
-  @override
   String arPausedLine(Object date, int payments, Object total) {
-    return 'Paused $date · $payments payments · $total';
+    return 'paused $date · $payments payments · $total';
   }
 
   @override
   String arCompletedLine(Object date, Object amount) {
-    return 'Paid $date · $amount';
+    return 'paid $date · $amount';
   }
 
   @override
   String arCancelledLine(Object date) {
-    return 'Cancelled $date';
+    return 'cancelled $date';
   }
 
   @override
   String arDeletedLineTask(Object date, int payments, Object total) {
-    return 'Deleted $date · $payments payments · $total';
+    return 'deleted $date · $payments payments · $total';
   }
 }

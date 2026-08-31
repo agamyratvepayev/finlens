@@ -10,14 +10,17 @@ import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/app_typography.dart';
 import '../balance/balance_screen.dart' show EmptyState;
+import '../quick_add/pickers.dart';
 
-/// More → Tags (§3). Sits directly beneath Categories and matches its row shape.
+/// More → Tags (§4). Every tag is a chip, not a row: the 34 pt purple tile the
+/// old rows carried was identical on every tag and so said nothing — the name is
+/// the content, and a name is a chip. Two `Wrap`s — IN USE (ending in a dashed
+/// "+ New" chip) and ARCHIVED (at 45 % opacity, absent when empty).
 ///
-/// Two sections — IN USE, then ARCHIVED. Archiving takes a tag out of circulation
-/// without touching its transactions: they keep it and keep matching it in the
-/// filter. That reversible, lossless move is why in-use tags offer Archive, not
-/// Delete — Delete appears only for a tag on no transactions, where it costs
-/// nothing (§4).
+/// Tapping a chip opens the edit sheet directly (§4.2): the old two-sheet
+/// tap → actions → rename detour is gone. The row subtitle it dropped
+/// (`3 transactions · last 2 Aug`) reappears in that sheet, where it is the
+/// reason the destructive control says Archive rather than Delete.
 class TagManagementScreen extends StatelessWidget {
   const TagManagementScreen({super.key});
 
@@ -33,11 +36,12 @@ class TagManagementScreen extends StatelessWidget {
         bottom: false,
         child: Column(
           children: [
+            // The header `+` is gone — the create chip replaces it (§4.1).
             ScreenHeader(
               title: l.tagsTitle,
               showBack: true,
               showEye: false,
-              onAdd: () => _showCreateSheet(context, store),
+              showAdd: false,
             ),
             Expanded(
               child: (inUse.isEmpty && archived.isEmpty)
@@ -52,23 +56,33 @@ class TagManagementScreen extends StatelessWidget {
                   : ListView(
                       padding: const EdgeInsets.only(bottom: Insets.xxl),
                       children: [
-                        if (inUse.isNotEmpty) ...[
-                          SectionLabel(l.tagSectionInUse),
-                          _card([for (final t in inUse) _row(context, store, t)]),
-                        ],
+                        SectionLabel(l.tagSectionInUse),
+                        _wrap(context, [
+                          for (final t in inUse)
+                            _TagChip(
+                              tag: t,
+                              onTap: () => _showEditTag(context, store, t),
+                            ),
+                          _NewTagChip(
+                            onTap: () => _showCreateTag(context, store),
+                          ),
+                        ]),
                         if (archived.isNotEmpty) ...[
                           SectionLabel(l.tagSectionArchived),
-                          _card([
-                            for (final t in archived) _row(context, store, t),
-                          ]),
+                          Opacity(
+                            opacity: 0.45,
+                            child: _wrap(context, [
+                              for (final t in archived)
+                                _TagChip(
+                                  tag: t,
+                                  onTap: () => _showEditTag(context, store, t),
+                                ),
+                            ]),
+                          ),
                         ],
                         Padding(
                           padding: const EdgeInsets.fromLTRB(
-                            Insets.gutter,
-                            Insets.md,
-                            Insets.gutter,
-                            0,
-                          ),
+                              Insets.gutter, Insets.md, Insets.gutter, 0),
                           child: Text(
                             l.tagArchiveFootnote,
                             style: AppText.caption.copyWith(fontSize: 12.5),
@@ -83,204 +97,180 @@ class TagManagementScreen extends StatelessWidget {
     );
   }
 
-  Widget _card(List<Widget> rows) => Padding(
-        padding: const EdgeInsets.symmetric(horizontal: Insets.gutter),
-        child: AppCard(
-          child: Column(
-            children: [
-              for (var i = 0; i < rows.length; i++) ...[
-                if (i > 0) const RowDivider(indent: Insets.md),
-                rows[i],
-              ],
-            ],
-          ),
-        ),
+  Widget _wrap(BuildContext context, List<Widget> chips) => Padding(
+        padding: const EdgeInsets.fromLTRB(
+            Insets.gutter, Insets.sm, Insets.gutter, 0),
+        child: Wrap(spacing: 8, runSpacing: 8, children: chips),
       );
+}
 
-  Widget _row(BuildContext context, AppStore store, Tag tag) {
-    final l = AppLocalizations.of(context);
-    final count = store.txnCountForTag(tag.id);
-    final subtitle = count == 0
-        ? l.tagNeverUsed
-        : l.tagUsageLine(count, dayMonth(tag.lastUsedAt, l));
-    final row = InkWell(
-      onTap: () => _showTagActions(context, store, tag),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-            horizontal: Insets.md, vertical: Insets.md),
-        child: Row(
-          children: [
-            IconTile(Icons.tag_rounded, color: AppColors.tagDot, size: 34),
-            const SizedBox(width: Insets.md),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '#${tag.name}',
-                    style: AppText.rowTitle,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    style: AppText.rowSubtitle.copyWith(fontSize: 11.5),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
+/// A tag chip: `#name` on a pill of [AppColors.chipBg], the `#` in
+/// [AppColors.tagDot].
+class _TagChip extends StatelessWidget {
+  const _TagChip({required this.tag, required this.onTap});
+
+  final Tag tag;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: '#${tag.name}',
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(Radii.pill),
+        child: Container(
+          decoration: BoxDecoration(
+            color: AppColors.chipBg,
+            borderRadius: BorderRadius.circular(Radii.pill),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 7),
+          child: Text.rich(
+            TextSpan(
+              children: [
+                const TextSpan(
+                  text: '#',
+                  style: TextStyle(color: AppColors.tagDot, fontSize: 13.5),
+                ),
+                TextSpan(
+                  text: tag.name,
+                  style: const TextStyle(
+                      color: AppColors.chipText, fontSize: 13.5),
+                ),
+              ],
             ),
-            const Icon(Icons.chevron_right_rounded,
-                size: 20, color: AppColors.textTertiary),
-          ],
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
         ),
       ),
     );
-    // An archived tag renders the whole card at 45% opacity (§3).
-    return tag.archived ? Opacity(opacity: 0.45, child: row) : row;
   }
 }
 
-// ── Row action sheet (§4) ─────────────────────────────────────────────────────
+/// The create chip, last in the IN USE wrap (§4.1): a dashed accent pill + "New".
+class _NewTagChip extends StatelessWidget {
+  const _NewTagChip({required this.onTap});
 
-Future<void> _showTagActions(
-    BuildContext context, AppStore store, Tag tag) async {
-  final l = AppLocalizations.of(context);
-  final count = store.txnCountForTag(tag.id);
-  final canDelete = count == 0;
+  final VoidCallback onTap;
 
-  await showModalBottomSheet<void>(
-    context: context,
-    backgroundColor: AppColors.surfaceAlt,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(Radii.sheet)),
-    ),
-    builder: (sheetContext) {
-      return SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const SizedBox(height: Insets.sm),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                  Insets.gutter, Insets.sm, Insets.gutter, Insets.sm),
-              child: Text('#${tag.name}', style: AppText.rowTitle),
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: AppLocalizations.of(context).tagNewTitle,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(Radii.pill),
+        child: CustomPaint(
+          painter: _DashedPillPainter(color: AppColors.accent),
+          child: const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 13, vertical: 7),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.add_rounded, size: 15, color: AppColors.accent),
+                SizedBox(width: 3),
+                Text('New',
+                    style: TextStyle(
+                        color: AppColors.accent,
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w500)),
+              ],
             ),
-            const RowDivider(indent: 0),
-            _action(
-              sheetContext,
-              icon: Icons.edit_rounded,
-              label: l.tagActionRename,
-              onTap: () {
-                Navigator.of(sheetContext).pop();
-                _showRenameSheet(context, store, tag);
-              },
-            ),
-            // Archived: Restore, plus Delete only when unused.
-            // In use (active), ≥1 txn: Archive (reversible, lossless).
-            // In use (active), 0 txn: Delete — a typo costs nothing (§4).
-            if (tag.archived)
-              _action(
-                sheetContext,
-                icon: Icons.unarchive_rounded,
-                label: l.actionRestore,
-                onTap: () {
-                  store.restoreTag(tag);
-                  Navigator.of(sheetContext).pop();
-                },
-              ),
-            if (!tag.archived && !canDelete)
-              _action(
-                sheetContext,
-                icon: Icons.archive_rounded,
-                label: l.tagActionArchive,
-                onTap: () {
-                  store.archiveTag(tag);
-                  Navigator.of(sheetContext).pop();
-                },
-              ),
-            if (canDelete)
-              _action(
-                sheetContext,
-                icon: Icons.delete_outline_rounded,
-                label: l.actionDelete,
-                destructive: true,
-                onTap: () {
-                  store.deleteTag(tag);
-                  Navigator.of(sheetContext).pop();
-                },
-              ),
-            const SizedBox(height: Insets.sm),
-          ],
+          ),
         ),
-      );
-    },
-  );
-}
-
-Widget _action(
-  BuildContext context, {
-  required IconData icon,
-  required String label,
-  required VoidCallback onTap,
-  bool destructive = false,
-}) {
-  final color = destructive ? AppColors.negative : AppColors.textPrimary;
-  return InkWell(
-    onTap: onTap,
-    child: Padding(
-      padding: const EdgeInsets.symmetric(
-          horizontal: Insets.gutter, vertical: Insets.md),
-      child: Row(
-        children: [
-          Icon(icon, size: 20, color: color),
-          const SizedBox(width: Insets.md),
-          Text(label, style: AppText.body.copyWith(color: color, fontSize: 16)),
-        ],
       ),
-    ),
+    );
+  }
+}
+
+/// A dashed 1 pt pill border — Flutter has no dashed border built in.
+class _DashedPillPainter extends CustomPainter {
+  const _DashedPillPainter({required this.color});
+
+  final Color color;
+  static const _dash = 4.0;
+  static const _gap = 3.0;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1;
+    final rrect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(0.5, 0.5, size.width - 1, size.height - 1),
+      Radius.circular(size.height / 2),
+    );
+    final path = Path()..addRRect(rrect);
+    for (final metric in path.computeMetrics()) {
+      var distance = 0.0;
+      while (distance < metric.length) {
+        final next = (distance + _dash).clamp(0.0, metric.length);
+        canvas.drawPath(metric.extractPath(distance, next), paint);
+        distance += _dash + _gap;
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_DashedPillPainter old) => old.color != color;
+}
+
+// ── Create + edit sheets (§4.2 / §5) ─────────────────────────────────────────
+
+void _showCreateTag(BuildContext context, AppStore store) {
+  final l = AppLocalizations.of(context);
+  showAppSheet<void>(
+    context,
+    title: l.tagNewTitle,
+    initialSize: 0.55,
+    cancelLabel: l.actionCancel,
+    builder: (context, controller) =>
+        _TagSheetBody(store: store, tag: null, controller: controller),
   );
 }
 
-// ── Rename + merge sheet (§5) ─────────────────────────────────────────────────
-
-void _showRenameSheet(BuildContext context, AppStore store, Tag tag) {
-  showModalBottomSheet<void>(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    builder: (_) => _RenameTagSheet(store: store, tag: tag),
+void _showEditTag(BuildContext context, AppStore store, Tag tag) {
+  final l = AppLocalizations.of(context);
+  showAppSheet<void>(
+    context,
+    title: l.tagEditTitle,
+    initialSize: 0.55,
+    cancelLabel: l.actionCancel,
+    builder: (context, controller) =>
+        _TagSheetBody(store: store, tag: tag, controller: controller),
   );
 }
 
-void _showCreateSheet(BuildContext context, AppStore store) {
-  showModalBottomSheet<void>(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    builder: (_) => _RenameTagSheet(store: store, tag: null),
-  );
-}
-
-/// One sheet for both create (tag == null) and rename/merge. Kept together so the
-/// `#`-prefixed field, the sanitiser and the merge warning have a single home.
-class _RenameTagSheet extends StatefulWidget {
-  const _RenameTagSheet({required this.store, required this.tag});
+/// One body for create (tag == null) and edit. Edit adds the usage caption and
+/// the destructive control; an archived tag's name field is read-only, because
+/// renaming it would silently relabel transactions already filed under it — the
+/// same reasoning as the locked category Type (§3.1/§5).
+class _TagSheetBody extends StatefulWidget {
+  const _TagSheetBody({
+    required this.store,
+    required this.tag,
+    required this.controller,
+  });
 
   final AppStore store;
   final Tag? tag;
+  final ScrollController controller;
 
   @override
-  State<_RenameTagSheet> createState() => _RenameTagSheetState();
+  State<_TagSheetBody> createState() => _TagSheetBodyState();
 }
 
-class _RenameTagSheetState extends State<_RenameTagSheet> {
+class _TagSheetBodyState extends State<_TagSheetBody> {
   late final TextEditingController _ctrl =
       TextEditingController(text: widget.tag?.name ?? '');
   String _text = '';
+
+  bool get _creating => widget.tag == null;
+  bool get _archived => widget.tag?.archived ?? false;
 
   @override
   void initState() {
@@ -294,7 +284,7 @@ class _RenameTagSheetState extends State<_RenameTagSheet> {
     super.dispose();
   }
 
-  /// Strip a single leading `#`; reject empty or any further `#` (§7).
+  /// Strip a single leading `#`; reject empty or any further `#`.
   String? _sanitize(String raw) {
     var s = raw.trim();
     if (s.startsWith('#')) s = s.substring(1);
@@ -306,117 +296,134 @@ class _RenameTagSheetState extends State<_RenameTagSheet> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final creating = widget.tag == null;
+    final store = widget.store;
+    final tag = widget.tag;
     final clean = _sanitize(_text);
     final valid = clean != null;
 
-    // Merge is only possible when renaming an existing tag onto a *different*
-    // existing tag's folded name (§5).
-    final Tag? mergeTarget =
-        (!creating && valid) ? widget.store.mergeTargetFor(widget.tag!, clean) : null;
+    // Merge only when renaming an existing tag onto a *different* existing tag.
+    final Tag? mergeTarget = (!_creating && valid && !_archived)
+        ? store.mergeTargetFor(tag!, clean)
+        : null;
     final merging = mergeTarget != null;
-    final mergeCount =
-        merging ? widget.store.txnCountForTag(mergeTarget.id) : 0;
 
-    final title = creating
-        ? l.tagNewTitle
-        : l.tagRenameTitle(widget.tag!.name);
-    final buttonLabel = merging
-        ? l.tagMergeButton(mergeTarget.name)
-        : (creating ? l.actionSave : l.tagActionRename);
+    final count = tag == null ? 0 : store.txnCountForTag(tag.id);
+    final used = count > 0;
 
-    return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
-      child: Container(
-        decoration: const BoxDecoration(
-          color: AppColors.surface,
-          borderRadius:
-              BorderRadius.vertical(top: Radius.circular(Radii.sheet)),
-        ),
-        child: SafeArea(
-          top: false,
-          child: Padding(
+    return Column(
+      children: [
+        Expanded(
+          child: ListView(
+            controller: widget.controller,
             padding: const EdgeInsets.fromLTRB(
-                Insets.gutter, Insets.md, Insets.gutter, Insets.md),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(title, style: AppText.rowTitle),
-                if (!creating) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    l.tagRenameSubtitle(widget.store.txnCountForTag(widget.tag!.id)),
-                    style: AppText.caption,
-                  ),
-                ],
-                const SizedBox(height: Insets.md),
-                _field(l),
-                // The merge warning is announced before the button (§8): it
-                // precedes the button in the tree and is a Semantics liveRegion.
-                if (merging) ...[
-                  const SizedBox(height: Insets.md),
-                  _mergeWarning(l, mergeTarget.name, mergeCount),
-                ],
-                const SizedBox(height: Insets.lg),
-                SizedBox(
-                  height: 47,
-                  child: FilledButton(
-                    onPressed: valid ? () => _submit(clean) : null,
-                    style: FilledButton.styleFrom(
-                      backgroundColor:
-                          merging ? AppColors.warning : AppColors.accent,
-                      foregroundColor: Colors.white,
-                      disabledBackgroundColor: AppColors.surfaceHigh,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(13),
-                      ),
-                    ),
-                    child: Text(
-                      buttonLabel,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                          fontSize: 16, fontWeight: FontWeight.w600),
-                    ),
+                Insets.gutter, Insets.sm, Insets.gutter, Insets.lg),
+            children: [
+              _field(l),
+              if (!_creating) ...[
+                const SizedBox(height: Insets.sm),
+                Padding(
+                  padding: const EdgeInsets.only(left: 2),
+                  child: Text(
+                    used ? l.tagUsageLine(count, dayMonth(tag!.lastUsedAt, l))
+                         : l.tagNeverUsed,
+                    style: AppText.caption.copyWith(fontSize: 11.5),
                   ),
                 ),
               ],
-            ),
+              if (merging) ...[
+                const SizedBox(height: Insets.md),
+                _mergeWarning(l, mergeTarget.name, store.txnCountForTag(mergeTarget.id)),
+              ],
+              if (!_creating) ...[
+                const SizedBox(height: Insets.lg),
+                if (_archived) ...[
+                  _actionRow(
+                    label: l.tagRestoreThis,
+                    color: AppColors.accentSoft,
+                    onTap: () {
+                      store.restoreTag(tag!);
+                      Navigator.of(context).pop();
+                    },
+                  ),
+                  if (!used)
+                    _actionRow(
+                      label: l.actionDeletePermanent,
+                      color: AppColors.negative,
+                      onTap: () {
+                        store.deleteTag(tag!);
+                        Navigator.of(context).pop();
+                      },
+                    ),
+                ] else if (used)
+                  _actionRow(
+                    label: l.tagArchiveThis,
+                    color: AppColors.negative,
+                    subtitle: l.tagArchiveMsg(count),
+                    onTap: () {
+                      store.archiveTag(tag!);
+                      Navigator.of(context).pop();
+                    },
+                  )
+                else
+                  _actionRow(
+                    label: l.tagDeleteThis,
+                    color: AppColors.negative,
+                    subtitle: l.tagDeleteMsg,
+                    onTap: () {
+                      store.deleteTag(tag!);
+                      Navigator.of(context).pop();
+                    },
+                  ),
+              ],
+            ],
           ),
         ),
-      ),
+        // Save is offered for create and for a live rename/merge; an archived
+        // tag's name can't change, so it has no Save.
+        if (!_archived)
+          _footer(
+            label: merging
+                ? l.tagMergeButton(mergeTarget.name)
+                : l.actionSave,
+            color: merging ? AppColors.warning : AppColors.accent,
+            enabled: valid,
+            onPressed: () => _submit(clean!),
+          ),
+      ],
     );
   }
 
   Widget _field(AppLocalizations l) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 11),
       decoration: BoxDecoration(
-        color: AppColors.surfaceAlt,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(11),
       ),
       child: Row(
         children: [
           const Text('#',
-              style: TextStyle(fontSize: 16, color: AppColors.textTertiary)),
+              style: TextStyle(fontSize: 16, color: AppColors.tagDot)),
           const SizedBox(width: 2),
           Expanded(
             child: TextField(
               controller: _ctrl,
-              autofocus: true,
+              autofocus: !_archived,
+              readOnly: _archived,
+              enabled: !_archived,
               onChanged: (v) => setState(() => _text = v),
               onSubmitted: (_) {
                 final c = _sanitize(_text);
-                if (c != null) _submit(c);
+                if (c != null && !_archived) _submit(c);
               },
               style: AppText.body.copyWith(fontSize: 16),
+              cursorColor: AppColors.accentSoft,
               decoration: InputDecoration(
                 isCollapsed: true,
                 border: InputBorder.none,
                 hintText: l.tagNameHint,
-                hintStyle: const TextStyle(
-                    fontSize: 16, color: AppColors.textTertiary),
+                hintStyle:
+                    const TextStyle(fontSize: 16, color: AppColors.textTertiary),
               ),
             ),
           ),
@@ -445,11 +452,88 @@ class _RenameTagSheetState extends State<_RenameTagSheet> {
               child: Text(
                 l.tagMergeWarning(target, count),
                 style: AppText.caption.copyWith(
-                    color: AppColors.textSecondary, fontSize: 12.5, height: 1.35),
+                    color: AppColors.textSecondary,
+                    fontSize: 12.5,
+                    height: 1.35),
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _actionRow({
+    required String label,
+    required Color color,
+    String? subtitle,
+    required VoidCallback onTap,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: Insets.sm),
+      child: AppCard(
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(Radii.card),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+                horizontal: Insets.md, vertical: Insets.md),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(label,
+                          style: AppText.body.copyWith(
+                              fontSize: 14.5,
+                              color: color,
+                              fontWeight: FontWeight.w500)),
+                      if (subtitle != null) ...[
+                        const SizedBox(height: 3),
+                        Text(subtitle,
+                            style: AppText.caption.copyWith(fontSize: 11.5)),
+                      ],
+                    ],
+                  ),
+                ),
+                const Icon(Icons.chevron_right_rounded,
+                    size: 18, color: AppColors.textTertiary),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _footer({
+    required String label,
+    required Color color,
+    required bool enabled,
+    required VoidCallback onPressed,
+  }) {
+    return Container(
+      padding: EdgeInsets.fromLTRB(Insets.gutter, Insets.md, Insets.gutter,
+          Insets.md + MediaQuery.of(context).padding.bottom),
+      decoration: const BoxDecoration(
+        color: AppColors.surfaceAlt,
+        border: Border(top: BorderSide(color: AppColors.divider, width: 0.5)),
+      ),
+      child: FilledButton(
+        onPressed: enabled ? onPressed : null,
+        style: FilledButton.styleFrom(
+          backgroundColor: color,
+          disabledBackgroundColor: AppColors.surfaceHigh,
+          foregroundColor: Colors.white,
+          disabledForegroundColor: AppColors.textTertiary,
+          minimumSize: const Size.fromHeight(50),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(Radii.md),
+          ),
+          textStyle: AppText.button,
+        ),
+        child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
       ),
     );
   }

@@ -179,26 +179,53 @@ class AppStore extends ChangeNotifier {
   }
 
   // ── Language (spec: multilingual UI) ──────────────────────────────────────
-  // null means "follow the device locale" (resolved in MaterialApp against the
-  // supported set, falling back to Turkmen). Only the language code is stored
-  // ('en'/'ru'/'tr'/'tk'). Unlike the presentational toggles above, [setLocale]
-  // DOES notify: every visible string changes, so the whole app must rebuild.
+  // The stored language, never null (§7.1). The picker offers only real
+  // languages — there is no "system default" row, because there is no live
+  // system link left to represent once a value is stored. Only the language
+  // code is persisted ('en'/'ru'/'tr'/'tk'). Unlike the presentational toggles
+  // above, [setLocale] DOES notify: every visible string changes, so the whole
+  // app must rebuild.
   static const _localeKey = 'app_locale';
-  Locale? _locale;
-  Locale? get locale => _locale;
 
-  void setLocale(Locale? value) {
+  /// The languages FinLens ships. Doubles as the seeding oracle in
+  /// [resolveInitialLocale] and mirrors `AppLocalizations.supportedLocales`.
+  static const _supportedLanguageCodes = {'en', 'ru', 'tr', 'tk'};
+
+  Locale _locale = const Locale('en');
+  Locale get locale => _locale;
+
+  void setLocale(Locale value) {
     _locale = value;
     notifyListeners();
-    unawaited(_saveString(_localeKey, value?.languageCode ?? ''));
+    unawaited(_saveString(_localeKey, value.languageCode));
+  }
+
+  /// Language is a stored value, not a live mirror of the device. On the very
+  /// first launch — nothing persisted yet — the device's language seeds it when
+  /// FinLens speaks it, and English does otherwise. From then on the stored
+  /// value wins, which is why the picker has no "system default" row: there is
+  /// no live system link left to offer.
+  ///
+  /// Pure and parameterised so the seeding rule is unit-testable without a real
+  /// platform or SharedPreferences (§9 locale-seeding test).
+  static Locale resolveInitialLocale(String? stored, List<Locale> deviceLocales) {
+    if (stored != null && stored.isNotEmpty) return Locale(stored);
+    for (final device in deviceLocales) {
+      if (_supportedLanguageCodes.contains(device.languageCode)) {
+        return Locale(device.languageCode);
+      }
+    }
+    return const Locale('en');
   }
 
   /// Restores the language preference before the first frame (called from
   /// `main`), so the app never paints in the wrong language and then re-renders.
   Future<void> loadLocale() async {
     final prefs = await SharedPreferences.getInstance();
-    final code = prefs.getString(_localeKey);
-    _locale = (code == null || code.isEmpty) ? null : Locale(code);
+    _locale = resolveInitialLocale(
+      prefs.getString(_localeKey),
+      WidgetsBinding.instance.platformDispatcher.locales,
+    );
   }
 
   // ── Ledger view preferences ───────────────────────────────────────────────
@@ -833,15 +860,14 @@ class AppStore extends ChangeNotifier {
       .where((c) => c.removedOn != null && c.monthlyBudget == null)
       .toList(growable: false);
 
-  /// The Archive screen's row count. A budgeted category that was archived
-  /// intentionally counts twice — it shows one row under Removed budgets (to
-  /// restore the budget) and one under Categories (to restore the category),
-  /// two independently restorable things.
+  /// What the Archive holds — and only that. A thing with a management screen of
+  /// its own keeps its archived items there and stays out of this count: tags
+  /// always have, categories now do (§2.4). The Archive is for what has nowhere
+  /// else to go.
   int get archivedCount =>
       archivedGoals.length +
       removedBudgets.length +
       archivedAccounts.length +
-      archivedCategories.length +
       pausedTasks.length +
       completedTasks.length +
       deletedTasks.length;
@@ -2618,6 +2644,29 @@ class AppStore extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// §3.4 — rename / re-icon / recolour. Type is deliberately absent: flipping a
+  /// category's direction would reverse every transaction already filed against
+  /// it, and nothing in the app is allowed to do that silently.
+  void updateCategory(Category category,
+      {String? name, IconData? icon, Color? color}) {
+    category
+      ..name = name ?? category.name
+      ..icon = icon ?? category.icon
+      ..color = color ?? category.color;
+    notifyListeners();
+  }
+
+  /// §3.4 — erase a category outright. Only legal when nothing references it — no
+  /// transaction, no budget. Returns false and changes nothing otherwise, so the
+  /// caller can never delete history by passing the wrong id.
+  bool deleteCategory(Category category) {
+    if (txnCountForCategory(category.id) > 0) return false;
+    if (category.monthlyBudget != null) return false;
+    _categories.removeWhere((c) => c.id == category.id);
+    notifyListeners();
+    return true;
+  }
+
   // ── Mutations: goals ──────────────────────────────────────────────────────
 
   static String _histDate(DateTime? d) =>
@@ -2746,33 +2795,47 @@ class AppStore extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// "Clear permanently" empties only the goal and budget sections: it deletes
-  /// archived goals and forgets every category's `removedOn` (so removed
-  /// budgets leave that section). It deliberately does NOT hard-delete archived
-  /// accounts or categories, nor un-archive them — those carry transactions and
-  /// a hard delete would strand history (§1). They keep their Restore.
-  void clearArchive() {
-    _goals.removeWhere((g) => g.status != GoalStatus.active);
-    for (final c in _categories) {
-      c.removedOn = null;
-    }
-    // Permanently remove archived tasks and sever every payment that pointed at
-    // them, so no orphan `recurrenceTaskId` survives (§9). Ledger entries stay —
-    // only the link is nulled.
-    final clearedIds = {
-      for (final t in [...pausedTasks, ...completedTasks, ...deletedTasks])
-        t.id,
-    };
-    if (clearedIds.isNotEmpty) {
-      for (final t in _txns) {
-        if (t.recurrenceTaskId != null &&
-            clearedIds.contains(t.recurrenceTaskId)) {
-          t.recurrenceTaskId = null;
-        }
+  /// Hard-delete a set of tasks and sever every payment that pointed at them, so
+  /// no orphan `recurrenceTaskId` survives (§6.3/§9). Ledger entries stay — only
+  /// the link is nulled. Does not notify; the public caller does, once.
+  void _purgeTasks(Set<String> ids) {
+    if (ids.isEmpty) return;
+    for (final t in _txns) {
+      if (t.recurrenceTaskId != null && ids.contains(t.recurrenceTaskId)) {
+        t.recurrenceTaskId = null;
       }
-      _tasks.removeWhere((t) => clearedIds.contains(t.id));
-      _taskPriorStatus.removeWhere((id, _) => clearedIds.contains(id));
     }
+    _tasks.removeWhere((t) => ids.contains(t.id));
+    _taskPriorStatus.removeWhere((id, _) => ids.contains(id));
+  }
+
+  /// §6.3 — clear the Archive's FINISHED section: reached goals and paid one-off
+  /// tasks. Leaves everything else (paused tasks, removed budgets, archived
+  /// accounts, the UNFINISHED and RECENTLY DELETED sections) untouched.
+  void clearFinished() {
+    _goals.removeWhere((g) => g.status == GoalStatus.reached);
+    _purgeTasks({
+      for (final t in completedTasks)
+        if (t.status == TaskStatus.paid) t.id,
+    });
+    notifyListeners();
+  }
+
+  /// §6.3 — clear the Archive's UNFINISHED section: abandoned goals and cancelled
+  /// (skipped) one-off tasks. Nothing restorable is touched.
+  void clearUnfinished() {
+    _goals.removeWhere((g) => g.status == GoalStatus.abandoned);
+    _purgeTasks({
+      for (final t in completedTasks)
+        if (t.status == TaskStatus.skipped) t.id,
+    });
+    notifyListeners();
+  }
+
+  /// §6.3 — empty the Archive's RECENTLY DELETED section: the soft-deleted tasks,
+  /// for good.
+  void deleteRecycledTasks() {
+    _purgeTasks({for (final t in deletedTasks) t.id});
     notifyListeners();
   }
 

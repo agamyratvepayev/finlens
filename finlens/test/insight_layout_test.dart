@@ -271,7 +271,9 @@ void main() {
         closeTo(104, 1.0));
   });
 
-  testWidgets('the archive performance card is 76 pt', (tester) async {
+  // §6.2 — the goal-performance card was collapsed from a 76 pt three-up stat
+  // block to a single ~32 pt line ("1 reached · 50% success · 5 mo average").
+  testWidgets('the archive performance card is one line, ~32 pt', (tester) async {
     tester.view.physicalSize = _sizes['390x844']!;
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
@@ -279,7 +281,7 @@ void main() {
     await tester.pumpWidget(_app(buildSeedStore(), const ArchiveScreen()));
     await tester.pump(const Duration(milliseconds: 300));
     expect(tester.getSize(find.byKey(const Key('arc-perfcard'))).height,
-        closeTo(76, 2.0));
+        closeTo(32, 4.0));
   });
 
   // ── Preview length (§3.2) ───────────────────────────────────────────────────

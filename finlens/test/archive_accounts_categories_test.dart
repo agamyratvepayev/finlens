@@ -156,7 +156,8 @@ void main() {
   });
 
   group('archivedCount', () {
-    test('counts archived goals, removed budgets, accounts and categories', () {
+    test('counts goals, removed budgets and accounts — NOT archived categories (§2.4)',
+        () {
       final reached = Goal(
         id: 'g1',
         name: 'Trip',
@@ -185,12 +186,15 @@ void main() {
       expect(store.removedBudgets, hasLength(1));
       expect(store.archivedAccounts, hasLength(1));
       expect(store.archivedCategories, hasLength(1));
-      expect(store.archivedCount, 4);
+      // Archived categories live in the category management screen now, so they
+      // no longer contribute to the Archive's count: 1 goal + 1 budget + 1
+      // account = 3, not 4.
+      expect(store.archivedCount, 3);
     });
   });
 
-  group('clearArchive', () {
-    test('leaves archived accounts and categories alone', () {
+  group('scoped clear (§6.3)', () {
+    AppStore build() {
       final abandoned = Goal(
         id: 'g1',
         name: 'Gym',
@@ -200,7 +204,7 @@ void main() {
         status: GoalStatus.abandoned,
         stoppedAt: DateTime(2026, 6, 1),
       );
-      final store = _store(
+      return _store(
         accounts: [
           _account('a1', 'Checking'),
           _account('a2', 'Old Wallet', archived: true),
@@ -212,18 +216,29 @@ void main() {
         ],
         goals: [abandoned],
       );
+    }
 
-      store.clearArchive();
-
-      // Goal and budget sections are emptied…
-      expect(store.archivedGoals, isEmpty);
-      expect(store.removedBudgets, isEmpty);
-      // …but archived accounts and categories survive with their Restore.
+    test('clearFinished leaves accounts, budgets and unfinished goals alone', () {
+      final store = build();
+      store.clearFinished();
+      // The abandoned goal is UNFINISHED, not FINISHED — untouched.
+      expect(store.archivedGoals.map((g) => g.id), ['g1']);
+      expect(store.removedBudgets, hasLength(1));
       expect(store.archivedAccounts.map((a) => a.id), ['a2']);
       expect(store.archivedCategories.map((c) => c.id), ['c2']);
-      // And they are still hidden from the public lists.
+    });
+
+    test('clearUnfinished removes abandoned goals but keeps the rest', () {
+      final store = build();
+      store.clearUnfinished();
+      expect(store.archivedGoals, isEmpty);
+      // Removed budgets sit in CAN COME BACK now — no clear touches them (§6.3).
+      expect(store.removedBudgets, hasLength(1));
+      // Archived accounts and categories survive with their Restore.
+      expect(store.archivedAccounts.map((a) => a.id), ['a2']);
+      expect(store.archivedCategories.map((c) => c.id), ['c2']);
+      // Still hidden from the public account list.
       expect(store.accounts.map((a) => a.id), ['a1']);
-      expect(store.categories, isEmpty);
     });
   });
 

@@ -56,35 +56,44 @@ void main() {
     expect(find.text('AT THIS RATE'), findsNothing);
   });
 
-  testWidgets('tapping a removed budget row pushes nothing', (tester) async {
+  testWidgets('a removed budget row (CAN COME BACK) pushes nothing on the '
+      'body but keeps its Restore pill (§6)', (tester) async {
     bigScreen(tester);
     await tester.pumpWidget(wrap(buildSeedStore(), const ArchiveScreen()));
 
+    // The row body of a removed budget is not tappable — tapping Garden pushes
+    // no detail and leaves us on the Archive.
     await tester.tap(find.text('Garden'));
     await tester.pumpAndSettle();
-
-    // No goal detail was pushed, and we are still on the Archive.
     expect(find.text('REACHED ON'), findsNothing);
     expect(find.text('GOT TO'), findsNothing);
-    expect(find.text('Clear archive permanently'), findsOneWidget);
+    expect(find.text('Garden'), findsOneWidget);
+
+    // Garden is the only Restore affordance on the seed (§6.1): reached/abandoned
+    // goals are read-only, paused tasks say Resume, deleted tasks say Undo.
+    expect(find.text('Restore'), findsOneWidget);
+    // The old global "Clear archive permanently" button is gone (§6.3).
+    expect(find.text('Clear archive permanently'), findsNothing);
   });
 
-  testWidgets('tapping Restore restores the row and does not push a screen',
-      (tester) async {
+  testWidgets('an abandoned goal (UNFINISHED) is read-only — no row Restore; '
+      'restoring moved to the goal detail (§6.1)', (tester) async {
     bigScreen(tester);
     await tester.pumpWidget(wrap(buildSeedStore(), const ArchiveScreen()));
 
-    // The Restore button inside Bali's row (not the row's own tap).
+    // Bali sits in UNFINISHED, which carries no action pill.
     final baliRow =
         find.ancestor(of: find.text('Bali 2026'), matching: find.byType(InkWell))
             .first;
-    await tester.tap(find.descendant(of: baliRow, matching: find.text('Restore')));
-    await tester.pumpAndSettle();
+    expect(
+        find.descendant(of: baliRow, matching: find.text('Restore')),
+        findsNothing);
 
-    // No detail screen, and Bali has left the Archive (restored to active).
-    expect(find.text('GOT TO'), findsNothing);
-    expect(find.text('Bali 2026'), findsNothing);
-    expect(find.text('Clear archive permanently'), findsOneWidget);
+    // The row itself is still tappable — it opens the archived goal detail,
+    // where Restore now lives.
+    await tester.tap(find.text('Bali 2026'));
+    await tester.pumpAndSettle();
+    expect(find.text('STOPPED ON'), findsOneWidget);
   });
 
   testWidgets('a live goal keeps the AT THIS RATE forecast and the Goals '
