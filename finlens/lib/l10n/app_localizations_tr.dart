@@ -2625,6 +2625,11 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
+  String goalAmountOf(Object amount, Object whole) {
+    return '$whole içinde $amount';
+  }
+
+  @override
   String goalDueLine(Object date, Object tail) {
     return 'Son $date · $tail';
   }

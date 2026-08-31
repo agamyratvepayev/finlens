@@ -716,6 +716,7 @@
   "goalReachedEarly": "{days, plural, one{1 gün erken ulaşıldı} other{{days} gün erken ulaşıldı}}",
   "goalNothingYet": "henüz yok",
   "goalAmountIn": "{amount} geldi",
+  "goalAmountOf": "{whole} içinde {amount}",
   "goalDueLine": "Son {date} · {tail}",
   "goalFunded": "Karşılandı",
   "goalRefill": "{amount} ekle",

@@ -2628,6 +2628,11 @@ class AppLocalizationsTk extends AppLocalizations {
   }
 
   @override
+  String goalAmountOf(Object amount, Object whole) {
+    return '$whole içinde $amount';
+  }
+
+  @override
   String goalDueLine(Object date, Object tail) {
     return 'Möhlet $date · $tail';
   }

@@ -4212,6 +4212,12 @@ abstract class AppLocalizations {
   /// **'{amount} in'**
   String goalAmountIn(Object amount);
 
+  /// No description provided for @goalAmountOf.
+  ///
+  /// In en, this message translates to:
+  /// **'{amount} of {whole}'**
+  String goalAmountOf(Object amount, Object whole);
+
   /// No description provided for @goalDueLine.
   ///
   /// In en, this message translates to:

@@ -914,6 +914,8 @@
   "goalNothingYet": "nothing yet",
   "goalAmountIn": "{amount} in",
   "@goalAmountIn": { "placeholders": { "amount": {} } },
+  "goalAmountOf": "{amount} of {whole}",
+  "@goalAmountOf": { "placeholders": { "amount": {}, "whole": {} } },
   "goalDueLine": "Due {date} · {tail}",
   "@goalDueLine": { "placeholders": { "date": {}, "tail": {} } },
   "goalFunded": "Funded",

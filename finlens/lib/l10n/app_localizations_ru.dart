@@ -2687,6 +2687,11 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
+  String goalAmountOf(Object amount, Object whole) {
+    return '$amount из $whole';
+  }
+
+  @override
   String goalDueLine(Object date, Object tail) {
     return 'Срок $date · $tail';
   }

@@ -716,6 +716,7 @@
   "goalReachedEarly": "{days, plural, one{Достигнуто на {days} день раньше} few{Достигнуто на {days} дня раньше} many{Достигнуто на {days} дней раньше} other{Достигнуто на {days} дней раньше}}",
   "goalNothingYet": "пока ничего",
   "goalAmountIn": "получено {amount}",
+  "goalAmountOf": "{amount} из {whole}",
   "goalDueLine": "Срок {date} · {tail}",
   "goalFunded": "Обеспечено",
   "goalRefill": "Пополнить {amount}",

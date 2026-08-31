@@ -951,9 +951,29 @@ class _GoalCard extends StatelessWidget {
     // One composed sentence for the screen reader вЂ” name, the amount pair, then
     // the verdict (which now carries the section's verb). ExcludeSemantics on
     // the visual tree keeps the two amounts and two Texts from reading twice.
+    // The figure the current amount is measured against: the target for a goal
+    // that climbs (saving, earning), the original amount for one that pays down
+    // (paying off, waiting on). Switched on the section, never a label string --
+    // the rule _rateVerb follows. Rendered signless: it is a magnitude paired
+    // with the signless balance above, and m.start is negative for a liability.
+    final whole = switch (m.section) {
+      GoalSection.saving || GoalSection.earning => m.target,
+      GoalSection.payingOff || GoalSection.waitingOn => m.start,
+    };
+    final currentStr = money(m.current, signless: true);
+    final wholeStr = money(whole, signless: true);
+    // Omit the second figure when it would just repeat the first -- a waiting-on
+    // goal with nothing collected (current == start) or a reached/funded one
+    // (current == target). Compare the rendered strings, not the doubles, so two
+    // figures a cent apart never print as an identical pair.
+    final showWhole = wholeStr != currentStr;
+
+    final maskedCurrent = money(m.current, signless: true, masked: store.masked);
+    // The pair keeps a spoken "of" for the screen reader: two bare figures in
+    // sequence say nothing about their relation, unlike the stacked visual (5).
+    // Masking mirrors the visual -- the current amount masks, the whole does not.
     final amountPair =
-        '${money(m.current, signless: true, masked: store.masked)}'
-        ' / ${money(m.target)}';
+        showWhole ? l.goalAmountOf(maskedCurrent, wholeStr) : maskedCurrent;
 
     return Padding(
       // Tighter bottom margin than a budget card (В§1): 8, not Insets.md.
@@ -995,52 +1015,74 @@ class _GoalCard extends StatelessWidget {
                           size: 26,
                         ),
                         const SizedBox(width: 10),
+                        // Two columns top-aligned to each other, the whole block
+                        // still centred against the icon by the outer Row. Left:
+                        // name over verdict. Right: current amount over the
+                        // figure it is measured against, right-aligned so the
+                        // digits line up under one another with no connector.
                         Expanded(
-                          child: Column(
+                          child: Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // Name and amount share a baseline; the verdict
-                              // sits alone on the line below (В§2).
-                              Row(
-                                crossAxisAlignment:
-                                    CrossAxisAlignment.baseline,
-                                textBaseline: TextBaseline.alphabetic,
-                                children: [
-                                  Expanded(
-                                    child: Text(
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
                                       goal.name,
                                       style: AppText.rowTitle
                                           .copyWith(height: 1.15),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                     ),
-                                  ),
-                                  const SizedBox(width: Insets.sm),
+                                    const SizedBox(height: 1),
+                                    Text(
+                                      verdict.text,
+                                      style: AppText.rowSubtitle.copyWith(
+                                        fontSize: 11.5,
+                                        height: 1.15,
+                                        color: goalVerdictColor(
+                                            m, verdict.attention),
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: Insets.sm),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  // Explicit 1.15 line height so this line box
+                                  // equals the name's (rowTitle also at 1.15) --
+                                  // without it the second lines drift a point.
                                   AmountText.balance(
                                     m.current,
+                                    style: AppText.amount
+                                        .copyWith(height: 1.15),
                                     color: m.reached
                                         ? AppColors.positive
                                         : null,
                                   ),
-                                  Text(
-                                    ' / ${money(m.target)}',
-                                    style: AppText.amount.copyWith(
-                                      color: AppColors.textSecondary,
+                                  if (showWhole) ...[
+                                    const SizedBox(height: 1),
+                                    // The reference figure: dimmer than the
+                                    // verdict (tertiary, not secondary) and the
+                                    // verdict's exact metrics so line two of each
+                                    // column sits level.
+                                    Text(
+                                      wholeStr,
+                                      style: AppText.rowSubtitle.copyWith(
+                                        fontSize: 11.5,
+                                        height: 1.15,
+                                        color: AppColors.textTertiary,
+                                      ),
                                     ),
-                                  ),
+                                  ],
                                 ],
-                              ),
-                              const SizedBox(height: 1),
-                              Text(
-                                verdict.text,
-                                style: AppText.rowSubtitle.copyWith(
-                                  fontSize: 11.5,
-                                  height: 1.15,
-                                  color: goalVerdictColor(
-                                      m, verdict.attention),
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
                               ),
                             ],
                           ),
