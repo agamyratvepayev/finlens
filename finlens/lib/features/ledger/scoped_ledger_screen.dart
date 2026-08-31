@@ -36,9 +36,19 @@ import 'widgets/trans_filter_sheet.dart';
 /// Group and account ledgers are this one widget with a different
 /// [LedgerScope] — see [LedgerScope] for why they are not two screens.
 class ScopedLedgerScreen extends StatefulWidget {
-  const ScopedLedgerScreen({super.key, required this.initialScope});
+  const ScopedLedgerScreen({
+    super.key,
+    required this.initialScope,
+    this.initialRange,
+  });
 
   final LedgerScope initialScope;
+
+  /// When set, the screen opens on this window instead of the period containing
+  /// today (spec Insight §10 — Insight opens its drill-downs on its own
+  /// window). No existing caller passes it, so the default is unchanged. Once
+  /// open, the period strip steps and picks from here as usual.
+  final DateRange? initialRange;
 
   @override
   State<ScopedLedgerScreen> createState() => _ScopedLedgerScreenState();
@@ -101,7 +111,8 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
     // Land on the period containing today, at the unit saved for this screen
     // type (account vs category) — the cursor is never persisted (spec §5).
     _showDescriptions = StoreScope.read(context).scopedShowDescriptions;
-    _range = _periodForScope(StoreScope.read(context), _scope);
+    _range = widget.initialRange ??
+        _periodForScope(StoreScope.read(context), _scope);
     if (!_hintShown) {
       _hintShown = true;
       // Cancellable so leaving the screen early does not leave it pending.

@@ -469,7 +469,7 @@ class AppLocalizationsTr extends AppLocalizations {
   String get insNetWorth => 'Net değer';
 
   @override
-  String get insNetWorthCaption => 'net değerin';
+  String get insNetWorthCaption => 'net değer';
 
   @override
   String get insIncome => 'Gelir';
@@ -493,6 +493,15 @@ class AppLocalizationsTr extends AppLocalizations {
   String get insRevalued => 'Değerlendi';
 
   @override
+  String get insBefore => 'Önce';
+
+  @override
+  String get insNow => 'Şimdi';
+
+  @override
+  String get insMoved => 'Taşındı';
+
+  @override
   String get insYourDebt => 'Borcun';
 
   @override
@@ -505,7 +514,137 @@ class AppLocalizationsTr extends AppLocalizations {
   String get insChargedToCards => 'Kartla harcadın';
 
   @override
-  String get insCardPayment => 'Kart ödemesi';
+  String get insPaidToCards => 'Karta ödedin';
+
+  @override
+  String insMore(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count daha',
+    );
+    return '+$_temp0';
+  }
+
+  @override
+  String get insShowLess => 'Daha az göster';
+
+  @override
+  String get insFilterAccounts => 'Hesapları filtrele';
+
+  @override
+  String get insFilterOff => 'Kapalı';
+
+  @override
+  String insFilterActive(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Etkin, $count öğe gizli',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get insClearCustomRange => 'Özel aralığı temizle';
+
+  @override
+  String insA11yHeroUp(String amount) {
+    return 'Net değer $amount arttı.';
+  }
+
+  @override
+  String insA11yHeroDown(String amount) {
+    return 'Net değer $amount azaldı.';
+  }
+
+  @override
+  String insA11yHeroFlat(String amount) {
+    return 'Net değer değişmedi, $amount.';
+  }
+
+  @override
+  String insA11yWaterfall(
+    Object before,
+    Object inflow,
+    Object outflow,
+    Object revalued,
+    Object now,
+  ) {
+    return 'Net değer önce $before, $inflow girdi, $outflow çıktı, $revalued değerlendi, şimdi $now.';
+  }
+
+  @override
+  String insA11yWaterfallMoved(
+    Object before,
+    Object inflow,
+    Object outflow,
+    Object revalued,
+    Object moved,
+    Object now,
+  ) {
+    return 'Net değer önce $before, $inflow girdi, $outflow çıktı, $revalued değerlendi, $moved görünümden çıktı, şimdi $now.';
+  }
+
+  @override
+  String insA11yGroupUp(Object name, Object amount) {
+    return '$name, $amount arttı.';
+  }
+
+  @override
+  String insA11yGroupDown(Object name, Object amount) {
+    return '$name, $amount azaldı.';
+  }
+
+  @override
+  String insA11yDebtUp(Object label, Object balance, Object delta) {
+    return '$label $balance, $delta arttı.';
+  }
+
+  @override
+  String insA11yDebtDown(Object label, Object balance, Object delta) {
+    return '$label $balance, $delta azaldı.';
+  }
+
+  @override
+  String insA11yDebtFlat(Object label, Object balance) {
+    return '$label $balance, değişmedi.';
+  }
+
+  @override
+  String insA11yMovementUp(Object label, Object amount) {
+    return '$label, $amount, borç arttı.';
+  }
+
+  @override
+  String insA11yMovementDown(Object label, Object amount) {
+    return '$label, $amount, borç azaldı.';
+  }
+
+  @override
+  String insA11yRevalUp(
+    Object name,
+    Object amount,
+    Object percent,
+    Object date,
+  ) {
+    return '$name, $amount arttı$percent, $date.';
+  }
+
+  @override
+  String insA11yRevalDown(
+    Object name,
+    Object amount,
+    Object percent,
+    Object date,
+  ) {
+    return '$name, $amount azaldı$percent, $date.';
+  }
+
+  @override
+  String insA11yPercent(Object percent) {
+    return ', $percent';
+  }
 
   @override
   String insSeeAll(int count) {
@@ -526,45 +665,6 @@ class AppLocalizationsTr extends AppLocalizations {
     );
     return '$_temp0';
   }
-
-  @override
-  String insUntouchedGained(String amount) {
-    return 'Elini sürmediğin para $amount kazandırdı';
-  }
-
-  @override
-  String insUntouchedLost(String amount) {
-    return 'Elini sürmediğin para $amount kaybettirdi';
-  }
-
-  @override
-  String insTransferFootnote(String amount) {
-    return 'Hesaplar arasında $amount taşıdın';
-  }
-
-  @override
-  String insTransferCount(int count) {
-    return '$count aktarım';
-  }
-
-  @override
-  String insFee(String amount) {
-    return '$amount komisyon';
-  }
-
-  @override
-  String insContradictionUp(String amount) {
-    return 'Net değerin arttı ama kazandığından $amount fazla harcadın.';
-  }
-
-  @override
-  String insContradictionDown(String amount) {
-    return 'Net değerin azaldı ama harcadığından $amount fazla kazandın.';
-  }
-
-  @override
-  String get insContradictionRevalued =>
-      'Bu dönemki değişimin tamamı yatırım değerlemesinden.';
 
   @override
   String get insNoRecords => 'Bu dönemde kayıt yok';
@@ -643,23 +743,7 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
-  String insCustomRange(int days) {
-    String _temp0 = intl.Intl.pluralLogic(
-      days,
-      locale: localeName,
-      other: '$days gün',
-    );
-    return 'Özel aralık · $_temp0';
-  }
-
-  @override
-  String get insClearRange => 'temizle';
-
-  @override
   String get insSelectDateRange => 'Tarih aralığı seç…';
-
-  @override
-  String get insOther => 'Diğer';
 
   @override
   String get arcReached => 'Ulaşılan';

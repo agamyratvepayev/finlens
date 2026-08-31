@@ -487,7 +487,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get insNetWorth => 'Чистый капитал';
 
   @override
-  String get insNetWorthCaption => 'твой чистый капитал';
+  String get insNetWorthCaption => 'чистый капитал';
 
   @override
   String get insIncome => 'Доход';
@@ -508,7 +508,16 @@ class AppLocalizationsRu extends AppLocalizations {
   String get insOut => 'Расход';
 
   @override
-  String get insRevalued => 'Переоценка';
+  String get insRevalued => 'Переоц.';
+
+  @override
+  String get insBefore => 'Было';
+
+  @override
+  String get insNow => 'Сейчас';
+
+  @override
+  String get insMoved => 'Ушло';
 
   @override
   String get insYourDebt => 'Твой долг';
@@ -523,7 +532,141 @@ class AppLocalizationsRu extends AppLocalizations {
   String get insChargedToCards => 'Потрачено картой';
 
   @override
-  String get insCardPayment => 'Оплата карты';
+  String get insPaidToCards => 'Оплата карты';
+
+  @override
+  String insMore(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'ещё $count',
+      few: 'ещё $count',
+      one: 'ещё $count',
+    );
+    return '+$_temp0';
+  }
+
+  @override
+  String get insShowLess => 'Свернуть';
+
+  @override
+  String get insFilterAccounts => 'Фильтр счетов';
+
+  @override
+  String get insFilterOff => 'Выкл';
+
+  @override
+  String insFilterActive(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Активен, скрыто $count элементов',
+      few: 'Активен, скрыто $count элемента',
+      one: 'Активен, скрыт $count элемент',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get insClearCustomRange => 'Сбросить свой период';
+
+  @override
+  String insA11yHeroUp(String amount) {
+    return 'Чистый капитал вырос на $amount.';
+  }
+
+  @override
+  String insA11yHeroDown(String amount) {
+    return 'Чистый капитал упал на $amount.';
+  }
+
+  @override
+  String insA11yHeroFlat(String amount) {
+    return 'Чистый капитал без изменений, $amount.';
+  }
+
+  @override
+  String insA11yWaterfall(
+    Object before,
+    Object inflow,
+    Object outflow,
+    Object revalued,
+    Object now,
+  ) {
+    return 'Чистый капитал: было $before, приход $inflow, расход $outflow, переоценка $revalued, сейчас $now.';
+  }
+
+  @override
+  String insA11yWaterfallMoved(
+    Object before,
+    Object inflow,
+    Object outflow,
+    Object revalued,
+    Object moved,
+    Object now,
+  ) {
+    return 'Чистый капитал: было $before, приход $inflow, расход $outflow, переоценка $revalued, $moved ушло из виду, сейчас $now.';
+  }
+
+  @override
+  String insA11yGroupUp(Object name, Object amount) {
+    return '$name, рост на $amount.';
+  }
+
+  @override
+  String insA11yGroupDown(Object name, Object amount) {
+    return '$name, снижение на $amount.';
+  }
+
+  @override
+  String insA11yDebtUp(Object label, Object balance, Object delta) {
+    return '$label $balance, рост на $delta.';
+  }
+
+  @override
+  String insA11yDebtDown(Object label, Object balance, Object delta) {
+    return '$label $balance, снижение на $delta.';
+  }
+
+  @override
+  String insA11yDebtFlat(Object label, Object balance) {
+    return '$label $balance, без изменений.';
+  }
+
+  @override
+  String insA11yMovementUp(Object label, Object amount) {
+    return '$label, $amount, долг вырос.';
+  }
+
+  @override
+  String insA11yMovementDown(Object label, Object amount) {
+    return '$label, $amount, долг снизился.';
+  }
+
+  @override
+  String insA11yRevalUp(
+    Object name,
+    Object amount,
+    Object percent,
+    Object date,
+  ) {
+    return '$name, рост на $amount$percent, $date.';
+  }
+
+  @override
+  String insA11yRevalDown(
+    Object name,
+    Object amount,
+    Object percent,
+    Object date,
+  ) {
+    return '$name, снижение на $amount$percent, $date.';
+  }
+
+  @override
+  String insA11yPercent(Object percent) {
+    return ', $percent';
+  }
 
   @override
   String insSeeAll(int count) {
@@ -548,52 +691,6 @@ class AppLocalizationsRu extends AppLocalizations {
     );
     return '$_temp0';
   }
-
-  @override
-  String insUntouchedGained(String amount) {
-    return 'Деньги, к которым ты не притрагивался, принесли $amount';
-  }
-
-  @override
-  String insUntouchedLost(String amount) {
-    return 'Деньги, к которым ты не притрагивался, потеряли $amount';
-  }
-
-  @override
-  String insTransferFootnote(String amount) {
-    return 'Ты перевёл $amount между своими счетами';
-  }
-
-  @override
-  String insTransferCount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count переводов',
-      few: '$count перевода',
-      one: '$count перевод',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String insFee(String amount) {
-    return 'комиссия $amount';
-  }
-
-  @override
-  String insContradictionUp(String amount) {
-    return 'Твой чистый капитал вырос, но ты потратил на $amount больше, чем заработал.';
-  }
-
-  @override
-  String insContradictionDown(String amount) {
-    return 'Твой чистый капитал упал, хотя ты заработал на $amount больше, чем потратил.';
-  }
-
-  @override
-  String get insContradictionRevalued =>
-      'Весь рост за этот период — это переоценка инвестиций.';
 
   @override
   String get insNoRecords => 'Нет записей за этот период';
@@ -672,25 +769,7 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String insCustomRange(int days) {
-    String _temp0 = intl.Intl.pluralLogic(
-      days,
-      locale: localeName,
-      other: '$days дней',
-      few: '$days дня',
-      one: '$days день',
-    );
-    return 'Свой период · $_temp0';
-  }
-
-  @override
-  String get insClearRange => 'очистить';
-
-  @override
   String get insSelectDateRange => 'Выбрать период…';
-
-  @override
-  String get insOther => 'Другое';
 
   @override
   String get arcReached => 'Достигнуто';

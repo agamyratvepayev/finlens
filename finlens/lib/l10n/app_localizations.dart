@@ -729,7 +729,7 @@ abstract class AppLocalizations {
   /// No description provided for @insNetWorthCaption.
   ///
   /// In en, this message translates to:
-  /// **'your net worth'**
+  /// **'net worth'**
   String get insNetWorthCaption;
 
   /// No description provided for @insIncome.
@@ -774,6 +774,24 @@ abstract class AppLocalizations {
   /// **'Revalued'**
   String get insRevalued;
 
+  /// No description provided for @insBefore.
+  ///
+  /// In en, this message translates to:
+  /// **'Before'**
+  String get insBefore;
+
+  /// No description provided for @insNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Now'**
+  String get insNow;
+
+  /// No description provided for @insMoved.
+  ///
+  /// In en, this message translates to:
+  /// **'Moved'**
+  String get insMoved;
+
   /// No description provided for @insYourDebt.
   ///
   /// In en, this message translates to:
@@ -798,11 +816,160 @@ abstract class AppLocalizations {
   /// **'Charged to cards'**
   String get insChargedToCards;
 
-  /// No description provided for @insCardPayment.
+  /// No description provided for @insPaidToCards.
   ///
   /// In en, this message translates to:
-  /// **'Card payment'**
-  String get insCardPayment;
+  /// **'Paid to cards'**
+  String get insPaidToCards;
+
+  /// No description provided for @insMore.
+  ///
+  /// In en, this message translates to:
+  /// **'+{count, plural, =1{1 more} other{{count} more}}'**
+  String insMore(int count);
+
+  /// No description provided for @insShowLess.
+  ///
+  /// In en, this message translates to:
+  /// **'Show less'**
+  String get insShowLess;
+
+  /// No description provided for @insFilterAccounts.
+  ///
+  /// In en, this message translates to:
+  /// **'Filter accounts'**
+  String get insFilterAccounts;
+
+  /// No description provided for @insFilterOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Off'**
+  String get insFilterOff;
+
+  /// No description provided for @insFilterActive.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{Active, {count} item hidden} other{Active, {count} items hidden}}'**
+  String insFilterActive(int count);
+
+  /// No description provided for @insClearCustomRange.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear custom range'**
+  String get insClearCustomRange;
+
+  /// No description provided for @insA11yHeroUp.
+  ///
+  /// In en, this message translates to:
+  /// **'Net worth rose {amount}.'**
+  String insA11yHeroUp(String amount);
+
+  /// No description provided for @insA11yHeroDown.
+  ///
+  /// In en, this message translates to:
+  /// **'Net worth fell {amount}.'**
+  String insA11yHeroDown(String amount);
+
+  /// No description provided for @insA11yHeroFlat.
+  ///
+  /// In en, this message translates to:
+  /// **'Net worth unchanged, {amount}.'**
+  String insA11yHeroFlat(String amount);
+
+  /// No description provided for @insA11yWaterfall.
+  ///
+  /// In en, this message translates to:
+  /// **'Net worth {before} before, {inflow} in, {outflow} out, {revalued} revalued, {now} now.'**
+  String insA11yWaterfall(
+    Object before,
+    Object inflow,
+    Object outflow,
+    Object revalued,
+    Object now,
+  );
+
+  /// No description provided for @insA11yWaterfallMoved.
+  ///
+  /// In en, this message translates to:
+  /// **'Net worth {before} before, {inflow} in, {outflow} out, {revalued} revalued, {moved} moved out of view, {now} now.'**
+  String insA11yWaterfallMoved(
+    Object before,
+    Object inflow,
+    Object outflow,
+    Object revalued,
+    Object moved,
+    Object now,
+  );
+
+  /// No description provided for @insA11yGroupUp.
+  ///
+  /// In en, this message translates to:
+  /// **'{name}, up {amount}.'**
+  String insA11yGroupUp(Object name, Object amount);
+
+  /// No description provided for @insA11yGroupDown.
+  ///
+  /// In en, this message translates to:
+  /// **'{name}, down {amount}.'**
+  String insA11yGroupDown(Object name, Object amount);
+
+  /// No description provided for @insA11yDebtUp.
+  ///
+  /// In en, this message translates to:
+  /// **'{label} {balance}, up {delta}.'**
+  String insA11yDebtUp(Object label, Object balance, Object delta);
+
+  /// No description provided for @insA11yDebtDown.
+  ///
+  /// In en, this message translates to:
+  /// **'{label} {balance}, down {delta}.'**
+  String insA11yDebtDown(Object label, Object balance, Object delta);
+
+  /// No description provided for @insA11yDebtFlat.
+  ///
+  /// In en, this message translates to:
+  /// **'{label} {balance}, unchanged.'**
+  String insA11yDebtFlat(Object label, Object balance);
+
+  /// No description provided for @insA11yMovementUp.
+  ///
+  /// In en, this message translates to:
+  /// **'{label}, {amount}, debt increased.'**
+  String insA11yMovementUp(Object label, Object amount);
+
+  /// No description provided for @insA11yMovementDown.
+  ///
+  /// In en, this message translates to:
+  /// **'{label}, {amount}, debt decreased.'**
+  String insA11yMovementDown(Object label, Object amount);
+
+  /// No description provided for @insA11yRevalUp.
+  ///
+  /// In en, this message translates to:
+  /// **'{name}, up {amount}{percent}, {date}.'**
+  String insA11yRevalUp(
+    Object name,
+    Object amount,
+    Object percent,
+    Object date,
+  );
+
+  /// No description provided for @insA11yRevalDown.
+  ///
+  /// In en, this message translates to:
+  /// **'{name}, down {amount}{percent}, {date}.'**
+  String insA11yRevalDown(
+    Object name,
+    Object amount,
+    Object percent,
+    Object date,
+  );
+
+  /// No description provided for @insA11yPercent.
+  ///
+  /// In en, this message translates to:
+  /// **', {percent}'**
+  String insA11yPercent(Object percent);
 
   /// No description provided for @insSeeAll.
   ///
@@ -815,54 +982,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count, plural, =1{1 category} other{{count} categories}}'**
   String insCategoriesCount(int count);
-
-  /// No description provided for @insUntouchedGained.
-  ///
-  /// In en, this message translates to:
-  /// **'Money you didn\'t touch earned {amount}'**
-  String insUntouchedGained(String amount);
-
-  /// No description provided for @insUntouchedLost.
-  ///
-  /// In en, this message translates to:
-  /// **'Money you didn\'t touch lost {amount}'**
-  String insUntouchedLost(String amount);
-
-  /// No description provided for @insTransferFootnote.
-  ///
-  /// In en, this message translates to:
-  /// **'Moved {amount} between your accounts'**
-  String insTransferFootnote(String amount);
-
-  /// No description provided for @insTransferCount.
-  ///
-  /// In en, this message translates to:
-  /// **'{count} transfers'**
-  String insTransferCount(int count);
-
-  /// No description provided for @insFee.
-  ///
-  /// In en, this message translates to:
-  /// **'{amount} fee'**
-  String insFee(String amount);
-
-  /// No description provided for @insContradictionUp.
-  ///
-  /// In en, this message translates to:
-  /// **'Your net worth rose, but you spent {amount} more than you earned.'**
-  String insContradictionUp(String amount);
-
-  /// No description provided for @insContradictionDown.
-  ///
-  /// In en, this message translates to:
-  /// **'Your net worth fell, though you earned {amount} more than you spent.'**
-  String insContradictionDown(String amount);
-
-  /// No description provided for @insContradictionRevalued.
-  ///
-  /// In en, this message translates to:
-  /// **'The whole change this period is investment revaluation.'**
-  String get insContradictionRevalued;
 
   /// No description provided for @insNoRecords.
   ///
@@ -972,29 +1091,11 @@ abstract class AppLocalizations {
   /// **'{amount} in unbudgeted categories'**
   String insUnbudgetedTotal(String amount);
 
-  /// No description provided for @insCustomRange.
-  ///
-  /// In en, this message translates to:
-  /// **'Custom range · {days, plural, =1{1 day} other{{days} days}}'**
-  String insCustomRange(int days);
-
-  /// No description provided for @insClearRange.
-  ///
-  /// In en, this message translates to:
-  /// **'clear'**
-  String get insClearRange;
-
   /// No description provided for @insSelectDateRange.
   ///
   /// In en, this message translates to:
   /// **'Select date range…'**
   String get insSelectDateRange;
-
-  /// No description provided for @insOther.
-  ///
-  /// In en, this message translates to:
-  /// **'Other'**
-  String get insOther;
 
   /// No description provided for @arcReached.
   ///

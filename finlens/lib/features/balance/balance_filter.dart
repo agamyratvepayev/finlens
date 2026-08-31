@@ -47,6 +47,20 @@ class BalanceFilter {
         .toList(growable: false);
   }
 
+  /// The ids of every account this filter leaves visible, across all groups —
+  /// the set Insight's windowed store getters restrict to (spec §9.2). A group
+  /// hidden via [hiddenGroups] drops all its accounts here just as it does in
+  /// [visibleAccounts], so the two surfaces can never disagree.
+  Set<String> visibleAccountIds(AppStore store) {
+    final ids = <String>{};
+    for (final g in AccountGroup.values) {
+      for (final a in visibleAccounts(store, g)) {
+        ids.add(a.id);
+      }
+    }
+    return ids;
+  }
+
   /// The single source of truth for whether a group renders. Never read
   /// [hiddenGroups] directly in the UI: a group with every account hidden is
   /// `off` whether or not its own id was ever added to the set.
@@ -146,6 +160,11 @@ class BalanceFilter {
   static const _groupsKey = 'balance_filter_hidden_categories';
   static const _accountsKey = 'balance_filter_hidden_accounts';
 
+  /// Insight holds a *second*, independent filter (spec §9.1) persisted under
+  /// its own keys, so hiding an account on Insight never touches Balance.
+  static const insightGroupsKey = 'insight_account_filter_groups';
+  static const insightAccountsKey = 'insight_account_filter_accounts';
+
   /// Ids that no longer match anything are dropped, so a deleted account can
   /// never leave the filter button looking active with nothing behind it.
   static BalanceFilter fromStored({
@@ -165,21 +184,30 @@ class BalanceFilter {
     );
   }
 
-  static Future<BalanceFilter> load(AppStore store) async {
+  /// [groupsKey]/[accountsKey] default to Balance's own keys, so every existing
+  /// call is byte-identical; Insight passes its pair (spec §9.1).
+  static Future<BalanceFilter> load(
+    AppStore store, {
+    String groupsKey = _groupsKey,
+    String accountsKey = _accountsKey,
+  }) async {
     final prefs = await SharedPreferences.getInstance();
     return fromStored(
-      groups: _decode(prefs.getString(_groupsKey)),
-      accounts: _decode(prefs.getString(_accountsKey)),
+      groups: _decode(prefs.getString(groupsKey)),
+      accounts: _decode(prefs.getString(accountsKey)),
       store: store,
     );
   }
 
-  Future<void> save() async {
+  Future<void> save({
+    String groupsKey = _groupsKey,
+    String accountsKey = _accountsKey,
+  }) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(
-        _groupsKey, jsonEncode(hiddenGroups.map((g) => g.name).toList()));
+        groupsKey, jsonEncode(hiddenGroups.map((g) => g.name).toList()));
     await prefs.setString(
-        _accountsKey, jsonEncode(hiddenAccountIds.toList()));
+        accountsKey, jsonEncode(hiddenAccountIds.toList()));
   }
 
   static List<String> _decode(String? raw) {

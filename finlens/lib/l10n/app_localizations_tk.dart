@@ -469,7 +469,7 @@ class AppLocalizationsTk extends AppLocalizations {
   String get insNetWorth => 'Arassa gymmat';
 
   @override
-  String get insNetWorthCaption => 'arassa gymmatyň';
+  String get insNetWorthCaption => 'arassa gymmat';
 
   @override
   String get insIncome => 'Girdeji';
@@ -493,6 +493,15 @@ class AppLocalizationsTk extends AppLocalizations {
   String get insRevalued => 'Gaýtadan bahalandy';
 
   @override
+  String get insBefore => 'Öň';
+
+  @override
+  String get insNow => 'Häzir';
+
+  @override
+  String get insMoved => 'Geçirildi';
+
+  @override
   String get insYourDebt => 'Bergiň';
 
   @override
@@ -505,7 +514,137 @@ class AppLocalizationsTk extends AppLocalizations {
   String get insChargedToCards => 'Kart bilen harçladyň';
 
   @override
-  String get insCardPayment => 'Kart tölegi';
+  String get insPaidToCards => 'Karta töledin';
+
+  @override
+  String insMore(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'ýene $count',
+    );
+    return '+$_temp0';
+  }
+
+  @override
+  String get insShowLess => 'Azyny görkez';
+
+  @override
+  String get insFilterAccounts => 'Hasaplary süz';
+
+  @override
+  String get insFilterOff => 'Öçük';
+
+  @override
+  String insFilterActive(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Işjeň, $count element gizlenen',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get insClearCustomRange => 'Ýörite aralygy arassala';
+
+  @override
+  String insA11yHeroUp(String amount) {
+    return 'Arassa gymmat $amount artdy.';
+  }
+
+  @override
+  String insA11yHeroDown(String amount) {
+    return 'Arassa gymmat $amount azaldy.';
+  }
+
+  @override
+  String insA11yHeroFlat(String amount) {
+    return 'Arassa gymmat üýtgemedi, $amount.';
+  }
+
+  @override
+  String insA11yWaterfall(
+    Object before,
+    Object inflow,
+    Object outflow,
+    Object revalued,
+    Object now,
+  ) {
+    return 'Arassa gymmat öň $before, $inflow girdi, $outflow çykdy, $revalued bahalandy, häzir $now.';
+  }
+
+  @override
+  String insA11yWaterfallMoved(
+    Object before,
+    Object inflow,
+    Object outflow,
+    Object revalued,
+    Object moved,
+    Object now,
+  ) {
+    return 'Arassa gymmat öň $before, $inflow girdi, $outflow çykdy, $revalued bahalandy, $moved görnüşden çykdy, häzir $now.';
+  }
+
+  @override
+  String insA11yGroupUp(Object name, Object amount) {
+    return '$name, $amount artdy.';
+  }
+
+  @override
+  String insA11yGroupDown(Object name, Object amount) {
+    return '$name, $amount azaldy.';
+  }
+
+  @override
+  String insA11yDebtUp(Object label, Object balance, Object delta) {
+    return '$label $balance, $delta artdy.';
+  }
+
+  @override
+  String insA11yDebtDown(Object label, Object balance, Object delta) {
+    return '$label $balance, $delta azaldy.';
+  }
+
+  @override
+  String insA11yDebtFlat(Object label, Object balance) {
+    return '$label $balance, üýtgemedi.';
+  }
+
+  @override
+  String insA11yMovementUp(Object label, Object amount) {
+    return '$label, $amount, bergi artdy.';
+  }
+
+  @override
+  String insA11yMovementDown(Object label, Object amount) {
+    return '$label, $amount, bergi azaldy.';
+  }
+
+  @override
+  String insA11yRevalUp(
+    Object name,
+    Object amount,
+    Object percent,
+    Object date,
+  ) {
+    return '$name, $amount artdy$percent, $date.';
+  }
+
+  @override
+  String insA11yRevalDown(
+    Object name,
+    Object amount,
+    Object percent,
+    Object date,
+  ) {
+    return '$name, $amount azaldy$percent, $date.';
+  }
+
+  @override
+  String insA11yPercent(Object percent) {
+    return ', $percent';
+  }
 
   @override
   String insSeeAll(int count) {
@@ -526,45 +665,6 @@ class AppLocalizationsTk extends AppLocalizations {
     );
     return '$_temp0';
   }
-
-  @override
-  String insUntouchedGained(String amount) {
-    return 'El degirmedik puluň $amount gazandyrdy';
-  }
-
-  @override
-  String insUntouchedLost(String amount) {
-    return 'El degirmedik puluň $amount ýitirtdi';
-  }
-
-  @override
-  String insTransferFootnote(String amount) {
-    return 'Hasaplaryň arasynda $amount geçirdiň';
-  }
-
-  @override
-  String insTransferCount(int count) {
-    return '$count geçirim';
-  }
-
-  @override
-  String insFee(String amount) {
-    return '$amount komissiýa';
-  }
-
-  @override
-  String insContradictionUp(String amount) {
-    return 'Arassa gymmatyň artdy, emma gazananyňdan $amount köp harçladyň.';
-  }
-
-  @override
-  String insContradictionDown(String amount) {
-    return 'Arassa gymmatyň azaldy, emma harçlanyňdan $amount köp gazandyň.';
-  }
-
-  @override
-  String get insContradictionRevalued =>
-      'Bu döwürdäki üýtgemäniň bary maýa goýum bahalandyrmasyndan.';
 
   @override
   String get insNoRecords => 'Bu döwürde ýazgy ýok';
@@ -643,23 +743,7 @@ class AppLocalizationsTk extends AppLocalizations {
   }
 
   @override
-  String insCustomRange(int days) {
-    String _temp0 = intl.Intl.pluralLogic(
-      days,
-      locale: localeName,
-      other: '$days gün',
-    );
-    return 'Ýörite aralyk · $_temp0';
-  }
-
-  @override
-  String get insClearRange => 'arassala';
-
-  @override
   String get insSelectDateRange => 'Sene aralygyny saýla…';
-
-  @override
-  String get insOther => 'Beýleki';
 
   @override
   String get arcReached => 'Ýetilen';

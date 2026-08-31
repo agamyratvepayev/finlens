@@ -294,6 +294,31 @@ class AppStore extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Insight's own account filter (spec §9.1). Reuses the [BalanceFilter] value
+  /// type but is a *second, independent* instance persisted under its own keys —
+  /// deliberately not shared with Balance, so the two can disagree; that cost is
+  /// accepted so hiding an account on one tab never silently reshapes the other.
+  BalanceFilter _insightAccountFilter = const BalanceFilter();
+  BalanceFilter get insightAccountFilter => _insightAccountFilter;
+
+  void setInsightAccountFilter(BalanceFilter filter) {
+    _insightAccountFilter = filter;
+    notifyListeners();
+    unawaited(filter.save(
+      groupsKey: BalanceFilter.insightGroupsKey,
+      accountsKey: BalanceFilter.insightAccountsKey,
+    ));
+  }
+
+  Future<void> loadInsightAccountFilter() async {
+    _insightAccountFilter = await BalanceFilter.load(
+      this,
+      groupsKey: BalanceFilter.insightGroupsKey,
+      accountsKey: BalanceFilter.insightAccountsKey,
+    );
+    notifyListeners();
+  }
+
   /// Which sort the Balance list is in, and the user's hand-made order. Held
   /// here (like [balanceFilter]) so both persist and can be restored before the
   /// first frame; the screen does the actual ordering through [CustomOrder]'s
@@ -1215,13 +1240,19 @@ class AppStore extends ChangeNotifier {
   /// Range-lens twins of [monthIncome]/[monthExpense] — same fold, windowed, and
   /// **converted** (spec §9). Aliased by [inflowInWindow]/[outflowInWindow], the
   /// names Insight reads, which promise conversion in the getter name itself.
-  double incomeInWindow(DateRange window) => txnsInWindow(window)
-      .where((t) => t.type == TxnType.income)
-      .fold(0.0, (sum, t) => sum + Fx.toBase(t.amount, t.currency));
+  double incomeInWindow(DateRange window, {Set<String>? visible}) =>
+      txnsInWindow(window)
+          .where((t) =>
+              t.type == TxnType.income &&
+              (visible == null || visible.contains(t.toRef)))
+          .fold(0.0, (sum, t) => sum + Fx.toBase(t.amount, t.currency));
 
-  double expenseInWindow(DateRange window) => txnsInWindow(window)
-      .where((t) => t.type == TxnType.expense)
-      .fold(0.0, (sum, t) => sum + Fx.toBase(t.amount, t.currency));
+  double expenseInWindow(DateRange window, {Set<String>? visible}) =>
+      txnsInWindow(window)
+          .where((t) =>
+              t.type == TxnType.expense &&
+              (visible == null || visible.contains(t.fromRef)))
+          .fold(0.0, (sum, t) => sum + Fx.toBase(t.amount, t.currency));
 
   /// The set of months (1–12) in [year] that hold at least one transaction —
   /// the Period sheet's has-data dots. One grouped pass per displayed year per
@@ -1389,8 +1420,12 @@ class AppStore extends ChangeNotifier {
   /// at each end of the window. Summed over ALL accounts (hidden included, like
   /// every net-worth total; archived included so a windowed history stays whole)
   /// — the same set [groupChangeInWindow] partitions.
-  double netWorthOn(DateTime date) =>
-      _accounts.fold(0.0, (sum, a) => sum + balanceOnInBase(a.id, date));
+  /// [visible], when non-null, restricts the sum to that set of account ids —
+  /// Insight's account filter (spec §9.2). Null means every account, so every
+  /// existing caller is unchanged and an empty filter is bit-identical.
+  double netWorthOn(DateTime date, {Set<String>? visible}) => _accounts
+      .where((a) => visible == null || visible.contains(a.id))
+      .fold(0.0, (sum, a) => sum + balanceOnInBase(a.id, date));
 
   /// Net worth change across [window] — the Insight hero. The windowed twin of
   /// [netWorthDelta], which is anchored to the Balance header's ComparePeriod and
@@ -1398,10 +1433,11 @@ class AppStore extends ChangeNotifier {
   /// (like [netWorthDelta]); equals `netWorthOn(end) − netWorthOn(before)` and,
   /// by construction, the sum of [groupChangeInWindow] over every group (§0
   /// stock identity).
-  double netWorthChangeInWindow(DateRange window) {
+  double netWorthChangeInWindow(DateRange window, {Set<String>? visible}) {
     var delta = 0.0;
     for (final t in txnsInWindow(window)) {
       for (final a in _accounts) {
+        if (visible != null && !visible.contains(a.id)) continue;
         delta += Fx.toBase(_effectOn(t, a.id), a.currency);
       }
     }
@@ -1410,11 +1446,16 @@ class AppStore extends ChangeNotifier {
 
   /// Change in the summed base-currency balances of one [group] across [window].
   /// The stock identity: these sum to [netWorthChangeInWindow]. One pass.
-  double groupChangeInWindow(AccountGroup group, DateRange window) {
+  /// Under a filter, both sides restrict to [visible], so the identity still
+  /// closes on the filtered set — the crossing-transfer effect on a visible
+  /// account lands in that account's own group, so no MOVED term is needed here.
+  double groupChangeInWindow(AccountGroup group, DateRange window,
+      {Set<String>? visible}) {
     var delta = 0.0;
     for (final t in txnsInWindow(window)) {
       for (final a in _accounts) {
         if (a.group != group) continue;
+        if (visible != null && !visible.contains(a.id)) continue;
         delta += Fx.toBase(_effectOn(t, a.id), a.currency);
       }
     }
@@ -1423,9 +1464,12 @@ class AppStore extends ChangeNotifier {
 
   /// Revaluation booked in [window], in base currency — the DEĞER DEĞİŞİMİ block.
   /// This is the figure income/expense metrics deliberately exclude (spec 6.2).
-  double revaluedInWindow(DateRange window) => txnsInWindow(window)
-      .where((t) => t.type == TxnType.rebalance)
-      .fold(0.0, (sum, t) => sum + Fx.toBase(t.amount, t.currency));
+  double revaluedInWindow(DateRange window, {Set<String>? visible}) =>
+      txnsInWindow(window)
+          .where((t) =>
+              t.type == TxnType.rebalance &&
+              (visible == null || visible.contains(t.toRef)))
+          .fold(0.0, (sum, t) => sum + Fx.toBase(t.amount, t.currency));
 
   /// What a window's transfers actually cost: the fee, plus any gap between what
   /// left the source and what landed in the destination once both are converted
@@ -1434,31 +1478,66 @@ class AppStore extends ChangeNotifier {
   /// negated sum of each transfer's own effects on the two accounts it touches.
   /// Never negative in practice, but not clamped — a negative leak is a data
   /// error worth surfacing, not hiding.
-  double transferLeakInWindow(DateRange window) {
+  double transferLeakInWindow(DateRange window, {Set<String>? visible}) {
     var leak = 0.0;
     for (final t in txnsInWindow(window)) {
       if (t.type != TxnType.transfer) continue;
-      for (final ref in {t.fromRef, t.toRef}) {
-        final acc = accountById(ref);
-        if (acc != null) leak -= Fx.toBase(_effectOn(t, acc.id), acc.currency);
-      }
+      final from = accountById(t.fromRef);
+      final to = accountById(t.toRef);
+      // A leak belongs to a transfer only when BOTH ends are counted. Under a
+      // filter, a transfer that crosses the boundary is not a leak on the
+      // visible set — its visible end is real money leaving/arriving, counted by
+      // [movedAcrossFilterInWindow] instead. With no filter both ends count, so
+      // this is bit-identical to the old per-ref fold.
+      bool inSet(Account? a) =>
+          a != null && (visible == null || visible.contains(a.id));
+      if (!inSet(from) || !inSet(to)) continue;
+      leak -= Fx.toBase(_effectOn(t, from!.id), from.currency);
+      leak -= Fx.toBase(_effectOn(t, to!.id), to.currency);
     }
     return leak;
+  }
+
+  /// Net effect on the *visible* accounts of transfers that cross the filter
+  /// boundary in [window]. Zero when the filter is empty — with nothing hidden
+  /// there is no boundary to cross. This is the waterfall's MOVED step (§9.3):
+  /// money genuinely leaving (or arriving at) the visible set, which is neither
+  /// income, expense, revaluation nor a leak, so the flow identity needs it to
+  /// close on the filtered set.
+  double movedAcrossFilterInWindow(DateRange window, {Set<String>? visible}) {
+    if (visible == null) return 0;
+    var moved = 0.0;
+    for (final t in txnsInWindow(window)) {
+      if (t.type != TxnType.transfer) continue;
+      final from = accountById(t.fromRef);
+      final to = accountById(t.toRef);
+      final fromV = from != null && visible.contains(from.id);
+      final toV = to != null && visible.contains(to.id);
+      if (fromV == toV) continue; // both in or both out → not crossing
+      final acc = fromV ? from : to;
+      if (acc == null) continue;
+      moved += Fx.toBase(_effectOn(t, acc.id), acc.currency);
+    }
+    return moved;
   }
 
   /// One grouped pass over [window], bucketed by category id, in base currency —
   /// the INCOME and SPENDING lists. Insight renders every category, so a
   /// per-category scan would be N passes over the ledger; this is one.
   ({Map<String, double> income, Map<String, double> expense})
-      categoryFlowInWindow(DateRange window) {
+      categoryFlowInWindow(DateRange window, {Set<String>? visible}) {
     final income = <String, double>{};
     final expense = <String, double>{};
     for (final t in txnsInWindow(window)) {
       switch (t.type) {
         case TxnType.expense:
+          // The account charged is `fromRef`; the row counts when it is visible.
+          if (visible != null && !visible.contains(t.fromRef)) break;
           expense[t.toRef] =
               (expense[t.toRef] ?? 0) + Fx.toBase(t.amount, t.currency);
         case TxnType.income:
+          // The account credited is `toRef`; the row counts when it is visible.
+          if (visible != null && !visible.contains(t.toRef)) break;
           income[t.fromRef] =
               (income[t.fromRef] ?? 0) + Fx.toBase(t.amount, t.currency);
         case TxnType.transfer:
@@ -1489,9 +1568,12 @@ class AppStore extends ChangeNotifier {
 
   /// Every rebalance in [window], newest first — the rows of the revaluation
   /// block, each naming its account.
-  List<Txn> revaluationsInWindow(DateRange window) => txnsInWindow(window)
-      .where((t) => t.type == TxnType.rebalance)
-      .toList(growable: false);
+  List<Txn> revaluationsInWindow(DateRange window, {Set<String>? visible}) =>
+      txnsInWindow(window)
+          .where((t) =>
+              t.type == TxnType.rebalance &&
+              (visible == null || visible.contains(t.toRef)))
+          .toList(growable: false);
 
   /// Every transfer in [window], newest first — the transfer footnote's count
   /// and total.
@@ -1502,22 +1584,25 @@ class AppStore extends ChangeNotifier {
   /// Spent on credit-card accounts in [window]: expense transactions whose
   /// `fromRef` is an account in [AccountGroup.creditCards], in base — the DEBT
   /// block's "charged" figure.
-  double chargedToCardsInWindow(DateRange window) => txnsInWindow(window)
-      .where((t) =>
-          t.type == TxnType.expense &&
-          accountById(t.fromRef)?.group == AccountGroup.creditCards)
-      .fold(0.0, (sum, t) => sum + Fx.toBase(t.amount, t.currency));
+  double chargedToCardsInWindow(DateRange window, {Set<String>? visible}) =>
+      txnsInWindow(window)
+          .where((t) =>
+              t.type == TxnType.expense &&
+              accountById(t.fromRef)?.group == AccountGroup.creditCards &&
+              (visible == null || visible.contains(t.fromRef)))
+          .fold(0.0, (sum, t) => sum + Fx.toBase(t.amount, t.currency));
 
   /// Paid *into* liability accounts in [window] via transfer — the DEBT block's
   /// "paid" figure, a positive magnitude. Uses what actually landed in the
   /// destination (`toAmount`), in the destination account's currency, so a
   /// cross-currency payment counts what the debt actually received.
-  double paidToLiabilitiesInWindow(DateRange window) {
+  double paidToLiabilitiesInWindow(DateRange window, {Set<String>? visible}) {
     var paid = 0.0;
     for (final t in txnsInWindow(window)) {
       if (t.type != TxnType.transfer) continue;
       final dest = accountById(t.toRef);
       if (dest == null || !dest.group.isLiability) continue;
+      if (visible != null && !visible.contains(dest.id)) continue;
       paid += Fx.toBase(t.toAmount ?? t.amount, dest.currency);
     }
     return paid;
@@ -1525,21 +1610,26 @@ class AppStore extends ChangeNotifier {
 
   /// Total liabilities as they stood at the end of [date] — positive magnitude.
   /// Built from [balanceOnInBase]; the DEBT block's before/after pair.
-  double totalLiabilitiesOn(DateTime date) => _accounts
-      .where((a) => a.group.isLiability)
+  double totalLiabilitiesOn(DateTime date, {Set<String>? visible}) => _accounts
+      .where((a) =>
+          a.group.isLiability && (visible == null || visible.contains(a.id)))
       .fold(0.0, (sum, a) => sum + balanceOnInBase(a.id, date))
       .abs();
 
   /// Total receivables as they stood at the end of [date] — the ALACAĞIN cell.
-  double totalReceivablesOn(DateTime date) => _accounts
-      .where((a) => a.group == AccountGroup.receivables)
+  double totalReceivablesOn(DateTime date, {Set<String>? visible}) => _accounts
+      .where((a) =>
+          a.group == AccountGroup.receivables &&
+          (visible == null || visible.contains(a.id)))
       .fold(0.0, (sum, a) => sum + balanceOnInBase(a.id, date));
 
   /// The window's income/expense, **converted** (spec §9). Insight reads these —
   /// the getter name promises the conversion [incomeInWindow]/[expenseInWindow]
   /// now also perform, so a reader of Insight never has to wonder.
-  double inflowInWindow(DateRange window) => incomeInWindow(window);
-  double outflowInWindow(DateRange window) => expenseInWindow(window);
+  double inflowInWindow(DateRange window, {Set<String>? visible}) =>
+      incomeInWindow(window, visible: visible);
+  double outflowInWindow(DateRange window, {Set<String>? visible}) =>
+      expenseInWindow(window, visible: visible);
 
   // ── Goals, rebuilt on real balances (§1) ──────────────────────────────────
   //

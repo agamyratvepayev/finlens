@@ -72,10 +72,6 @@ class SeeAllScreen extends StatelessWidget {
                   AppCard(
                     child: Column(
                       children: [
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(12, 11, 12, 9),
-                          child: _StackedBar(rows: rows, total: total),
-                        ),
                         for (var i = 0; i < rows.length; i++) ...[
                           if (i > 0) const RowDivider(indent: 47),
                           _Row(
@@ -88,9 +84,13 @@ class SeeAllScreen extends StatelessWidget {
                           ),
                         ],
                         if (!income && unbudgeted > 0.005)
+                          // The old strip appended "· Add budget" with no
+                          // onTap — a dead half-sentence (spec §10). Dropped to
+                          // the honest figure alone; there is no budget-editor
+                          // route from here to wire it to.
                           _Foot(
-                            text:
-                                '${l.insUnbudgetedTotal(money(unbudgeted, masked: store.masked))} · ${l.insAddBudget}',
+                            text: l.insUnbudgetedTotal(
+                                money(unbudgeted, masked: store.masked)),
                           ),
                       ],
                     ),
@@ -116,37 +116,6 @@ class SeeAllScreen extends StatelessWidget {
       default:
         return w.label(AppStore.today, l);
     }
-  }
-}
-
-class _StackedBar extends StatelessWidget {
-  const _StackedBar({required this.rows, required this.total});
-  final List<(Category?, double)> rows;
-  final double total;
-
-  @override
-  Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(8),
-      child: SizedBox(
-        height: 8,
-        child: total <= 0
-            ? const ColoredBox(color: AppColors.surfaceHigh)
-            : Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  for (var i = 0; i < rows.length; i++) ...[
-                    if (i > 0) const SizedBox(width: 2),
-                    Expanded(
-                      flex: (rows[i].$2 / total * 1000).round().clamp(1, 1000000),
-                      child: ColoredBox(
-                          color: rows[i].$1?.color ?? AppColors.textTertiary),
-                    ),
-                  ],
-                ],
-              ),
-      ),
-    );
   }
 }
 

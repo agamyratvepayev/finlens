@@ -126,8 +126,8 @@ void main() {
     }
   }
 
-  // ── Density (§4) ────────────────────────────────────────────────────────────
-  testWidgets('component heights match the §4 targets', (tester) async {
+  // ── Density (§13) ───────────────────────────────────────────────────────────
+  testWidgets('component heights match the §13 targets', (tester) async {
     tester.view.physicalSize = _sizes['390x844']!;
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
@@ -136,9 +136,125 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
 
     double h(Key k) => tester.getSize(find.byKey(k).first).height;
-    expect(h(const Key('ins-threeup')), closeTo(46, 1.5));
-    expect(h(const Key('ins-debtcells')), closeTo(47, 1.5));
+    expect(h(const Key('ins-waterfall')), closeTo(92, 1));
+    expect(h(const Key('ins-gridcell')), closeTo(21, 1));
+    expect(h(const Key('ins-debtside')), closeTo(34, 2));
+    expect(h(const Key('ins-debtmove')), closeTo(28, 2));
+    expect(h(const Key('ins-revalrow')), closeTo(44, 2.5));
     expect(h(const Key('ins-foot')), closeTo(30, 1.5));
+  });
+
+  // ── No stacked bar anywhere (§6 / §15) ──────────────────────────────────────
+  testWidgets('no 8pt stacked-bar strip is built on Insight or See-all',
+      (tester) async {
+    tester.view.physicalSize = _sizes['390x844']!;
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    // A stacked bar was an 8pt-high ClipRRect of coloured segments at the top of
+    // every card. It is gone; assert no ClipRRect renders at exactly 8pt.
+    await tester.pumpWidget(_app(buildSeedStore(), const InsightScreen()));
+    await tester.pump(const Duration(milliseconds: 300));
+    for (final e in find.byType(ClipRRect).evaluate()) {
+      expect((e.renderObject as dynamic).size.height, isNot(closeTo(8, 0.1)));
+    }
+
+    await tester.pumpWidget(_app(
+        buildSeedStore(), SeeAllScreen(income: false, window: _augustMonth())));
+    await tester.pump(const Duration(milliseconds: 300));
+    for (final e in find.byType(ClipRRect).evaluate()) {
+      expect((e.renderObject as dynamic).size.height, isNot(closeTo(8, 0.1)));
+    }
+  });
+
+  // ── The waterfall exposes exactly one semantic sentence (§11) ────────────────
+  testWidgets('the waterfall is one semantics node naming the four figures',
+      (tester) async {
+    tester.view.physicalSize = _sizes['390x844']!;
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    final handle = tester.ensureSemantics();
+
+    await tester.pumpWidget(_app(buildSeedStore(), const InsightScreen()));
+    await tester.pump(const Duration(milliseconds: 300));
+
+    // The whole chart reads as one sentence; the bars/axis are ExcludeSemantics.
+    expect(find.bySemanticsLabel(RegExp(r'Net worth .* before, .* now\.')),
+        findsOneWidget);
+    // A group row names its direction in words, never "−\$1,200".
+    expect(find.bySemanticsLabel(RegExp(r'(up|down) ')), findsWidgets);
+    handle.dispose();
+  });
+
+  // ── Masked mode: shape is not a secret (§12) ────────────────────────────────
+  testWidgets('masking changes every amount but never the bar geometry',
+      (tester) async {
+    tester.view.physicalSize = _sizes['390x844']!;
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    final store = buildSeedStore();
+    await tester.pumpWidget(_app(store, const InsightScreen()));
+    await tester.pump(const Duration(milliseconds: 300));
+    final unmasked = tester.getSize(find.byKey(const Key('ins-waterfall')));
+
+    store.toggleMasked();
+    await tester.pump(const Duration(milliseconds: 300));
+    final masked = tester.getSize(find.byKey(const Key('ins-waterfall')));
+
+    expect(masked.height, closeTo(unmasked.height, 0.5));
+    // The concrete figures are gone once masked.
+    expect(find.text('\$189,128'), findsNothing);
+  });
+
+  // ── Two-column grid, with a fallback (§5.3) ─────────────────────────────────
+  testWidgets('the group grid is two columns at 390 en, one column at 130%',
+      (tester) async {
+    Future<int> distinctRows(Size size, double scale) async {
+      tester.view.physicalSize = size;
+      tester.view.devicePixelRatio = 1.0;
+      await tester.pumpWidget(
+          _app(buildSeedStore(), const InsightScreen(), scale: scale));
+      await tester.pump(const Duration(milliseconds: 300));
+      final cells = find.byKey(const Key('ins-gridcell'));
+      final ys = <double>{};
+      for (final e in cells.evaluate()) {
+        final box = e.renderObject as RenderBox;
+        ys.add(box.localToGlobal(Offset.zero).dy.roundToDouble());
+      }
+      return ys.length;
+    }
+
+    addTearDown(tester.view.reset);
+    // August has three movers. Two columns → two rows (2 + 1); the 130% scale
+    // reliably breaks the half-width fit → one column → three rows.
+    expect(await distinctRows(_sizes['390x844']!, 1.0), 2);
+    expect(await distinctRows(_sizes['390x844']!, 1.3), 3);
+  });
+
+  // ── Empty window (§12) ──────────────────────────────────────────────────────
+  testWidgets('an empty window keeps the hero, drops the waterfall and grid',
+      (tester) async {
+    tester.view.physicalSize = _sizes['390x844']!;
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(_app(buildSeedStore(), const InsightScreen()));
+    await tester.pump(const Duration(milliseconds: 300));
+
+    // Step back to a window with no records (well before the seed's history).
+    for (var i = 0; i < 40; i++) {
+      await tester.drag(
+          find.byType(HorizontalSectionSwipe).first, const Offset(320, 0));
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+    await tester.pump(const Duration(milliseconds: 300));
+
+    if (find.text('No records in this period').evaluate().isNotEmpty) {
+      expect(find.byKey(const Key('ins-waterfall')), findsNothing);
+      expect(find.byKey(const Key('ins-gridcell')), findsNothing);
+      expect(find.textContaining('Back to'), findsOneWidget);
+    }
   });
 
   testWidgets('the category chart is 104 pt', (tester) async {

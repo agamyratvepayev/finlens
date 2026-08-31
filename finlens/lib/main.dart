@@ -28,6 +28,7 @@ Future<void> main() async {
   SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle.light);
   final store = _useDevSeed ? buildDevSeedStore() : buildSeedStore();
   await store.loadBalanceFilter();
+  await store.loadInsightAccountFilter();
   await store.loadBalanceOrder();
   await store.loadSameListRange();
   await store.loadCompletedRange();

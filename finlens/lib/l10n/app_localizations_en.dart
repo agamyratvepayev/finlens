@@ -469,7 +469,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get insNetWorth => 'Net worth';
 
   @override
-  String get insNetWorthCaption => 'your net worth';
+  String get insNetWorthCaption => 'net worth';
 
   @override
   String get insIncome => 'Income';
@@ -493,6 +493,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get insRevalued => 'Revalued';
 
   @override
+  String get insBefore => 'Before';
+
+  @override
+  String get insNow => 'Now';
+
+  @override
+  String get insMoved => 'Moved';
+
+  @override
   String get insYourDebt => 'Your debt';
 
   @override
@@ -505,7 +514,139 @@ class AppLocalizationsEn extends AppLocalizations {
   String get insChargedToCards => 'Charged to cards';
 
   @override
-  String get insCardPayment => 'Card payment';
+  String get insPaidToCards => 'Paid to cards';
+
+  @override
+  String insMore(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count more',
+      one: '1 more',
+    );
+    return '+$_temp0';
+  }
+
+  @override
+  String get insShowLess => 'Show less';
+
+  @override
+  String get insFilterAccounts => 'Filter accounts';
+
+  @override
+  String get insFilterOff => 'Off';
+
+  @override
+  String insFilterActive(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Active, $count items hidden',
+      one: 'Active, $count item hidden',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get insClearCustomRange => 'Clear custom range';
+
+  @override
+  String insA11yHeroUp(String amount) {
+    return 'Net worth rose $amount.';
+  }
+
+  @override
+  String insA11yHeroDown(String amount) {
+    return 'Net worth fell $amount.';
+  }
+
+  @override
+  String insA11yHeroFlat(String amount) {
+    return 'Net worth unchanged, $amount.';
+  }
+
+  @override
+  String insA11yWaterfall(
+    Object before,
+    Object inflow,
+    Object outflow,
+    Object revalued,
+    Object now,
+  ) {
+    return 'Net worth $before before, $inflow in, $outflow out, $revalued revalued, $now now.';
+  }
+
+  @override
+  String insA11yWaterfallMoved(
+    Object before,
+    Object inflow,
+    Object outflow,
+    Object revalued,
+    Object moved,
+    Object now,
+  ) {
+    return 'Net worth $before before, $inflow in, $outflow out, $revalued revalued, $moved moved out of view, $now now.';
+  }
+
+  @override
+  String insA11yGroupUp(Object name, Object amount) {
+    return '$name, up $amount.';
+  }
+
+  @override
+  String insA11yGroupDown(Object name, Object amount) {
+    return '$name, down $amount.';
+  }
+
+  @override
+  String insA11yDebtUp(Object label, Object balance, Object delta) {
+    return '$label $balance, up $delta.';
+  }
+
+  @override
+  String insA11yDebtDown(Object label, Object balance, Object delta) {
+    return '$label $balance, down $delta.';
+  }
+
+  @override
+  String insA11yDebtFlat(Object label, Object balance) {
+    return '$label $balance, unchanged.';
+  }
+
+  @override
+  String insA11yMovementUp(Object label, Object amount) {
+    return '$label, $amount, debt increased.';
+  }
+
+  @override
+  String insA11yMovementDown(Object label, Object amount) {
+    return '$label, $amount, debt decreased.';
+  }
+
+  @override
+  String insA11yRevalUp(
+    Object name,
+    Object amount,
+    Object percent,
+    Object date,
+  ) {
+    return '$name, up $amount$percent, $date.';
+  }
+
+  @override
+  String insA11yRevalDown(
+    Object name,
+    Object amount,
+    Object percent,
+    Object date,
+  ) {
+    return '$name, down $amount$percent, $date.';
+  }
+
+  @override
+  String insA11yPercent(Object percent) {
+    return ', $percent';
+  }
 
   @override
   String insSeeAll(int count) {
@@ -528,45 +669,6 @@ class AppLocalizationsEn extends AppLocalizations {
     );
     return '$_temp0';
   }
-
-  @override
-  String insUntouchedGained(String amount) {
-    return 'Money you didn\'t touch earned $amount';
-  }
-
-  @override
-  String insUntouchedLost(String amount) {
-    return 'Money you didn\'t touch lost $amount';
-  }
-
-  @override
-  String insTransferFootnote(String amount) {
-    return 'Moved $amount between your accounts';
-  }
-
-  @override
-  String insTransferCount(int count) {
-    return '$count transfers';
-  }
-
-  @override
-  String insFee(String amount) {
-    return '$amount fee';
-  }
-
-  @override
-  String insContradictionUp(String amount) {
-    return 'Your net worth rose, but you spent $amount more than you earned.';
-  }
-
-  @override
-  String insContradictionDown(String amount) {
-    return 'Your net worth fell, though you earned $amount more than you spent.';
-  }
-
-  @override
-  String get insContradictionRevalued =>
-      'The whole change this period is investment revaluation.';
 
   @override
   String get insNoRecords => 'No records in this period';
@@ -645,24 +747,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String insCustomRange(int days) {
-    String _temp0 = intl.Intl.pluralLogic(
-      days,
-      locale: localeName,
-      other: '$days days',
-      one: '1 day',
-    );
-    return 'Custom range · $_temp0';
-  }
-
-  @override
-  String get insClearRange => 'clear';
-
-  @override
   String get insSelectDateRange => 'Select date range…';
-
-  @override
-  String get insOther => 'Other';
 
   @override
   String get arcReached => 'Reached';
