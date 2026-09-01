@@ -440,6 +440,42 @@ class AppLocalizationsTk extends AppLocalizations {
   String get moreMaskAmounts => 'Ähli mukdarlary gizle';
 
   @override
+  String get moreBackup => 'Ätiýaçlyk nusga';
+
+  @override
+  String get moreRestore => 'Dikeltmek';
+
+  @override
+  String get backupSavedMsg => 'Nusga saklandy';
+
+  @override
+  String get backupFailedMsg => 'Nusgany saklap bolmady';
+
+  @override
+  String get restoreConfirmTitle => 'Ähli maglumat çalşylsynmy?';
+
+  @override
+  String restoreConfirmMsg(int accounts, int txns) {
+    return 'Bu nusgada $accounts hasap we $txns amal bar. Häzirki maglumatlaryňyz çalşylar.';
+  }
+
+  @override
+  String get restoreImpactLost => 'Bu enjamdaky ähli maglumatlar pozular';
+
+  @override
+  String get restoreImpactKept =>
+      'Nusgadaky hasaplar, amallar we sazlamalar ýüklener';
+
+  @override
+  String get restoreConfirmAction => 'Dikelt';
+
+  @override
+  String get restoreDoneMsg => 'Maglumatlar dikeldildi';
+
+  @override
+  String get restoreInvalidMsg => 'Bu faýl dogry FinLens nusgasy däl';
+
+  @override
   String moreVersion(String version, String build) {
     return '$version ($build)';
   }

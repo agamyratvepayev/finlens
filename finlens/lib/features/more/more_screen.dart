@@ -1,9 +1,15 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
+import '../../core/persistence/backup_codec.dart';
 import '../../core/store/app_store.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/app_card.dart';
+import '../../shared/widgets/destructive_sheet.dart';
 import '../../shared/widgets/screen_header.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
@@ -120,6 +126,92 @@ void _pickLanguage(BuildContext context, AppStore store) {
   );
 }
 
+/// Dump: serialise the whole store and hand the bytes to the system "Save"
+/// dialog so the user stores the `.json` anywhere (Downloads, SD card, Drive).
+/// On Android/iOS the picker writes the bytes itself; on desktop it returns the
+/// chosen path only, so we write there ourselves. A cancelled dialog is a no-op.
+Future<void> _runBackup(BuildContext context, AppStore store) async {
+  final l = AppLocalizations.of(context);
+  final messenger = ScaffoldMessenger.of(context);
+  try {
+    final now = DateTime.now();
+    final bytes = Uint8List.fromList(
+      utf8.encode(encodeBackup(store, exportedAt: now)),
+    );
+    final stamp = '${now.year.toString().padLeft(4, '0')}-'
+        '${now.month.toString().padLeft(2, '0')}-'
+        '${now.day.toString().padLeft(2, '0')}';
+    // saveFile writes [bytes] itself on every platform we ship (mobile writes
+    // the file; desktop writes them to the chosen path) — we only react to the
+    // returned path being null (the user cancelled the dialog).
+    final path = await FilePicker.saveFile(
+      dialogTitle: l.moreBackup,
+      fileName: 'finlens-backup-$stamp.json',
+      type: FileType.custom,
+      allowedExtensions: const ['json'],
+      bytes: bytes,
+    );
+    if (path == null) return; // user cancelled
+    messenger.showSnackBar(SnackBar(content: Text(l.backupSavedMsg)));
+  } catch (_) {
+    messenger.showSnackBar(SnackBar(content: Text(l.backupFailedMsg)));
+  }
+}
+
+/// Restore: pick a backup `.json`, validate it, confirm the destructive replace,
+/// then load it. [AppStore.loadFrom] fires `notifyListeners`, so the attached
+/// persister writes the restored data to SQLite on its own — nothing here
+/// touches the database. An invalid/corrupt file shows a notice and changes
+/// nothing; cancelling the picker or the confirm is a silent no-op.
+Future<void> _runRestore(BuildContext context, AppStore store) async {
+  final l = AppLocalizations.of(context);
+  final messenger = ScaffoldMessenger.of(context);
+
+  final FilePickerResult? picked;
+  try {
+    picked = await FilePicker.pickFiles(
+      dialogTitle: l.moreRestore,
+      type: FileType.custom,
+      allowedExtensions: const ['json'],
+      withData: true,
+    );
+  } catch (_) {
+    messenger.showSnackBar(SnackBar(content: Text(l.restoreInvalidMsg)));
+    return;
+  }
+  if (picked == null || picked.files.isEmpty) return; // cancelled
+
+  final bytes = picked.files.single.bytes;
+  if (bytes == null) {
+    messenger.showSnackBar(SnackBar(content: Text(l.restoreInvalidMsg)));
+    return;
+  }
+
+  final BackupDocument doc;
+  try {
+    doc = decodeBackup(utf8.decode(bytes));
+  } catch (_) {
+    messenger.showSnackBar(SnackBar(content: Text(l.restoreInvalidMsg)));
+    return;
+  }
+
+  if (!context.mounted) return;
+  final ok = await showDestructiveConfirm(
+    context,
+    title: l.restoreConfirmTitle,
+    message: l.restoreConfirmMsg(doc.accountCount, doc.txnCount),
+    impact: [
+      ImpactLine.lost(l.restoreImpactLost),
+      ImpactLine.kept(l.restoreImpactKept),
+    ],
+    confirmLabel: l.restoreConfirmAction,
+  );
+  if (!ok) return;
+
+  store.loadFrom(doc.source);
+  messenger.showSnackBar(SnackBar(content: Text(l.restoreDoneMsg)));
+}
+
 /// The fifth tab is a settings page. The governing rule:
 ///
 /// > A row belongs on More only when the thing it reaches has no home
@@ -190,6 +282,21 @@ class MoreScreen extends StatelessWidget {
                         .push(MaterialPageRoute(
                       builder: (_) => const ArchiveScreen(),
                     )),
+                  ),
+                  // Backup / Restore: carry the whole store to a JSON file and
+                  // back, so a user can move to a new phone (indent-48 hairlines
+                  // align to the text past the 24-icon + 12-gap column).
+                  const RowDivider(indent: 48),
+                  _ActionRow(
+                    icon: Icons.save_alt_rounded,
+                    label: l.moreBackup,
+                    onTap: () => _runBackup(context, store),
+                  ),
+                  const RowDivider(indent: 48),
+                  _ActionRow(
+                    icon: Icons.restore_rounded,
+                    label: l.moreRestore,
+                    onTap: () => _runRestore(context, store),
                   ),
                 ]),
                 // PREFERENCES follows a card, not the screen title, so it keeps
@@ -266,6 +373,55 @@ class _ArchiveRow extends StatelessWidget {
             ),
             const SizedBox(width: Insets.sm),
             Text('$count', style: AppText.amount),
+            const Padding(
+              padding: EdgeInsets.only(left: 2),
+              child: Icon(Icons.chevron_right_rounded,
+                  size: 18, color: AppColors.textTertiary),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// A plain tappable row: leading icon, label, trailing chevron — no value.
+/// Used for Backup / Restore, which navigate to a picker rather than showing a
+/// count or a switch. Same 24-icon + 12-gap + 10-padding metrics as the rows
+/// above so its hairlines and text align with them.
+class _ActionRow extends StatelessWidget {
+  const _ActionRow({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 24,
+              child: Icon(icon, size: 18, color: AppColors.textSecondary),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                label,
+                style: AppText.body
+                    .copyWith(fontSize: 14.5, color: AppColors.textPrimary),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
             const Padding(
               padding: EdgeInsets.only(left: 2),
               child: Icon(Icons.chevron_right_rounded,

@@ -2367,11 +2367,14 @@ class AppStore extends ChangeNotifier {
   }
 
   /// Debug-only: replace the entire in-memory dataset with [source]'s, in place.
-  /// Backs the developer Seed/Reset menu (see [MoreScreen]) — never part of a
-  /// user flow. Because this mutates the existing store rather than swapping the
-  /// instance, loaded preferences (privacy, balance filter/order, ranges) survive
-  /// the swap. Copies [source]'s full goal list so archived goals come across too
-  /// (the public [goals] getter filters them out).
+  /// Replaces this store's data with [source]'s. Backs both the developer
+  /// Seed/Reset menu and the user-facing Restore-from-backup flow (see
+  /// [MoreScreen]). Because this mutates the existing store rather than swapping
+  /// the instance, loaded preferences (privacy, balance filter/order, ranges)
+  /// survive the swap, and the attached persister — a listener — writes the
+  /// restored data straight back to disk on the trailing [notifyListeners].
+  /// Copies [source]'s full goal list so archived goals come across too (the
+  /// public [goals] getter filters them out).
   void loadFrom(AppStore source) {
     _accounts
       ..clear()
@@ -2395,6 +2398,10 @@ class AppStore extends ChangeNotifier {
     // its schema so this store does not re-migrate already-reified ids.
     _tagSchema = source._tagSchema;
     _tagMigrationMerged = source._tagMigrationMerged;
+    // Adopt the source's id counter too. Without this a Restore into a store
+    // that started blank (_idSeq == 1000) would mint colliding ids for the next
+    // new entity, since the restored rows already carry ids well past 1000.
+    _idSeq = source._idSeq;
     _sameIndex = null;
     _accountIndex = null;
     // A moved balance can newly meet a goal's target; latch any that reached

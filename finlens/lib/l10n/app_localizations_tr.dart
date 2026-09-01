@@ -440,6 +440,42 @@ class AppLocalizationsTr extends AppLocalizations {
   String get moreMaskAmounts => 'Tüm tutarları gizle';
 
   @override
+  String get moreBackup => 'Verileri yedekle';
+
+  @override
+  String get moreRestore => 'Verileri geri yükle';
+
+  @override
+  String get backupSavedMsg => 'Yedek kaydedildi';
+
+  @override
+  String get backupFailedMsg => 'Yedek kaydedilemedi';
+
+  @override
+  String get restoreConfirmTitle => 'Tüm veriler değiştirilsin mi?';
+
+  @override
+  String restoreConfirmMsg(int accounts, int txns) {
+    return 'Bu yedekte $accounts hesap ve $txns işlem var. Mevcut verileriniz değiştirilecek.';
+  }
+
+  @override
+  String get restoreImpactLost => 'Bu cihazdaki tüm veriler silinir';
+
+  @override
+  String get restoreImpactKept =>
+      'Yedekteki hesaplar, işlemler ve ayarlar yüklenir';
+
+  @override
+  String get restoreConfirmAction => 'Geri yükle';
+
+  @override
+  String get restoreDoneMsg => 'Veriler geri yüklendi';
+
+  @override
+  String get restoreInvalidMsg => 'Bu dosya geçerli bir FinLens yedeği değil';
+
+  @override
   String moreVersion(String version, String build) {
     return '$version ($build)';
   }

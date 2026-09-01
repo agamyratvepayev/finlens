@@ -52,6 +52,7 @@ dependencies:
   # Real app version + build for the More footer (spec §7). The only runtime
   # source of the pubspec version/build number; read once via FutureBuilder.
   package_info_plus: ^8.0.0
+  file_picker: ^11.0.3
 
 dev_dependencies:
   flutter_test:

@@ -456,6 +456,42 @@ class AppLocalizationsRu extends AppLocalizations {
   String get moreMaskAmounts => 'Скрывать все суммы';
 
   @override
+  String get moreBackup => 'Резервная копия';
+
+  @override
+  String get moreRestore => 'Восстановить';
+
+  @override
+  String get backupSavedMsg => 'Копия сохранена';
+
+  @override
+  String get backupFailedMsg => 'Не удалось сохранить копию';
+
+  @override
+  String get restoreConfirmTitle => 'Заменить все данные?';
+
+  @override
+  String restoreConfirmMsg(int accounts, int txns) {
+    return 'В этой копии $accounts счетов и $txns операций. Текущие данные будут заменены.';
+  }
+
+  @override
+  String get restoreImpactLost => 'Все данные на этом устройстве будут стёрты';
+
+  @override
+  String get restoreImpactKept =>
+      'Счета, операции и настройки из копии будут загружены';
+
+  @override
+  String get restoreConfirmAction => 'Восстановить';
+
+  @override
+  String get restoreDoneMsg => 'Данные восстановлены';
+
+  @override
+  String get restoreInvalidMsg => 'Файл не является резервной копией FinLens';
+
+  @override
   String moreVersion(String version, String build) {
     return '$version ($build)';
   }

@@ -684,6 +684,72 @@ abstract class AppLocalizations {
   /// **'Mask all amounts'**
   String get moreMaskAmounts;
 
+  /// No description provided for @moreBackup.
+  ///
+  /// In en, this message translates to:
+  /// **'Back up data'**
+  String get moreBackup;
+
+  /// No description provided for @moreRestore.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore data'**
+  String get moreRestore;
+
+  /// No description provided for @backupSavedMsg.
+  ///
+  /// In en, this message translates to:
+  /// **'Backup saved'**
+  String get backupSavedMsg;
+
+  /// No description provided for @backupFailedMsg.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t save the backup'**
+  String get backupFailedMsg;
+
+  /// No description provided for @restoreConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Replace all data?'**
+  String get restoreConfirmTitle;
+
+  /// No description provided for @restoreConfirmMsg.
+  ///
+  /// In en, this message translates to:
+  /// **'This backup has {accounts} accounts and {txns} transactions. Your current data will be replaced.'**
+  String restoreConfirmMsg(int accounts, int txns);
+
+  /// No description provided for @restoreImpactLost.
+  ///
+  /// In en, this message translates to:
+  /// **'Everything on this device now is erased'**
+  String get restoreImpactLost;
+
+  /// No description provided for @restoreImpactKept.
+  ///
+  /// In en, this message translates to:
+  /// **'The backup\'s accounts, transactions and settings are loaded'**
+  String get restoreImpactKept;
+
+  /// No description provided for @restoreConfirmAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore'**
+  String get restoreConfirmAction;
+
+  /// No description provided for @restoreDoneMsg.
+  ///
+  /// In en, this message translates to:
+  /// **'Data restored'**
+  String get restoreDoneMsg;
+
+  /// No description provided for @restoreInvalidMsg.
+  ///
+  /// In en, this message translates to:
+  /// **'That file isn\'t a valid FinLens backup'**
+  String get restoreInvalidMsg;
+
   /// No description provided for @moreVersion.
   ///
   /// In en, this message translates to:

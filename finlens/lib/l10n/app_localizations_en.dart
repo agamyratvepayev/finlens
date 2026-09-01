@@ -440,6 +440,42 @@ class AppLocalizationsEn extends AppLocalizations {
   String get moreMaskAmounts => 'Mask all amounts';
 
   @override
+  String get moreBackup => 'Back up data';
+
+  @override
+  String get moreRestore => 'Restore data';
+
+  @override
+  String get backupSavedMsg => 'Backup saved';
+
+  @override
+  String get backupFailedMsg => 'Couldn\'t save the backup';
+
+  @override
+  String get restoreConfirmTitle => 'Replace all data?';
+
+  @override
+  String restoreConfirmMsg(int accounts, int txns) {
+    return 'This backup has $accounts accounts and $txns transactions. Your current data will be replaced.';
+  }
+
+  @override
+  String get restoreImpactLost => 'Everything on this device now is erased';
+
+  @override
+  String get restoreImpactKept =>
+      'The backup\'s accounts, transactions and settings are loaded';
+
+  @override
+  String get restoreConfirmAction => 'Restore';
+
+  @override
+  String get restoreDoneMsg => 'Data restored';
+
+  @override
+  String get restoreInvalidMsg => 'That file isn\'t a valid FinLens backup';
+
+  @override
   String moreVersion(String version, String build) {
     return '$version ($build)';
   }
