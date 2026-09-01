@@ -82,13 +82,15 @@ class _FinLensAppState extends State<FinLensApp> with WidgetsBindingObserver {
   }
 
   @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
+  void didChangeAppLifecycleState(AppLifecycleState state) async {
     // Flush any pending debounced snapshot before the OS can suspend or kill the
-    // process, so a change made moments earlier survives.
+    // process, so a change made moments earlier survives. The framework does not
+    // await this callback, but awaiting flush here drives the write to completion
+    // during `paused`/`hidden` — the window before the process is suspended.
     if (state == AppLifecycleState.paused ||
         state == AppLifecycleState.hidden ||
         state == AppLifecycleState.detached) {
-      widget.persister?.flush();
+      await widget.persister?.flush();
     }
   }
 

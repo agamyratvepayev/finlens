@@ -16,6 +16,11 @@ import 'store_mappers.dart';
 /// transaction that clears and rewrites every table, so the file on disk always
 /// reflects a whole, consistent store. Data volumes are tiny (personal finance),
 /// so a full rewrite is effectively instant.
+///
+/// Writes are serialized through a single [_inFlight] chain so a burst never
+/// runs two rewrites at once and [flush] has one tail to await — this is what
+/// lets a change made moments before backgrounding be persisted before the OS
+/// suspends the process.
 class StorePersister {
   StorePersister(this._store, this._database);
 
@@ -26,6 +31,10 @@ class StorePersister {
 
   Timer? _debounce;
   bool _attached = false;
+
+  /// The most recently scheduled write, or null when none is running/queued.
+  /// New writes chain after it so they never overlap, and [flush] awaits it.
+  Future<void>? _inFlight;
 
   /// Builds an [AppStore] from the persisted rows, or returns null when the
   /// database is empty (a fresh install — `main()` then starts blank). The id
@@ -75,15 +84,18 @@ class StorePersister {
     _store.addListener(_onChange);
   }
 
-  /// Writes any pending debounced snapshot immediately. Call from the app
-  /// lifecycle (paused/detached) so a change made moments before backgrounding
-  /// is not lost if the process is killed.
+  /// Writes the latest snapshot immediately and waits for it to land. Call from
+  /// the app lifecycle (paused/hidden/detached) so a change made moments before
+  /// backgrounding is not lost if the process is killed.
+  ///
+  /// Unlike a conditional flush, this always enqueues a fresh write: it cancels
+  /// any pending debounce, awaits any in-flight write, then writes the current
+  /// store state. That closes the window where the debounce had already fired
+  /// but its fire-and-forget write was still running.
   Future<void> flush() async {
-    if (_debounce?.isActive ?? false) {
-      _debounce!.cancel();
-      _debounce = null;
-      await _writeSafe();
-    }
+    _debounce?.cancel();
+    _debounce = null;
+    await _enqueueWrite();
   }
 
   /// Stops persisting and drops any pending write.
@@ -100,8 +112,20 @@ class StorePersister {
     _debounce?.cancel();
     _debounce = Timer(_debounceDelay, () {
       _debounce = null;
-      unawaited(_writeSafe());
+      unawaited(_enqueueWrite());
     });
+  }
+
+  /// Chains a write after any in-flight one so two rewrites never overlap, and
+  /// exposes a single future for [flush] to await. Clears [_inFlight] once the
+  /// tail settles (guarded so a newer write already queued behind us wins).
+  Future<void> _enqueueWrite() {
+    final next = (_inFlight ?? Future<void>.value()).then((_) => _writeSafe());
+    _inFlight = next;
+    next.whenComplete(() {
+      if (identical(_inFlight, next)) _inFlight = null;
+    });
+    return next;
   }
 
   Future<void> _writeSafe() async {
