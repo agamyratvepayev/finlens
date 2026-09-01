@@ -27,6 +27,8 @@ class AppStore extends ChangeNotifier {
     required List<Task> tasks,
     List<Tag> tags = const [],
     DateTime? budgetHistorySince,
+    int? idSeq,
+    int? tagSchema,
   })  : _accounts = List.of(accounts),
         _categories = List.of(categories),
         _txns = List.of(txns),
@@ -40,6 +42,11 @@ class AppStore extends ChangeNotifier {
         // AppStore.today at render, which would drift daily. Existing budgets are
         // NOT backfilled — history begins empty and fills from the first edit.
         budgetHistorySince = budgetHistorySince ?? today {
+    // Persistence seam: restore the id counter (so hydrated ids never collide
+    // with freshly minted ones) and the tag schema (so already-reified tag ids
+    // are never re-migrated). Both no-op on the seed path where they are null.
+    if (idSeq != null) _idSeq = idSeq;
+    if (tagSchema != null) _tagSchema = tagSchema;
     // On load: reify tags (turn the fixture's legacy name-lists into Tag
     // entities and rewrite each txn's tagIds — §1 migration), drop goals whose
     // source no longer resolves to anything (§9), seed a `created` history entry
@@ -50,6 +57,17 @@ class AppStore extends ChangeNotifier {
     _seedGoalHistory();
     _syncGoalLatches();
   }
+
+  /// An empty store — the first-run state before anything has been persisted.
+  /// `main()` uses this when the local database is still empty (spec: fresh
+  /// installs start blank, not seeded with demo data).
+  factory AppStore.empty() => AppStore(
+        accounts: const [],
+        categories: const [],
+        txns: const [],
+        goals: const [],
+        tasks: const [],
+      );
 
   /// Current on-load tag schema. Bumping this re-runs [_migrateTags].
   static const int tagSchemaVersion = 1;
@@ -160,6 +178,25 @@ class AppStore extends ChangeNotifier {
 
   int _idSeq = 1000;
   String _nextId(String prefix) => '$prefix${_idSeq++}';
+
+  // ── Persistence seam ──────────────────────────────────────────────────────
+  // Raw, unfiltered views of the canonical collections for the snapshot writer.
+  // The public getters (`accounts`, `categories`, `goals`, `tasks`, …) are all
+  // filtered — archived/status-scoped — so a backup that used them would silently
+  // drop rows. A round-trippable snapshot reads the private lists directly.
+  List<Account> get snapshotAccounts => List.unmodifiable(_accounts);
+  List<Category> get snapshotCategories => List.unmodifiable(_categories);
+  List<Txn> get snapshotTxns => List.unmodifiable(_txns);
+  List<Goal> get snapshotGoals => List.unmodifiable(_goals);
+  List<Task> get snapshotTasks => List.unmodifiable(_tasks);
+  List<Tag> get snapshotTags => List.unmodifiable(_tags);
+
+  /// The id counter to persist and restore across launches (see the constructor).
+  int get idSeq => _idSeq;
+
+  /// The tag-migration schema to persist, so a reload does not re-run
+  /// [_migrateTags] over already-reified tag ids.
+  int get tagSchema => _tagSchema;
 
   // ── Reference date ────────────────────────────────────────────────────────
   // The seed data is authored around the mockups' "August 2026". Pinning

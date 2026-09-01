@@ -37,6 +37,15 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
   shared_preferences: ^2.5.5
+  # Local persistence (spec: on-device SQLite; no backend). `sqflite` is the
+  # store engine on Android/iOS/macOS; `path` builds the db file path. The whole
+  # store is hydrated into AppStore at launch and a debounced snapshot is written
+  # back on every mutation — the app never queries the db relationally.
+  sqflite: ^2.4.1
+  path: ^1.9.0
+  # Desktop-dev only path: plain `sqflite` has no Windows/Linux backend, so a
+  # `flutter run` on the dev machine needs the FFI factory. Unused on mobile.
+  sqflite_common_ffi: ^2.3.4
   # Localized month/weekday names (DateFormat) and ICU plural/select support.
   # money() stays hand-rolled — intl is used only for l10n, not amount rendering.
   intl: any

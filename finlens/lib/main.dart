@@ -4,7 +4,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'core/data/dev_seed_data.dart';
-import 'core/data/seed_data.dart';
+import 'core/persistence/local_database.dart';
+import 'core/persistence/store_persister.dart';
 import 'core/store/app_store.dart';
 import 'features/shell/app_shell.dart';
 import 'l10n/app_localizations.dart';
@@ -26,7 +27,21 @@ Future<void> main() async {
   // frame* — the screen must never paint unfiltered values and then re-render.
   WidgetsFlutterBinding.ensureInitialized();
   SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle.light);
-  final store = _useDevSeed ? buildDevSeedStore() : buildSeedStore();
+
+  // Local persistence: hydrate the store from the on-device database, or start
+  // blank on a fresh install. The debug dev-seed fixture is ephemeral and is
+  // never persisted (it mirrors the app's old reset-every-launch behaviour), so
+  // it does not attach a persister and cannot overwrite real data.
+  final db = await LocalDatabase.open();
+  final AppStore store;
+  StorePersister? persister;
+  if (_useDevSeed) {
+    store = buildDevSeedStore();
+  } else {
+    store = await StorePersister.hydrate(db) ?? AppStore.empty();
+    persister = StorePersister(store, db)..attach();
+  }
+
   await store.loadBalanceFilter();
   await store.loadInsightAccountFilter();
   await store.loadInsightCategoryFilter();
@@ -37,18 +52,50 @@ Future<void> main() async {
   await store.loadTransPrefs();
   await store.loadLedgerPrefs();
   await store.loadLocale();
-  runApp(FinLensApp(store: store));
+  runApp(FinLensApp(store: store, persister: persister));
 }
 
-class FinLensApp extends StatelessWidget {
-  const FinLensApp({super.key, required this.store});
+class FinLensApp extends StatefulWidget {
+  const FinLensApp({super.key, required this.store, this.persister});
 
   final AppStore store;
+
+  /// Null in the debug dev-seed mode (that fixture is not persisted); otherwise
+  /// the live persister, flushed on app suspend so the last edit is never lost.
+  final StorePersister? persister;
+
+  @override
+  State<FinLensApp> createState() => _FinLensAppState();
+}
+
+class _FinLensAppState extends State<FinLensApp> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Flush any pending debounced snapshot before the OS can suspend or kill the
+    // process, so a change made moments earlier survives.
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.hidden ||
+        state == AppLifecycleState.detached) {
+      widget.persister?.flush();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return StoreScope(
-      store: store,
+      store: widget.store,
       // FinLensApp's own context sits above StoreScope, so the MaterialApp is
       // built one level down via Builder — that inner context can subscribe to
       // the store and rebuild MaterialApp (and thus the whole app's locale)
