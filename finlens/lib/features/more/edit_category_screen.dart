@@ -255,7 +255,7 @@ class _EditCategoryScreenState extends State<EditCategoryScreen> {
   /// refused outright (§3.2) — never a silent fall-back to Archive. The user is
   /// told why and pointed at the fix.
   Future<void> _confirmDelete(AppStore store, AppLocalizations l) async {
-    if (_category.monthlyBudget != null) {
+    if (store.monthlyBudgetForCategory(_category.id) != null) {
       await _showBudgetedRefusal(l);
       return;
     }

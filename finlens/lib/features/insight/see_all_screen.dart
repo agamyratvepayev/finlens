@@ -169,8 +169,9 @@ class SeeAllScreen extends StatelessWidget {
       BuildContext context, AppStore store, DateRange window) {
     Category? best;
     var bestAmount = 0.0;
-    for (final c in store.categories.where(
-        (c) => c.type == CategoryType.expense && c.monthlyBudget == null)) {
+    for (final c in store.categories.where((c) =>
+        c.type == CategoryType.expense &&
+        store.monthlyBudgetForCategory(c.id) == null)) {
       final spent = store.spentInCategoryWindow(c.id, window);
       if (spent > bestAmount) {
         bestAmount = spent;
@@ -241,7 +242,7 @@ class _Row extends StatelessWidget {
     String? sub;
     Color subColor = AppColors.textTertiary;
     if (!income && cat != null) {
-      final limit = cat!.effectiveLimit;
+      final limit = store.effectiveLimitOf(cat!);
       if (limit == null) {
         sub = l.insNoBudget;
         subColor = AppColors.textQuaternary;

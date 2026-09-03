@@ -68,6 +68,7 @@ String encodeBackup(AppStore store, {required DateTime exportedAt}) {
     },
     'accounts': store.snapshotAccounts.map(accountToMap).toList(),
     'categories': store.snapshotCategories.map(categoryToMap).toList(),
+    'budgets': store.snapshotBudgets.map(budgetToMap).toList(),
     'txns': store.snapshotTxns.map(txnToMap).toList(),
     'tags': store.snapshotTags.map(tagToMap).toList(),
     'goals': store.snapshotGoals.map(goalToMap).toList(),
@@ -119,11 +120,21 @@ BackupDocument decodeBackup(String jsonText) {
 
   final since = metaInt('budget_history_since');
 
+  // A pre-v5 backup carries no `budgets` array — budgets still lived on the
+  // category rows. Run the same migration the on-device upgrade uses so an older
+  // backup restores with every budget intact (budgets-as-object spec §A.4).
+  final categoryRows = rows('categories');
+  final budgetRows = rows('budgets');
+  final budgets = budgetRows.isNotEmpty
+      ? budgetRows.map(budgetFromMap).toList()
+      : legacyBudgetsFromCategoryRows(categoryRows);
+
   final AppStore source;
   try {
     source = AppStore(
       accounts: rows('accounts').map(accountFromMap).toList(),
-      categories: rows('categories').map(categoryFromMap).toList(),
+      categories: categoryRows.map(categoryFromMap).toList(),
+      budgets: budgets,
       txns: rows('txns').map(txnFromMap).toList(),
       tags: rows('tags').map(tagFromMap).toList(),
       goals: rows('goals').map(goalFromMap).toList(),

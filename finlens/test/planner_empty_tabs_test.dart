@@ -127,7 +127,16 @@ void main() {
             type: CategoryType.expense,
             icon: Icons.local_grocery_store_rounded,
             color: Colors.green,
-            monthlyBudget: 500,
+          ),
+        ],
+        budgets: [
+          Budget(
+            id: 'b1',
+            name: 'Groceries',
+            scope: BudgetScope.categories,
+            targets: {'c1'},
+            limit: 500,
+            anchor: DateTime(2026, 1, 1),
           ),
         ],
         txns: const [],

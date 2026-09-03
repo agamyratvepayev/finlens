@@ -130,10 +130,14 @@ class Account {
   }
 }
 
-/// One recorded change to a category's budget (budget-detail CHANGES). Written
-/// by the store on every budget write path; never derived, never edited, never
-/// deleted. A deliberate sibling of [GoalEdit], not a shared class: a budget
-/// edit has its own field vocabulary and the two must be free to diverge.
+/// One recorded change to a budget (budget-detail CHANGES). Written by the store
+/// on every budget write path; never derived, never edited, never deleted. A
+/// deliberate sibling of [GoalEdit], not a shared class: a budget edit has its
+/// own field vocabulary and the two must be free to diverge.
+///
+/// History now lives on [Budget], not [Category] — the budget became its own
+/// object (budgets-as-object spec §A). The migration carries each category's
+/// old `budgetHistory` onto the synthesized [Budget] verbatim.
 class BudgetEdit {
   const BudgetEdit({
     required this.at,
@@ -146,7 +150,8 @@ class BudgetEdit {
   final DateTime at;
 
   /// 'created' | 'limit' | 'rollover' | 'warn' | 'removed' | 'restored'
-  /// | 'categoryArchived'
+  /// | 'categoryArchived' | 'categories' (targets changed — budgets-as-object
+  /// spec §C.3)
   final String field;
 
   /// Formatted, and language-neutral: money via `money()`, percent via
@@ -165,9 +170,104 @@ class BudgetEdit {
   final bool amber;
 }
 
-/// Spec 6.1 — Category. The budget is *fields on the category*, not a separate
-/// entity: Quick Add's picker and Planner > Budgets read the same record
-/// (spec 4.1 / 5.4). Removing a budget sets [monthlyBudget] to null (spec 5.5).
+/// What a budget's [Budget.targets] point at (budgets-as-object spec §A.1).
+/// `tag` is reserved: the field exists so the enum need not be reshaped later,
+/// but nothing reads it (spec §G — tag budgets are a non-goal).
+enum BudgetScope { categories, account, tag }
+
+/// How a budget's period is measured (spec §A.1). `month` walks whole calendar
+/// months from [Budget.anchor]'s day-of-month, so its length is read from the
+/// calendar every period (28–31 days) and is *not* `lengthDays: 30`. `days`
+/// walks a fixed [Budget.lengthDays] stride from [Budget.anchor].
+enum BudgetPeriod { month, days }
+
+/// A budget — its own object, no longer three fields on a [Category]
+/// (budgets-as-object spec §A). It fixes three independent axes that the old
+/// `Category.monthlyBudget` conflated: the period ([period]/[lengthDays]),
+/// the scope ([scope]/[targets]) and the lifetime ([repeats]/[endedAt]).
+///
+/// Nothing derived is stored: spend, percentages, days elapsed and the
+/// pass/fail outcome are always recomputed from the ledger through
+/// `AppStore.budgetWindow` / `budgetSpend`, so a budget can never drift from the
+/// transactions (spec §C.3 / Hard boundary).
+class Budget {
+  Budget({
+    required this.id,
+    required this.name,
+    required this.scope,
+    required Set<String> targets,
+    required this.limit,
+    this.period = BudgetPeriod.month,
+    this.lengthDays,
+    required this.anchor,
+    this.repeats = true,
+    this.rollover = false,
+    this.warnThreshold = 0.8,
+    this.endedAt,
+    this.archivedAt,
+    List<BudgetEdit>? history,
+  })  : targets = {...targets},
+        history = history ?? <BudgetEdit>[];
+
+  final String id;
+
+  /// Required: a multi-category budget has no single category name to borrow
+  /// (spec §A.1). For a migrated single-category budget it is the category's
+  /// name.
+  String name;
+
+  BudgetScope scope;
+
+  /// Category ids (for [BudgetScope.categories]) or exactly one account id (for
+  /// [BudgetScope.account]).
+  Set<String> targets;
+
+  /// In base currency, because spend is summed through `Fx.toBase`
+  /// (spec §A.1 / §C.7).
+  double limit;
+
+  BudgetPeriod period;
+
+  /// Null when [period] is [BudgetPeriod.month]; the fixed stride otherwise.
+  int? lengthDays;
+
+  /// The first period's start. For [BudgetPeriod.month] only its day-of-month is
+  /// read (an anchor on the 13th yields 13 Aug – 12 Sep); for [BudgetPeriod.days]
+  /// it is the concrete first day the stride steps from.
+  DateTime anchor;
+
+  bool repeats;
+
+  /// Carried from the immediately preceding period only, and only when
+  /// [repeats] && [rollover] (spec §A.3). Meaningless — and hidden — when
+  /// [repeats] is false.
+  bool rollover;
+
+  /// 0..1; carried over unchanged from the old `Category.warnThreshold`.
+  double warnThreshold;
+
+  /// Set when a non-repeating budget's window closed, or the reader stopped it
+  /// (spec §C.5). A finished budget's definition is then locked so recomputing
+  /// over the closed window is stable.
+  DateTime? endedAt;
+
+  /// Set when the budget is archived — it then leaves the Budgets tab in every
+  /// month and lives only in the Archive (spec §C.5). The migration maps a
+  /// removed budget's `removedOn` here so the Archive keeps its contents.
+  DateTime? archivedAt;
+
+  /// Change log (budget-detail CHANGES), same shape as the old
+  /// `Category.budgetHistory`, carried across by the migration.
+  List<BudgetEdit> history;
+
+  bool get isArchived => archivedAt != null;
+  bool get isFinished => endedAt != null;
+}
+
+/// Spec 6.1 — Category. The budget is no longer fields on the category: it moved
+/// to its own [Budget] object (budgets-as-object spec §A). A category is only a
+/// name, type, glyph and colour now; whether it is budgeted is answered by
+/// `AppStore.monthlyBudgetForCategory`, not a field here.
 class Category {
   Category({
     required this.id,
@@ -177,14 +277,8 @@ class Category {
     required this.color,
     this.emoji,
     this.createdAt,
-    this.monthlyBudget,
-    this.budgetRollover = false,
-    this.warnThreshold = 0.8,
-    this.rolloverAmount = 0,
     this.archived = false,
-    this.removedOn,
-    List<BudgetEdit>? budgetHistory,
-  }) : budgetHistory = budgetHistory ?? <BudgetEdit>[];
+  });
 
   final String id;
   String name;
@@ -210,23 +304,7 @@ class Category {
   /// (mirrors [Account.hasEmoji]).
   bool get hasEmoji => emoji != null && emoji!.isNotEmpty;
 
-  /// null == not budgeted. Presence is what puts it in Planner > Budgets.
-  double? monthlyBudget;
-  bool budgetRollover;
-  double warnThreshold;
-  double rolloverAmount;
-
   bool archived;
-  DateTime? removedOn;
-
-  /// Budget edit history (budget-detail CHANGES). Empty for a category that has
-  /// never been budgeted, and for budgets that predate this feature — the store
-  /// does not backfill a guessed `created` entry.
-  List<BudgetEdit> budgetHistory;
-
-  /// Spec 5.4 — rollover adds last month's leftover on top of the limit.
-  double? get effectiveLimit =>
-      monthlyBudget == null ? null : monthlyBudget! + (budgetRollover ? rolloverAmount : 0);
 }
 
 /// A tag is a real entity, not a bare string on a transaction.

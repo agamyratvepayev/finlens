@@ -106,7 +106,9 @@ void main() {
       // lives in the management screen now.
       final before = store.archivedCount;
       final victim = store.categoriesOfType(CategoryType.expense).firstWhere(
-          (c) => c.monthlyBudget == null && c.removedOn == null);
+          (c) =>
+              store.monthlyBudgetForCategory(c.id) == null &&
+              store.removedOnOf(c) == null);
       store.archiveCategory(victim);
       expect(store.archivedCategories, contains(victim));
       expect(store.archivedCount, before);

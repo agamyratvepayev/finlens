@@ -230,7 +230,9 @@ AppStore buildSeedStore() {
     ),
   ];
 
-  // ── Categories (spec 4.1 / 5.1 — budget lives on the category) ────────────
+  // ── Categories (spec 4.1) ─────────────────────────────────────────────────
+  // Budgets are their own objects now (budgets-as-object spec §A); see the
+  // `budgets` list below. Categories carry no budget fields.
   final categories = <Category>[
     Category(
       id: 'c-groceries',
@@ -238,7 +240,6 @@ AppStore buildSeedStore() {
       type: CategoryType.expense,
       icon: Icons.shopping_basket_rounded,
       color: const Color(0xFF34C759),
-      monthlyBudget: 1000,
     ),
     Category(
       id: 'c-housing',
@@ -246,7 +247,6 @@ AppStore buildSeedStore() {
       type: CategoryType.expense,
       icon: Icons.home_rounded,
       color: const Color(0xFF3B82F6),
-      monthlyBudget: 1200,
     ),
     Category(
       id: 'c-entertainment',
@@ -254,8 +254,6 @@ AppStore buildSeedStore() {
       type: CategoryType.expense,
       icon: Icons.play_circle_rounded,
       color: const Color(0xFF8B5CF6),
-      monthlyBudget: 400,
-      warnThreshold: 0.8,
     ),
     Category(
       id: 'c-transport',
@@ -263,7 +261,6 @@ AppStore buildSeedStore() {
       type: CategoryType.expense,
       icon: Icons.local_shipping_rounded,
       color: const Color(0xFFF5A524),
-      monthlyBudget: 500,
     ),
     Category(
       id: 'c-shopping',
@@ -271,7 +268,6 @@ AppStore buildSeedStore() {
       type: CategoryType.expense,
       icon: Icons.shopping_bag_rounded,
       color: const Color(0xFFF04438),
-      monthlyBudget: 500,
     ),
     Category(
       id: 'c-personal',
@@ -279,7 +275,6 @@ AppStore buildSeedStore() {
       type: CategoryType.expense,
       icon: Icons.self_improvement_rounded,
       color: const Color(0xFF14B8A6),
-      monthlyBudget: 200,
     ),
     // Unbudgeted expense categories — they exist in the picker but not in
     // Planner > Budgets, which is exactly what monthly_budget == null means.
@@ -304,14 +299,13 @@ AppStore buildSeedStore() {
       icon: Icons.favorite_rounded,
       color: const Color(0xFF34C759),
     ),
-    // Removed budget, waiting in Archive (spec 5.8).
+    // Its budget is a removed one, waiting in Archive (spec 5.8) — see `budgets`.
     Category(
       id: 'c-garden',
       name: 'Garden',
       type: CategoryType.expense,
       icon: Icons.local_florist_rounded,
       color: const Color(0xFF34C759),
-      removedOn: DateTime(2026, 6, 12),
     ),
     Category(
       id: 'c-debt',
@@ -770,11 +764,44 @@ AppStore buildSeedStore() {
     a.openingDate = openingDate;
   }
 
+  // ── Budgets (budgets-as-object spec §A) ───────────────────────────────────
+  // Each seed budget is a monthly category budget anchored to the 1st, matching
+  // the pre-change per-category fields exactly. Garden is a removed (archived)
+  // budget, waiting in the Archive's REMOVED BUDGETS section.
+  Budget monthlyBudget(String id, String catId, String name, double limit,
+          {double warn = 0.8, DateTime? archivedAt}) =>
+      Budget(
+        id: id,
+        name: name,
+        scope: BudgetScope.categories,
+        targets: {catId},
+        limit: limit,
+        period: BudgetPeriod.month,
+        anchor: DateTime(2026, 1, 1),
+        repeats: true,
+        warnThreshold: warn,
+        archivedAt: archivedAt,
+      );
+
+  final budgets = <Budget>[
+    monthlyBudget('b-groceries', 'c-groceries', 'Groceries', 1000),
+    monthlyBudget('b-housing', 'c-housing', 'Housing', 1200),
+    monthlyBudget('b-entertainment', 'c-entertainment', 'Entertainment', 400),
+    monthlyBudget('b-transport', 'c-transport', 'Transportation', 500),
+    monthlyBudget('b-shopping', 'c-shopping', 'Shopping', 500),
+    monthlyBudget('b-personal', 'c-personal', 'Personal', 200),
+    // Removed budget, waiting in Archive (spec 5.8): limit cleared on removal,
+    // rederived from spend on restore.
+    monthlyBudget('b-garden', 'c-garden', 'Garden', 0,
+        archivedAt: DateTime(2026, 6, 12)),
+  ];
+
   return AppStore(
     accounts: accounts,
     categories: categories,
     txns: txns,
     goals: goals,
     tasks: tasks,
+    budgets: budgets,
   );
 }

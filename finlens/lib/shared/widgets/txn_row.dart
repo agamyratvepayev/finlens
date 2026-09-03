@@ -711,7 +711,9 @@ Future<bool> confirmDeleteTxn(BuildContext context, Txn txn) async {
 
   for (final ref in {txn.fromRef, txn.toRef}) {
     final category = store.categoryById(ref);
-    if (category == null || category.monthlyBudget == null) continue;
+    if (category == null || store.monthlyBudgetForCategory(category.id) == null) {
+      continue;
+    }
     final month = DateTime(txn.date.year, txn.date.month);
     final before = store.spentInCategory(category.id, month);
     final after = store.categorySpendWithout(category.id, txn);

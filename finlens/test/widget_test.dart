@@ -46,7 +46,7 @@ void main() {
     store.removeBudget(category);
 
     // Spec 5.5 — budget ≠ category.
-    expect(category.monthlyBudget, isNull);
+    expect(store.monthlyLimitOf(category), isNull);
     expect(store.categoryById('c-entertainment'), isNotNull);
     expect(store.txnCountForCategory(category.id), txnCount);
     expect(store.budgetedCategories.contains(category), isFalse);

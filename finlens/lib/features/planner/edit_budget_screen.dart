@@ -28,10 +28,10 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
   late final Category _category = _store.categoryById(widget.categoryId)!;
 
   late final TextEditingController _limit = TextEditingController(
-    text: (_category.monthlyBudget ?? 0).toStringAsFixed(0),
+    text: (_store.monthlyLimitOf(_category) ?? 0).toStringAsFixed(0),
   );
-  late bool _rollover = _category.budgetRollover;
-  late double _warn = _category.warnThreshold;
+  late bool _rollover = _store.rolloverOf(_category);
+  late double _warn = _store.warnThresholdOf(_category);
 
   @override
   void dispose() {
@@ -239,7 +239,7 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
   /// Spec 5.5 — the critical distinction: a budget is not a category.
   Future<void> _confirmRemove() async {
     final count = _store.txnCountForCategory(_category.id);
-    final newTotal = _store.totalBudget - (_category.effectiveLimit ?? 0);
+    final newTotal = _store.totalBudget - (_store.effectiveLimitOf(_category) ?? 0);
 
     final l = AppLocalizations.of(context);
     final ok = await showDestructiveConfirm(

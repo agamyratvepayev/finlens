@@ -95,14 +95,17 @@ Map<String, Object?> categoryToMap(Category c) => {
       'icon_emoji': c.emoji,
       'color_argb': c.color.toARGB32(),
       'created_at': _dt(c.createdAt),
-      'monthly_budget': c.monthlyBudget,
-      'budget_rollover': _b(c.budgetRollover),
-      'warn_threshold': c.warnThreshold,
-      'rollover_amount': c.rolloverAmount,
+      // The budget moved to its own [Budget] object (budgets-as-object spec §A).
+      // These columns survive so an older build/backup can still be read, but a
+      // v5 store writes only dormant defaults here — the truth lives in the
+      // budgets table. NOT-NULL columns must still carry a value.
+      'monthly_budget': null,
+      'budget_rollover': _b(false),
+      'warn_threshold': 0.8,
+      'rollover_amount': 0.0,
       'archived': _b(c.archived),
-      'removed_on': _dt(c.removedOn),
-      'budget_history':
-          jsonEncode(c.budgetHistory.map(_budgetEditToJson).toList()),
+      'removed_on': null,
+      'budget_history': '[]',
     };
 
 Category categoryFromMap(Map<String, Object?> m) => Category(
@@ -117,16 +120,87 @@ Category categoryFromMap(Map<String, Object?> m) => Category(
           : m['icon_emoji'] as String?,
       color: Color((m['color_argb'] as int?) ?? 0xFF9E9E9E),
       createdAt: _dtn(m['created_at']),
-      monthlyBudget: _dn(m['monthly_budget']),
-      budgetRollover: _bf(m['budget_rollover']),
-      warnThreshold: _d(m['warn_threshold']),
-      rolloverAmount: _d(m['rollover_amount']),
       archived: _bf(m['archived']),
-      removedOn: _dtn(m['removed_on']),
-      budgetHistory: _decodeList(m['budget_history'])
+    );
+
+// ── Budgets (budgets-as-object spec §A) ──────────────────────────────────────
+
+Map<String, Object?> budgetToMap(Budget b) => {
+      'id': b.id,
+      'name': b.name,
+      'scope_name': b.scope.name,
+      'targets': jsonEncode(b.targets.toList()),
+      'limit_amount': b.limit,
+      'period_name': b.period.name,
+      'length_days': b.lengthDays,
+      'anchor': _dt(b.anchor),
+      'repeats': _b(b.repeats),
+      'rollover': _b(b.rollover),
+      'warn_threshold': b.warnThreshold,
+      'ended_at': _dt(b.endedAt),
+      'archived_at': _dt(b.archivedAt),
+      'history': jsonEncode(b.history.map(_budgetEditToJson).toList()),
+    };
+
+Budget budgetFromMap(Map<String, Object?> m) => Budget(
+      id: m['id'] as String,
+      name: m['name'] as String,
+      scope: _enumByName(BudgetScope.values, m['scope_name'], BudgetScope.categories),
+      targets: _decodeList(m['targets']).map((e) => e as String).toSet(),
+      limit: _d(m['limit_amount']),
+      period: _enumByName(BudgetPeriod.values, m['period_name'], BudgetPeriod.month),
+      lengthDays: (m['length_days'] as num?)?.toInt(),
+      anchor: _dtn(m['anchor'])!,
+      repeats: _bf(m['repeats']),
+      rollover: _bf(m['rollover']),
+      warnThreshold: _d(m['warn_threshold']),
+      endedAt: _dtn(m['ended_at']),
+      archivedAt: _dtn(m['archived_at']),
+      history: _decodeList(m['history'])
           .map((e) => _budgetEditFromJson(e as Map<String, dynamic>))
           .toList(),
     );
+
+/// Migrate the legacy per-category budget columns (schema ≤ 4 / old backups)
+/// into [Budget] objects (budgets-as-object spec §A.4). Run only when the
+/// budgets table/section is empty. Each category with a `monthly_budget` becomes
+/// an active monthly category budget; a category with `removed_on` set becomes
+/// an archived one (so the Archive keeps its `REMOVED BUDGETS`). Ids are
+/// deterministic (`b-mig-<categoryId>`) so re-running is idempotent and cannot
+/// collide with runtime `b<n>` ids.
+List<Budget> legacyBudgetsFromCategoryRows(List<Map<String, Object?>> rows) {
+  final out = <Budget>[];
+  for (final m in rows) {
+    final limit = _dn(m['monthly_budget']);
+    final removedOn = _dtn(m['removed_on']);
+    if (limit == null && removedOn == null) continue;
+    final id = m['id'] as String;
+    final name = m['name'] as String;
+    final createdAt = _dtn(m['created_at']);
+    final anchorYear = createdAt?.year ?? 2026;
+    final anchorMonth = createdAt?.month ?? 1;
+    final history = _decodeList(m['budget_history'])
+        .map((e) => _budgetEditFromJson(e as Map<String, dynamic>))
+        .toList();
+    out.add(Budget(
+      id: 'b-mig-$id',
+      name: name,
+      scope: BudgetScope.categories,
+      targets: {id},
+      // A removed budget cleared its limit; the old restore path re-derived one
+      // from spend, so 0 here loses nothing the model still held.
+      limit: limit ?? 0,
+      period: BudgetPeriod.month,
+      anchor: DateTime(anchorYear, anchorMonth, 1),
+      repeats: true,
+      rollover: _bf(m['budget_rollover']),
+      warnThreshold: (m['warn_threshold'] as num?)?.toDouble() ?? 0.8,
+      archivedAt: removedOn,
+      history: history,
+    ));
+  }
+  return out;
+}
 
 // ── Transactions ────────────────────────────────────────────────────────────
 

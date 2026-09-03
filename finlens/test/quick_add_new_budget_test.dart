@@ -56,7 +56,9 @@ Widget _flowHost(AppStore store, {Locale? locale}) => _host(
 /// reachable from the seed fixture.
 void _budgetEveryExpenseCategory(AppStore store) {
   for (final c in store.categories.where((c) => c.type == CategoryType.expense)) {
-    c.monthlyBudget ??= 100;
+    if (store.monthlyBudgetForCategory(c.id) == null) {
+      store.updateBudget(c, monthlyBudget: 100);
+    }
   }
 }
 
@@ -214,8 +216,11 @@ void main() {
       type: CategoryType.expense,
       icon: Icons.delete_rounded,
       color: Colors.red,
+      monthlyBudget: 150,
     );
-    removed.removedOn = DateTime(2026, 1, 1);
+    // A removed budget: its category is a candidate no longer (budgets-as-object
+    // spec §A — removal archives the budget, `removedOnOf` is then non-null).
+    store.removeBudget(removed);
 
     await tester.pumpWidget(_flowHost(store));
     await tester.tap(find.text('start'));

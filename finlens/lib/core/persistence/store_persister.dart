@@ -43,6 +43,7 @@ class StorePersister {
   static Future<AppStore?> hydrate(LocalDatabase database) async {
     final accountRows = await database.readAll(LocalDatabase.accountsTable);
     final categoryRows = await database.readAll(LocalDatabase.categoriesTable);
+    final budgetRows = await database.readAll(LocalDatabase.budgetsTable);
     final txnRows = await database.readAll(LocalDatabase.txnsTable);
     final tagRows = await database.readAll(LocalDatabase.tagsTable);
     final goalRows = await database.readAll(LocalDatabase.goalsTable);
@@ -63,9 +64,18 @@ class StorePersister {
     };
     final since = int.tryParse(meta['budget_history_since'] ?? '');
 
+    // v4→v5: budgets became their own objects. When the budgets table is empty
+    // (a database upgraded from an older schema whose budgets still lived on the
+    // category rows), synthesize them from the legacy columns; once the store
+    // saves, the budgets table is authoritative and this fallback stops firing.
+    final budgets = budgetRows.isNotEmpty
+        ? budgetRows.map(budgetFromMap).toList()
+        : legacyBudgetsFromCategoryRows(categoryRows);
+
     return AppStore(
       accounts: accountRows.map(accountFromMap).toList(),
       categories: categoryRows.map(categoryFromMap).toList(),
+      budgets: budgets,
       txns: txnRows.map(txnFromMap).toList(),
       goals: goalRows.map(goalFromMap).toList(),
       tasks: taskRows.map(taskFromMap).toList(),
@@ -145,6 +155,7 @@ class StorePersister {
     // possible.
     final accounts = _store.snapshotAccounts.map(accountToMap).toList();
     final categories = _store.snapshotCategories.map(categoryToMap).toList();
+    final budgets = _store.snapshotBudgets.map(budgetToMap).toList();
     final txns = _store.snapshotTxns.map(txnToMap).toList();
     final tags = _store.snapshotTags.map(tagToMap).toList();
     final goals = _store.snapshotGoals.map(goalToMap).toList();
@@ -164,6 +175,9 @@ class StorePersister {
       }
       for (final row in categories) {
         batch.insert(LocalDatabase.categoriesTable, row);
+      }
+      for (final row in budgets) {
+        batch.insert(LocalDatabase.budgetsTable, row);
       }
       for (final row in txns) {
         batch.insert(LocalDatabase.txnsTable, row);

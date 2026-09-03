@@ -28,13 +28,18 @@ class LocalDatabase {
   // `recurrence_interval`, `recurrence_unit_name`, `recurrence_end_date`,
   // `recurrence_end_count` — for custom `Every N unit` cadences and end
   // conditions.
+  // v5 (spec: budgets as their own object) adds the `budgets` table. Budgets are
+  // no longer three fields on a category; the legacy category budget columns are
+  // left in place (dormant, written as defaults) so the migration can still read
+  // an older file on the way in — see [_onUpgrade] and `legacyBudgetsFromRows`.
   // The bump is one-way and additive: a newer build reads an older file (the new
   // columns simply come back empty/null), while an older build rejects a newer
   // backup. See [_onUpgrade].
-  static const int schemaVersion = 4;
+  static const int schemaVersion = 5;
 
   static const String accountsTable = 'accounts';
   static const String categoriesTable = 'categories';
+  static const String budgetsTable = 'budgets';
   static const String txnsTable = 'txns';
   static const String tagsTable = 'tags';
   static const String goalsTable = 'goals';
@@ -47,6 +52,7 @@ class LocalDatabase {
   static const List<String> entityTables = [
     accountsTable,
     categoriesTable,
+    budgetsTable,
     txnsTable,
     tagsTable,
     goalsTable,
@@ -103,6 +109,7 @@ class LocalDatabase {
         opening_date INTEGER
       )''');
     batch.execute(_createCurrenciesTable);
+    batch.execute(_createBudgetsTable);
     batch.execute('''
       CREATE TABLE $categoriesTable(
         id TEXT PRIMARY KEY,
@@ -215,6 +222,27 @@ class LocalDatabase {
         symbol_before INTEGER NOT NULL
       )''';
 
+  /// The budgets table (budgets-as-object spec §A). `targets` is a JSON id list;
+  /// nothing filters on it relationally. `limit_amount` avoids the SQL reserved
+  /// word `limit`.
+  static const String _createBudgetsTable = '''
+      CREATE TABLE $budgetsTable(
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        scope_name TEXT NOT NULL,
+        targets TEXT NOT NULL,
+        limit_amount REAL NOT NULL,
+        period_name TEXT NOT NULL,
+        length_days INTEGER,
+        anchor INTEGER NOT NULL,
+        repeats INTEGER NOT NULL,
+        rollover INTEGER NOT NULL,
+        warn_threshold REAL NOT NULL,
+        ended_at INTEGER,
+        archived_at INTEGER,
+        history TEXT NOT NULL
+      )''';
+
   /// Additive migrations only — every column/table added since v1 is nullable or
   /// brand-new, so an existing v1 database upgrades in place without rewriting a
   /// row. A fresh install runs [_onCreate] at the current version and skips this.
@@ -241,6 +269,12 @@ class LocalDatabase {
           'ALTER TABLE $tasksTable ADD COLUMN recurrence_end_date INTEGER');
       await db.execute(
           'ALTER TABLE $tasksTable ADD COLUMN recurrence_end_count INTEGER');
+    }
+    if (oldVersion < 5) {
+      // The budgets table starts empty; StorePersister.hydrate then synthesizes
+      // budgets from the categories table's legacy budget columns (which the
+      // upgrade deliberately leaves in place) on the next read.
+      await db.execute(_createBudgetsTable);
     }
   }
 }

@@ -530,7 +530,7 @@ class _BudgetsTab extends StatelessWidget {
 
     // Over-limit categories first, then the rest in their existing order.
     bool over(Category c) =>
-        store.spentInCategory(c.id, month) > (c.effectiveLimit ?? 0);
+        store.spentInCategory(c.id, month) > (store.effectiveLimitOf(c) ?? 0);
     final ordered = [
       ...budgets.where(over),
       ...budgets.where((c) => !over(c)),
@@ -585,14 +585,14 @@ class _BudgetRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final spent = store.spentInCategory(category.id, month);
-    final limit = category.effectiveLimit ?? 0;
+    final limit = store.effectiveLimitOf(category) ?? 0;
     final ratio = limit <= 0 ? 0.0 : spent / limit;
 
     // <80% green, 80вЂ“100% amber, >100% red вЂ” against effectiveLimit, byte
     // identical thresholds to before (spec В§4). Colour states the fact; the
     // glyph names the one state geometry can't; the marker gives context.
     final over = ratio > 1;
-    final warn = !over && ratio >= category.warnThreshold;
+    final warn = !over && ratio >= store.warnThresholdOf(category);
     final color = over
         ? AppColors.negative
         : (warn ? AppColors.warning : AppColors.positive);

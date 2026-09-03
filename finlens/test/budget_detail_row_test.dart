@@ -55,18 +55,31 @@ Category _cat(String id, String name) => Category(
       type: CategoryType.expense,
       icon: Icons.restaurant_rounded,
       color: const Color(0xFF30D158),
-      monthlyBudget: 500,
+    );
+
+/// A monthly category budget (budgets-as-object spec §A) — the field the
+/// category used to carry.
+Budget _budget(String catId, {double limit = 500}) => Budget(
+      id: 'b-$catId',
+      name: catId,
+      scope: BudgetScope.categories,
+      targets: {catId},
+      limit: limit,
+      anchor: DateTime(2026, 1, 1),
     );
 
 AppStore _store(List<Txn> txns,
-        {List<Account>? accounts, List<Category>? categories}) =>
-    AppStore(
-      accounts: accounts ?? [_acc('a1', 'Main Checking')],
-      categories: categories ?? [_cat('c1', 'Eating out')],
-      txns: txns,
-      goals: const <Goal>[],
-      tasks: const <Task>[],
-    );
+        {List<Account>? accounts, List<Category>? categories}) {
+  final cats = categories ?? [_cat('c1', 'Eating out')];
+  return AppStore(
+    accounts: accounts ?? [_acc('a1', 'Main Checking')],
+    categories: cats,
+    budgets: [for (final c in cats) _budget(c.id)],
+    txns: txns,
+    goals: const <Goal>[],
+    tasks: const <Task>[],
+  );
+}
 
 Widget _host(AppStore store) => StoreScope(
       store: store,

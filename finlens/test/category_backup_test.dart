@@ -25,8 +25,8 @@ AppStore _storeWith(Category c) => AppStore(
     );
 
 void main() {
-  test('schemaVersion is 3 (was 2)', () {
-    expect(LocalDatabase.schemaVersion, 3);
+  test('schemaVersion is 5 (budgets-as-object added the budgets table)', () {
+    expect(LocalDatabase.schemaVersion, 5);
   });
 
   test('a custom icon + colour + emoji category round-trips', () {

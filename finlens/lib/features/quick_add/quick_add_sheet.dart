@@ -85,8 +85,8 @@ Future<void> startNewBudgetFlow(BuildContext context) async {
   final candidates = store.categories
       .where((c) =>
           c.type == CategoryType.expense &&
-          c.monthlyBudget == null &&
-          c.removedOn == null)
+          store.monthlyBudgetForCategory(c.id) == null &&
+          store.removedOnOf(c) == null)
       .toList()
     ..sort((a, b) {
       final bySpend = store

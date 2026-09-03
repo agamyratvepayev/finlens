@@ -108,7 +108,7 @@ void main() {
     final store = buildSeedStore();
     final budgets = store.budgetedCategories;
     bool over(Category c) =>
-        store.spentInCategory(c.id, aug) > (c.effectiveLimit ?? 0);
+        store.spentInCategory(c.id, aug) > (store.effectiveLimitOf(c) ?? 0);
     final ordered = [
       ...budgets.where(over),
       ...budgets.where((c) => !over(c)),
@@ -288,7 +288,7 @@ void main() {
 
     final overCount = store.budgetedCategories
         .where((c) =>
-            store.spentInCategory(c.id, aug) > (c.effectiveLimit ?? 0))
+            store.spentInCategory(c.id, aug) > (store.effectiveLimitOf(c) ?? 0))
         .length;
     // The seed has exactly one over-limit budget (Entertainment); no warn-level
     // glyph exists, so the count of triangles equals the over-limit count.
@@ -328,7 +328,7 @@ void main() {
         store.budgetedCategories.firstWhere((c) => c.id == 'c-groceries');
     final spent = store.spentInCategory('c-groceries', aug);
     expect(spent, greaterThan(0));
-    groceries.monthlyBudget = spent / 0.9;
+    store.updateBudget(groceries, monthlyBudget: spent / 0.9);
 
     await tester.pumpWidget(wrap(store, const PlannerScreen()));
 
@@ -357,7 +357,7 @@ void main() {
     final ent =
         store.budgetedCategories.firstWhere((c) => c.id == 'c-entertainment');
     ent.name = 'Güýmenje we dynç alyş hyzmatlary üçin aýlyk býudžet';
-    ent.monthlyBudget = 1000000;
+    store.updateBudget(ent, monthlyBudget: 1000000);
     final spent = store.spentInCategory('c-entertainment', aug);
     store.addTxn(
       type: TxnType.expense,
@@ -368,7 +368,7 @@ void main() {
       date: DateTime(2026, 8, 9),
     );
     expect(store.spentInCategory('c-entertainment', aug),
-        greaterThan(ent.effectiveLimit ?? 0));
+        greaterThan(store.effectiveLimitOf(ent) ?? 0));
 
     await tester.pumpWidget(
         wrap(store, const PlannerScreen(), locale: const Locale('tk')));
@@ -403,7 +403,7 @@ void main() {
     final c = store.budgetedCategories.firstWhere((c) => c.name == categoryName);
     return find.descendant(
         of: rowOf(categoryName),
-        matching: find.text(money(c.effectiveLimit ?? 0)));
+        matching: find.text(money(store.effectiveLimitOf(c) ?? 0)));
   }
 
   testWidgets('Entertainment renders in full — no ellipsis — at 402pt',
@@ -481,14 +481,14 @@ void main() {
     var sawOver = false;
     for (final c in store.budgetedCategories) {
       final spent = store.spentInCategory(c.id, aug);
-      final limit = c.effectiveLimit ?? 0;
+      final limit = store.effectiveLimitOf(c) ?? 0;
       final ratio = limit <= 0 ? 0.0 : spent / limit;
       final s = money(spent), lim = money(limit);
       final String expected;
       if (ratio > 1) {
         expected = '${c.name}, over budget, $s of $lim';
         sawOver = true;
-      } else if (ratio >= c.warnThreshold) {
+      } else if (ratio >= store.warnThresholdOf(c)) {
         expected = '${c.name}, near the limit, $s of $lim';
       } else {
         expected = '${c.name}, $s of $lim';

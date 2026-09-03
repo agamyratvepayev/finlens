@@ -28,9 +28,7 @@ Category _category(
   String id,
   String name, {
   CategoryType type = CategoryType.expense,
-  double? budget,
   bool archived = false,
-  DateTime? removedOn,
 }) =>
     Category(
       id: id,
@@ -38,9 +36,20 @@ Category _category(
       type: type,
       icon: Icons.shopping_basket_rounded,
       color: const Color(0xFF34C759),
-      monthlyBudget: budget,
       archived: archived,
-      removedOn: removedOn,
+    );
+
+/// A monthly category budget for [catId] (budgets-as-object spec §A). A removed
+/// budget carries an [archivedAt] — the migration's `removedOn`.
+Budget _budget(String catId, {double limit = 1000, DateTime? archivedAt}) =>
+    Budget(
+      id: 'b-$catId',
+      name: catId,
+      scope: BudgetScope.categories,
+      targets: {catId},
+      limit: limit,
+      anchor: DateTime(2026, 1, 1),
+      archivedAt: archivedAt,
     );
 
 Txn _expense(String id, String from, String to, double amount) => Txn(
@@ -56,6 +65,7 @@ Txn _expense(String id, String from, String to, double amount) => Txn(
 AppStore _store({
   List<Account>? accounts,
   List<Category>? categories,
+  List<Budget>? budgets,
   List<Txn>? txns,
   List<Goal>? goals,
   List<Task>? tasks,
@@ -63,6 +73,7 @@ AppStore _store({
     AppStore(
       accounts: accounts ?? [_account('a1', 'Checking')],
       categories: categories ?? [_category('c1', 'Groceries')],
+      budgets: budgets ?? const <Budget>[],
       txns: txns ?? const <Txn>[],
       goals: goals ?? const <Goal>[],
       tasks: tasks ?? const <Task>[],
@@ -124,7 +135,10 @@ void main() {
 
   group('archiveCategory', () {
     test('removes an existing budget and leaves removedOn set', () {
-      final store = _store(categories: [_category('c1', 'Groceries', budget: 1000)]);
+      final store = _store(
+        categories: [_category('c1', 'Groceries')],
+        budgets: [_budget('c1', limit: 1000)],
+      );
       final cat = store.categoryById('c1')!;
 
       expect(store.budgetedCategories.map((c) => c.id), contains('c1'));
@@ -132,8 +146,8 @@ void main() {
       store.archiveCategory(cat);
 
       expect(cat.archived, isTrue);
-      expect(cat.monthlyBudget, isNull);
-      expect(cat.removedOn, AppStore.today);
+      expect(store.monthlyLimitOf(cat), isNull);
+      expect(store.removedOnOf(cat), AppStore.today);
       // It is now BOTH an archived category and a removed budget — two
       // independently restorable rows.
       expect(store.archivedCategories.map((c) => c.id), contains('c1'));
@@ -149,7 +163,7 @@ void main() {
       store.archiveCategory(cat);
 
       expect(cat.archived, isTrue);
-      expect(cat.removedOn, isNull);
+      expect(store.removedOnOf(cat), isNull);
       expect(store.removedBudgets, isEmpty);
       expect(store.archivedCategories.map((c) => c.id), ['c1']);
     });
@@ -174,11 +188,12 @@ void main() {
         ],
         categories: [
           // Removed budget only (not archived).
-          _category('c1', 'Rent', removedOn: DateTime(2026, 7, 1)),
+          _category('c1', 'Rent'),
           // Archived category with no budget (not a removed budget).
           _category('c2', 'Freelance',
               type: CategoryType.income, archived: true),
         ],
+        budgets: [_budget('c1', archivedAt: DateTime(2026, 7, 1))],
         goals: [reached],
       );
 
@@ -210,10 +225,11 @@ void main() {
           _account('a2', 'Old Wallet', archived: true),
         ],
         categories: [
-          _category('c1', 'Rent', removedOn: DateTime(2026, 7, 1)),
+          _category('c1', 'Rent'),
           _category('c2', 'Freelance',
               type: CategoryType.income, archived: true),
         ],
+        budgets: [_budget('c1', archivedAt: DateTime(2026, 7, 1))],
         goals: [abandoned],
       );
     }

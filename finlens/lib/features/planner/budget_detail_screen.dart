@@ -64,12 +64,12 @@ class BudgetDetailScreen extends StatelessWidget {
       return const Scaffold(body: SizedBox.shrink());
     }
 
-    final monthlyBudget = category.monthlyBudget ?? 0;
-    final effectiveLimit = category.effectiveLimit ?? 0;
+    final monthlyBudget = store.monthlyLimitOf(category) ?? 0;
+    final effectiveLimit = store.effectiveLimitOf(category) ?? 0;
     final spent = store.spentInCategory(category.id, month);
     final ratio = effectiveLimit <= 0 ? 0.0 : spent / effectiveLimit;
     final over = ratio > 1;
-    final warn = !over && ratio >= category.warnThreshold;
+    final warn = !over && ratio >= store.warnThresholdOf(category);
     final color = over
         ? AppColors.negative
         : (warn ? AppColors.warning : AppColors.positive);
@@ -268,7 +268,7 @@ class BudgetDetailScreen extends StatelessWidget {
     }
 
     final count = store.txnCountForCategory(category.id);
-    final budget = category.monthlyBudget;
+    final budget = store.monthlyLimitOf(category);
     final ok = await showDestructiveConfirm(
       context,
       title: l.ctArchiveTitle(category.name),
@@ -625,7 +625,7 @@ class BudgetDetailScreen extends StatelessWidget {
   /// dates the record so its emptiness reads as new, not missing.
   Widget _changes(BuildContext context, AppStore store, Category category) {
     final l = AppLocalizations.of(context);
-    final history = category.budgetHistory;
+    final history = store.budgetHistoryOf(category);
     final since =
         '${store.budgetHistorySince.day} ${monthLong(store.budgetHistorySince.month, l)} ${store.budgetHistorySince.year}';
     return Column(
