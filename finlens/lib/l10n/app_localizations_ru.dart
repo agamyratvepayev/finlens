@@ -2520,7 +2520,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get qaDate => 'Дата';
 
   @override
-  String get qaTag => 'Метка';
+  String get qaTag => 'Метки';
 
   @override
   String get qaNone => 'Нет';
@@ -3664,7 +3664,14 @@ class AppLocalizationsRu extends AppLocalizations {
   String get tagSectionInUse => 'In use';
 
   @override
+  String get tagSectionUnused => 'Не используются';
+
+  @override
   String get tagSectionArchived => 'Archived';
+
+  @override
+  String get tagCapReached =>
+      'До 5 меток. Удалите одну, чтобы добавить другую.';
 
   @override
   String get tagNeverUsed => 'Not used yet';

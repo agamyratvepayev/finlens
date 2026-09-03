@@ -2454,7 +2454,7 @@ class AppLocalizationsTr extends AppLocalizations {
   String get qaDate => 'Tarih';
 
   @override
-  String get qaTag => 'Etiket';
+  String get qaTag => 'Etiketler';
 
   @override
   String get qaNone => 'Yok';
@@ -3582,7 +3582,13 @@ class AppLocalizationsTr extends AppLocalizations {
   String get tagSectionInUse => 'In use';
 
   @override
+  String get tagSectionUnused => 'Kullanılmıyor';
+
+  @override
   String get tagSectionArchived => 'Archived';
+
+  @override
+  String get tagCapReached => 'En fazla 5 etiket. Yenisi için birini kaldır.';
 
   @override
   String get tagNeverUsed => 'Not used yet';

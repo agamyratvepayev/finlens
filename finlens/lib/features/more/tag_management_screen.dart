@@ -28,7 +28,13 @@ class TagManagementScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
     final l = AppLocalizations.of(context);
-    final inUse = store.activeTags;
+    // Split the non-archived tags by whether anything actually carries them
+    // (§9): UNUSED is where a tag can be deleted with nothing at stake. One O(n)
+    // pass for all counts, not a scan per tag.
+    final counts = store.tagUsageCounts();
+    final active = store.activeTags; // newest use first
+    final used = [for (final t in active) if ((counts[t.id] ?? 0) > 0) t];
+    final unused = [for (final t in active) if ((counts[t.id] ?? 0) == 0) t];
     final archived = store.archivedTags;
 
     return Scaffold(
@@ -44,7 +50,7 @@ class TagManagementScreen extends StatelessWidget {
               showAdd: false,
             ),
             Expanded(
-              child: (inUse.isEmpty && archived.isEmpty)
+              child: (active.isEmpty && archived.isEmpty)
                   ? Padding(
                       padding: const EdgeInsets.only(top: 64),
                       child: EmptyState(
@@ -56,9 +62,11 @@ class TagManagementScreen extends StatelessWidget {
                   : ListView(
                       padding: const EdgeInsets.only(bottom: Insets.xxl),
                       children: [
+                        // IN USE always renders: it hosts the "+ New" chip, the
+                        // only create affordance on this screen.
                         SectionLabel(l.tagSectionInUse),
                         _wrap(context, [
-                          for (final t in inUse)
+                          for (final t in used)
                             _TagChip(
                               tag: t,
                               onTap: () => _showEditTag(context, store, t),
@@ -67,6 +75,16 @@ class TagManagementScreen extends StatelessWidget {
                             onTap: () => _showCreateTag(context, store),
                           ),
                         ]),
+                        if (unused.isNotEmpty) ...[
+                          SectionLabel(l.tagSectionUnused),
+                          _wrap(context, [
+                            for (final t in unused)
+                              _TagChip(
+                                tag: t,
+                                onTap: () => _showEditTag(context, store, t),
+                              ),
+                          ]),
+                        ],
                         if (archived.isNotEmpty) ...[
                           SectionLabel(l.tagSectionArchived),
                           Opacity(

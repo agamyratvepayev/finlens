@@ -1013,6 +1013,19 @@ class AppStore extends ChangeNotifier {
     return n;
   }
 
+  /// Usage count for every tag id in one O(n) pass over the ledger — the whole
+  /// map at once, for callers that need counts for many tags (the picker rows,
+  /// the management screen's IN USE / UNUSED split) without an O(n) scan per tag.
+  Map<String, int> tagUsageCounts() {
+    final counts = <String, int>{};
+    for (final t in _txns) {
+      for (final id in t.tagIds) {
+        counts[id] = (counts[id] ?? 0) + 1;
+      }
+    }
+    return counts;
+  }
+
   int get tagsInUseCount => _tags.where((t) => !t.archived).length;
   int get tagsArchivedCount => _tags.where((t) => t.archived).length;
 

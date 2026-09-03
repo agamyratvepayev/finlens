@@ -2453,7 +2453,7 @@ class AppLocalizationsTk extends AppLocalizations {
   String get qaDate => 'Sene';
 
   @override
-  String get qaTag => 'Bellik';
+  String get qaTag => 'Bellikler';
 
   @override
   String get qaNone => 'Ýok';
@@ -3582,7 +3582,14 @@ class AppLocalizationsTk extends AppLocalizations {
   String get tagSectionInUse => 'In use';
 
   @override
+  String get tagSectionUnused => 'Ulanylmaýar';
+
+  @override
   String get tagSectionArchived => 'Archived';
+
+  @override
+  String get tagCapReached =>
+      'Iň köp 5 bellik. Täzesini goşmak üçin birini aýyr.';
 
   @override
   String get tagNeverUsed => 'Not used yet';

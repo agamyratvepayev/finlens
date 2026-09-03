@@ -2465,7 +2465,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get qaDate => 'Date';
 
   @override
-  String get qaTag => 'Tag';
+  String get qaTag => 'Tags';
 
   @override
   String get qaNone => 'None';
@@ -3593,7 +3593,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tagSectionInUse => 'In use';
 
   @override
+  String get tagSectionUnused => 'Unused';
+
+  @override
   String get tagSectionArchived => 'Archived';
+
+  @override
+  String get tagCapReached => 'Up to 5 tags. Deselect one to add another.';
 
   @override
   String get tagNeverUsed => 'Not used yet';

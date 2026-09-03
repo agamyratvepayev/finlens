@@ -16,6 +16,13 @@ import '../../theme/app_typography.dart';
 /// lets finished tags sink on their own. Archived tags never appear here — that
 /// is precisely what archiving means.
 ///
+/// The ceiling on tags per transaction (§7). A tagged transaction is counted
+/// under every tag it carries, so tag-by-tag totals overcount as the count per
+/// transaction rises; and without a ceiling nothing stops a wall of labels that
+/// mean nothing. At the cap the unselected rows and the create row disable —
+/// dimmed, not removed — so a swap is still two taps.
+const int kMaxTagsPerTxn = 5;
+
 /// Selections apply as they are made (through [onChanged]); Done only closes.
 Future<void> showTagPicker(
   BuildContext context, {
@@ -51,16 +58,23 @@ class _TagPickerSheetState extends State<_TagPickerSheet> {
     super.dispose();
   }
 
+  bool get _atCap => _selected.length >= kMaxTagsPerTxn;
+
   void _emit() => widget.onChanged({..._selected});
 
   void _toggle(String id) {
+    // Deselecting is always allowed; selecting a new one is refused at the cap
+    // (§7). The row is already disabled there — this guards a stray tap.
+    final selecting = !_selected.contains(id);
+    if (selecting && _atCap) return;
     setState(() {
-      _selected.contains(id) ? _selected.remove(id) : _selected.add(id);
+      selecting ? _selected.add(id) : _selected.remove(id);
     });
     _emit();
   }
 
   void _create(AppStore store, String raw) {
+    if (_atCap) return; // create auto-selects, so it too is capped (§7)
     final tag = store.createTag(raw);
     if (tag == null) return;
     setState(() {
@@ -76,13 +90,8 @@ class _TagPickerSheetState extends State<_TagPickerSheet> {
     final store = StoreScope.of(context);
     final l = AppLocalizations.of(context);
 
-    // One O(n) pass for the per-tag usage counts, not a query per row (§7).
-    final counts = <String, int>{};
-    for (final t in store.txns) {
-      for (final id in t.tagIds) {
-        counts[id] = (counts[id] ?? 0) + 1;
-      }
-    }
+    // One O(n) pass for the per-tag usage counts, not a query per row.
+    final counts = store.tagUsageCounts();
 
     final q = _query.trim();
     final folded = foldTag(q);
@@ -134,6 +143,16 @@ class _TagPickerSheetState extends State<_TagPickerSheet> {
                   child: _list(store, l, matches, counts,
                       showCreate: showCreate, createText: q),
                 ),
+                // At the cap, one line explains why the unselected rows and the
+                // create row went dim — silently ignoring taps is forbidden (§7).
+                if (_atCap) ...[
+                  const SizedBox(height: Insets.sm),
+                  Text(
+                    l.tagCapReached,
+                    style: const TextStyle(
+                        fontSize: 12.5, color: AppColors.textTertiary),
+                  ),
+                ],
                 const SizedBox(height: Insets.md),
                 _doneButton(l),
               ],
@@ -284,23 +303,28 @@ class _TagPickerSheetState extends State<_TagPickerSheet> {
   }
 
   Widget _createRow(AppStore store, AppLocalizations l, String text) {
-    return InkWell(
-      onTap: () => _create(store, text),
-      child: Container(
-        constraints: const BoxConstraints(minHeight: 44),
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        child: Row(
-          children: [
-            const Icon(Icons.add_rounded, size: 18, color: AppColors.accent),
-            const SizedBox(width: Insets.sm),
-            Expanded(
-              child: Text(
-                l.tagCreate(text.trim().replaceFirst(RegExp(r'^#'), '')),
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 15, color: AppColors.accent),
+    // Disabled at the cap: shown, dimmed, non-tappable — never removed (§7).
+    final disabled = _atCap;
+    return Opacity(
+      opacity: disabled ? 0.4 : 1,
+      child: InkWell(
+        onTap: disabled ? null : () => _create(store, text),
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 44),
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Row(
+            children: [
+              const Icon(Icons.add_rounded, size: 18, color: AppColors.accent),
+              const SizedBox(width: Insets.sm),
+              Expanded(
+                child: Text(
+                  l.tagCreate(text.trim().replaceFirst(RegExp(r'^#'), '')),
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 15, color: AppColors.accent),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -308,12 +332,17 @@ class _TagPickerSheetState extends State<_TagPickerSheet> {
 
   Widget _tagRow(Tag t, int count) {
     final selected = _selected.contains(t.id);
-    return InkWell(
-      onTap: () => _toggle(t.id),
-      child: Container(
-        constraints: const BoxConstraints(minHeight: 44),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        child: Row(
+    // Unselected rows disable at the cap; selected rows stay tappable so a swap
+    // is two taps (§7).
+    final disabled = _atCap && !selected;
+    return Opacity(
+      opacity: disabled ? 0.4 : 1,
+      child: InkWell(
+        onTap: disabled ? null : () => _toggle(t.id),
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 44),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: Row(
           children: [
             Expanded(
               child: Text(
@@ -337,6 +366,7 @@ class _TagPickerSheetState extends State<_TagPickerSheet> {
                   : null,
             ),
           ],
+          ),
         ),
       ),
     );

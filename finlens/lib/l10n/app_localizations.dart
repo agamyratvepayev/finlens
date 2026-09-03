@@ -3763,7 +3763,7 @@ abstract class AppLocalizations {
   /// No description provided for @qaTag.
   ///
   /// In en, this message translates to:
-  /// **'Tag'**
+  /// **'Tags'**
   String get qaTag;
 
   /// No description provided for @qaNone.
@@ -5614,11 +5614,23 @@ abstract class AppLocalizations {
   /// **'In use'**
   String get tagSectionInUse;
 
+  /// No description provided for @tagSectionUnused.
+  ///
+  /// In en, this message translates to:
+  /// **'Unused'**
+  String get tagSectionUnused;
+
   /// No description provided for @tagSectionArchived.
   ///
   /// In en, this message translates to:
   /// **'Archived'**
   String get tagSectionArchived;
+
+  /// No description provided for @tagCapReached.
+  ///
+  /// In en, this message translates to:
+  /// **'Up to 5 tags. Deselect one to add another.'**
+  String get tagCapReached;
 
   /// No description provided for @tagNeverUsed.
   ///
