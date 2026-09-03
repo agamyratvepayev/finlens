@@ -29,6 +29,10 @@ String repeatCadenceLabel(
   switch (freq) {
     case RepeatFrequency.none:
       return l.repeatNever;
+    case RepeatFrequency.daily:
+      return l.rcDaily;
+    case RepeatFrequency.custom:
+      return l.rcCustom;
     case RepeatFrequency.biweekly:
       return l.rsEvery2Weeks;
     case RepeatFrequency.quarterly:
@@ -62,6 +66,10 @@ String repeatShortLabel(RepeatFrequency freq, AppLocalizations l) {
   switch (freq) {
     case RepeatFrequency.none:
       return l.repeatNever;
+    case RepeatFrequency.daily:
+      return l.rcDaily;
+    case RepeatFrequency.custom:
+      return l.rcCustom;
     case RepeatFrequency.weekly:
       return l.rsShortWeekly;
     case RepeatFrequency.biweekly:

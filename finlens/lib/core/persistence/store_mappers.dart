@@ -249,6 +249,10 @@ Map<String, Object?> taskToMap(Task t) => {
       'repeats_name': t.repeats.name,
       'weekdays': jsonEncode(t.weekdays.toList()),
       'days_of_month': jsonEncode(t.daysOfMonth.toList()),
+      'recurrence_interval': t.repeatInterval,
+      'recurrence_unit_name': t.repeatUnit?.name,
+      'recurrence_end_date': _dt(t.repeatEndDate),
+      'recurrence_end_count': t.repeatEndCount,
       'skipped_dates':
           jsonEncode(t.skippedDates.map((d) => d.millisecondsSinceEpoch).toList()),
       'priority_name': t.priority.name,
@@ -273,6 +277,12 @@ Task taskFromMap(Map<String, Object?> m) => Task(
       weekdays: _decodeList(m['weekdays']).map((e) => (e as num).toInt()).toSet(),
       daysOfMonth:
           _decodeList(m['days_of_month']).map((e) => (e as num).toInt()).toSet(),
+      // Legacy rows/backups (schema < 4) lack these keys: interval coalesces to
+      // 1, the rest to null, matching the model defaults.
+      repeatInterval: (m['recurrence_interval'] as num?)?.toInt() ?? 1,
+      repeatUnit: _enumByNameOrNull(RepeatUnit.values, m['recurrence_unit_name']),
+      repeatEndDate: _dtn(m['recurrence_end_date']),
+      repeatEndCount: (m['recurrence_end_count'] as num?)?.toInt(),
       skippedDates: _decodeList(m['skipped_dates'])
           .map((e) => DateTime.fromMillisecondsSinceEpoch((e as num).toInt()))
           .toList(),
@@ -369,4 +379,14 @@ T _enumByName<T extends Enum>(List<T> values, Object? name, T fallback) {
     if (v.name == name) return v;
   }
   return fallback;
+}
+
+/// Like [_enumByName] but returns null for a missing/unknown name — for
+/// optional enum columns (e.g. a custom repeat's unit).
+T? _enumByNameOrNull<T extends Enum>(List<T> values, Object? name) {
+  if (name == null) return null;
+  for (final v in values) {
+    if (v.name == name) return v;
+  }
+  return null;
 }

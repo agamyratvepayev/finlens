@@ -2535,9 +2535,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get qaNotePlaceholder => 'Для чего это было?';
 
   @override
-  String get qaSplit => 'Разбить';
-
-  @override
   String qaSplitCategories(Object count) {
     return '$count категорий';
   }
@@ -3010,6 +3007,113 @@ class AppLocalizationsRu extends AppLocalizations {
   String rsDaysJoin(Object head, Object last) {
     return '$head и $last';
   }
+
+  @override
+  String get rcDaily => 'Ежедневно';
+
+  @override
+  String get rcCustom => 'Настроить';
+
+  @override
+  String get rcEnds => 'Завершение';
+
+  @override
+  String get rcOnDate => 'В дату';
+
+  @override
+  String get rcAfter => 'После';
+
+  @override
+  String rcTimes(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count раза',
+      many: '$count раз',
+      few: '$count раза',
+      one: '$count раз',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get rcEvery => 'Каждые';
+
+  @override
+  String rcNDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count дня',
+      many: '$count дней',
+      few: '$count дня',
+      one: '$count день',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String rcNWeeks(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count недели',
+      many: '$count недель',
+      few: '$count недели',
+      one: '$count неделя',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String rcNMonths(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count месяца',
+      many: '$count месяцев',
+      few: '$count месяца',
+      one: '$count месяц',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String rcNYears(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count года',
+      many: '$count лет',
+      few: '$count года',
+      one: '$count год',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get rcUnitDay => 'День';
+
+  @override
+  String get rcUnitWeek => 'Неделя';
+
+  @override
+  String get rcUnitMonth => 'Месяц';
+
+  @override
+  String get rcUnitYear => 'Год';
+
+  @override
+  String get rcOnTheseDays => 'В эти дни';
+
+  @override
+  String get rcLast => 'Последний';
+
+  @override
+  String get qaSplitAction => 'Разбить на несколько категорий';
+
+  @override
+  String get qaSplitNeedsAmount => 'Сначала введите сумму.';
 
   @override
   String get qaExchange => 'Обмен';

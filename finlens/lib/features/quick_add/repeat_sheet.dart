@@ -94,7 +94,12 @@ class _RepeatSheetState extends State<_RepeatSheet> {
         RepeatFrequency.quarterly ||
         RepeatFrequency.yearly =>
           RepeatSelection(_freq, daysOfMonth: {widget.date.day}),
-        RepeatFrequency.none || RepeatFrequency.biweekly =>
+        // daily/custom are transaction-form-only cadences; the Planner sheet
+        // never offers them, but the switch stays exhaustive.
+        RepeatFrequency.none ||
+        RepeatFrequency.biweekly ||
+        RepeatFrequency.daily ||
+        RepeatFrequency.custom =>
           RepeatSelection(_freq),
       };
 

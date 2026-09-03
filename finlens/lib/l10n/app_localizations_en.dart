@@ -2480,9 +2480,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get qaNotePlaceholder => 'What was this for?';
 
   @override
-  String get qaSplit => 'Split';
-
-  @override
   String qaSplitCategories(Object count) {
     return '$count categories';
   }
@@ -2954,6 +2951,103 @@ class AppLocalizationsEn extends AppLocalizations {
   String rsDaysJoin(Object head, Object last) {
     return '$head & $last';
   }
+
+  @override
+  String get rcDaily => 'Daily';
+
+  @override
+  String get rcCustom => 'Custom';
+
+  @override
+  String get rcEnds => 'Ends';
+
+  @override
+  String get rcOnDate => 'On a date';
+
+  @override
+  String get rcAfter => 'After';
+
+  @override
+  String rcTimes(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count times',
+      one: '$count time',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get rcEvery => 'Every';
+
+  @override
+  String rcNDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count days',
+      one: '$count day',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String rcNWeeks(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count weeks',
+      one: '$count week',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String rcNMonths(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count months',
+      one: '$count month',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String rcNYears(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count years',
+      one: '$count year',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get rcUnitDay => 'Day';
+
+  @override
+  String get rcUnitWeek => 'Week';
+
+  @override
+  String get rcUnitMonth => 'Month';
+
+  @override
+  String get rcUnitYear => 'Year';
+
+  @override
+  String get rcOnTheseDays => 'On these days';
+
+  @override
+  String get rcLast => 'Last';
+
+  @override
+  String get qaSplitAction => 'Split into several categories';
+
+  @override
+  String get qaSplitNeedsAmount => 'Enter an amount first.';
 
   @override
   String get qaExchange => 'Exchange';

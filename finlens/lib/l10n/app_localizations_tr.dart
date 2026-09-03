@@ -2469,9 +2469,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String get qaNotePlaceholder => 'Ne içindi?';
 
   @override
-  String get qaSplit => 'Böl';
-
-  @override
   String qaSplitCategories(Object count) {
     return '$count kategori';
   }
@@ -2943,6 +2940,103 @@ class AppLocalizationsTr extends AppLocalizations {
   String rsDaysJoin(Object head, Object last) {
     return '$head ve $last';
   }
+
+  @override
+  String get rcDaily => 'Günlük';
+
+  @override
+  String get rcCustom => 'Özel';
+
+  @override
+  String get rcEnds => 'Bitiş';
+
+  @override
+  String get rcOnDate => 'Bir tarihte';
+
+  @override
+  String get rcAfter => 'Şu kadar tekrardan sonra';
+
+  @override
+  String rcTimes(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count kez',
+      one: '$count kez',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get rcEvery => 'Her';
+
+  @override
+  String rcNDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count gün',
+      one: '$count gün',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String rcNWeeks(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count hafta',
+      one: '$count hafta',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String rcNMonths(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ay',
+      one: '$count ay',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String rcNYears(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count yıl',
+      one: '$count yıl',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get rcUnitDay => 'Gün';
+
+  @override
+  String get rcUnitWeek => 'Hafta';
+
+  @override
+  String get rcUnitMonth => 'Ay';
+
+  @override
+  String get rcUnitYear => 'Yıl';
+
+  @override
+  String get rcOnTheseDays => 'Bu günlerde';
+
+  @override
+  String get rcLast => 'Son';
+
+  @override
+  String get qaSplitAction => 'Birkaç kategoriye böl';
+
+  @override
+  String get qaSplitNeedsAmount => 'Önce bir tutar girin.';
 
   @override
   String get qaExchange => 'Döviz';

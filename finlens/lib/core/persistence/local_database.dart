@@ -24,10 +24,14 @@ class LocalDatabase {
   // v2 (spec: New-account form) added the accounts' `color_argb` + `icon_emoji`
   // columns and the `currencies` table for user-defined currencies. v3 (spec:
   // category picker) adds the categories' `icon_emoji` + `created_at` columns.
+  // v4 (spec: transaction Repeat rework) adds the tasks' recurrence columns —
+  // `recurrence_interval`, `recurrence_unit_name`, `recurrence_end_date`,
+  // `recurrence_end_count` — for custom `Every N unit` cadences and end
+  // conditions.
   // The bump is one-way and additive: a newer build reads an older file (the new
   // columns simply come back empty/null), while an older build rejects a newer
   // backup. See [_onUpgrade].
-  static const int schemaVersion = 3;
+  static const int schemaVersion = 4;
 
   static const String accountsTable = 'accounts';
   static const String categoriesTable = 'categories';
@@ -186,7 +190,11 @@ class LocalDatabase {
         priority_name TEXT NOT NULL,
         reminder_days_before INTEGER,
         reminder_time_minutes INTEGER,
-        status_name TEXT NOT NULL
+        status_name TEXT NOT NULL,
+        recurrence_interval INTEGER,
+        recurrence_unit_name TEXT,
+        recurrence_end_date INTEGER,
+        recurrence_end_count INTEGER
       )''');
     batch.execute('''
       CREATE TABLE $metaTable(
@@ -223,6 +231,16 @@ class LocalDatabase {
           'ALTER TABLE $categoriesTable ADD COLUMN icon_emoji TEXT');
       await db.execute(
           'ALTER TABLE $categoriesTable ADD COLUMN created_at INTEGER');
+    }
+    if (oldVersion < 4) {
+      await db.execute(
+          'ALTER TABLE $tasksTable ADD COLUMN recurrence_interval INTEGER');
+      await db.execute(
+          'ALTER TABLE $tasksTable ADD COLUMN recurrence_unit_name TEXT');
+      await db.execute(
+          'ALTER TABLE $tasksTable ADD COLUMN recurrence_end_date INTEGER');
+      await db.execute(
+          'ALTER TABLE $tasksTable ADD COLUMN recurrence_end_count INTEGER');
     }
   }
 }

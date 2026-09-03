@@ -22,6 +22,12 @@ double formTextScale(BuildContext context) =>
 /// Flat at every width so the cards line up with the rest of the app.
 const kFormMargin = 16.0;
 
+/// The single row height every selectable row in the Repeat / Custom / Ends
+/// sheets uses (transaction Repeat spec §8). One constant so the sheets cannot
+/// drift row-to-row. The account-type, currency and tag sheets predate it and
+/// are left unchanged for now — see the report.
+const double kSheetRowHeight = 44.0;
+
 /// Row padding, icon column and gap add up to where the hairline starts.
 const kRowPadding = 15.0;
 const kIconColumn = 22.0;
@@ -46,10 +52,16 @@ class TxnFieldRow extends StatelessWidget {
     this.hideLabel = false,
     this.valueMaxLines = 1,
     this.semanticValue,
+    this.iconColor,
   });
 
   final IconData icon;
   final String label;
+
+  /// Overrides the leading icon's colour. The Repeat row uses the accent when a
+  /// repeat is set, so the form shows at a glance that the transaction recurs
+  /// (transaction Repeat spec §3). Null keeps the default dim glyph.
+  final Color? iconColor;
 
   /// null renders [emptyText] in the dim colour instead.
   final String? value;
@@ -98,7 +110,8 @@ class TxnFieldRow extends StatelessWidget {
             children: [
               SizedBox(
                 width: kIconColumn * s,
-                child: Icon(icon, size: 18 * s, color: AppColors.formDim2),
+                child: Icon(icon,
+                    size: 18 * s, color: iconColor ?? AppColors.formDim2),
               ),
               SizedBox(width: kIconGap * s),
               Expanded(
@@ -389,6 +402,106 @@ class _ToggleButton extends StatelessWidget {
       label: toggle.label,
       value: toggle.semanticValue,
       child: Opacity(opacity: toggle.enabled ? 1 : 0.35, child: button),
+    );
+  }
+}
+
+/// A transformation, not a property — one full-width action beneath the card.
+/// Unlike [FormToggle] it holds no value; when disabled it states its reason on
+/// a line beneath (transaction Repeat spec §7).
+class FormActionSpec {
+  const FormActionSpec({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.enabled = true,
+    this.disabledReason,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  final bool enabled;
+
+  /// Shown beneath the button and announced to the screen reader when
+  /// [enabled] is false, e.g. "Enter an amount first."
+  final String? disabledReason;
+}
+
+/// Renders a [FormActionSpec] full-width, with the disabled reason on its own
+/// line beneath when the action is unavailable.
+class FormAction extends StatelessWidget {
+  const FormAction({super.key, required this.spec});
+
+  final FormActionSpec spec;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = formScale(context);
+    final on = spec.enabled;
+    final button = Material(
+      color: AppColors.fieldCard,
+      borderRadius: BorderRadius.circular(12 * s),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: on ? spec.onTap : null,
+        child: SizedBox(
+          height: 44 * s < 44 ? 44 : 44 * s,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                spec.icon,
+                size: 14 * s,
+                color: AppColors.toggleOffFg.withValues(alpha: 0.7),
+              ),
+              SizedBox(width: 7 * s),
+              Flexible(
+                child: Text(
+                  spec.label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 14 * s * formTextScale(context),
+                    fontWeight: FontWeight.w500,
+                    height: 1.2,
+                    color: AppColors.toggleOffFg,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    return Padding(
+      padding: EdgeInsets.fromLTRB(kFormMargin, 16 * s, kFormMargin, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Semantics(
+            button: true,
+            enabled: on,
+            label: spec.label,
+            // The reason travels with the button's semantics so a screen reader
+            // hears why it is unavailable (spec §7 / §12).
+            value: on ? null : spec.disabledReason,
+            child: Opacity(opacity: on ? 1 : 0.35, child: button),
+          ),
+          if (!on && spec.disabledReason != null)
+            Padding(
+              padding: EdgeInsets.only(top: 7 * s, left: 2 * s),
+              child: Text(
+                spec.disabledReason!,
+                style: TextStyle(
+                  fontSize: 12 * s * formTextScale(context),
+                  height: 1.3,
+                  color: AppColors.formDim2,
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }

@@ -3790,12 +3790,6 @@ abstract class AppLocalizations {
   /// **'What was this for?'**
   String get qaNotePlaceholder;
 
-  /// No description provided for @qaSplit.
-  ///
-  /// In en, this message translates to:
-  /// **'Split'**
-  String get qaSplit;
-
   /// No description provided for @qaSplitCategories.
   ///
   /// In en, this message translates to:
@@ -4653,6 +4647,120 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{head} & {last}'**
   String rsDaysJoin(Object head, Object last);
+
+  /// No description provided for @rcDaily.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily'**
+  String get rcDaily;
+
+  /// No description provided for @rcCustom.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom'**
+  String get rcCustom;
+
+  /// No description provided for @rcEnds.
+  ///
+  /// In en, this message translates to:
+  /// **'Ends'**
+  String get rcEnds;
+
+  /// No description provided for @rcOnDate.
+  ///
+  /// In en, this message translates to:
+  /// **'On a date'**
+  String get rcOnDate;
+
+  /// No description provided for @rcAfter.
+  ///
+  /// In en, this message translates to:
+  /// **'After'**
+  String get rcAfter;
+
+  /// No description provided for @rcTimes.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{{count} time} other{{count} times}}'**
+  String rcTimes(int count);
+
+  /// No description provided for @rcEvery.
+  ///
+  /// In en, this message translates to:
+  /// **'Every'**
+  String get rcEvery;
+
+  /// No description provided for @rcNDays.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{{count} day} other{{count} days}}'**
+  String rcNDays(int count);
+
+  /// No description provided for @rcNWeeks.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{{count} week} other{{count} weeks}}'**
+  String rcNWeeks(int count);
+
+  /// No description provided for @rcNMonths.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{{count} month} other{{count} months}}'**
+  String rcNMonths(int count);
+
+  /// No description provided for @rcNYears.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{{count} year} other{{count} years}}'**
+  String rcNYears(int count);
+
+  /// No description provided for @rcUnitDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Day'**
+  String get rcUnitDay;
+
+  /// No description provided for @rcUnitWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'Week'**
+  String get rcUnitWeek;
+
+  /// No description provided for @rcUnitMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Month'**
+  String get rcUnitMonth;
+
+  /// No description provided for @rcUnitYear.
+  ///
+  /// In en, this message translates to:
+  /// **'Year'**
+  String get rcUnitYear;
+
+  /// No description provided for @rcOnTheseDays.
+  ///
+  /// In en, this message translates to:
+  /// **'On these days'**
+  String get rcOnTheseDays;
+
+  /// No description provided for @rcLast.
+  ///
+  /// In en, this message translates to:
+  /// **'Last'**
+  String get rcLast;
+
+  /// No description provided for @qaSplitAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Split into several categories'**
+  String get qaSplitAction;
+
+  /// No description provided for @qaSplitNeedsAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter an amount first.'**
+  String get qaSplitNeedsAmount;
 
   /// No description provided for @qaExchange.
   ///

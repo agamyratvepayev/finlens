@@ -20,6 +20,7 @@ import 'pickers.dart';
 import 'repeat_sheet.dart';
 import 'tag_picker_sheet.dart';
 import 'split_sheet.dart';
+import 'transaction_repeat_sheet.dart';
 import 'widgets/amount_hero.dart';
 import 'widgets/form_kit.dart';
 import 'widgets/transaction_form_shell.dart';
@@ -171,6 +172,10 @@ class _QuickAddScreenState extends State<QuickAddScreen>
   RepeatFrequency _repeatFreq = RepeatFrequency.none;
   Set<int> _repeatWeekdays = {}; // weekly fire-days (ISO weekday)
   Set<int> _repeatDaysOfMonth = {}; // monthly fire-days / seed day
+  int _repeatInterval = 1; // custom `Every N unit` step
+  RepeatUnit _repeatUnit = RepeatUnit.month; // custom unit
+  DateTime? _repeatEndDate; // Ends: on a date
+  int? _repeatEndCount; // Ends: after N times (incl. the first)
   String? _recurrenceTaskId; // the Planner Task backing an existing repeat
   List<SplitLine>? _splitLines; // non-null once a split is applied
   bool _hasFee = false;
@@ -234,6 +239,10 @@ class _QuickAddScreenState extends State<QuickAddScreen>
       _repeatFreq = task?.repeats ?? RepeatFrequency.none;
       _repeatWeekdays = {...?task?.weekdays};
       _repeatDaysOfMonth = {...?task?.daysOfMonth};
+      _repeatInterval = task?.repeatInterval ?? 1;
+      _repeatUnit = task?.repeatUnit ?? RepeatUnit.month;
+      _repeatEndDate = task?.repeatEndDate;
+      _repeatEndCount = task?.repeatEndCount;
     }
     if (src.splitGroupId != null) {
       final group = store.txns
@@ -444,20 +453,68 @@ class _QuickAddScreenState extends State<QuickAddScreen>
     );
   }
 
-  FormToggle _splitToggle(AppStore store) => FormToggle(
-        icon: Icons.call_split_rounded,
-        label: _hasSplit
-            ? AppLocalizations.of(context).qaSplitCategories('${_splitLines!.length}')
-            : AppLocalizations.of(context).qaSplit,
-        value: _hasSplit,
-        enabled: _amount > 0,
-        semanticValue: _amount <= 0
-            ? AppLocalizations.of(context).qaUnavailableNoAmount
-            : (_hasSplit
-                ? AppLocalizations.of(context).qaSplitCategories('${_splitLines!.length}')
-                : AppLocalizations.of(context).stateOff.toLowerCase()),
-        onTap: () => _openSplit(store),
-      );
+  /// Repeat as a row in the OPTIONAL card (spec §3): the frequency word on the
+  /// right, and the leading icon in the accent when a repeat is set so the form
+  /// shows at a glance that the transaction recurs.
+  FieldSpec _repeatField() {
+    final l = AppLocalizations.of(context);
+    return FieldSpec(
+      icon: Icons.repeat_rounded,
+      label: l.rsRepeat,
+      value: _hasRepeat ? txnRepeatWord(_repeatFreq, l) : null,
+      emptyText: l.repeatNever,
+      iconColor: _hasRepeat ? AppColors.accent : null,
+      onTap: _openTxnRepeat,
+    );
+  }
+
+  /// Split as one full-width action (spec §7): labelled with what it does, and
+  /// stating its reason on a line beneath when there is no amount to split.
+  FormActionSpec _splitAction(AppStore store) {
+    final l = AppLocalizations.of(context);
+    return FormActionSpec(
+      icon: Icons.call_split_rounded,
+      label: l.qaSplitAction,
+      enabled: _amount > 0,
+      disabledReason: _amount > 0 ? null : l.qaSplitNeedsAmount,
+      onTap: () => _openSplit(store),
+    );
+  }
+
+  /// The transaction form's Repeat chooser — its own sheets (Repeat / Custom /
+  /// Ends), distinct from the Planner task editor's [showRepeatSheet].
+  Future<void> _openTxnRepeat() async {
+    // Planner's Task can't represent a multi-transaction (split) occurrence, so
+    // the combination is blocked with a clear message (spec §5).
+    if (_hasSplit) {
+      _toast("Can't repeat a split transaction");
+      return;
+    }
+    setState(() => _keypadOpen = false);
+    final sel = await showTxnRepeatSheet(
+      context,
+      current: TxnRepeatSelection(
+        freq: _repeatFreq,
+        weekdays: _repeatWeekdays,
+        daysOfMonth: _repeatDaysOfMonth,
+        interval: _repeatInterval,
+        unit: _repeatFreq == RepeatFrequency.custom ? _repeatUnit : null,
+        endDate: _repeatEndDate,
+        endCount: _repeatEndCount,
+      ),
+      date: _date,
+    );
+    if (sel == null || !mounted) return;
+    setState(() {
+      _repeatFreq = sel.freq;
+      _repeatWeekdays = sel.weekdays;
+      _repeatDaysOfMonth = sel.daysOfMonth;
+      _repeatInterval = sel.interval;
+      _repeatUnit = sel.unit ?? RepeatUnit.month;
+      _repeatEndDate = sel.endDate;
+      _repeatEndCount = sel.endCount;
+    });
+  }
 
   Future<void> _openRepeat() async {
     // Planner's Task can't represent a multi-transaction (split) occurrence, so
@@ -550,9 +607,11 @@ class _QuickAddScreenState extends State<QuickAddScreen>
                 : () => _pickCategoryInto(CategoryType.expense, isFrom: false),
           ),
         ]),
-        FieldGroup(AppLocalizations.of(context).qaGroupOptional.toUpperCase(), [_dateField(), _tagField(), _noteField()]),
+        FieldGroup(AppLocalizations.of(context).qaGroupOptional.toUpperCase(),
+            [_dateField(), _tagField(), _repeatField(), _noteField()]),
       ],
-      toggles: [_repeatToggle(), _splitToggle(store)],
+      toggles: const [],
+      action: _splitAction(store),
       saveLabel: AppLocalizations.of(context).qaSaveExpense,
       blockers: [
         Blocker(unmet: _amount <= 0, label: AppLocalizations.of(context).qaBlockAmount, flashId: 'amount'),
@@ -601,9 +660,11 @@ class _QuickAddScreenState extends State<QuickAddScreen>
                 _pickAccountInto(store, isFrom: false, title: AppLocalizations.of(context).qaDepositInto),
           ),
         ]),
-        FieldGroup(AppLocalizations.of(context).qaGroupOptional.toUpperCase(), [_dateField(), _tagField(), _noteField()]),
+        FieldGroup(AppLocalizations.of(context).qaGroupOptional.toUpperCase(),
+            [_dateField(), _tagField(), _repeatField(), _noteField()]),
       ],
-      toggles: [_repeatToggle(), _splitToggle(store)],
+      toggles: const [],
+      action: _splitAction(store),
       saveLabel: AppLocalizations.of(context).qaSaveIncome,
       blockers: [
         Blocker(unmet: _amount <= 0, label: AppLocalizations.of(context).qaBlockAmount, flashId: 'amount'),
@@ -685,10 +746,12 @@ class _QuickAddScreenState extends State<QuickAddScreen>
           ]),
         // No Tag: money moved between your own accounts is not spending and
         // should not enter tag reporting.
-        FieldGroup(AppLocalizations.of(context).qaGroupOptional.toUpperCase(), [_dateField(), _noteField()]),
+        FieldGroup(AppLocalizations.of(context).qaGroupOptional.toUpperCase(),
+            [_dateField(), _repeatField(), _noteField()]),
       ],
+      // Repeat moved into the card (§3); Fee stays a toggle — a transfer has no
+      // Split, so no side-by-side pair remains.
       toggles: [
-        _repeatToggle(),
         FormToggle(
           icon: Icons.percent_rounded,
           label: AppLocalizations.of(context).qaFee,
@@ -1183,6 +1246,8 @@ class _QuickAddScreenState extends State<QuickAddScreen>
     final note = _note.text.trim();
     // The entered transaction is the first occurrence; the series starts at the
     // *next* one. A transient Task computes it through the one true rule.
+    final customUnit =
+        _repeatFreq == RepeatFrequency.custom ? _repeatUnit : null;
     final firstDue = Task(
       id: '',
       title: '',
@@ -1193,6 +1258,8 @@ class _QuickAddScreenState extends State<QuickAddScreen>
       repeats: _repeatFreq,
       weekdays: _repeatWeekdays,
       daysOfMonth: _repeatDaysOfMonth,
+      repeatInterval: _repeatInterval,
+      repeatUnit: customUnit,
     ).nextOccurrence(_date);
     final task = store.addTask(
       title: note.isNotEmpty
@@ -1206,6 +1273,10 @@ class _QuickAddScreenState extends State<QuickAddScreen>
       repeats: _repeatFreq,
       weekdays: _repeatWeekdays,
       daysOfMonth: _repeatDaysOfMonth,
+      repeatInterval: _repeatInterval,
+      repeatUnit: customUnit,
+      repeatEndDate: _repeatEndDate,
+      repeatEndCount: _repeatEndCount,
     );
     txn.recurrenceTaskId = task.id;
   }

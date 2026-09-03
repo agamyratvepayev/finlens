@@ -22,6 +22,7 @@ class FieldSpec {
     this.hideLabel = false,
     this.valueMaxLines = 1,
     this.semanticValue,
+    this.iconColor,
   });
 
   final IconData icon;
@@ -29,6 +30,9 @@ class FieldSpec {
   final String? value;
   final String? emptyText;
   final Color? valueColor;
+
+  /// Tints the leading icon — the Repeat row uses the accent when set (§3).
+  final Color? iconColor;
   final VoidCallback? onTap;
 
   /// Ties this row to a [Blocker.flashId] so an incomplete Save can flash it
@@ -107,6 +111,7 @@ class FormConfig {
     required this.toggles,
     required this.saveLabel,
     required this.blockers,
+    this.action,
     this.hint,
     this.trailing = const [],
   });
@@ -120,6 +125,11 @@ class FormConfig {
   final List<FieldGroup> groups;
 
   final List<FormToggle> toggles;
+
+  /// A single full-width transformation beneath the card (Split). Null when the
+  /// type has none. Rendered after any [toggles].
+  final FormActionSpec? action;
+
   final String saveLabel;
 
   /// Evaluated in order; the first unmet one names the blocker on Save.
@@ -313,6 +323,7 @@ class TransactionFormShell extends StatelessWidget {
                   hideLabel: f.hideLabel,
                   valueMaxLines: f.valueMaxLines,
                   semanticValue: f.semanticValue,
+                  iconColor: f.iconColor,
                 ),
               ),
           ],
@@ -321,6 +332,7 @@ class TransactionFormShell extends StatelessWidget {
           HintStrip(spans: config.hint!.spans, accent: config.accent),
       ],
       FormToggleBar(toggles: config.toggles),
+      if (config.action != null) FormAction(spec: config.action!),
       ...config.trailing,
     ];
   }

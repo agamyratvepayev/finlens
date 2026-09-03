@@ -590,6 +590,10 @@ class Task {
     this.repeats = RepeatFrequency.none,
     this.weekdays = const {},
     this.daysOfMonth = const {},
+    this.repeatInterval = 1,
+    this.repeatUnit,
+    this.repeatEndDate,
+    this.repeatEndCount,
     this.skippedDates = const [],
     this.priority = Priority.normal,
     this.reminderDaysBefore,
@@ -650,6 +654,24 @@ class Task {
   /// long-enough month returns to the chosen day.
   Set<int> daysOfMonth;
 
+  /// `Every N unit` step size for a `custom` repeat (1..99). 1 for every other
+  /// cadence. See the transaction form's Custom sheet.
+  int repeatInterval;
+
+  /// The unit a `custom` repeat steps by; null unless `repeats == custom`.
+  RepeatUnit? repeatUnit;
+
+  /// End condition, set by the transaction form's Ends sheet. At most one of
+  /// [repeatEndDate] / [repeatEndCount] is non-null; both null means the series
+  /// never ends. [repeatEndCount] counts the **first occurrence** toward the
+  /// total (so 2 is the floor — one occurrence is not a repeat) and is ≥ 2.
+  ///
+  /// Stored and round-tripped, but the Planner's on-demand advance does not yet
+  /// stop the series at the limit — enforcing that is recurrence-engine work
+  /// kept out of scope. See the transaction Repeat spec §1 / §6.
+  DateTime? repeatEndDate;
+  int? repeatEndCount;
+
   List<DateTime> skippedDates;
   Priority priority;
   int? reminderDaysBefore;
@@ -692,6 +714,9 @@ class Task {
     switch (repeats) {
       case RepeatFrequency.none:
         return from;
+      case RepeatFrequency.daily:
+        return DateTime(
+            from.year, from.month, from.day + 1, from.hour, from.minute);
       case RepeatFrequency.weekly:
         if (weekdays.isEmpty) return from.add(const Duration(days: 7));
         return _nextWeekday(from, weekdays);
@@ -703,6 +728,32 @@ class Task {
         return _monthStep(from, 3);
       case RepeatFrequency.yearly:
         return _monthStep(from, 12);
+      case RepeatFrequency.custom:
+        return _nextCustom(from);
+    }
+  }
+
+  /// Steps a `custom` rule by `repeatInterval` units. For a single-interval week
+  /// or month cadence the chosen day-sets are honoured through the same helpers
+  /// weekly/monthly use (so the 29/30/31 short-month clamp applies); for
+  /// multi-interval cadences the step advances whole periods from the anchor —
+  /// honouring day-sets *across* an interval is Planner-engine work left out of
+  /// scope (transaction Repeat spec §1). Pure, like [nextOccurrence].
+  DateTime _nextCustom(DateTime from) {
+    final n = repeatInterval < 1 ? 1 : repeatInterval;
+    switch (repeatUnit ?? RepeatUnit.month) {
+      case RepeatUnit.day:
+        return DateTime(
+            from.year, from.month, from.day + n, from.hour, from.minute);
+      case RepeatUnit.week:
+        if (n == 1 && weekdays.isNotEmpty) return _nextWeekday(from, weekdays);
+        return DateTime(
+            from.year, from.month, from.day + 7 * n, from.hour, from.minute);
+      case RepeatUnit.month:
+        if (n == 1 && daysOfMonth.isNotEmpty) return _nextMonthly(from, daysOfMonth);
+        return _monthStep(from, n);
+      case RepeatUnit.year:
+        return _monthStep(from, 12 * n);
     }
   }
 
@@ -765,6 +816,8 @@ class Task {
     switch (repeats) {
       case RepeatFrequency.none:
         return null;
+      case RepeatFrequency.daily:
+        return 365;
       case RepeatFrequency.weekly:
         return 52;
       case RepeatFrequency.biweekly:
@@ -775,7 +828,40 @@ class Task {
         return 4;
       case RepeatFrequency.yearly:
         return 1;
+      case RepeatFrequency.custom:
+        final n = repeatInterval < 1 ? 1 : repeatInterval;
+        switch (repeatUnit ?? RepeatUnit.month) {
+          case RepeatUnit.day:
+            return (365 / n).round();
+          case RepeatUnit.week:
+            return (52 / n).round() * (weekdays.isEmpty ? 1 : weekdays.length);
+          case RepeatUnit.month:
+            return (12 / n).round() *
+                (daysOfMonth.isEmpty ? 1 : daysOfMonth.length);
+          case RepeatUnit.year:
+            return n <= 1 ? 1 : 0;
+        }
     }
+  }
+
+  /// The whole series from [first] (which counts as occurrence #1), honouring
+  /// the end condition ([repeatEndDate] / [repeatEndCount]). Pure — writes
+  /// nothing and does not touch the Planner's on-demand advance; used for
+  /// previews and tests. `12 times` yields twelve dates including [first], and
+  /// an end date stops the series at the last occurrence on or before it
+  /// (transaction Repeat spec §6). [cap] bounds a never-ending rule.
+  List<DateTime> boundedSeries(DateTime first, {int cap = 2000}) {
+    final out = <DateTime>[first];
+    if (!isRecurring) return out;
+    var d = first;
+    while (out.length < cap) {
+      if (repeatEndCount != null && out.length >= repeatEndCount!) break;
+      final next = nextOccurrence(d);
+      if (repeatEndDate != null && next.isAfter(repeatEndDate!)) break;
+      out.add(next);
+      d = next;
+    }
+    return out;
   }
 
   /// The next 3 dates shown as a preview in New/Edit Task (spec 3.7 / 5.7).

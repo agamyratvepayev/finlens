@@ -77,11 +77,15 @@ void main() {
     expect(store.txns, isEmpty);
   });
 
-  testWidgets('Split is non-interactive until an amount is entered (§2)',
+  testWidgets('Split action is disabled and states its reason (§7)',
       (tester) async {
     await _pump(tester, _store());
-    // Tapping the disabled Split toggle opens nothing.
-    await tester.tap(find.text('Split'));
+    // The full-width Split action names what it does and, with no amount,
+    // states why it is unavailable.
+    expect(find.text('Split into several categories'), findsOneWidget);
+    expect(find.text('Enter an amount first.'), findsOneWidget);
+    // Tapping the disabled action opens nothing.
+    await tester.tap(find.text('Split into several categories'));
     await tester.pumpAndSettle();
     expect(find.text('Split by category'), findsNothing);
   });
@@ -105,10 +109,10 @@ void main() {
     await tester.pump();
     await tester.tap(find.text('5'));
     await tester.pump();
-    // Open Repeat, choose a monthly cadence, confirm.
+    // Open the Repeat row, choose Monthly, confirm.
     await tester.tap(find.text('Repeat'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Every month'));
+    await tester.tap(find.text('Monthly'));
     await tester.pump();
     await tester.tap(find.text('Done'));
     await tester.pumpAndSettle();
@@ -174,8 +178,10 @@ void main() {
       ),
     ));
     await tester.pump();
-    // Editing loads the existing rule: the toggle shows its cadence.
-    await tester.tap(find.text('Every month'));
+    // Editing loads the existing rule: the Repeat row shows "Monthly". Open it
+    // and switch to Never.
+    expect(find.text('Monthly'), findsOneWidget);
+    await tester.tap(find.text('Repeat'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Never'));
     await tester.pump();

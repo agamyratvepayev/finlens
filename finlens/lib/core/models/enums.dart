@@ -119,10 +119,31 @@ enum TaskStatus { open, paid, skipped, paused, deleted }
 enum Priority { low, normal, high }
 
 /// Repeat cadences. Labels localized — see `RepeatFrequencyL10n.label`.
-/// `biweekly` sits between `weekly` and `monthly` to match the Repeat sheet's
-/// row order. Nothing persists this enum by index (no persistence layer; seed
-/// data and callers all use named values / `switch`), so the insertion is safe.
-enum RepeatFrequency { none, weekly, biweekly, monthly, quarterly, yearly }
+/// `biweekly` sits between `weekly` and `monthly` to match the Planner Repeat
+/// sheet's row order.
+///
+/// `daily` and `custom` were appended for the transaction form's Repeat rework:
+/// `daily` is an explicit every-day cadence; `custom` carries an arbitrary
+/// `Every N unit` rule (see [RepeatUnit] and `Task.repeatInterval`). They are
+/// appended, never inserted — persistence stores this enum by **`.name`**
+/// (`store_mappers.dart`), so declaration order does not affect stored data, and
+/// an unknown name reads back as `none`. The Planner task editor never offers
+/// them; only the transaction form does.
+enum RepeatFrequency {
+  none,
+  weekly,
+  biweekly,
+  monthly,
+  quarterly,
+  yearly,
+  daily,
+  custom,
+}
+
+/// The unit a `custom` repeat steps by (`Every N day/week/month/year`).
+/// Meaningful only when `Task.repeats == RepeatFrequency.custom`; null
+/// otherwise. Stored by `.name`, so members may be reordered safely.
+enum RepeatUnit { day, week, month, year }
 
 /// Comparison window for the Balance header selector (spec 1.1). Label +
 /// caption localized — see `ComparePeriodL10n`.

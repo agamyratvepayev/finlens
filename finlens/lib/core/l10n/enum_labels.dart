@@ -63,11 +63,13 @@ extension PriorityL10n on Priority {
 extension RepeatFrequencyL10n on RepeatFrequency {
   String label(AppLocalizations l) => switch (this) {
         RepeatFrequency.none => l.repeatNever,
+        RepeatFrequency.daily => l.rcDaily,
         RepeatFrequency.weekly => l.repeatWeekly,
         RepeatFrequency.biweekly => l.rsEvery2Weeks,
         RepeatFrequency.monthly => l.repeatMonthly,
         RepeatFrequency.quarterly => l.repeatQuarterly,
         RepeatFrequency.yearly => l.repeatYearly,
+        RepeatFrequency.custom => l.rcCustom,
       };
 }
 
