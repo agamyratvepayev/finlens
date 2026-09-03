@@ -374,6 +374,7 @@
   "filterTitle": "Filtre",
   "sheetApply": "Uygula",
   "sheetToday": "Bugün",
+  "sheetNow": "Şimdi",
   "balNoBetween": "{range} aralığında {subject} yok",
   "freqLessThanMonthly": "Ayda bir defadan az",
   "freqAbout": "Yaklaşık ",

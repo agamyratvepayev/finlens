@@ -1427,6 +1427,9 @@ class AppLocalizationsTk extends AppLocalizations {
   String get sheetToday => 'Şu gün';
 
   @override
+  String get sheetNow => 'Häzir';
+
+  @override
   String balNoBetween(String subject, String range) {
     return '$range aralygynda $subject ýok';
   }

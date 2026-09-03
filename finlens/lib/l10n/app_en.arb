@@ -489,6 +489,7 @@
   "filterTitle": "Filter",
   "sheetApply": "Apply",
   "sheetToday": "Today",
+  "sheetNow": "Now",
   "balNoBetween": "No {subject} between {range}",
   "@balNoBetween": { "placeholders": { "subject": { "type": "String" }, "range": { "type": "String" } } },
   "freqLessThanMonthly": "Less than once a month",

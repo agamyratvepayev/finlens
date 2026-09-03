@@ -374,6 +374,7 @@
   "filterTitle": "Süzgüç",
   "sheetApply": "Ulan",
   "sheetToday": "Şu gün",
+  "sheetNow": "Häzir",
   "balNoBetween": "{range} aralygynda {subject} ýok",
   "freqLessThanMonthly": "Aýda bir gezekden az",
   "freqAbout": "Takmynan ",

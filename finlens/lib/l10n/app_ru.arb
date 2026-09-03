@@ -374,6 +374,7 @@
   "filterTitle": "Фильтр",
   "sheetApply": "Применить",
   "sheetToday": "Сегодня",
+  "sheetNow": "Сейчас",
   "balNoBetween": "Нет «{subject}» за период {range}",
   "freqLessThanMonthly": "Реже раза в месяц",
   "freqAbout": "Около ",

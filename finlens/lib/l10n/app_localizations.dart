@@ -2146,6 +2146,12 @@ abstract class AppLocalizations {
   /// **'Today'**
   String get sheetToday;
 
+  /// No description provided for @sheetNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Now'**
+  String get sheetNow;
+
   /// No description provided for @balNoBetween.
   ///
   /// In en, this message translates to:

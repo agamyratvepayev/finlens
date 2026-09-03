@@ -1437,6 +1437,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sheetToday => 'Today';
 
   @override
+  String get sheetNow => 'Now';
+
+  @override
   String balNoBetween(String subject, String range) {
     return 'No $subject between $range';
   }

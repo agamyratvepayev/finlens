@@ -1478,6 +1478,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get sheetToday => 'Сегодня';
 
   @override
+  String get sheetNow => 'Сейчас';
+
+  @override
   String balNoBetween(String subject, String range) {
     return 'Нет «$subject» за период $range';
   }

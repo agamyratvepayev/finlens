@@ -14,6 +14,7 @@ import '../../theme/app_theme.dart';
 import '../../theme/app_typography.dart';
 import '../planner/edit_budget_screen.dart';
 import '../planner/edit_goal_screen.dart';
+import 'date_time_sheet.dart';
 import 'pickers.dart';
 import 'repeat_sheet.dart';
 import 'tag_picker_sheet.dart';
@@ -370,12 +371,21 @@ class _QuickAddScreenState extends State<QuickAddScreen>
         },
       );
 
-  FieldSpec _dateField({String? label}) => FieldSpec(
-        icon: Icons.event_rounded,
-        label: label ?? AppLocalizations.of(context).qaDate,
-        value: dateTimeLabel(_date, AppLocalizations.of(context), now: AppStore.today),
-        onTap: _pickDate,
-      );
+  FieldSpec _dateField({String? label}) {
+    final l = AppLocalizations.of(context);
+    // A real date, never a relative word (spec §1); the year is dropped within
+    // the current year. The time follows the device's 12-/24-hour setting.
+    final time = MaterialLocalizations.of(context).formatTimeOfDay(
+      TimeOfDay.fromDateTime(_date),
+      alwaysUse24HourFormat: MediaQuery.of(context).alwaysUse24HourFormat,
+    );
+    return FieldSpec(
+      icon: Icons.event_rounded,
+      label: label ?? l.qaDate,
+      value: l.dateWithTime(dateAbsolute(_date, l, now: AppStore.today), time),
+      onTap: _pickDate,
+    );
+  }
 
   FieldSpec _tagField() {
     final store = StoreScope.of(context);
@@ -888,16 +898,18 @@ class _QuickAddScreenState extends State<QuickAddScreen>
 
   Future<void> _pickDate() async {
     setState(() => _keypadOpen = false);
-    final d = await showDatePicker(
-      context: context,
-      initialDate: _date,
+    // The app-native sheet edits date and time together and returns the full
+    // value; the old showDatePicker only touched the date, leaving the time
+    // frozen. Bounds are preserved (DateTime(2020)..DateTime(2035)).
+    final d = await showDateTimeSheet(
+      context,
+      initial: _date,
       firstDate: DateTime(2020),
       lastDate: DateTime(2035),
+      now: AppStore.today,
     );
     if (d == null || !mounted) return;
-    setState(
-      () => _date = DateTime(d.year, d.month, d.day, _date.hour, _date.minute),
-    );
+    setState(() => _date = d);
   }
 
   double _defaultRate(Account? from, Account? to) {

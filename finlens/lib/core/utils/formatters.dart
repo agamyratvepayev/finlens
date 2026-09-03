@@ -245,6 +245,17 @@ String dateTimeLabel(DateTime d, AppLocalizations l, {DateTime? now}) {
       : l.dateWithTime(dayMonthYear(d, l), hhmm(d));
 }
 
+/// Absolute date label for the transaction form's Date row — the same layout
+/// as [dateTimeLabel] but **never** a relative word ("Today"/"Tomorrow"), and
+/// with the year dropped within the current year. The time is joined by the
+/// caller (it depends on the device's 12-/24-hour setting, which needs a
+/// `BuildContext`); this returns only the date half: "9 Aug" this year,
+/// "9 Aug 2025" otherwise.
+String dateAbsolute(DateTime d, AppLocalizations l, {DateTime? now}) {
+  final today = now ?? DateTime.now();
+  return d.year == today.year ? dayMonth(d, l) : dayMonthYear(d, l);
+}
+
 /// Ledger date-group headings: "Today", "Yesterday · 8 Aug", "7 Aug".
 String dateGroupLabel(DateTime d, AppLocalizations l) {
   final now = DateTime.now();
