@@ -2709,15 +2709,11 @@ class AppLocalizationsTr extends AppLocalizations {
   String get qaBudgetWhichCategory => 'Hangi kategoriye bütçe?';
 
   @override
-  String qaThisMonthSpend(Object amount) {
-    return 'bu ay $amount';
-  }
+  String get qaBudgetNeedsCategory => 'Bütçe için bir kategori gerekir';
 
   @override
-  String get qaNothingSpentYet => 'Henüz yok';
-
-  @override
-  String get qaAllCategoriesBudgeted => 'Her kategorinin zaten bir bütçesi var';
+  String get qaBudgetNeedsCategoryMsg =>
+      'Her bütçe tek bir kategorinin harcamasını sınırlar.';
 
   @override
   String get qaSearchCleared => 'Arama temizlendi';

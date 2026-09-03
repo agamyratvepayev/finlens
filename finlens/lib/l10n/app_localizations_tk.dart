@@ -2709,15 +2709,11 @@ class AppLocalizationsTk extends AppLocalizations {
   String get qaBudgetWhichCategory => 'Haýsy kategoriýa býujet?';
 
   @override
-  String qaThisMonthSpend(Object amount) {
-    return 'şu aý $amount';
-  }
+  String get qaBudgetNeedsCategory => 'Býujet üçin kategoriýa gerek';
 
   @override
-  String get qaNothingSpentYet => 'Entek ýok';
-
-  @override
-  String get qaAllCategoriesBudgeted => 'Her kategoriýanyň eýýäm býujeti bar';
+  String get qaBudgetNeedsCategoryMsg =>
+      'Her býujet bir kategoriýanyň çykdajylaryny çäklendirýär.';
 
   @override
   String get qaSearchCleared => 'Gözleg arassalandy';

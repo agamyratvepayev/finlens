@@ -121,9 +121,10 @@ void main() {
 
     // The picker opened with its own title (not "Expense category").
     expect(find.text('Budget which category?'), findsOneWidget);
-    // The zero-spend category is listed, with its context subtitle.
+    // The zero-spend category is listed; its value column reads an em dash, not
+    // a confident $0 (§4 — "Nothing yet" subtitle is gone).
     expect(find.text('TripFundZZ'), findsOneWidget);
-    expect(find.text('Nothing yet'), findsWidgets);
+    expect(find.text('—'), findsWidgets);
 
     await tester.tap(find.text('TripFundZZ'));
     await tester.pumpAndSettle();
@@ -228,8 +229,9 @@ void main() {
     expect(store.categoryById(included.id), isNotNull);
   });
 
-  // ── §6 · every expense category budgeted → a notice, no sheet ─────────────
-  testWidgets('all budgeted shows a notice and opens no picker', (tester) async {
+  // ── §1/§3 · every expense category budgeted → the sheet still opens ────────
+  testWidgets('all budgeted opens the sheet with the empty block, no snackbar',
+      (tester) async {
     tester.view.physicalSize = _defaultSize;
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
@@ -241,9 +243,199 @@ void main() {
     await tester.tap(find.text('start'));
     await tester.pump(const Duration(milliseconds: 350));
 
-    expect(find.text('Budget which category?'), findsNothing);
+    // The sheet opens (§1); the empty block is shown (§3); the old snackbar is
+    // gone entirely.
+    expect(find.text('Budget which category?'), findsOneWidget);
+    expect(find.text('A budget needs a category'), findsOneWidget);
+    expect(find.text("Each one caps a single category's spending."),
+        findsOneWidget);
+    expect(find.byType(SnackBar), findsNothing);
     expect(find.byType(EditBudgetScreen), findsNothing);
-    expect(find.text('Every category already has a budget'), findsOneWidget);
+    // The create action renders in this (empty) state too (§2).
+    expect(find.text('New category'), findsOneWidget);
+  });
+
+  // ── §1/§3 · a store with zero categories → the sheet still opens ───────────
+  testWidgets('zero categories opens the sheet, empty block, create action, '
+      'no snackbar', (tester) async {
+    tester.view.physicalSize = _defaultSize;
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    final store = AppStore.empty();
+
+    await tester.pumpWidget(_flowHost(store));
+    await tester.tap(find.text('start'));
+    await tester.pump(const Duration(milliseconds: 350));
+
+    expect(find.text('Budget which category?'), findsOneWidget);
+    expect(find.text('A budget needs a category'), findsOneWidget);
+    expect(find.text('New category'), findsOneWidget);
+    expect(find.byType(SnackBar), findsNothing);
+  });
+
+  // ── §4 · rows are the amount, right-aligned, with an em dash at zero ───────
+  testWidgets('rows share one chevron x and one value x; zero renders an em '
+      'dash', (tester) async {
+    tester.view.physicalSize = _defaultSize;
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    final store = AppStore.empty();
+    final acct = store.addAccount(
+      name: 'Cash',
+      group: AccountGroup.spendable,
+      currency: 'USD',
+      startingBalance: 1000,
+    );
+    // One category with spend this period, one with none — so both branches of
+    // the value column render.
+    final spent = store.addCategory(
+      name: 'GroceriesZZ',
+      type: CategoryType.expense,
+      icon: Icons.local_grocery_store_rounded,
+      color: Colors.orange,
+    );
+    store.addCategory(
+      name: 'TravelZZ',
+      type: CategoryType.expense,
+      icon: Icons.flight_rounded,
+      color: Colors.teal,
+    );
+    store.addTxn(
+      type: TxnType.expense,
+      amount: 42,
+      currency: 'USD',
+      fromRef: acct.id,
+      toRef: spent.id,
+      date: DateTime(store.period.year, store.period.month, 5),
+    );
+
+    await tester.pumpWidget(_flowHost(store));
+    await tester.tap(find.text('start'));
+    await tester.pump(const Duration(milliseconds: 350));
+
+    // The zero-spend category shows an em dash; the other shows its amount.
+    expect(find.text('—'), findsOneWidget);
+    expect(find.text(r'$42'), findsOneWidget);
+
+    // Every chevron shares one right edge.
+    final chevrons = find.byIcon(Icons.chevron_right_rounded);
+    expect(chevrons, findsNWidgets(2));
+    final chevronRight = tester.getRect(chevrons.at(0)).right;
+    expect(tester.getRect(chevrons.at(1)).right, closeTo(chevronRight, 0.5),
+        reason: 'chevron right edges must align');
+
+    // Both values share one right edge.
+    final dashRight = tester.getRect(find.text('—')).right;
+    final amtRight = tester.getRect(find.text(r'$42')).right;
+    expect(dashRight, closeTo(amtRight, 0.5),
+        reason: 'value right edges must align');
+
+    // The value edge sits 8 (gap) + 18 (chevron box) left of the chevron edge.
+    expect(chevronRight - amtRight, closeTo(8 + 18, 1.0));
+  });
+
+  // ── §4/§8 · each row is 48pt at normal text scale ─────────────────────────
+  testWidgets('rows are 48pt tall', (tester) async {
+    tester.view.physicalSize = _defaultSize;
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    final store = AppStore.empty();
+    store.addCategory(
+      name: 'OnlyOneZZ',
+      type: CategoryType.expense,
+      icon: Icons.shopping_bag_rounded,
+      color: Colors.orange,
+    );
+
+    await tester.pumpWidget(_flowHost(store));
+    await tester.tap(find.text('start'));
+    await tester.pump(const Duration(milliseconds: 350));
+
+    // The closest ConstrainedBox above the name is the row's 48pt floor.
+    final row = find.ancestor(
+      of: find.text('OnlyOneZZ'),
+      matching: find.byType(ConstrainedBox),
+    );
+    expect(tester.getSize(row.first).height, 48);
+  });
+
+  // ── §5/§6 · the label and figures name store.period, not today's month ────
+  testWidgets('with the Planner on a past month, label and figures name that '
+      'month', (tester) async {
+    tester.view.physicalSize = _defaultSize;
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    final store = AppStore.empty();
+    final acct = store.addAccount(
+      name: 'Cash',
+      group: AccountGroup.spendable,
+      currency: 'USD',
+      startingBalance: 1000,
+    );
+    final cat = store.addCategory(
+      name: 'RentZZ',
+      type: CategoryType.expense,
+      icon: Icons.home_rounded,
+      color: Colors.blue,
+    );
+    // Spend in the period BEFORE the current one, and step the Planner back to
+    // it, so "today's month" and store.period differ.
+    final prev = DateTime(store.period.year, store.period.month - 1);
+    store.addTxn(
+      type: TxnType.expense,
+      amount: 99,
+      currency: 'USD',
+      fromRef: acct.id,
+      toRef: cat.id,
+      date: DateTime(prev.year, prev.month, 3),
+    );
+    store.shiftPeriod(-1);
+
+    await tester.pumpWidget(_flowHost(store));
+    await tester.tap(find.text('start'));
+    await tester.pump(const Duration(milliseconds: 350));
+
+    // The label names the period's month, uppercased.
+    const months = [
+      'JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE',
+      'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER',
+    ];
+    expect(find.text(months[prev.month - 1]), findsOneWidget);
+    // The figure is that month's spend, not a dash.
+    expect(find.text(r'$99'), findsOneWidget);
+  });
+
+  // ── §2/§7 · creating a category from the sheet returns it to the caller ────
+  testWidgets('creating a category from the sheet pushes EditBudgetScreen',
+      (tester) async {
+    tester.view.physicalSize = _defaultSize;
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
+    final store = AppStore.empty();
+
+    await tester.pumpWidget(_flowHost(store));
+    await tester.tap(find.text('start'));
+    await tester.pump(const Duration(milliseconds: 350));
+
+    // Tap the title-row create action, then complete the new-category sheet.
+    await tester.tap(find.text('New category'));
+    await tester.pumpAndSettle();
+    // The new-category sheet is the only one with a text field on screen.
+    await tester.enterText(find.byType(TextField), 'FreshCatZZ');
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Create & select'));
+    await tester.pumpAndSettle();
+
+    // We land directly in the editor for the freshly created category.
+    final editor = find.byType(EditBudgetScreen);
+    expect(editor, findsOneWidget);
+    final created = store.categories.firstWhere((c) => c.name == 'FreshCatZZ');
+    expect(tester.widget<EditBudgetScreen>(editor).categoryId, created.id);
   });
 
   // ── §5 · the Planner + per tab ────────────────────────────────────────────

@@ -17,6 +17,7 @@ import '../../shared/widgets/form_fields.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/app_typography.dart';
+import '../balance/balance_screen.dart' show EmptyState;
 import 'account_icons.dart';
 import 'icon_picker_sheet.dart';
 import 'widgets/amount_hero.dart';
@@ -839,21 +840,37 @@ class _CategoryPickerBodyState extends State<_CategoryPickerBody> {
   }
 }
 
-/// New Budget's category picker (§3). Deliberately *not* [pickCategory]: it
+/// New Budget's category picker (§1–§7). Deliberately *not* [pickCategory]: it
 /// lists only expense categories that carry no budget — including ones with no
-/// spending this month, which is the whole point of the flow — shows this
-/// month's spend beneath each as context (not a filter), and offers no
-/// "New category" cell, since creating a category here is a non-goal. The
-/// caller filters and sorts (spend descending, then name) and never opens this
-/// on an empty list, so there is no empty state to render.
+/// spending in the period, which is the whole point of the flow — names the
+/// period's spend once over the value column (not a per-row filter), and the
+/// caller filters and sorts (spend descending, then name).
+///
+/// The sheet ALWAYS opens (§1): the caller no longer guards on an empty list.
+/// With nothing to pick the body is a single empty block (§3) and the title-row
+/// `New category` action (§2) is the way forward — present in both states, since
+/// it is part of the sheet, not a recovery affordance for the empty case.
 Future<Category?> pickBudgetCategory(
   BuildContext context, {
   required List<Category> candidates,
   required DateTime month,
 }) {
+  final l = AppLocalizations.of(context);
   return showAppSheet<Category>(
     context,
-    title: AppLocalizations.of(context).qaBudgetWhichCategory,
+    title: l.qaBudgetWhichCategory,
+    // Mirrors [pickAccount] (§2). `CategoryType.expense` is not a guess: the
+    // candidate filter only ever offers expense categories, so an income one
+    // created here could never be budgeted. `_HeaderCreateAction` pops the sheet
+    // with the created category, so it flows straight back through this return
+    // value and the caller pushes EditBudgetScreen for it with no extra code.
+    actions: [
+      _HeaderCreateAction<Category>(
+        label: l.qaNewCategory,
+        onCreate: (ctx) =>
+            showNewCategorySheet(ctx, type: CategoryType.expense),
+      ),
+    ],
     builder: (context, controller) => _BudgetCategoryPickerBody(
       controller: controller,
       candidates: candidates,
@@ -873,10 +890,38 @@ class _BudgetCategoryPickerBody extends StatelessWidget {
   final List<Category> candidates;
   final DateTime month;
 
+  /// The value column's right edge, expressed as an inset from the card's inner
+  /// edge: the chevron box (18) + its 8pt gap + the row's [Insets.md] right
+  /// padding. §5's month label shares this exact inset, so it sits directly over
+  /// the figures it names. (§5's prose reads "18 + 8"; that omits the row's
+  /// [Insets.md] padding — matching the true value edge requires including it.)
+  static const double _valueInset = Insets.md + 18 + 8;
+
   @override
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
     final l = AppLocalizations.of(context);
+
+    // One empty block whatever the cause — no categories, all budgeted, or all
+    // remaining ones having a removed budget (§3/§7). No branch on why, and no
+    // button: the create action lives in the title row. Kept scrollable so it
+    // still dismisses by drag and grows at large text scale.
+    if (candidates.isEmpty) {
+      return ListView(
+        controller: controller,
+        padding: const EdgeInsets.symmetric(vertical: Insets.xl),
+        children: [
+          EmptyState(
+            icon: Icons.pie_chart_outline_rounded,
+            iconBackdrop: true,
+            titleAsHeader: true,
+            title: l.qaBudgetNeedsCategory,
+            message: l.qaBudgetNeedsCategoryMsg,
+          ),
+        ],
+      );
+    }
+
     return ListView(
       controller: controller,
       padding: const EdgeInsets.fromLTRB(
@@ -886,6 +931,21 @@ class _BudgetCategoryPickerBody extends StatelessWidget {
         Insets.xxl,
       ),
       children: [
+        // §5 — one label row over the value column, the period's month in caps.
+        // Right-aligned to the value column via [_valueInset], and part of the
+        // scrollable content (not sticky). It renders only when the card does.
+        Padding(
+          padding: const EdgeInsets.only(
+            right: _valueInset,
+            top: Insets.xs,
+            bottom: Insets.sm,
+          ),
+          child: Text(
+            monthLong(month.month, l).toUpperCase(),
+            style: AppText.label,
+            textAlign: TextAlign.right,
+          ),
+        ),
         AppCard(
           child: Column(
             children: [
@@ -900,6 +960,9 @@ class _BudgetCategoryPickerBody extends StatelessWidget {
     );
   }
 
+  /// A single 48pt line (§4): icon, name, the period's spend right-aligned, and
+  /// the chevron. The height is a `minHeight` floor, not a hard box, so a normal
+  /// row is exactly 48pt yet grows at large text scale rather than clipping (§7).
   Widget _budgetCategoryRow(
     BuildContext context,
     AppStore store,
@@ -907,46 +970,50 @@ class _BudgetCategoryPickerBody extends StatelessWidget {
     Category c,
   ) {
     final spent = store.spentInCategory(c.id, month);
-    final subtitle =
-        spent > 0 ? l.qaThisMonthSpend(money(spent)) : l.qaNothingSpentYet;
-    return InkWell(
-      onTap: () => Navigator.of(context).pop(c),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: Insets.md,
-          vertical: Insets.md,
-        ),
-        child: Row(
-          children: [
-            IconTile(c.icon, color: c.color, size: 36),
-            const SizedBox(width: Insets.md),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
+    // The period's spend, right-aligned and never shrinking. A confident $0
+    // would be a claim rather than a blank, so zero renders as an em dash — the
+    // same convention Balance uses on its own first run (§4).
+    final value = Text(
+      spent > 0 ? money(spent) : '—',
+      style: AppText.amount.copyWith(
+        color: spent > 0 ? AppColors.textSecondary : AppColors.textTertiary,
+      ),
+    );
+    return Semantics(
+      button: true,
+      child: InkWell(
+        onTap: () => Navigator.of(context).pop(c),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 48),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: Insets.md),
+            child: Row(
+              children: [
+                IconTile(c.icon, color: c.color, size: 30),
+                const SizedBox(width: Insets.md),
+                Expanded(
+                  child: Text(
                     c.name,
-                    style: AppText.rowTitle.copyWith(fontWeight: FontWeight.w500),
+                    style:
+                        AppText.rowTitle.copyWith(fontWeight: FontWeight.w500),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    style: AppText.caption,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                ),
+                value,
+                const SizedBox(width: 8),
+                const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: Icon(
+                    Icons.chevron_right_rounded,
+                    size: 18,
+                    color: AppColors.formChevron,
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-            const SizedBox(width: Insets.sm),
-            const Icon(
-              Icons.chevron_right_rounded,
-              size: 18,
-              color: AppColors.formChevron,
-            ),
-          ],
+          ),
         ),
       ),
     );

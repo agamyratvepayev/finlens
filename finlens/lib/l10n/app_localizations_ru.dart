@@ -2769,15 +2769,11 @@ class AppLocalizationsRu extends AppLocalizations {
   String get qaBudgetWhichCategory => 'Для какой категории бюджет?';
 
   @override
-  String qaThisMonthSpend(Object amount) {
-    return '$amount в этом месяце';
-  }
+  String get qaBudgetNeedsCategory => 'Для бюджета нужна категория';
 
   @override
-  String get qaNothingSpentYet => 'Пока ничего';
-
-  @override
-  String get qaAllCategoriesBudgeted => 'У каждой категории уже есть бюджет';
+  String get qaBudgetNeedsCategoryMsg =>
+      'Каждый бюджет ограничивает расходы одной категории.';
 
   @override
   String get qaSearchCleared => 'Поиск очищен';

@@ -2720,15 +2720,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get qaBudgetWhichCategory => 'Budget which category?';
 
   @override
-  String qaThisMonthSpend(Object amount) {
-    return '$amount this month';
-  }
+  String get qaBudgetNeedsCategory => 'A budget needs a category';
 
   @override
-  String get qaNothingSpentYet => 'Nothing yet';
-
-  @override
-  String get qaAllCategoriesBudgeted => 'Every category already has a budget';
+  String get qaBudgetNeedsCategoryMsg =>
+      'Each one caps a single category\'s spending.';
 
   @override
   String get qaSearchCleared => 'Search cleared';

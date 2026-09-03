@@ -66,11 +66,11 @@ Future<void> showQuickAdd(
 
 /// New Budget leaves the numeric-hero sheet the way New Goal does (§3), but asks
 /// one question first: a budget needs a category. Lists expense categories that
-/// carry no budget yet — including ones with no spending this month, which is
-/// the whole point — sorted by this month's spend descending then name, and on
-/// a pick pushes [EditBudgetScreen]. Dismissing does nothing. When every
-/// category is already budgeted there is nothing to pick, so a transient
-/// snackbar replaces the empty sheet — no sheet, no editor (§6).
+/// carry no budget yet — including ones with no spending in the period, which is
+/// the whole point — sorted by the period's spend descending then name, and on a
+/// pick pushes [EditBudgetScreen]. Dismissing does nothing. The sheet ALWAYS
+/// opens: with nothing to pick it draws an empty block and its title-row
+/// `New category` action, never a snackbar (§1/§7).
 ///
 /// [context] must stay valid after any open Quick Add screen has been popped
 /// and must resolve to the root navigator; the type-menu caller pops Quick Add
@@ -78,9 +78,10 @@ Future<void> showQuickAdd(
 /// navigator that outlives the pop) for exactly this reason.
 Future<void> startNewBudgetFlow(BuildContext context) async {
   final store = StoreScope.read(context);
-  // "This month" is the current calendar month — the only month a budget is set
-  // for (§8) — and drives both the spend subtitle and the sort.
-  final month = DateTime(AppStore.today.year, AppStore.today.month);
+  // The month the Planner is showing (§6) — the same month EditBudgetScreen's
+  // history reads — drives both the spend figures and the sort. Derived once
+  // here and passed down so the sheet never computes its own.
+  final month = DateTime(store.period.year, store.period.month);
   final candidates = store.categories
       .where((c) =>
           c.type == CategoryType.expense &&
@@ -95,15 +96,6 @@ Future<void> startNewBudgetFlow(BuildContext context) async {
           ? bySpend
           : a.name.toLowerCase().compareTo(b.name.toLowerCase());
     });
-
-  if (candidates.isEmpty) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(
-        content: Text(AppLocalizations.of(context).qaAllCategoriesBudgeted),
-      ));
-    return;
-  }
 
   final picked =
       await pickBudgetCategory(context, candidates: candidates, month: month);

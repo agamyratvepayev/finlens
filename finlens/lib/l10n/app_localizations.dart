@@ -4276,23 +4276,17 @@ abstract class AppLocalizations {
   /// **'Budget which category?'**
   String get qaBudgetWhichCategory;
 
-  /// No description provided for @qaThisMonthSpend.
+  /// No description provided for @qaBudgetNeedsCategory.
   ///
   /// In en, this message translates to:
-  /// **'{amount} this month'**
-  String qaThisMonthSpend(Object amount);
+  /// **'A budget needs a category'**
+  String get qaBudgetNeedsCategory;
 
-  /// No description provided for @qaNothingSpentYet.
+  /// No description provided for @qaBudgetNeedsCategoryMsg.
   ///
   /// In en, this message translates to:
-  /// **'Nothing yet'**
-  String get qaNothingSpentYet;
-
-  /// No description provided for @qaAllCategoriesBudgeted.
-  ///
-  /// In en, this message translates to:
-  /// **'Every category already has a budget'**
-  String get qaAllCategoriesBudgeted;
+  /// **'Each one caps a single category\'s spending.'**
+  String get qaBudgetNeedsCategoryMsg;
 
   /// No description provided for @qaSearchCleared.
   ///
