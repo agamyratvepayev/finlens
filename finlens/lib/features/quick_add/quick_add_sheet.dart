@@ -545,10 +545,12 @@ class _QuickAddScreenState extends State<QuickAddScreen>
       return;
     }
     if (_amount <= 0) return;
-    final catType =
-        _type == QuickAddType.income ? CategoryType.income : CategoryType.expense;
-    final account =
-        store.accountById(_type == QuickAddType.income ? _toRef : _fromRef);
+    final income = _type == QuickAddType.income;
+    final catType = income ? CategoryType.income : CategoryType.expense;
+    final account = store.accountById(income ? _toRef : _fromRef);
+    // Not-yet-split: open with a single line carrying the transaction's own
+    // category (which may be unset), amount blank (spec §5).
+    final currentCategory = income ? _fromRef : _toRef;
     setState(() => _keypadOpen = false);
     final result = await showSplitSheet(
       context,
@@ -556,7 +558,7 @@ class _QuickAddScreenState extends State<QuickAddScreen>
       currency: _currency,
       accountName: account?.name ?? '—',
       categoryType: catType,
-      initial: _splitLines ?? const [],
+      initial: _splitLines ?? [SplitLine(categoryId: currentCategory)],
     );
     if (result == null || !mounted) return;
     setState(() => _splitLines = result.length >= 2 ? result : null);
@@ -1293,7 +1295,7 @@ class _QuickAddScreenState extends State<QuickAddScreen>
         final line = _splitLines![i];
         final t = store.addTxn(
           type: txnType,
-          amount: line.amount,
+          amount: line.amount ?? 0,
           currency: _currency,
           fromRef: income ? line.categoryId! : accountId,
           toRef: income ? accountId : line.categoryId!,

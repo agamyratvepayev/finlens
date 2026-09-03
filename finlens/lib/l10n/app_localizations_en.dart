@@ -2824,40 +2824,34 @@ class AppLocalizationsEn extends AppLocalizations {
   String get qaSearchIcons => 'Search icons';
 
   @override
-  String get ssRemoveSplit => 'Remove split';
+  String get ssSplit => 'Split';
 
   @override
-  String get ssSplitByCategory => 'Split by category';
-
-  @override
-  String ssTotalCovers(Object total, Object covered) {
-    return 'Total $total · $covered';
-  }
+  String get ssTotal => 'Total';
 
   @override
   String get ssRemoveLine => 'Remove line';
 
   @override
-  String get ssAddCategory => 'Add category';
+  String get ssAddLine => 'Add a line';
 
   @override
-  String get ssRemaining => 'Remaining';
-
-  @override
-  String get ssOverBy => 'Over by';
+  String get ssChooseCategory => 'Choose a category';
 
   @override
   String get ssSplitEvenly => 'Split evenly';
 
   @override
-  String get ssRestToLast => 'Rest to last';
+  String get ssAssignRest => 'Assign the rest';
 
   @override
-  String get ssApplySplit => 'Apply split';
+  String get ssLeftToAssign => 'Left to assign';
 
   @override
-  String get ssApplySplitBlocked =>
-      'Apply split, unavailable until the remaining is zero';
+  String get ssOverTotalBy => 'Over the total by';
+
+  @override
+  String get ssAddAnotherLine => 'Add another line to split.';
 
   @override
   String get rsRepeat => 'Repeat';

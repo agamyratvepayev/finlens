@@ -2812,40 +2812,34 @@ class AppLocalizationsTk extends AppLocalizations {
   String get qaSearchIcons => 'Nyşan gözle';
 
   @override
-  String get ssRemoveSplit => 'Bölünmäni aýyr';
+  String get ssSplit => 'Böl';
 
   @override
-  String get ssSplitByCategory => 'Kategoriýa boýunça böl';
-
-  @override
-  String ssTotalCovers(Object total, Object covered) {
-    return 'Jemi $total · $covered';
-  }
+  String get ssTotal => 'Jemi';
 
   @override
   String get ssRemoveLine => 'Setiri aýyr';
 
   @override
-  String get ssAddCategory => 'Kategoriýa goş';
+  String get ssAddLine => 'Setir goş';
 
   @override
-  String get ssRemaining => 'Galan';
-
-  @override
-  String get ssOverBy => 'Artyk';
+  String get ssChooseCategory => 'Kategoriýa saýla';
 
   @override
   String get ssSplitEvenly => 'Deň böl';
 
   @override
-  String get ssRestToLast => 'Galany soňkusyna';
+  String get ssAssignRest => 'Galany belle';
 
   @override
-  String get ssApplySplit => 'Bölünmäni ulan';
+  String get ssLeftToAssign => 'Bellenmeli galan';
 
   @override
-  String get ssApplySplitBlocked =>
-      'Bölünmäni ulanmak, galan nol bolýança elýeterli däl';
+  String get ssOverTotalBy => 'Jemden şonça artýar';
+
+  @override
+  String get ssAddAnotherLine => 'Bölmek üçin ýene bir setir goş.';
 
   @override
   String get rsRepeat => 'Gaýtala';

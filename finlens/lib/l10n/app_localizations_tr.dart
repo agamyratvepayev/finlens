@@ -2813,40 +2813,34 @@ class AppLocalizationsTr extends AppLocalizations {
   String get qaSearchIcons => 'Simge ara';
 
   @override
-  String get ssRemoveSplit => 'Bölmeyi kaldır';
+  String get ssSplit => 'Böl';
 
   @override
-  String get ssSplitByCategory => 'Kategoriye göre böl';
-
-  @override
-  String ssTotalCovers(Object total, Object covered) {
-    return 'Toplam $total · $covered';
-  }
+  String get ssTotal => 'Toplam';
 
   @override
   String get ssRemoveLine => 'Satırı kaldır';
 
   @override
-  String get ssAddCategory => 'Kategori ekle';
+  String get ssAddLine => 'Satır ekle';
 
   @override
-  String get ssRemaining => 'Kalan';
-
-  @override
-  String get ssOverBy => 'Fazla';
+  String get ssChooseCategory => 'Kategori seç';
 
   @override
   String get ssSplitEvenly => 'Eşit böl';
 
   @override
-  String get ssRestToLast => 'Kalanı sona';
+  String get ssAssignRest => 'Kalanı ata';
 
   @override
-  String get ssApplySplit => 'Bölmeyi uygula';
+  String get ssLeftToAssign => 'Atanmayı bekleyen';
 
   @override
-  String get ssApplySplitBlocked =>
-      'Bölmeyi uygula, kalan sıfır olana kadar kullanılamaz';
+  String get ssOverTotalBy => 'Toplamı şu kadar aşıyor';
+
+  @override
+  String get ssAddAnotherLine => 'Bölmek için bir satır daha ekle.';
 
   @override
   String get rsRepeat => 'Tekrar';

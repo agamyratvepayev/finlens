@@ -2880,40 +2880,34 @@ class AppLocalizationsRu extends AppLocalizations {
   String get qaSearchIcons => 'Поиск значков';
 
   @override
-  String get ssRemoveSplit => 'Убрать разбивку';
+  String get ssSplit => 'Разбить';
 
   @override
-  String get ssSplitByCategory => 'Разбить по категориям';
-
-  @override
-  String ssTotalCovers(Object total, Object covered) {
-    return 'Всего $total · $covered';
-  }
+  String get ssTotal => 'Всего';
 
   @override
   String get ssRemoveLine => 'Убрать строку';
 
   @override
-  String get ssAddCategory => 'Добавить категорию';
+  String get ssAddLine => 'Добавить строку';
 
   @override
-  String get ssRemaining => 'Осталось';
-
-  @override
-  String get ssOverBy => 'Превышение на';
+  String get ssChooseCategory => 'Выберите категорию';
 
   @override
   String get ssSplitEvenly => 'Поровну';
 
   @override
-  String get ssRestToLast => 'Остаток в последнюю';
+  String get ssAssignRest => 'Назначить остаток';
 
   @override
-  String get ssApplySplit => 'Применить разбивку';
+  String get ssLeftToAssign => 'Осталось распределить';
 
   @override
-  String get ssApplySplitBlocked =>
-      'Применить разбивку можно, когда остаток равен нулю';
+  String get ssOverTotalBy => 'Превышение суммы на';
+
+  @override
+  String get ssAddAnotherLine => 'Добавьте ещё строку для разбивки.';
 
   @override
   String get rsRepeat => 'Повтор';

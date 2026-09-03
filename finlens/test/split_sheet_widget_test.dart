@@ -10,6 +10,11 @@ import 'package:finlens/theme/app_theme.dart';
 
 // flutter test hangs on the author's machine — run these yourself:
 //   flutter test test/split_sheet_widget_test.dart
+//
+// The redesigned split sheet (spec §4–§8): a single opening line with the
+// transaction's category and a blank amount; Cancel in the header and Done the
+// only commit; a status line that shows at most one thing and nothing when the
+// split is valid; a missing category flagged in the row, not the status line.
 
 Category _cat(String id, String name) => Category(
       id: id,
@@ -35,8 +40,8 @@ AppStore _store() => AppStore(
       tasks: const <Task>[],
     );
 
-void _portrait(WidgetTester tester) {
-  tester.view.physicalSize = const Size(1170, 2532); // 390 × 844 @3x
+void _size(WidgetTester tester, double w, double h) {
+  tester.view.physicalSize = Size(w * 3, h * 3);
   tester.view.devicePixelRatio = 3;
   addTearDown(() {
     tester.view.resetPhysicalSize();
@@ -44,32 +49,41 @@ void _portrait(WidgetTester tester) {
   });
 }
 
+void _portrait(WidgetTester tester) => _size(tester, 390, 844);
+
 /// Pumps a host with an "open" button that shows the split sheet with [initial]
 /// lines. Leaves the split sheet on screen, settled.
 Future<void> _openSheet(
   WidgetTester tester, {
   required double total,
   required List<SplitLine> initial,
+  Locale? locale,
+  double textScale = 1.0,
 }) async {
   await tester.pumpWidget(StoreScope(
     store: _store(),
     child: MaterialApp(
+      locale: locale,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       theme: AppTheme.dark,
       home: Builder(
-        builder: (ctx) => Scaffold(
-          body: Center(
-            child: ElevatedButton(
-              onPressed: () => showSplitSheet(
-                ctx,
-                total: total,
-                currency: 'USD',
-                accountName: 'Cash',
-                categoryType: CategoryType.expense,
-                initial: initial,
+        builder: (ctx) => MediaQuery(
+          data: MediaQuery.of(ctx).copyWith(
+              textScaler: TextScaler.linear(textScale)),
+          child: Scaffold(
+            body: Center(
+              child: ElevatedButton(
+                onPressed: () => showSplitSheet(
+                  ctx,
+                  total: total,
+                  currency: 'USD',
+                  accountName: 'Cash',
+                  categoryType: CategoryType.expense,
+                  initial: initial,
+                ),
+                child: const Text('open'),
               ),
-              child: const Text('open'),
             ),
           ),
         ),
@@ -80,174 +94,270 @@ Future<void> _openSheet(
   await tester.pumpAndSettle();
 }
 
-/// The colour of the remaining-row figure — the single Text inside the
-/// live-region Semantics node.
-Color _remainingColor(WidgetTester tester) {
-  final figure = find.descendant(
-    of: find.byWidgetPredicate(
-        (w) => w is Semantics && w.properties.liveRegion == true),
-    matching: find.byType(Text),
-  );
-  return tester.widget<Text>(figure).style!.color!;
-}
-
 SplitLine _line(String cat, double amt) =>
     SplitLine(categoryId: cat, amount: amt);
 
+Color? _textColor(WidgetTester tester, String text) =>
+    tester.widget<Text>(find.text(text)).style?.color;
+
+FilledButton _doneButton(WidgetTester tester) =>
+    tester.widget<FilledButton>(find.widgetWithText(FilledButton, 'Done'));
+
 void main() {
-  group('the amount editor no longer crashes on dismissal (§1)', () {
-    // The crash is value-independent: the disposal race fires on dismissal at
-    // any amount. Proven across the small/boundary/large values the bug report
-    // singled out — 5, 2000, 2001 — none of which is special here.
-    for (final entry in const {5: r'$5', 2000: r'$2,000', 2001: r'$2,001'}
-        .entries) {
-      testWidgets('enter ${entry.key} and tap Done — no crash, value applied',
-          (tester) async {
-        _portrait(tester);
-        await _openSheet(tester,
-            total: 3000, initial: [_line('c1', 100), _line('c2', 50)]);
-
-        await tester.tap(find.text(r'$100'));
-        await tester.pumpAndSettle();
-
-        await tester.enterText(find.byType(TextField), '${entry.key}');
-        await tester.tap(find.widgetWithText(FilledButton, 'Done'));
-        await tester.pumpAndSettle();
-
-        expect(tester.takeException(), isNull);
-        expect(find.text(entry.value), findsOneWidget); // line updated
-      });
-    }
-
-    testWidgets('submit with the keyboard — no crash, value applied',
+  group('the frame: one commit, one opening line (§4/§5)', () {
+    testWidgets('opens with one line, the category, and a blank amount',
         (tester) async {
       _portrait(tester);
-      await _openSheet(tester,
-          total: 3000, initial: [_line('c1', 100), _line('c2', 50)]);
+      // The caller seeds the sheet with the transaction's own category.
+      await _openSheet(tester, total: 1200, initial: [SplitLine(categoryId: 'c1')]);
 
-      await tester.tap(find.text(r'$100'));
-      await tester.pumpAndSettle();
-
-      await tester.enterText(find.byType(TextField), '2000');
-      await tester.testTextInput.receiveAction(TextInputAction.done);
-      await tester.pumpAndSettle();
-
-      expect(tester.takeException(), isNull);
-      expect(find.text(r'$2,000'), findsOneWidget);
+      expect(find.text('Groceries'), findsOneWidget);
+      expect(find.text(r'$0.00'), findsOneWidget); // blank, placeholder colour
+      expect(_textColor(tester, r'$0.00'), AppColors.textTertiary);
+      // Regression: the old bottom commit is gone.
+      expect(find.text('Apply split'), findsNothing);
     });
 
-    testWidgets('dismiss the editor by tapping the scrim — no crash, no change',
+    testWidgets('the header holds Cancel; the only Done is the bottom button',
         (tester) async {
       _portrait(tester);
-      await _openSheet(tester,
-          total: 3000, initial: [_line('c1', 100), _line('c2', 50)]);
+      await _openSheet(tester, total: 1200, initial: [SplitLine(categoryId: 'c1')]);
 
-      await tester.tap(find.text(r'$100'));
-      await tester.pumpAndSettle();
-      expect(find.byType(TextField), findsOneWidget); // editor open
+      expect(find.text('Cancel'), findsOneWidget);
+      // Exactly one 'Done' — the primary button — and no header 'Done'.
+      expect(find.text('Done'), findsOneWidget);
+      expect(find.widgetWithText(FilledButton, 'Done'), findsOneWidget);
+    });
 
-      await tester.tapAt(const Offset(200, 20)); // scrim, above the sheet
-      await tester.pumpAndSettle();
-
-      expect(tester.takeException(), isNull);
-      expect(find.byType(TextField), findsNothing); // editor gone
-      expect(find.text(r'$100'), findsOneWidget); // line untouched
+    testWidgets('one line, amount assigned → "Add another line"; Done disabled',
+        (tester) async {
+      _portrait(tester);
+      await _openSheet(tester, total: 200, initial: [_line('c1', 200)]);
+      expect(find.text('Add another line to split.'), findsOneWidget);
+      expect(_doneButton(tester).onPressed, isNull);
     });
   });
 
-  group('the remaining row names its state (§2)', () {
-    testWidgets('under-allocated: "Remaining", signed, textSecondary',
+  group('the status line shows at most one thing (§8)', () {
+    testWidgets('a zero remainder renders no status figure', (tester) async {
+      _portrait(tester);
+      await _openSheet(tester,
+          total: 200, initial: [_line('c1', 120), _line('c2', 80)]);
+      expect(find.text('Left to assign'), findsNothing);
+      expect(find.text('Over the total by'), findsNothing);
+      expect(find.text('Add another line to split.'), findsNothing);
+    });
+
+    testWidgets('assigned < total → amber "Left to assign" with the figure',
         (tester) async {
       _portrait(tester);
       await _openSheet(tester,
           total: 200, initial: [_line('c1', 120), _line('c2', 30)]);
-      expect(find.text('Remaining'), findsOneWidget);
-      expect(find.text('Over by'), findsNothing);
-      expect(find.text(r'+$50'), findsOneWidget);
-      expect(_remainingColor(tester), AppColors.textSecondary);
+      expect(find.text('Left to assign'), findsOneWidget);
+      expect(find.text(r'$50'), findsOneWidget); // status figure, no cents
+      expect(_textColor(tester, 'Left to assign'), AppColors.warning);
+      expect(_textColor(tester, r'$50'), AppColors.warning);
     });
 
-    testWidgets('balanced: "Remaining", \$0, positive', (tester) async {
-      _portrait(tester);
-      await _openSheet(tester,
-          total: 200, initial: [_line('c1', 120), _line('c2', 80)]);
-      expect(find.text('Remaining'), findsOneWidget);
-      expect(find.text(r'$0'), findsOneWidget);
-      expect(_remainingColor(tester), AppColors.positive);
-    });
-
-    testWidgets('over-allocated: "Over by", unsigned, negative',
+    testWidgets('assigned > total → red "Over the total by"; offenders red',
         (tester) async {
       _portrait(tester);
       await _openSheet(tester,
           total: 200, initial: [_line('c1', 150), _line('c2', 100)]);
-      expect(find.text('Over by'), findsOneWidget);
-      expect(find.text('Remaining'), findsNothing);
-      expect(find.text(r'$50'), findsOneWidget); // unsigned, no minus
-      expect(find.text(r'-$50'), findsNothing);
-      expect(_remainingColor(tester), AppColors.negative);
+      expect(find.text('Over the total by'), findsOneWidget);
+      expect(find.text('Left to assign'), findsNothing);
+      expect(_textColor(tester, 'Over the total by'), AppColors.negative);
+      // The overage-carrying line amounts render red.
+      expect(_textColor(tester, r'$150.00'), AppColors.negative);
+      expect(_textColor(tester, r'$100.00'), AppColors.negative);
     });
 
-    testWidgets('the ε boundary: just inside reads positive, just outside not',
-        (tester) async {
-      _portrait(tester);
-      // remaining = +0.004 < kMoneyEpsilon → treated as balanced (positive).
-      await _openSheet(tester,
-          total: 200.004, initial: [_line('c1', 100), _line('c2', 100)]);
-      expect(_remainingColor(tester), AppColors.positive);
-
-      // remaining = +0.02 > kMoneyEpsilon → under-allocated (textSecondary).
-      await _openSheet(tester,
-          total: 200.02, initial: [_line('c1', 100), _line('c2', 100)]);
-      expect(_remainingColor(tester), AppColors.textSecondary);
-
-      // remaining = -0.02 < -kMoneyEpsilon → over-allocated (negative).
-      await _openSheet(tester,
-          total: 199.98, initial: [_line('c1', 100), _line('c2', 100)]);
-      expect(_remainingColor(tester), AppColors.negative);
-    });
-
-    testWidgets('the live region announces the word, not just the number',
+    testWidgets('a line with an amount but no category: amber row, no status',
         (tester) async {
       _portrait(tester);
       await _openSheet(tester,
-          total: 200, initial: [_line('c1', 150), _line('c2', 100)]);
-      // Semantics label carries "Over by $50" so a screen reader hears it.
-      expect(find.bySemanticsLabel(r'Over by $50'), findsOneWidget);
+          total: 200,
+          initial: [SplitLine(amount: 120), _line('c2', 80)]);
+      // The row names the fault, in amber.
+      expect(find.text('Choose a category'), findsOneWidget);
+      expect(_textColor(tester, 'Choose a category'), AppColors.warning);
+      // No status line at all (sum is exact) and Done is disabled.
+      expect(find.text('Left to assign'), findsNothing);
+      expect(find.text('Over the total by'), findsNothing);
+      expect(find.text('Add another line to split.'), findsNothing);
+      expect(_doneButton(tester).onPressed, isNull);
     });
   });
 
-  group('an over-total line is marked, others are not (§2)', () {
-    testWidgets('the line that alone exceeds the total renders negative',
+  group('the helpers (§6/§7)', () {
+    testWidgets('Assign the rest fills the first blank line, not a new one',
         (tester) async {
       _portrait(tester);
       await _openSheet(tester,
-          total: 2000, initial: [_line('c1', 2500), _line('c2', 100)]);
-      // The offending line is red; the innocent one stays white.
-      expect(tester.widget<Text>(find.text(r'$2,500')).style!.color,
-          AppColors.negative);
-      expect(tester.widget<Text>(find.text(r'$100')).style!.color,
-          Colors.white);
+          total: 200,
+          initial: [_line('c1', 120), SplitLine(categoryId: 'c2')]);
+      await tester.tap(find.text('Assign the rest'));
+      await tester.pumpAndSettle();
+      // The blank line took the $80 remainder; no third line was added.
+      expect(find.text(r'$80.00'), findsOneWidget);
+      expect(find.text('Household'), findsOneWidget);
+      expect(find.byIcon(Icons.close_rounded), findsNWidgets(2));
     });
 
-    testWidgets('a line equal to the total is not marked', (tester) async {
-      _portrait(tester);
-      await _openSheet(tester,
-          total: 2000, initial: [_line('c1', 2000), _line('c2', 100)]);
-      expect(tester.widget<Text>(find.text(r'$2,000')).style!.color,
-          Colors.white);
-    });
-
-    testWidgets('lines that only together exceed the total are not marked',
+    testWidgets('Assign the rest with no blank line adds an uncategorised line',
         (tester) async {
       _portrait(tester);
       await _openSheet(tester,
-          total: 200, initial: [_line('c1', 150), _line('c2', 150)]);
-      // Over by $100 overall, but no single line exceeds $200 → none red.
-      for (final t in tester.widgetList<Text>(find.text(r'$150'))) {
-        expect(t.style!.color, Colors.white);
-      }
-      expect(find.text('Over by'), findsOneWidget);
+          total: 200, initial: [_line('c1', 120), _line('c2', 30)]);
+      await tester.tap(find.text('Assign the rest'));
+      await tester.pumpAndSettle();
+      // A third line appeared, holding the $50 remainder, with no category.
+      expect(find.byIcon(Icons.close_rounded), findsNWidgets(3));
+      expect(find.text('Choose a category'), findsOneWidget);
+      expect(find.text(r'$50.00'), findsOneWidget);
     });
+
+    testWidgets('Assign the rest is inert at a zero remainder', (tester) async {
+      _portrait(tester);
+      await _openSheet(tester,
+          total: 200, initial: [_line('c1', 120), _line('c2', 80)]);
+      await tester.tap(find.text('Assign the rest')); // disabled → no-op
+      await tester.pumpAndSettle();
+      expect(find.byIcon(Icons.close_rounded), findsNWidgets(2)); // unchanged
+      expect(find.text(r'$120.00'), findsOneWidget);
+      expect(find.text(r'$80.00'), findsOneWidget);
+    });
+
+    testWidgets('Split evenly overwrites hand-typed amounts', (tester) async {
+      _portrait(tester);
+      await _openSheet(tester,
+          total: 300, initial: [_line('c1', 250), _line('c2', 10)]);
+      await tester.tap(find.text('Split evenly'));
+      await tester.pumpAndSettle();
+      // 300 / 2 = 150.00 each — both prior amounts replaced.
+      expect(find.text(r'$150.00'), findsNWidgets(2));
+    });
+  });
+
+  group('Done gating and un-blocked typing (§8)', () {
+    testWidgets('Done enables only when every rule holds', (tester) async {
+      _portrait(tester);
+      // Balanced, categorised, positive, exact → enabled.
+      await _openSheet(tester,
+          total: 200, initial: [_line('c1', 120), _line('c2', 80)]);
+      expect(_doneButton(tester).onPressed, isNotNull);
+    });
+
+    testWidgets('Done disabled on an inexact sum', (tester) async {
+      _portrait(tester);
+      await _openSheet(tester,
+          total: 200, initial: [_line('c1', 120), _line('c2', 70)]);
+      expect(_doneButton(tester).onPressed, isNull);
+    });
+
+    testWidgets('Done disabled when a line has a zero amount', (tester) async {
+      _portrait(tester);
+      await _openSheet(tester,
+          total: 120, initial: [_line('c1', 120), _line('c2', 0)]);
+      expect(_doneButton(tester).onPressed, isNull);
+    });
+
+    testWidgets('typing an amount above the total is accepted, not swallowed',
+        (tester) async {
+      _portrait(tester);
+      await _openSheet(tester,
+          total: 1200, initial: [_line('c1', 100), _line('c2', 50)]);
+      await tester.tap(find.text(r'$100.00'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), '15000');
+      await tester.tap(find.widgetWithText(FilledButton, 'Done'));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.text(r'$15,000.00'), findsOneWidget);
+      expect(find.text('Over the total by'), findsOneWidget);
+      expect(_textColor(tester, r'$15,000.00'), AppColors.negative);
+    });
+  });
+
+  group('removing lines (§5/§11)', () {
+    testWidgets('the last remaining line cannot be removed', (tester) async {
+      _portrait(tester);
+      await _openSheet(tester, total: 200, initial: [SplitLine(categoryId: 'c1')]);
+      final remove = tester.widget<IconButton>(
+          find.widgetWithIcon(IconButton, Icons.close_rounded));
+      expect(remove.onPressed, isNull);
+    });
+
+    testWidgets('a line can be removed down to one', (tester) async {
+      _portrait(tester);
+      await _openSheet(tester,
+          total: 200, initial: [_line('c1', 120), _line('c2', 80)]);
+      await tester.tap(find.byIcon(Icons.close_rounded).first);
+      await tester.pumpAndSettle();
+      expect(find.byIcon(Icons.close_rounded), findsOneWidget);
+    });
+  });
+
+  group('the amount editor still survives dismissal (§2)', () {
+    testWidgets('enter a value, tap Done — no crash, value applied',
+        (tester) async {
+      _portrait(tester);
+      await _openSheet(tester,
+          total: 3000, initial: [_line('c1', 100), _line('c2', 50)]);
+      await tester.tap(find.text(r'$100.00'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), '2000');
+      await tester.tap(find.widgetWithText(FilledButton, 'Done'));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(find.text(r'$2,000.00'), findsOneWidget);
+    });
+
+    testWidgets('dismiss by scrim — no crash, no change', (tester) async {
+      _portrait(tester);
+      await _openSheet(tester,
+          total: 3000, initial: [_line('c1', 100), _line('c2', 50)]);
+      await tester.tap(find.text(r'$100.00'));
+      await tester.pumpAndSettle();
+      expect(find.byType(TextField), findsOneWidget);
+      await tester.tapAt(const Offset(200, 20)); // scrim above the sheet
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(find.byType(TextField), findsNothing);
+      expect(find.text(r'$100.00'), findsOneWidget); // untouched
+    });
+  });
+
+  group('layout holds under narrow width, scale and locale (§11)', () {
+    for (final w in const [390.0, 360.0, 320.0]) {
+      testWidgets('no overflow at ${w.toInt()}pt', (tester) async {
+        _size(tester, w, 720);
+        await _openSheet(tester,
+            total: 200, initial: [_line('c1', 150), _line('c2', 30)]);
+        expect(tester.takeException(), isNull);
+      });
+    }
+
+    testWidgets('no overflow at 320pt · 130% scale', (tester) async {
+      _size(tester, 320, 720);
+      await _openSheet(tester,
+          total: 200,
+          initial: [_line('c1', 150), _line('c2', 30)],
+          textScale: 1.3);
+      expect(tester.takeException(), isNull);
+    });
+
+    for (final loc in const [Locale('tr'), Locale('ru')]) {
+      testWidgets('no overflow at 320pt in ${loc.languageCode}',
+          (tester) async {
+        _size(tester, 320, 720);
+        await _openSheet(tester,
+            total: 200,
+            initial: [_line('c1', 150), _line('c2', 300)], // over → longest label
+            locale: loc);
+        expect(tester.takeException(), isNull);
+      });
+    }
   });
 }

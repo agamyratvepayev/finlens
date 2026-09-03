@@ -87,7 +87,7 @@ void main() {
     // Tapping the disabled action opens nothing.
     await tester.tap(find.text('Split into several categories'));
     await tester.pumpAndSettle();
-    expect(find.text('Split by category'), findsNothing);
+    expect(find.widgetWithText(FilledButton, 'Done'), findsNothing);
   });
 
   testWidgets('setting a repeat creates one transaction and one Planner rule',

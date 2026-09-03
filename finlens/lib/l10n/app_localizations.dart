@@ -4432,23 +4432,17 @@ abstract class AppLocalizations {
   /// **'Search icons'**
   String get qaSearchIcons;
 
-  /// No description provided for @ssRemoveSplit.
+  /// No description provided for @ssSplit.
   ///
   /// In en, this message translates to:
-  /// **'Remove split'**
-  String get ssRemoveSplit;
+  /// **'Split'**
+  String get ssSplit;
 
-  /// No description provided for @ssSplitByCategory.
+  /// No description provided for @ssTotal.
   ///
   /// In en, this message translates to:
-  /// **'Split by category'**
-  String get ssSplitByCategory;
-
-  /// No description provided for @ssTotalCovers.
-  ///
-  /// In en, this message translates to:
-  /// **'Total {total} · {covered}'**
-  String ssTotalCovers(Object total, Object covered);
+  /// **'Total'**
+  String get ssTotal;
 
   /// No description provided for @ssRemoveLine.
   ///
@@ -4456,23 +4450,17 @@ abstract class AppLocalizations {
   /// **'Remove line'**
   String get ssRemoveLine;
 
-  /// No description provided for @ssAddCategory.
+  /// No description provided for @ssAddLine.
   ///
   /// In en, this message translates to:
-  /// **'Add category'**
-  String get ssAddCategory;
+  /// **'Add a line'**
+  String get ssAddLine;
 
-  /// No description provided for @ssRemaining.
+  /// No description provided for @ssChooseCategory.
   ///
   /// In en, this message translates to:
-  /// **'Remaining'**
-  String get ssRemaining;
-
-  /// No description provided for @ssOverBy.
-  ///
-  /// In en, this message translates to:
-  /// **'Over by'**
-  String get ssOverBy;
+  /// **'Choose a category'**
+  String get ssChooseCategory;
 
   /// No description provided for @ssSplitEvenly.
   ///
@@ -4480,23 +4468,29 @@ abstract class AppLocalizations {
   /// **'Split evenly'**
   String get ssSplitEvenly;
 
-  /// No description provided for @ssRestToLast.
+  /// No description provided for @ssAssignRest.
   ///
   /// In en, this message translates to:
-  /// **'Rest to last'**
-  String get ssRestToLast;
+  /// **'Assign the rest'**
+  String get ssAssignRest;
 
-  /// No description provided for @ssApplySplit.
+  /// No description provided for @ssLeftToAssign.
   ///
   /// In en, this message translates to:
-  /// **'Apply split'**
-  String get ssApplySplit;
+  /// **'Left to assign'**
+  String get ssLeftToAssign;
 
-  /// No description provided for @ssApplySplitBlocked.
+  /// No description provided for @ssOverTotalBy.
   ///
   /// In en, this message translates to:
-  /// **'Apply split, unavailable until the remaining is zero'**
-  String get ssApplySplitBlocked;
+  /// **'Over the total by'**
+  String get ssOverTotalBy;
+
+  /// No description provided for @ssAddAnotherLine.
+  ///
+  /// In en, this message translates to:
+  /// **'Add another line to split.'**
+  String get ssAddAnotherLine;
 
   /// No description provided for @rsRepeat.
   ///

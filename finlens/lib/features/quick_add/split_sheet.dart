@@ -10,22 +10,29 @@ import '../../theme/app_typography.dart';
 import 'pickers.dart';
 
 /// One line of a split: a category and its share of the payment.
+///
+/// [amount] is nullable: `null` means the user has not yet entered a figure
+/// (rendered `0.00` in the placeholder colour, spec §5). A typed zero is a real
+/// `0`, distinct from blank — the two differ for `Assign the rest` (which fills
+/// the first *blank* line) and for the placeholder rendering.
 class SplitLine {
-  SplitLine({this.categoryId, this.amount = 0});
+  SplitLine({this.categoryId, this.amount});
 
   String? categoryId;
-  double amount;
+  double? amount;
+
+  bool get isBlank => amount == null;
 
   SplitLine copy() => SplitLine(categoryId: categoryId, amount: amount);
 }
 
 /// Cent-rounding tolerance for money equality. The app has no shared epsilon
 /// (formatters round to cents), so this mirrors that: two figures are equal
-/// when they agree to the nearest cent (spec §2 — reuse the existing rounding).
+/// when they agree to the nearest cent (spec §7 — reuse the existing rounding).
 const double kMoneyEpsilon = 0.005;
 
 /// Divides [total] across [n] lines, giving any rounding remainder to the
-/// **first** line so the sum stays exact (spec §2/§5). Works in integer cents.
+/// **first** line so the sum stays exact (spec §7). Works in integer cents.
 List<double> splitEvenly(double total, int n) {
   if (n <= 0) return const [];
   final totalCents = (total * 100).round();
@@ -36,22 +43,27 @@ List<double> splitEvenly(double total, int n) {
   ];
 }
 
+/// Sum of the assigned shares — a blank line contributes nothing.
 double splitAssigned(List<SplitLine> lines) =>
-    lines.fold(0.0, (sum, l) => sum + l.amount);
+    lines.fold(0.0, (sum, l) => sum + (l.amount ?? 0));
 
 double splitRemaining(double total, List<SplitLine> lines) =>
     total - splitAssigned(lines);
 
-/// A split is applicable only with ≥2 lines, every line a real (category +
-/// positive amount), and a remainder of exactly zero (spec §2).
+/// Whether the split can be committed (spec §8): ≥2 lines, every line has a
+/// category and an amount greater than zero, and the shares sum exactly to the
+/// total.
 bool splitBalanced(double total, List<SplitLine> lines) {
   if (lines.length < 2) return false;
-  if (lines.any((l) => l.categoryId == null || l.amount <= 0)) return false;
+  if (lines.any((l) => l.categoryId == null || (l.amount ?? 0) <= 0)) {
+    return false;
+  }
   return splitRemaining(total, lines).abs() < kMoneyEpsilon;
 }
 
-/// Opens the split editor. Returns the applied lines (Apply), an empty list
-/// (Remove split), or null (cancelled — no change).
+/// Opens the split editor. Returns the applied lines (Done) or null (Cancel —
+/// no change). Done is only reachable when the split is balanced, so a non-null
+/// result always holds ≥2 valid lines (spec §9).
 Future<List<SplitLine>?> showSplitSheet(
   BuildContext context, {
   required double total,
@@ -97,9 +109,11 @@ class _SplitSheet extends StatefulWidget {
 }
 
 class _SplitSheetState extends State<_SplitSheet> {
-  late final bool _wasApplied = widget.initial.length >= 2;
+  /// Opens with the existing lines when re-splitting; otherwise a single line —
+  /// the transaction's own category — with a blank amount (spec §5). The
+  /// caller passes the current category as the single initial line.
   late final List<SplitLine> _lines = widget.initial.isEmpty
-      ? [SplitLine(), SplitLine()]
+      ? [SplitLine()]
       : [for (final l in widget.initial) l.copy()];
 
   @override
@@ -107,7 +121,7 @@ class _SplitSheetState extends State<_SplitSheet> {
     final store = StoreScope.of(context);
     final masked = store.masked;
     final remaining = splitRemaining(widget.total, _lines);
-    final balanced = splitBalanced(widget.total, _lines);
+    final over = remaining < -kMoneyEpsilon;
 
     return SafeArea(
       child: Padding(
@@ -125,34 +139,21 @@ class _SplitSheetState extends State<_SplitSheet> {
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
-            _header(masked),
+            _header(),
+            _totalRow(masked),
             Flexible(
               child: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    _linesCard(store, masked),
-                    _remainingRow(remaining, masked),
-                    _helpers(),
+                    _linesCard(store, masked, over),
+                    _helpers(remaining),
+                    _statusRow(remaining, masked),
                   ],
                 ),
               ),
             ),
-            _applyButton(balanced),
-            if (_wasApplied)
-              Padding(
-                padding: const EdgeInsets.only(top: 4, bottom: 4),
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () => Navigator.of(context).pop(<SplitLine>[]),
-                  child: Padding(
-                    padding: const EdgeInsets.all(8),
-                    child: Text(AppLocalizations.of(context).ssRemoveSplit,
-                        style: const TextStyle(
-                            fontSize: 13, color: AppColors.negative)),
-                  ),
-                ),
-              ),
+            _doneButton(),
             const SizedBox(height: 10),
           ],
         ),
@@ -160,45 +161,79 @@ class _SplitSheetState extends State<_SplitSheet> {
     );
   }
 
-  Widget _header(bool masked) => Padding(
-        padding: const EdgeInsets.fromLTRB(16, 14, 14, 12),
+  // ── Header · Total ─────────────────────────────────────────────────────────
+
+  Widget _header() => Padding(
+        padding: const EdgeInsets.fromLTRB(16, 14, 14, 10),
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(AppLocalizations.of(context).ssSplitByCategory,
-                      style: TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                      )),
-                  const SizedBox(height: 3),
-                  Text(
-                    AppLocalizations.of(context).ssTotalCovers(
-                        money(widget.total,
-                            currency: widget.currency, masked: masked),
-                        widget.accountName),
-                    style: const TextStyle(
-                        fontSize: 12, color: AppColors.textSecondary),
-                  ),
-                ],
-              ),
+              child: Text(AppLocalizations.of(context).ssSplit,
+                  style: const TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  )),
             ),
             GestureDetector(
               behavior: HitTestBehavior.opaque,
               onTap: () => Navigator.of(context).pop(),
-              child: Text(AppLocalizations.of(context).actionDone,
-                  style: TextStyle(fontSize: 14.5, color: AppColors.accent)),
+              child: Semantics(
+                button: true,
+                label: AppLocalizations.of(context).actionCancel,
+                child: Text(AppLocalizations.of(context).actionCancel,
+                    style: const TextStyle(
+                        fontSize: 14.5, color: AppColors.accentLight)),
+              ),
             ),
           ],
         ),
       );
 
-  Widget _linesCard(AppStore store, bool masked) => Container(
-        margin: const EdgeInsets.fromLTRB(14, 0, 14, 8),
+  Widget _totalRow(bool masked) => Padding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+        child: Row(
+          children: [
+            Text(AppLocalizations.of(context).ssTotal,
+                style: const TextStyle(
+                    fontSize: 13, color: AppColors.textSecondary)),
+            const Spacer(),
+            _dimmedAmount(widget.total, masked),
+          ],
+        ),
+      );
+
+  /// The total with its decimal portion dimmed, matching the app's amount
+  /// treatment (spec §4). Masked amounts have no decimal to dim.
+  Widget _dimmedAmount(double value, bool masked) {
+    final text = money(value, currency: widget.currency,
+        forceDecimals: true, masked: masked);
+    final dot = text.lastIndexOf('.');
+    final whole = dot < 0 ? text : text.substring(0, dot);
+    final frac = dot < 0 ? '' : text.substring(dot);
+    return Text.rich(
+      TextSpan(
+        style: const TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.w700,
+          color: Colors.white,
+          fontFeatures: [FontFeature.tabularFigures()],
+        ),
+        children: [
+          TextSpan(text: whole),
+          if (frac.isNotEmpty)
+            TextSpan(
+                text: frac,
+                style: const TextStyle(color: AppColors.textSecondary)),
+        ],
+      ),
+    );
+  }
+
+  // ── Lines ──────────────────────────────────────────────────────────────────
+
+  Widget _linesCard(AppStore store, bool masked, bool over) => Container(
+        margin: const EdgeInsets.fromLTRB(14, 0, 14, 12),
         decoration: BoxDecoration(
           color: AppColors.sheetCard,
           borderRadius: BorderRadius.circular(11),
@@ -210,7 +245,7 @@ class _SplitSheetState extends State<_SplitSheet> {
               if (i > 0)
                 Container(
                     height: 1, color: Colors.white.withValues(alpha: 0.07)),
-              _lineRow(store, i, masked),
+              _lineRow(store, i, masked, over),
             ],
             Container(height: 1, color: Colors.white.withValues(alpha: 0.07)),
             _addRow(),
@@ -218,215 +253,281 @@ class _SplitSheetState extends State<_SplitSheet> {
         ),
       );
 
-  Widget _lineRow(AppStore store, int index, bool masked) {
+  Widget _lineRow(AppStore store, int index, bool masked, bool over) {
+    final l = AppLocalizations.of(context);
     final line = _lines[index];
     final category = store.categoryById(line.categoryId);
-    final color = category?.color ?? AppColors.textSecondary;
-    // A single line alone exceeding the payment is marked in the negative
-    // colour (spec §2). Equal-to-total is fine; only a real overshoot is red.
-    final overLine = line.amount - widget.total > kMoneyEpsilon;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
-      child: Row(
-        children: [
-          Container(
-            width: 30,
-            height: 30,
-            decoration: BoxDecoration(
-              color: category == null
-                  ? AppColors.surfaceHigh
-                  : Color.alphaBlend(
-                      color.withValues(alpha: 0.18), AppColors.sheetCard),
-              borderRadius: BorderRadius.circular(9),
+    final missing = category == null;
+    final color = category?.color ?? AppColors.warning;
+    // When the whole split exceeds the total, the amounts that carry the overage
+    // render red so the user does not have to hunt for them (spec §8). A blank
+    // line has nothing to flag.
+    final amountOver = over && !line.isBlank;
+    final removable = _lines.length > 1;
+
+    final amountText = line.isBlank
+        ? money(0, currency: widget.currency,
+            forceDecimals: true, masked: masked)
+        : money(line.amount!, currency: widget.currency,
+            forceDecimals: true, masked: masked);
+
+    return Semantics(
+      container: true,
+      label: '${missing ? l.ssChooseCategory : category.name}, $amountText',
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
+        child: Row(
+          children: [
+            Container(
+              width: 30,
+              height: 30,
+              decoration: BoxDecoration(
+                color: missing
+                    ? AppColors.surfaceHigh
+                    : Color.alphaBlend(
+                        color.withValues(alpha: 0.18), AppColors.sheetCard),
+                borderRadius: BorderRadius.circular(9),
+              ),
+              child: Icon(category?.icon ?? Icons.category_rounded,
+                  size: 16, color: color),
             ),
-            child: Icon(category?.icon ?? Icons.category_rounded,
-                size: 16, color: color),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: () async {
-                final c = await pickCategory(context, type: widget.categoryType);
-                if (c != null && mounted) {
-                  setState(() => line.categoryId = c.id);
-                }
-              },
-              child: Text(
-                category?.name ?? AppLocalizations.of(context).qaChooseCategory,
-                style: TextStyle(
-                  fontSize: 14.5,
-                  color: category == null
-                      ? AppColors.textTertiary
-                      : Colors.white,
+            const SizedBox(width: 10),
+            Expanded(
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () async {
+                  final c =
+                      await pickCategory(context, type: widget.categoryType);
+                  if (c != null && mounted) {
+                    setState(() => line.categoryId = c.id);
+                  }
+                },
+                // A line with no category names the fault in place, in amber —
+                // no separate status line (spec §8).
+                child: Text(
+                  missing ? l.ssChooseCategory : category.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 14.5,
+                    color: missing ? AppColors.warning : Colors.white,
+                  ),
                 ),
               ),
             ),
-          ),
-          const SizedBox(width: 8),
-          GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: () => _editAmount(index),
-            child: Text(
-              money(line.amount, currency: widget.currency, masked: masked),
-              style: TextStyle(
-                fontSize: 14.5,
-                fontWeight: FontWeight.w600,
-                color: overLine ? AppColors.negative : Colors.white,
-                fontFeatures: const [FontFeature.tabularFigures()],
+            const SizedBox(width: 8),
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => _editAmount(index),
+              child: Text(
+                amountText,
+                style: TextStyle(
+                  fontSize: 14.5,
+                  fontWeight: FontWeight.w600,
+                  color: line.isBlank
+                      ? AppColors.textTertiary
+                      : amountOver
+                          ? AppColors.negative
+                          : Colors.white,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
               ),
             ),
-          ),
-          SizedBox(
-            width: 44,
-            height: 44,
-            child: IconButton(
-              padding: EdgeInsets.zero,
-              iconSize: 15,
-              color: AppColors.textTertiary,
-              icon: const Icon(Icons.close_rounded),
-              onPressed: () => setState(() => _lines.removeAt(index)),
-              tooltip: AppLocalizations.of(context).ssRemoveLine,
+            SizedBox(
+              width: 44,
+              height: 44,
+              child: IconButton(
+                padding: EdgeInsets.zero,
+                iconSize: 15,
+                color: removable
+                    ? AppColors.textTertiary
+                    : AppColors.textTertiary.withValues(alpha: 0.3),
+                icon: const Icon(Icons.close_rounded),
+                // The last remaining line cannot be removed (spec §5).
+                onPressed:
+                    removable ? () => setState(() => _lines.removeAt(index)) : null,
+                tooltip: l.ssRemoveLine,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
+  /// A normal accent list row — no dashed border (spec §5).
   Widget _addRow() => InkWell(
         onTap: () => setState(() => _lines.add(SplitLine())),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
+          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 11),
           child: Row(
             children: [
-              _DashedTile(
-                size: 30,
-                color: AppColors.accent,
-                child: const Icon(Icons.add_rounded,
-                    size: 16, color: AppColors.accentLight),
+              const SizedBox(
+                width: 30,
+                child: Icon(Icons.add_rounded,
+                    size: 18, color: AppColors.accentLight),
               ),
               const SizedBox(width: 10),
-              Text(AppLocalizations.of(context).ssAddCategory,
-                  style: TextStyle(fontSize: 14.5, color: AppColors.accentLight)),
+              Text(AppLocalizations.of(context).ssAddLine,
+                  style: const TextStyle(
+                      fontSize: 14.5, color: AppColors.accentLight)),
             ],
           ),
         ),
       );
 
-  /// Three named states (spec §2). The word carries the meaning so the figure
-  /// never needs a sign — an overage is announced as a word, not just a colour:
-  ///   remaining >  ε → "Remaining"  · signed figure   · textSecondary
-  ///   |remaining| ≤ ε → "Remaining"  · $0             · positive
-  ///   remaining < −ε → "Over by"    · unsigned figure · negative
-  Widget _remainingRow(double remaining, bool masked) {
+  // ── Helpers ────────────────────────────────────────────────────────────────
+
+  Widget _helpers(double remaining) {
     final l = AppLocalizations.of(context);
-    final over = remaining < -kMoneyEpsilon;
-    final zero = remaining.abs() < kMoneyEpsilon;
-    final word = over ? l.ssOverBy : l.ssRemaining;
-    final figure = over
-        ? money(remaining.abs(), currency: widget.currency, masked: masked)
-        : zero
-            ? money(0, currency: widget.currency, masked: masked)
-            : money(remaining,
-                currency: widget.currency, showSign: true, masked: masked);
-    final color = over
-        ? AppColors.negative
-        : zero
-            ? AppColors.positive
-            : AppColors.textSecondary;
+    // Split evenly needs ≥2 lines; Assign the rest needs a positive remainder.
+    final canEven = _lines.length >= 2;
+    final canRest = remaining > kMoneyEpsilon;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+      padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
       child: Row(
         children: [
-          ExcludeSemantics(
-            child: Text(word,
-                style:
-                    TextStyle(fontSize: 13, color: AppColors.textSecondary)),
-          ),
-          const Spacer(),
-          // liveRegion announces the change; its label carries the word too so
-          // a screen reader hears "Over by $500", not just the number.
-          Semantics(
-            liveRegion: true,
-            excludeSemantics: true,
-            label: '$word $figure',
-            child: Text(
-              figure,
-              style: TextStyle(
-                fontSize: 14.5,
-                fontWeight: FontWeight.w600,
-                color: color,
-                fontFeatures: const [FontFeature.tabularFigures()],
-              ),
-            ),
-          ),
+          Expanded(child: _helper(l.ssSplitEvenly, canEven, _splitEvenly)),
+          const SizedBox(width: 8),
+          Expanded(child: _helper(l.ssAssignRest, canRest, _assignTheRest)),
         ],
       ),
     );
   }
 
-  Widget _helpers() => Padding(
-        padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
-        child: Row(
-          children: [
-            Expanded(child: _helper(AppLocalizations.of(context).ssSplitEvenly, _splitEvenly)),
-            const SizedBox(width: 8),
-            Expanded(child: _helper(AppLocalizations.of(context).ssRestToLast, _restToLast)),
-          ],
-        ),
-      );
-
-  Widget _helper(String label, VoidCallback onTap) => Material(
-        color: AppColors.sheetCard,
-        borderRadius: BorderRadius.circular(9),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-            child: Center(
-              child: Text(label,
-                  style:
-                      const TextStyle(fontSize: 13, color: AppColors.accentLight)),
-            ),
-          ),
-        ),
-      );
-
-  Widget _applyButton(bool enabled) => Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14),
+  /// A grey secondary button (spec §6): the one accent action in this region is
+  /// `Add a line`. Disabled rather than hidden so the row never reflows.
+  Widget _helper(String label, bool enabled, VoidCallback onTap) => Semantics(
+        button: true,
+        enabled: enabled,
+        label: label,
         child: Opacity(
-          opacity: enabled ? 1 : 0.35,
-          child: SizedBox(
-            width: double.infinity,
-            height: 45,
-            child: Semantics(
-              button: true,
-              enabled: enabled,
-              label: enabled
-                  ? AppLocalizations.of(context).ssApplySplit
-                  : AppLocalizations.of(context).ssApplySplitBlocked,
-              child: FilledButton(
-                onPressed:
-                    enabled ? () => Navigator.of(context).pop(_lines) : null,
-                style: FilledButton.styleFrom(
-                  backgroundColor: AppColors.accent,
-                  disabledBackgroundColor: AppColors.accent,
-                  foregroundColor: Colors.white,
-                  disabledForegroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(13)),
+          opacity: enabled ? 1 : 0.4,
+          child: Material(
+            color: AppColors.sheetCard,
+            borderRadius: BorderRadius.circular(9),
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              onTap: enabled ? onTap : null,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+                child: Center(
+                  child: Text(label,
+                      maxLines: 2,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          color: AppColors.toggleOffFg)),
                 ),
-                child: Text(AppLocalizations.of(context).ssApplySplit,
-                    style:
-                        TextStyle(fontSize: 15.5, fontWeight: FontWeight.w600)),
               ),
             ),
           ),
         ),
       );
 
+  // ── Status line ────────────────────────────────────────────────────────────
+
+  /// At most one message, by the §8 priority. Nothing at all when the split is
+  /// valid, and never a zero remainder.
+  Widget _statusRow(double remaining, bool masked) {
+    final l = AppLocalizations.of(context);
+    final over = remaining < -kMoneyEpsilon;
+    final under = remaining > kMoneyEpsilon;
+
+    String? word;
+    String? figure;
+    Color color;
+    if (over) {
+      word = l.ssOverTotalBy;
+      figure = money(remaining.abs(), currency: widget.currency, masked: masked);
+      color = AppColors.negative;
+    } else if (under) {
+      word = l.ssLeftToAssign;
+      figure = money(remaining, currency: widget.currency, masked: masked);
+      color = AppColors.warning;
+    } else if (_lines.length < 2) {
+      // Balanced sum, but a single line is not a split.
+      word = l.ssAddAnotherLine;
+      figure = null;
+      color = AppColors.textSecondary;
+    } else {
+      // Valid — no line at all.
+      return const SizedBox.shrink();
+    }
+
+    final semantics = figure == null ? word : '$word $figure';
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+      child: Semantics(
+        liveRegion: true,
+        excludeSemantics: true,
+        label: semantics,
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(word,
+                  style: TextStyle(fontSize: 13, color: color)),
+            ),
+            if (figure != null) ...[
+              const SizedBox(width: 12),
+              Text(
+                figure,
+                style: TextStyle(
+                  fontSize: 14.5,
+                  fontWeight: FontWeight.w600,
+                  color: color,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Done ───────────────────────────────────────────────────────────────────
+
+  Widget _doneButton() {
+    final enabled = splitBalanced(widget.total, _lines);
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14),
+      child: Opacity(
+        opacity: enabled ? 1 : 0.35,
+        child: SizedBox(
+          width: double.infinity,
+          height: 45,
+          child: Semantics(
+            button: true,
+            enabled: enabled,
+            label: AppLocalizations.of(context).actionDone,
+            child: FilledButton(
+              onPressed:
+                  enabled ? () => Navigator.of(context).pop(_lines) : null,
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.accent,
+                disabledBackgroundColor: AppColors.accent,
+                foregroundColor: Colors.white,
+                disabledForegroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(13)),
+              ),
+              child: Text(AppLocalizations.of(context).actionDone,
+                  style: const TextStyle(
+                      fontSize: 15.5, fontWeight: FontWeight.w600)),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── Actions ────────────────────────────────────────────────────────────────
+
+  /// Overwrites every amount — including hand-typed ones — with an even share,
+  /// giving the leftover minor units to the first line so the sum reconciles
+  /// exactly (spec §7). Categories are untouched.
   void _splitEvenly() {
     final shares = splitEvenly(widget.total, _lines.length);
     setState(() {
@@ -436,13 +537,20 @@ class _SplitSheetState extends State<_SplitSheet> {
     });
   }
 
-  void _restToLast() {
-    if (_lines.isEmpty) return;
-    final others = _lines
-        .sublist(0, _lines.length - 1)
-        .fold(0.0, (sum, l) => sum + l.amount);
-    setState(() => _lines.last.amount =
-        ((widget.total - others) * 100).round() / 100);
+  /// Puts the unassigned remainder into the first blank line, or — if every
+  /// line already has an amount — into a new, uncategorised line (spec §7). It
+  /// never overwrites a typed amount.
+  void _assignTheRest() {
+    final remaining = ((widget.total - splitAssigned(_lines)) * 100).round() / 100;
+    if (remaining <= 0) return;
+    setState(() {
+      final blank = _lines.indexWhere((l) => l.isBlank);
+      if (blank >= 0) {
+        _lines[blank].amount = remaining;
+      } else {
+        _lines.add(SplitLine(amount: remaining));
+      }
+    });
   }
 
   Future<void> _editAmount(int index) async {
@@ -450,14 +558,16 @@ class _SplitSheetState extends State<_SplitSheet> {
     // here, right after the future resolves on Navigator.pop, would tear the
     // controller out while the route's exit animation still has the TextField
     // mounted and listening — the '_dependents.isEmpty' assertion crash.
-    final value = await showModalBottomSheet<double>(
+    // A single-element list distinguishes "Done with a (possibly cleared)
+    // value" from a scrim dismissal (null → no change).
+    final result = await showModalBottomSheet<List<double?>>(
       context: context,
       isScrollControlled: true,
       backgroundColor: AppColors.surfaceAlt,
       builder: (_) => _AmountEditor(initial: _lines[index].amount),
     );
-    if (value != null && mounted) {
-      setState(() => _lines[index].amount = value);
+    if (result != null && mounted) {
+      setState(() => _lines[index].amount = result.first);
     }
   }
 }
@@ -469,7 +579,7 @@ class _SplitSheetState extends State<_SplitSheet> {
 class _AmountEditor extends StatefulWidget {
   const _AmountEditor({required this.initial});
 
-  final double initial;
+  final double? initial;
 
   @override
   State<_AmountEditor> createState() => _AmountEditorState();
@@ -477,7 +587,9 @@ class _AmountEditor extends StatefulWidget {
 
 class _AmountEditorState extends State<_AmountEditor> {
   late final TextEditingController _controller = TextEditingController(
-      text: widget.initial == 0 ? '' : '${widget.initial}');
+      text: (widget.initial == null || widget.initial == 0)
+          ? ''
+          : '${widget.initial}');
 
   @override
   void dispose() {
@@ -485,8 +597,10 @@ class _AmountEditorState extends State<_AmountEditor> {
     super.dispose();
   }
 
+  // Empty input clears the line back to blank; typing is never blocked, so an
+  // over-total figure is accepted and flagged by the sheet (spec §8).
   void _submit() =>
-      Navigator.of(context).pop(double.tryParse(_controller.text));
+      Navigator.of(context).pop(<double?>[double.tryParse(_controller.text)]);
 
   @override
   Widget build(BuildContext context) {
@@ -541,50 +655,4 @@ class _AmountEditorState extends State<_AmountEditor> {
       ),
     );
   }
-}
-
-/// A dashed rounded-square tile (the "+ Add category" glyph holder).
-class _DashedTile extends StatelessWidget {
-  const _DashedTile({required this.size, required this.color, required this.child});
-
-  final double size;
-  final Color color;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) => CustomPaint(
-        painter: _DashedSquarePainter(color: color, radius: 9),
-        child: SizedBox(width: size, height: size, child: Center(child: child)),
-      );
-}
-
-class _DashedSquarePainter extends CustomPainter {
-  const _DashedSquarePainter({required this.color, required this.radius});
-
-  final Color color;
-  final double radius;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.5;
-    final rrect = RRect.fromRectAndRadius(
-      Rect.fromLTWH(0.75, 0.75, size.width - 1.5, size.height - 1.5),
-      Radius.circular(radius),
-    );
-    final path = Path()..addRRect(rrect);
-    for (final metric in path.computeMetrics()) {
-      var d = 0.0;
-      while (d < metric.length) {
-        final next = (d + 4).clamp(0.0, metric.length);
-        canvas.drawPath(metric.extractPath(d, next), paint);
-        d += 7;
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(_DashedSquarePainter old) => old.color != color;
 }
