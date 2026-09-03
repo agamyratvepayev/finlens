@@ -553,6 +553,12 @@ class AppLocalizationsTk extends AppLocalizations {
   String get moreRestore => 'Dikeltmek';
 
   @override
+  String get moreBackupShort => 'Nusga';
+
+  @override
+  String get moreRestoreShort => 'Dikelt';
+
+  @override
   String get backupSavedMsg => 'Nusga saklandy';
 
   @override
@@ -3662,7 +3668,7 @@ class AppLocalizationsTk extends AppLocalizations {
 
   @override
   String get tagArchiveFootnote =>
-      'Archived tags stay on their transactions and stay searchable. They just don\'t appear when you tag something new.';
+      'Arhiwlenen bellikler amallarynda galýar we gözlegde tapylýar. Diňe täze bir zady bellände görünmeýär. Yzyna getirmek üçin birine bas.';
 
   @override
   String get tagActionArchive => 'Archive';
@@ -3731,6 +3737,12 @@ class AppLocalizationsTk extends AppLocalizations {
 
   @override
   String get tagRestoreThis => 'Belligi dikelt';
+
+  @override
+  String get tagsEmptyTitle => 'Entek bellik ýok';
+
+  @override
+  String get tagsEmptyMsg => 'Kategoriýanyň üstündäki ikinji bellik.';
 
   @override
   String get plTitle => 'Meýilleşdiriji';

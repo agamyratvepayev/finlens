@@ -554,6 +554,12 @@ class AppLocalizationsTr extends AppLocalizations {
   String get moreRestore => 'Verileri geri yükle';
 
   @override
+  String get moreBackupShort => 'Yedekle';
+
+  @override
+  String get moreRestoreShort => 'Geri yükle';
+
+  @override
   String get backupSavedMsg => 'Yedek kaydedildi';
 
   @override
@@ -3660,7 +3666,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get tagArchiveFootnote =>
-      'Archived tags stay on their transactions and stay searchable. They just don\'t appear when you tag something new.';
+      'Arşivlenen etiketler işlemlerinde kalır ve aranabilir olmayı sürdürür. Yalnızca yeni bir şey etiketlerken görünmezler. Geri getirmek için birine dokun.';
 
   @override
   String get tagActionArchive => 'Archive';
@@ -3729,6 +3735,12 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get tagRestoreThis => 'Etiketi geri yükle';
+
+  @override
+  String get tagsEmptyTitle => 'Henüz etiket yok';
+
+  @override
+  String get tagsEmptyMsg => 'Kategorinin üstüne eklenen ikinci bir etiket.';
 
   @override
   String get plTitle => 'Planlayıcı';

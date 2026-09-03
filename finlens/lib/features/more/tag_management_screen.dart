@@ -15,7 +15,11 @@ import '../quick_add/pickers.dart';
 /// More → Tags (§4). Every tag is a chip, not a row: the 34 pt purple tile the
 /// old rows carried was identical on every tag and so said nothing — the name is
 /// the content, and a name is a chip. Two `Wrap`s — IN USE (ending in a dashed
-/// "+ New" chip) and ARCHIVED (at 45 % opacity, absent when empty).
+/// "+ New" chip) and ARCHIVED (bordered rather than dimmed, absent when empty).
+///
+/// When there are no tags at all the screen still offers the create chip (the
+/// empty state carries it as its action) — the header `+` is gone, so without it
+/// a zero-tag store would have no way to make the first tag.
 ///
 /// Tapping a chip opens the edit sheet directly (§4.2): the old two-sheet
 /// tap → actions → rename detour is gone. The row subtitle it dropped
@@ -51,12 +55,31 @@ class TagManagementScreen extends StatelessWidget {
             ),
             Expanded(
               child: (active.isEmpty && archived.isEmpty)
-                  ? Padding(
-                      padding: const EdgeInsets.only(top: 64),
-                      child: EmptyState(
-                        icon: Icons.tag_rounded,
-                        title: l.tagsTitle,
-                        message: l.tagArchiveFootnote,
+                  // Zero tags: a centred block that carries the create chip (§5).
+                  // No IN USE / ARCHIVED labels and no archive footnote — a
+                  // section header over a lone create chip, and a footnote about
+                  // archived tags with none to speak of, would both say nothing.
+                  // Scrolls rather than overflows at 130 % on 320 pt.
+                  ? LayoutBuilder(
+                      builder: (context, constraints) => SingleChildScrollView(
+                        child: ConstrainedBox(
+                          constraints:
+                              BoxConstraints(minHeight: constraints.maxHeight),
+                          child: Center(
+                            child: Semantics(
+                              container: true,
+                              child: EmptyState(
+                                icon: Icons.tag_rounded,
+                                iconBackdrop: true,
+                                title: l.tagsEmptyTitle,
+                                message: l.tagsEmptyMsg,
+                                action: _NewTagChip(
+                                  onTap: () => _showCreateTag(context, store),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
                       ),
                     )
                   : ListView(
@@ -87,16 +110,17 @@ class TagManagementScreen extends StatelessWidget {
                         ],
                         if (archived.isNotEmpty) ...[
                           SectionLabel(l.tagSectionArchived),
-                          Opacity(
-                            opacity: 0.45,
-                            child: _wrap(context, [
-                              for (final t in archived)
-                                _TagChip(
-                                  tag: t,
-                                  onTap: () => _showEditTag(context, store, t),
-                                ),
-                            ]),
-                          ),
+                          // Bordered, not dimmed (§6): 45 % opacity read as
+                          // "disabled", but these are tappable — the sheet they
+                          // open is the only route back. Full contrast, own style,
+                          // and the InkWell splash responds on press.
+                          _wrap(context, [
+                            for (final t in archived)
+                              _ArchivedTagChip(
+                                tag: t,
+                                onTap: () => _showEditTag(context, store, t),
+                              ),
+                          ]),
                         ],
                         Padding(
                           padding: const EdgeInsets.fromLTRB(
@@ -155,6 +179,56 @@ class _TagChip extends StatelessWidget {
                   text: tag.name,
                   style: const TextStyle(
                       color: AppColors.chipText, fontSize: 13.5),
+                ),
+              ],
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// An archived tag chip (§6): the same pill outline as [_TagChip] but a
+/// different *state*, not a dimmed copy — a 1 pt [AppColors.surfaceHigh] border
+/// with no fill, secondary text, and a secondary `#`. Padding is 12/6 so the
+/// bordered pill matches the filled chip's outer size. Full contrast, so it reads
+/// as "archived" rather than "unavailable"; the [InkWell] splash responds because
+/// no [Opacity] dims it.
+class _ArchivedTagChip extends StatelessWidget {
+  const _ArchivedTagChip({required this.tag, required this.onTap});
+
+  final Tag tag;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: '#${tag.name}',
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(Radii.pill),
+        child: Container(
+          decoration: BoxDecoration(
+            border: Border.all(color: AppColors.surfaceHigh, width: 1),
+            borderRadius: BorderRadius.circular(Radii.pill),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          child: Text.rich(
+            TextSpan(
+              children: [
+                const TextSpan(
+                  text: '#',
+                  style: TextStyle(
+                      color: AppColors.textSecondary, fontSize: 13.5),
+                ),
+                TextSpan(
+                  text: tag.name,
+                  style: const TextStyle(
+                      color: AppColors.textSecondary, fontSize: 13.5),
                 ),
               ],
             ),

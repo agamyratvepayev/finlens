@@ -156,6 +156,8 @@
   "moreMaskAmounts": "Tüm tutarları gizle",
   "moreBackup": "Verileri yedekle",
   "moreRestore": "Verileri geri yükle",
+  "moreBackupShort": "Yedekle",
+  "moreRestoreShort": "Geri yükle",
   "backupSavedMsg": "Yedek kaydedildi",
   "backupFailedMsg": "Yedek kaydedilemedi",
   "restoreConfirmTitle": "Tüm veriler değiştirilsin mi?",
@@ -192,6 +194,9 @@
   "tagDeleteThis": "Etiketi sil",
   "tagDeleteMsg": "Henüz hiçbir şey onu taşımıyor, bu yüzden tamamen kaldırılabilir",
   "tagRestoreThis": "Etiketi geri yükle",
+  "tagArchiveFootnote": "Arşivlenen etiketler işlemlerinde kalır ve aranabilir olmayı sürdürür. Yalnızca yeni bir şey etiketlerken görünmezler. Geri getirmek için birine dokun.",
+  "tagsEmptyTitle": "Henüz etiket yok",
+  "tagsEmptyMsg": "Kategorinin üstüne eklenen ikinci bir etiket.",
 
   "insightTitle": "Analiz",
 

@@ -894,6 +894,18 @@ abstract class AppLocalizations {
   /// **'Restore data'**
   String get moreRestore;
 
+  /// No description provided for @moreBackupShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Back up'**
+  String get moreBackupShort;
+
+  /// No description provided for @moreRestoreShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore'**
+  String get moreRestoreShort;
+
   /// No description provided for @backupSavedMsg.
   ///
   /// In en, this message translates to:
@@ -5725,7 +5737,7 @@ abstract class AppLocalizations {
   /// No description provided for @tagArchiveFootnote.
   ///
   /// In en, this message translates to:
-  /// **'Archived tags stay on their transactions and stay searchable. They just don\'t appear when you tag something new.'**
+  /// **'Archived tags stay on their transactions and stay searchable. They just don\'t appear when you tag something new. Tap one to bring it back.'**
   String get tagArchiveFootnote;
 
   /// No description provided for @tagActionArchive.
@@ -5817,6 +5829,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Restore tag'**
   String get tagRestoreThis;
+
+  /// No description provided for @tagsEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No tags yet'**
+  String get tagsEmptyTitle;
+
+  /// No description provided for @tagsEmptyMsg.
+  ///
+  /// In en, this message translates to:
+  /// **'A second label, on top of the category.'**
+  String get tagsEmptyMsg;
 
   /// No description provided for @plTitle.
   ///

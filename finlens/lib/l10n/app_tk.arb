@@ -156,6 +156,8 @@
   "moreMaskAmounts": "Ähli mukdarlary gizle",
   "moreBackup": "Ätiýaçlyk nusga",
   "moreRestore": "Dikeltmek",
+  "moreBackupShort": "Nusga",
+  "moreRestoreShort": "Dikelt",
   "backupSavedMsg": "Nusga saklandy",
   "backupFailedMsg": "Nusgany saklap bolmady",
   "restoreConfirmTitle": "Ähli maglumat çalşylsynmy?",
@@ -192,6 +194,9 @@
   "tagDeleteThis": "Belligi poz",
   "tagDeleteMsg": "Ony entek hiç zat götermeýär, şonuň üçin doly aýrylyp bilner",
   "tagRestoreThis": "Belligi dikelt",
+  "tagArchiveFootnote": "Arhiwlenen bellikler amallarynda galýar we gözlegde tapylýar. Diňe täze bir zady bellände görünmeýär. Yzyna getirmek üçin birine bas.",
+  "tagsEmptyTitle": "Entek bellik ýok",
+  "tagsEmptyMsg": "Kategoriýanyň üstündäki ikinji bellik.",
 
   "insightTitle": "Derňew",
 

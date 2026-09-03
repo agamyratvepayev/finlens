@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:finlens/core/models/models.dart';
 import 'package:finlens/core/store/app_store.dart';
 import 'package:finlens/features/ledger/trans_filter.dart';
+import 'package:finlens/features/more/tag_management_screen.dart';
 import 'package:finlens/features/quick_add/tag_picker_sheet.dart';
 import 'package:finlens/l10n/app_localizations.dart';
 import 'package:finlens/theme/app_theme.dart';
@@ -276,6 +277,87 @@ void main() {
       );
       await openPicker(tester, store);
       expect(find.text('#fun'), findsNothing);
+    });
+  });
+
+  // ── Management screen (§5 / §6) ───────────────────────────────────────────────
+  group('management screen', () {
+    Widget tagsApp(AppStore store, {Locale locale = const Locale('en')}) =>
+        StoreScope(
+          store: store,
+          child: MaterialApp(
+            locale: locale,
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            theme: AppTheme.dark,
+            home: const TagManagementScreen(),
+          ),
+        );
+
+    testWidgets(
+        'empty state uses its own strings, not tagsTitle / tagArchiveFootnote',
+        (tester) async {
+      final store = _store(); // no tags, no txns
+      final l = await AppLocalizations.delegate.load(const Locale('en'));
+      await tester.pumpWidget(tagsApp(store));
+      await tester.pumpAndSettle();
+
+      expect(find.text(l.tagsEmptyTitle), findsOneWidget);
+      expect(find.text(l.tagsEmptyMsg), findsOneWidget);
+      // The old borrowed strings are gone from the empty state: the footnote
+      // isn't anywhere on the screen (the header still shows tagsTitle, so we
+      // assert on the footnote, which only ever lived in the body).
+      expect(find.text(l.tagArchiveFootnote), findsNothing);
+    });
+
+    testWidgets('§5 regression: a tag can be created from a zero-tag store',
+        (tester) async {
+      final store = _store();
+      final l = await AppLocalizations.delegate.load(const Locale('en'));
+      await tester.pumpWidget(tagsApp(store));
+      await tester.pumpAndSettle();
+
+      // The create chip is present in the empty state…
+      final chip = find.text('New');
+      expect(chip, findsOneWidget);
+
+      // …and tapping it opens the create sheet.
+      await tester.tap(chip);
+      await tester.pumpAndSettle();
+      expect(find.text(l.tagNewTitle), findsWidgets); // sheet title "New tag"
+      expect(find.byType(TextField), findsOneWidget); // the name field
+    });
+
+    testWidgets('archived chips are not wrapped in a 0.45 Opacity',
+        (tester) async {
+      final store = _store(
+        tags: [_tag('fun', name: 'fun', archived: true, used: 3)],
+      );
+      final l = await AppLocalizations.delegate.load(const Locale('en'));
+      await tester.pumpWidget(tagsApp(store));
+      await tester.pumpAndSettle();
+
+      expect(find.text(l.tagSectionArchived), findsOneWidget);
+      // The dimmed-copy treatment is gone (§6).
+      expect(
+        find.byWidgetPredicate((w) => w is Opacity && w.opacity == 0.45),
+        findsNothing,
+      );
+    });
+
+    testWidgets('with only archived tags, the IN USE create chip still renders',
+        (tester) async {
+      final store = _store(
+        tags: [_tag('fun', name: 'fun', archived: true, used: 3)],
+      );
+      final l = await AppLocalizations.delegate.load(const Locale('en'));
+      await tester.pumpWidget(tagsApp(store));
+      await tester.pumpAndSettle();
+
+      // Both sections render, so a first live tag can still be created.
+      expect(find.text(l.tagSectionInUse), findsOneWidget);
+      expect(find.text(l.tagSectionArchived), findsOneWidget);
+      expect(find.text('New'), findsOneWidget);
     });
   });
 }

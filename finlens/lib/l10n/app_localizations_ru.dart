@@ -571,6 +571,12 @@ class AppLocalizationsRu extends AppLocalizations {
   String get moreRestore => 'Восстановить';
 
   @override
+  String get moreBackupShort => 'Копия';
+
+  @override
+  String get moreRestoreShort => 'Восстановить';
+
+  @override
   String get backupSavedMsg => 'Копия сохранена';
 
   @override
@@ -3747,7 +3753,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get tagArchiveFootnote =>
-      'Archived tags stay on their transactions and stay searchable. They just don\'t appear when you tag something new.';
+      'Архивные метки остаются на своих операциях и доступны для поиска. Они просто не появляются, когда вы отмечаете что-то новое. Нажмите на метку, чтобы вернуть её.';
 
   @override
   String get tagActionArchive => 'Archive';
@@ -3818,6 +3824,12 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get tagRestoreThis => 'Восстановить метку';
+
+  @override
+  String get tagsEmptyTitle => 'Пока нет меток';
+
+  @override
+  String get tagsEmptyMsg => 'Второй ярлык поверх категории.';
 
   @override
   String get plTitle => 'Планер';

@@ -7,6 +7,7 @@ import 'package:finlens/core/models/models.dart';
 import 'package:finlens/core/store/app_store.dart';
 import 'package:finlens/features/more/more_screen.dart';
 import 'package:finlens/features/more/tag_management_screen.dart';
+import 'package:finlens/features/more/widgets/split_action_row.dart';
 import 'package:finlens/features/more/widgets/split_count_row.dart';
 import 'package:finlens/features/planner/archive_screen.dart';
 import 'package:finlens/l10n/app_localizations.dart';
@@ -197,6 +198,137 @@ void main() {
 
       // Still the number, never masked to bullets.
       expect(find.text(count), findsWidgets);
+    });
+  });
+
+  // ── §1 — no header, and §2 short labels ──────────────────────────────────────
+  group('chrome', () {
+    testWidgets('the word "More" appears nowhere on the screen', (tester) async {
+      final store = buildSeedStore();
+      final l = await AppLocalizations.delegate.load(const Locale('en'));
+      await tester.pumpWidget(app(store));
+      await tester.pump(const Duration(milliseconds: 300));
+
+      // moreTitle is "More"; with the header gone it must not render (the bottom
+      // nav — not part of this test harness — is the only place the word lives).
+      expect(find.text(l.moreTitle), findsNothing);
+    });
+
+    testWidgets('Back up / Restore use the short labels, not "… data"',
+        (tester) async {
+      final store = buildSeedStore();
+      final l = await AppLocalizations.delegate.load(const Locale('en'));
+      await tester.pumpWidget(app(store));
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.text(l.moreBackupShort), findsOneWidget); // "Back up"
+      expect(find.text(l.moreRestoreShort), findsOneWidget); // "Restore"
+      // The long dialog-title strings never appear on a row.
+      expect(find.text(l.moreBackup), findsNothing); // "Back up data"
+      expect(find.text(l.moreRestore), findsNothing); // "Restore data"
+    });
+  });
+
+  // ── §4 — the version footer is pinned, not scrolled ──────────────────────────
+  group('version footer', () {
+    testWidgets('is a sibling of the list, not inside it', (tester) async {
+      final store = buildSeedStore();
+      await tester.pumpWidget(app(store));
+      await tester.pump(const Duration(milliseconds: 300));
+
+      final version = find.textContaining('FinLens');
+      expect(version, findsOneWidget);
+      // It renders, but never as a descendant of the scrollable list.
+      expect(
+        find.descendant(of: find.byType(ListView), matching: version),
+        findsNothing,
+      );
+    });
+  });
+
+  // ── §3.1 — one row height across all five row types ──────────────────────────
+  group('row heights', () {
+    testWidgets('all five More row types render at 38 pt', (tester) async {
+      final store = buildSeedStore();
+      final l = await AppLocalizations.delegate.load(const Locale('en'));
+      await tester.pumpWidget(app(store));
+      await tester.pump(const Duration(milliseconds: 300));
+
+      double rowHeight(String text) => tester
+          .getSize(find
+              .ancestor(of: find.text(text), matching: find.byType(InkWell))
+              .first)
+          .height;
+
+      // Split rows measure the whole row (both cells stretch to one height).
+      expect(tester.getSize(find.byType(SplitCountRow)).height,
+          closeTo(38, 0.5));
+      expect(tester.getSize(find.byType(SplitActionRow)).height,
+          closeTo(38, 0.5));
+      expect(rowHeight(l.moreArchive), closeTo(38, 0.5));
+      expect(rowHeight(l.language), closeTo(38, 0.5));
+      expect(rowHeight(l.moreMaskAmounts), closeTo(38, 0.5));
+    });
+  });
+
+  // ── §3.2 — chevrons and values share one right edge down the card ────────────
+  group('column alignment', () {
+    testWidgets('every chevron and every value shares one right x',
+        (tester) async {
+      // Categories 2, Tags 0, Archive 0, Language English (the spec's fixture).
+      final store = noArchiveStore();
+      final l = await AppLocalizations.delegate.load(const Locale('en'));
+      await tester.pumpWidget(app(store));
+      await tester.pump(const Duration(milliseconds: 300));
+
+      Finder rowOf(String text) =>
+          find.ancestor(of: find.text(text), matching: find.byType(InkWell))
+              .first;
+
+      double chevronRight(Finder row) => tester
+          .getRect(find.descendant(
+              of: row, matching: find.byIcon(Icons.chevron_right_rounded)))
+          .right;
+      double valueRight(Finder row, String value) =>
+          tester.getRect(find.descendant(of: row, matching: find.text(value)))
+              .right;
+
+      final archive = rowOf(l.moreArchive);
+      final language = rowOf(l.language);
+      final tagsCell = rowOf(l.moreTags); // the right split cell
+
+      // Chevrons: the full-width rows and the right split cell all end at one x.
+      final chevX = chevronRight(archive);
+      expect(chevronRight(language), closeTo(chevX, 0.5));
+      expect(chevronRight(tagsCell), closeTo(chevX, 0.5));
+
+      // Values: Archive's 0, Language's "English", and the Tags cell's 0 too.
+      final valX = valueRight(archive, '0');
+      expect(valueRight(language, 'English'), closeTo(valX, 0.5));
+      expect(valueRight(tagsCell, '0'), closeTo(valX, 0.5));
+    });
+  });
+
+  // ── §2.1 — the split action row stacks when a label would not fit ────────────
+  group('split action row stacking', () {
+    testWidgets('English fits side-by-side at 320 pt', (tester) async {
+      final store = buildSeedStore();
+      await tester.pumpWidget(app(store, size: const Size(320, 640)));
+      await tester.pump(const Duration(milliseconds: 300));
+      // One row's height ⇒ the two cells sit side by side.
+      expect(tester.getSize(find.byType(SplitActionRow)).height,
+          closeTo(38, 0.5));
+    });
+
+    testWidgets('a long locale (ru) stacks into two rows at 320 pt',
+        (tester) async {
+      final store = buildSeedStore();
+      await tester.pumpWidget(app(store,
+          locale: const Locale('ru'), size: const Size(320, 640)));
+      await tester.pump(const Duration(milliseconds: 300));
+      // Two stacked full-width rows + a hairline ⇒ well over one row's height.
+      expect(
+          tester.getSize(find.byType(SplitActionRow)).height, greaterThan(60));
     });
   });
 }

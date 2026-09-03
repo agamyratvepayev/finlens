@@ -17,6 +17,7 @@ import '../../theme/app_typography.dart';
 import '../planner/archive_screen.dart';
 import 'category_management_screen.dart';
 import 'tag_management_screen.dart';
+import 'widgets/split_action_row.dart';
 import 'widgets/split_count_row.dart';
 
 /// Selectable UI languages (§7.1). Every entry is a real language: the "System
@@ -181,25 +182,27 @@ class MoreScreen extends StatelessWidget {
       bottom: false,
       child: Column(
         children: [
-          // The eye stays off here: More is where the mask is explained, not a
-          // second copy of the header control.
-          ScreenHeader(title: l.moreTitle, showEye: false, showAdd: false),
+          // More has no header (§1): the bottom nav already prints the screen's
+          // name, so a title row here would draw the word twice. The mask lives
+          // in PREFERENCES below, where it is explained rather than mirrored as a
+          // header eye.
           Expanded(
             child: ListView(
-              padding: const EdgeInsets.only(bottom: Insets.xxl),
+              padding: EdgeInsets.zero,
               children: [
                 // DATA is broader than its contents (Archive lives here too) —
                 // the opposite failure of the old "Planner" label, which was
                 // narrower than the archived accounts and categories it headed.
                 //
-                // The ONLY SectionLabel in the app that takes a custom padding:
-                // ScreenHeader's bottom gap is shared and can't shrink, so the
-                // 28 pt title→label gap is closed to 16 pt from the label side.
-                // Do not "normalise" this back to the default.
+                // Still the ONLY SectionLabel with a custom padding, but for a
+                // new reason: with the header gone this is the first thing on the
+                // page, so the top value is a page margin (Insets.xl) measured
+                // from the safe area, not the default Insets.lg that suits a label
+                // trailing a card. Do not "normalise" it back to the default.
                 SectionLabel(
                   l.moreData,
                   padding: const EdgeInsets.fromLTRB(
-                      Insets.gutter, Insets.xs, Insets.gutter, Insets.sm),
+                      Insets.gutter, Insets.xl, Insets.gutter, Insets.sm),
                 ),
                 _card([
                   SplitCountRow(
@@ -229,20 +232,20 @@ class MoreScreen extends StatelessWidget {
                       builder: (_) => const ArchiveScreen(),
                     )),
                   ),
-                  // Backup / Restore: carry the whole store to a JSON file and
-                  // back, so a user can move to a new phone (indent-48 hairlines
-                  // align to the text past the 24-icon + 12-gap column).
+                  // Back up / Restore share one row (§2): carry the whole store
+                  // to a JSON file and back, so a user can move to a new phone.
+                  // The indent-48 hairline aligns to the text past the 24-icon +
+                  // 12-gap column. Restore replaces everything, but sitting it
+                  // beside Back up is safe only because runRestoreFlow always
+                  // opens a destructive confirm first — see the note in §2.2.
                   const RowDivider(indent: 48),
-                  _ActionRow(
-                    icon: Icons.save_alt_rounded,
-                    label: l.moreBackup,
-                    onTap: () => _runBackup(context, store),
-                  ),
-                  const RowDivider(indent: 48),
-                  _ActionRow(
-                    icon: Icons.restore_rounded,
-                    label: l.moreRestore,
-                    onTap: () => runRestoreFlow(context, store),
+                  SplitActionRow(
+                    leftIcon: Icons.save_alt_rounded,
+                    leftLabel: l.moreBackupShort,
+                    onLeftTap: () => _runBackup(context, store),
+                    rightIcon: Icons.restore_rounded,
+                    rightLabel: l.moreRestoreShort,
+                    onRightTap: () => runRestoreFlow(context, store),
                   ),
                 ]),
                 // PREFERENCES follows a card, not the screen title, so it keeps
@@ -261,10 +264,13 @@ class MoreScreen extends StatelessWidget {
                     onChanged: (_) => store.toggleMasked(),
                   ),
                 ]),
-                const _VersionFooter(),
               ],
             ),
           ),
+          // Pinned (§4): the footer leaves the scrollable list and sits above the
+          // bottom nav, so on a screen whose cards end halfway down it no longer
+          // hangs under the last card with a screen of black beneath it.
+          const _VersionFooter(),
         ],
       ),
     );
@@ -281,8 +287,9 @@ Widget _card(List<Widget> children) => AppCard(
     );
 
 /// FormRow-shaped but inline: FormRow's padding is 12 and its value sits in a
-/// Flexible sized for text; this row's padding is 8. Do not widen FormRow to
-/// take it — five other screens render FormRow and must stay byte-identical.
+/// Flexible sized for text; this row owns More's shared 38 pt metrics. Do not
+/// widen FormRow to take it — five other screens render FormRow and must stay
+/// byte-identical.
 ///
 /// Renders at zero and prints `0` rather than disappearing: Archive has its own
 /// empty state, so a tap at zero lands somewhere coherent, and a row that
@@ -298,89 +305,63 @@ class _ArchiveRow extends StatelessWidget {
     final l = AppLocalizations.of(context);
     return InkWell(
       onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        child: Row(
-          children: [
-            const SizedBox(
-              width: 24,
-              child: Icon(Icons.inventory_2_rounded,
-                  size: 18, color: AppColors.textSecondary),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                l.moreArchive,
-                style: AppText.body.copyWith(
-                    fontSize: 14.5, color: AppColors.textPrimary),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 38),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: Insets.md),
+          child: Row(
+            children: [
+              const SizedBox(
+                width: 24,
+                child: Icon(Icons.inventory_2_rounded,
+                    size: 18, color: AppColors.textSecondary),
               ),
-            ),
-            const SizedBox(width: Insets.sm),
-            Text('$count', style: AppText.amount),
-            const Padding(
-              padding: EdgeInsets.only(left: 2),
-              child: Icon(Icons.chevron_right_rounded,
-                  size: 18, color: AppColors.textTertiary),
-            ),
-          ],
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  l.moreArchive,
+                  style: AppText.body.copyWith(
+                      fontSize: 14.5, color: AppColors.textPrimary),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              // Shared trailing (§3.2): label→value gap, the value (never shrinks),
+              // an 8 pt gap, then an 18 pt chevron box flush to the content edge.
+              const SizedBox(width: Insets.sm),
+              Text('$count', style: AppText.amount),
+              const _RowTrailingChevron(),
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-/// A plain tappable row: leading icon, label, trailing chevron — no value.
-/// Used for Backup / Restore, which navigate to a picker rather than showing a
-/// count or a switch. Same 24-icon + 12-gap + 10-padding metrics as the rows
-/// above so its hairlines and text align with them.
-class _ActionRow extends StatelessWidget {
-  const _ActionRow({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
+/// The value→chevron gap and the 18 pt chevron box, shared by every value+chevron
+/// row so the chevron's right edge (flush to the content edge) and the value's
+/// right edge (8 pt left of the box) land on the same x down the card (§3.2).
+class _RowTrailingChevron extends StatelessWidget {
+  const _RowTrailingChevron();
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        child: Row(
-          children: [
-            SizedBox(
-              width: 24,
-              child: Icon(icon, size: 18, color: AppColors.textSecondary),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                label,
-                style: AppText.body
-                    .copyWith(fontSize: 14.5, color: AppColors.textPrimary),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            const Padding(
-              padding: EdgeInsets.only(left: 2),
-              child: Icon(Icons.chevron_right_rounded,
-                  size: 18, color: AppColors.textTertiary),
-            ),
-          ],
+    return const Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(width: 8),
+        SizedBox(
+          width: 18,
+          child: Icon(Icons.chevron_right_rounded,
+              size: 18, color: AppColors.textTertiary),
         ),
-      ),
+      ],
     );
   }
 }
 
-/// The language row — inline for the same padding reason as [_ArchiveRow].
+/// The language row — inline for the same reason as [_ArchiveRow].
 /// Behaviour is unchanged: it still opens [_pickLanguage].
 class _LanguageRow extends StatelessWidget {
   const _LanguageRow({required this.value, required this.onTap});
@@ -393,41 +374,35 @@ class _LanguageRow extends StatelessWidget {
     final l = AppLocalizations.of(context);
     return InkWell(
       onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        child: Row(
-          children: [
-            const SizedBox(
-              width: 24,
-              child: Icon(Icons.language_rounded,
-                  size: 18, color: AppColors.textSecondary),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                l.language,
-                style: AppText.body.copyWith(
-                    fontSize: 14.5, color: AppColors.textPrimary),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 38),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: Insets.md),
+          child: Row(
+            children: [
+              const SizedBox(
+                width: 24,
+                child: Icon(Icons.language_rounded,
+                    size: 18, color: AppColors.textSecondary),
               ),
-            ),
-            const SizedBox(width: Insets.sm),
-            Flexible(
-              child: Text(
-                value,
-                textAlign: TextAlign.right,
-                style: AppText.amount,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  l.language,
+                  style: AppText.body.copyWith(
+                      fontSize: 14.5, color: AppColors.textPrimary),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
-            ),
-            const Padding(
-              padding: EdgeInsets.only(left: 2),
-              child: Icon(Icons.chevron_right_rounded,
-                  size: 18, color: AppColors.textTertiary),
-            ),
-          ],
+              // Same trailing column as [_ArchiveRow]: the endonym is the value
+              // and never shrinks (the label ellipsises instead); its right edge
+              // and the chevron's line up with the other rows (§3.2).
+              const SizedBox(width: Insets.sm),
+              Text(value, style: AppText.amount, maxLines: 1),
+              const _RowTrailingChevron(),
+            ],
+          ),
         ),
       ),
     );
@@ -435,9 +410,9 @@ class _LanguageRow extends StatelessWidget {
 }
 
 /// The old "Privacy mode" row, its subtitle folded into the label. ToggleRow-
-/// shaped but inline (same padding reason). The scaled switch — not the text —
-/// sets the row height; the whole row is the touch target, so the control looks
-/// 26 pt tall while the target stays the full 37 pt row.
+/// shaped but inline. The switch is boxed to 40 × 24 (§3.1) so it fits the shared
+/// 38 pt row and its right edge lines up with the chevron column; the whole row
+/// stays the touch target, not just the control.
 class _MaskRow extends StatelessWidget {
   const _MaskRow({required this.value, required this.onChanged});
 
@@ -449,37 +424,48 @@ class _MaskRow extends StatelessWidget {
     final l = AppLocalizations.of(context);
     return InkWell(
       onTap: () => onChanged(!value),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        child: Row(
-          children: [
-            const SizedBox(
-              width: 24,
-              child: Icon(Icons.visibility_off_rounded,
-                  size: 18, color: AppColors.textSecondary),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                l.moreMaskAmounts,
-                style: AppText.body.copyWith(
-                    fontSize: 14.5, color: AppColors.textPrimary),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 38),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: Insets.md),
+          child: Row(
+            children: [
+              const SizedBox(
+                width: 24,
+                child: Icon(Icons.visibility_off_rounded,
+                    size: 18, color: AppColors.textSecondary),
               ),
-            ),
-            const SizedBox(width: Insets.sm),
-            Transform.scale(
-              scale: 0.85,
-              child: Switch.adaptive(
-                value: value,
-                onChanged: onChanged,
-                activeThumbColor: Colors.white,
-                activeTrackColor: AppColors.accent,
-                inactiveTrackColor: AppColors.surfaceHigh,
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  l.moreMaskAmounts,
+                  style: AppText.body.copyWith(
+                      fontSize: 14.5, color: AppColors.textPrimary),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
-            ),
-          ],
+              const SizedBox(width: Insets.sm),
+              // The control's right edge is the same content edge the chevrons sit
+              // on; FittedBox constrains the switch's layout box to 40 × 24 (a bare
+              // Transform.scale would shrink the paint but keep the full layout
+              // size, breaking the 38 pt row).
+              SizedBox(
+                width: 40,
+                height: 24,
+                child: FittedBox(
+                  fit: BoxFit.contain,
+                  child: Switch.adaptive(
+                    value: value,
+                    onChanged: onChanged,
+                    activeThumbColor: Colors.white,
+                    activeTrackColor: AppColors.accent,
+                    inactiveTrackColor: AppColors.surfaceHigh,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -490,23 +476,40 @@ class _MaskRow extends StatelessWidget {
 /// [PackageInfo]. A line of text, not a row — no card, no chevron, no tap
 /// target. "FinLens" is the product name (a proper noun), not a localised
 /// string; only the version/build come from [l.moreVersion].
-class _VersionFooter extends StatelessWidget {
+///
+/// Stateful, and the future is resolved once in [initState] (§4): a
+/// FutureBuilder over a future rebuilt every `build` would re-fetch on each mask
+/// toggle. While it is unresolved the line renders a single space so it already
+/// occupies exactly one line's height — when the real text arrives it swaps in
+/// place with no layout shift, and the space grows with the text scale just as
+/// the text would.
+class _VersionFooter extends StatefulWidget {
   const _VersionFooter();
+
+  @override
+  State<_VersionFooter> createState() => _VersionFooterState();
+}
+
+class _VersionFooterState extends State<_VersionFooter> {
+  late final Future<PackageInfo> _info = PackageInfo.fromPlatform();
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     return Padding(
-      padding: const EdgeInsets.only(top: Insets.lg),
+      padding: const EdgeInsets.only(top: Insets.md, bottom: Insets.lg),
       child: Center(
         child: FutureBuilder<PackageInfo>(
-          future: PackageInfo.fromPlatform(),
+          future: _info,
           builder: (context, snap) {
             final info = snap.data;
+            final text = info == null
+                ? ''
+                : 'FinLens ${l.moreVersion(info.version, info.buildNumber)}';
+            // A space (not '') reserves one line's height so nothing shifts when
+            // the real string resolves.
             return Text(
-              info == null
-                  ? ''
-                  : 'FinLens ${l.moreVersion(info.version, info.buildNumber)}',
+              text.isEmpty ? ' ' : text,
               style: AppText.caption.copyWith(
                 fontSize: 11.5,
                 color: AppColors.textTertiary,

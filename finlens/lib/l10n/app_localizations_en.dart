@@ -556,6 +556,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get moreRestore => 'Restore data';
 
   @override
+  String get moreBackupShort => 'Back up';
+
+  @override
+  String get moreRestoreShort => 'Restore';
+
+  @override
   String get backupSavedMsg => 'Backup saved';
 
   @override
@@ -3671,7 +3677,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get tagArchiveFootnote =>
-      'Archived tags stay on their transactions and stay searchable. They just don\'t appear when you tag something new.';
+      'Archived tags stay on their transactions and stay searchable. They just don\'t appear when you tag something new. Tap one to bring it back.';
 
   @override
   String get tagActionArchive => 'Archive';
@@ -3740,6 +3746,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get tagRestoreThis => 'Restore tag';
+
+  @override
+  String get tagsEmptyTitle => 'No tags yet';
+
+  @override
+  String get tagsEmptyMsg => 'A second label, on top of the category.';
 
   @override
   String get plTitle => 'Planner';

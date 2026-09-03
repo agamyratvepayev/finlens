@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../theme/app_colors.dart';
+import '../../../theme/app_theme.dart';
 import '../../../theme/app_typography.dart';
 
 /// Two independent tap targets sharing one row: a label, its live count, and a
@@ -73,38 +74,50 @@ class _Cell extends StatelessWidget {
       label: '$label $count',
       child: InkWell(
         onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(12, 8, 10, 8),
-          child: Row(
-            children: [
-              // The label ellipsises under a narrow locale (RU КАТЕГОРИИ / ТЕГИ,
-              // TK) — the count never shrinks, so a row that loses room loses
-              // letters, not its figure.
-              Expanded(
-                child: Text(
-                  label,
-                  style: AppText.body.copyWith(
-                    fontSize: 14.5,
-                    color: AppColors.textPrimary,
+        // The shared More row: 38 pt tall (minHeight, so it still grows at
+        // 130 %), Insets.md horizontal padding, and the same value→chevron
+        // trailing as the full-width rows so the right cell's count and chevron
+        // line up with Archive and Language down the card (§3).
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 38),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: Insets.md),
+            child: Row(
+              children: [
+                // The label ellipsises under a narrow locale (RU КАТЕГОРИИ / ТЕГИ,
+                // TK) — the count never shrinks, so a row that loses room loses
+                // letters, not its figure.
+                Expanded(
+                  child: Text(
+                    label,
+                    style: AppText.body.copyWith(
+                      fontSize: 14.5,
+                      color: AppColors.textPrimary,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
-              ),
-              const SizedBox(width: 6),
-              Text(
-                '$count',
-                // Tabular so 99 → 100 does not shift the two cells relative to
-                // each other. AppText.amount is already tabular w600.
-                style: AppText.amount,
-              ),
-              const SizedBox(width: 2),
-              const Icon(
-                Icons.chevron_right_rounded,
-                size: 16,
-                color: AppColors.textTertiary,
-              ),
-            ],
+                const SizedBox(width: Insets.sm),
+                Text(
+                  '$count',
+                  // Tabular so 99 → 100 does not shift the two cells relative to
+                  // each other. AppText.amount is already tabular w600.
+                  style: AppText.amount,
+                ),
+                // 8 pt gap, then an 18 pt chevron box flush to the cell's inner
+                // edge — the same trailing metrics every other More row uses.
+                const SizedBox(width: 8),
+                const SizedBox(
+                  width: 18,
+                  child: Icon(
+                    Icons.chevron_right_rounded,
+                    size: 18,
+                    color: AppColors.textTertiary,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
