@@ -1624,23 +1624,17 @@ abstract class AppLocalizations {
   /// **'No account or group matches your search.'**
   String get balNoAccountMatch;
 
-  /// No description provided for @balAddFirstAccount.
+  /// No description provided for @balEmptyBenefit.
   ///
   /// In en, this message translates to:
-  /// **'Add your first account'**
-  String get balAddFirstAccount;
+  /// **'You never have to work out how much you actually have.'**
+  String get balEmptyBenefit;
 
-  /// No description provided for @balNoAccountsMessage.
+  /// No description provided for @balAddAccount.
   ///
   /// In en, this message translates to:
-  /// **'Add an account and its balance. Everything else — net worth, budgets, goals — is worked out from there.'**
-  String get balNoAccountsMessage;
-
-  /// No description provided for @balNothingRecordedYet.
-  ///
-  /// In en, this message translates to:
-  /// **'Nothing recorded yet'**
-  String get balNothingRecordedYet;
+  /// **'Add an account'**
+  String get balAddAccount;
 
   /// No description provided for @balAdjustFilter.
   ///

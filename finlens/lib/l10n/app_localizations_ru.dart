@@ -1157,14 +1157,11 @@ class AppLocalizationsRu extends AppLocalizations {
       'Ни один счёт или группа не подходят под запрос.';
 
   @override
-  String get balAddFirstAccount => 'Добавьте первый счёт';
+  String get balEmptyBenefit =>
+      'Вам больше не нужно самим считать, сколько у вас на самом деле денег.';
 
   @override
-  String get balNoAccountsMessage =>
-      'Добавьте счёт и его баланс. Всё остальное — капитал, бюджеты, цели — рассчитается из этого.';
-
-  @override
-  String get balNothingRecordedYet => 'Пока ничего не записано';
+  String get balAddAccount => 'Добавить счёт';
 
   @override
   String get balAdjustFilter => 'Настроить фильтр';

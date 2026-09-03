@@ -178,97 +178,89 @@ class _BalanceScreenState extends State<BalanceScreen> {
 
     // Height is not hard-coded: the ratio bar shows only on the All section,
     // the "as of" line appears only for a past date, and searching swaps the
-    // tool row for the field. AnimatedSize hands any freed space to the list —
-    // and, because it also wraps the first-run header below, the whole
-    // apparatus grows in when the first account lands rather than snapping.
+    // tool row for the field. AnimatedSize hands any freed space to the list.
+    //
+    // The label, hero, ratio bar and tools all belong to a populated tab; on a
+    // first run they are absent from the tree entirely, and an AnimatedSwitcher
+    // cross-fades the two states so the header text fades in over 180ms when the
+    // first account lands (§6). The + is the one exception: it is *not* inside
+    // the switcher. It sits in a Positioned overlay pinned to the top-right
+    // corner, drawn once over both states, so it never fades, moves or rebuilds
+    // — a user who opens the app to record something reaches the same button in
+    // the same place whether or not any account exists yet.
     return AnimatedSize(
       duration: const Duration(milliseconds: 180),
       curve: Curves.easeOut,
       alignment: Alignment.topCenter,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(Insets.gutter, 0, Insets.gutter, 4),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: hasAccounts
-              ? [
-                  SizedBox(height: 34, child: _headerRow1(store)),
-                  const SizedBox(height: 4),
-                  _headerRow2(store),
-                  if (showRatio) ...[
-                    const SizedBox(height: 8),
-                    _RatioBar(
-                      assets: filter.sectionTotal(store, assets: true),
-                      liabilities:
-                          filter.sectionTotal(store, assets: false).abs(),
-                    ),
-                  ],
-                  // The tools left the hero's line for a row of their own,
-                  // mirroring the Ledger's counter + tool-cluster grammar. The
-                  // search field takes this row's place while searching, so the
-                  // row never stacks on top of the field.
-                  if (!_searching) _toolRow(store),
-                ]
-              : _emptyHeaderChildren(),
-        ),
-      ),
-    );
-  }
-
-  /// The first-run header: only the things that still mean something with zero
-  /// accounts. The NET WORTH label (no dots — Assets/Liabilities are sections
-  /// of a list that does not exist yet) and the + are all that survive from
-  /// row 1; every other control (date pill, eye, sort, collapse, filter,
-  /// search), the ratio bar and the counts line are absent from the tree, not
-  /// merely disabled. The hero is a — rather than a $0, because nothing has
-  /// been added up yet — zero would be a claim, not a blank.
-  List<Widget> _emptyHeaderChildren() {
-    final l = AppLocalizations.of(context);
-    return [
-      SizedBox(
-        height: 34,
-        child: Row(
+        child: Stack(
           children: [
-            // SectionIndicator without its dots is just its label, so we render
-            // the label directly in the same style at the same position rather
-            // than teaching the indicator a dotless mode.
-            Text(l.balanceSectionAll.toUpperCase(), style: AppText.sectionLabel),
-            const Spacer(),
-            _CircleButton(
-              icon: Icons.add_rounded,
-              accent: true,
-              onTap: () => showQuickAdd(context),
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 180),
+              // Align the outgoing and incoming states at the top-left so the
+              // content grows downward from the +'s row rather than the switcher
+              // centring a shorter child and nudging it as it fades.
+              layoutBuilder: (currentChild, previousChildren) => Stack(
+                alignment: Alignment.topLeft,
+                children: [
+                  ...previousChildren,
+                  ?currentChild,
+                ],
+              ),
+              child: hasAccounts
+                  ? Column(
+                      key: const ValueKey('balance-header-populated'),
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SizedBox(height: 34, child: _headerRow1(store)),
+                        const SizedBox(height: 4),
+                        _headerRow2(store),
+                        if (showRatio) ...[
+                          const SizedBox(height: 8),
+                          _RatioBar(
+                            assets: filter.sectionTotal(store, assets: true),
+                            liabilities:
+                                filter.sectionTotal(store, assets: false).abs(),
+                          ),
+                        ],
+                        // The tools left the hero's line for a row of their own,
+                        // mirroring the Ledger's counter + tool-cluster grammar.
+                        // The search field takes this row's place while
+                        // searching, so the row never stacks on top of the field.
+                        if (!_searching) _toolRow(store),
+                      ],
+                    )
+                  // First run: no NET WORTH label, no hero, no delta line — a
+                  // header with nothing to report should not appear (§2). All
+                  // that remains is empty space the height of the +, so the Stack
+                  // is exactly as tall as the + and the empty state below claims
+                  // the rest of the screen. These slots are absent from the tree,
+                  // not hidden — an opacity-0 or 0-height widget still holds
+                  // layout and still reaches the screen reader.
+                  : const SizedBox(
+                      key: ValueKey('balance-header-empty'),
+                      height: 34,
+                      width: double.infinity,
+                    ),
+            ),
+            // The persistent create affordance. Same icon, size, destination and
+            // top-right position in both states; row 1 of the populated content
+            // reserves its footprint so nothing under it shifts.
+            Positioned(
+              top: 0,
+              right: 0,
+              child: _CircleButton(
+                icon: Icons.add_rounded,
+                accent: true,
+                onTap: () => showQuickAdd(context),
+              ),
             ),
           ],
         ),
       ),
-      const SizedBox(height: 4),
-      // Reads as "Net worth, nothing recorded yet" to a screen reader — never a
-      // bare dash. The dash is not an amount, so it does not go through
-      // AmountText and never masks.
-      Semantics(
-        label: '${l.balanceSectionAll}, ${l.balNothingRecordedYet}',
-        child: ExcludeSemantics(
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  '—',
-                  style: AppText.heroAmount
-                      .copyWith(color: AppColors.textTertiary),
-                ),
-                // Same slot the historical "as of …" line uses, so the header
-                // height behaves exactly as it already does.
-                Text(l.balNothingRecordedYet, style: AppText.asOfLine),
-              ],
-            ),
-          ),
-        ),
-      ),
-    ];
+    );
   }
 
   Widget _headerRow1(AppStore store) {
@@ -294,12 +286,10 @@ class _BalanceScreenState extends State<BalanceScreen> {
               : Icons.visibility_rounded,
           onTap: store.toggleMasked,
         ),
-        const SizedBox(width: Insets.sm),
-        _CircleButton(
-          icon: Icons.add_rounded,
-          accent: true,
-          onTap: () => showQuickAdd(context),
-        ),
+        // The + is drawn as a persistent overlay (see _header); reserve its
+        // footprint — the sm gap plus its 34pt width — so the eye keeps the
+        // exact x-position it had when the + was an inline sibling here.
+        const SizedBox(width: Insets.sm + 34),
       ],
     );
   }
@@ -818,28 +808,47 @@ class _BalanceScreenState extends State<BalanceScreen> {
       );
 
   /// The one place an "add account" call to action belongs: what is redundant
-  /// noise in a populated list is the only way forward in an empty one.
-  Widget _emptyState() => Padding(
-        padding: const EdgeInsets.only(top: 72),
-        child: EmptyState(
-          icon: Icons.account_balance_wallet_rounded,
-          title: AppLocalizations.of(context).balNoAccountsYet,
-          message: AppLocalizations.of(context).balNoAccountsMessage,
-          action: FilledButton.icon(
-            onPressed: () => showNewAccountSheet(context),
-            icon: const Icon(Icons.add_rounded, size: 18),
-            label: Text(AppLocalizations.of(context).balAddFirstAccount),
-            style: FilledButton.styleFrom(
-              backgroundColor: AppColors.accent,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(
-                horizontal: Insets.xl,
-                vertical: 12,
+  /// noise in a populated list is the only way forward in an empty one. The
+  /// action is a low-emphasis text button — a one-time account creation should
+  /// not compete with the persistent + — and it stays beside the sentence that
+  /// motivates it rather than migrating to the corner glyph (§4).
+  Widget _emptyState() {
+    final l = AppLocalizations.of(context);
+    // Centred between the + row above and the nav bar below (§3). The screen has
+    // no upward-nudge convention, so geometric centring is correct — no optical
+    // offset invented. A ConstrainedBox pinned to the viewport height keeps it
+    // centred when there is room and lets it scroll rather than clip when there
+    // is not (a large text scale, or a short/landscape viewport — §8).
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: Center(
+            child: EmptyState(
+              icon: Icons.account_balance_wallet_rounded,
+              title: l.balNoAccountsYet,
+              titleAsHeader: true,
+              message: l.balEmptyBenefit,
+              action: TextButton(
+                onPressed: () => showNewAccountSheet(context),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.accent,
+                  // A visually light control that is still physically full-size:
+                  // ≥44×44 via the tap target, not a larger font (§4).
+                  minimumSize: const Size(44, 44),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: Insets.lg,
+                    vertical: 10,
+                  ),
+                ),
+                child: Text(l.balAddAccount),
               ),
             ),
           ),
         ),
-      );
+      ),
+    );
+  }
 
   /// Groups that survive the section filter and the search query — a hidden
   /// group has zero accounts left, never an empty header. Order is always
@@ -1331,6 +1340,7 @@ class EmptyState extends StatelessWidget {
     required this.title,
     required this.message,
     this.action,
+    this.titleAsHeader = false,
   });
 
   final IconData icon;
@@ -1338,19 +1348,28 @@ class EmptyState extends StatelessWidget {
   final String message;
   final Widget? action;
 
+  /// Marks [title] as a heading for the screen reader. Off by default so every
+  /// existing caller's semantics tree is untouched; Balance's first-run state
+  /// opts in (§7).
+  final bool titleAsHeader;
+
   @override
   Widget build(BuildContext context) {
+    Widget titleText = Text(
+      title,
+      style: AppText.rowTitle.copyWith(fontSize: 16),
+      textAlign: TextAlign.center,
+    );
+    if (titleAsHeader) {
+      titleText = Semantics(header: true, child: titleText);
+    }
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: Insets.xxl),
       child: Column(
         children: [
           Icon(icon, size: 40, color: AppColors.textTertiary),
           const SizedBox(height: Insets.md),
-          Text(
-            title,
-            style: AppText.rowTitle.copyWith(fontSize: 16),
-            textAlign: TextAlign.center,
-          ),
+          titleText,
           const SizedBox(height: Insets.xs),
           Text(message, style: AppText.caption, textAlign: TextAlign.center),
           if (action != null) ...[const SizedBox(height: Insets.xl), action!],

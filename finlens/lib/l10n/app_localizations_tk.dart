@@ -1115,14 +1115,11 @@ class AppLocalizationsTk extends AppLocalizations {
       'Gözlegiňize gabat gelýän hasap ýa-da topar ýok.';
 
   @override
-  String get balAddFirstAccount => 'Ilkinji hasabyňyzy goşuň';
+  String get balEmptyBenefit =>
+      'Näçe puluňyzyň bardygyny indi hiç haçan özüňiz hasaplap oturmaly bolmarsyňyz.';
 
   @override
-  String get balNoAccountsMessage =>
-      'Hasap we onuň balansyny goşuň. Galan zatlaryň baryny — arassa baýlygy, býujetleri, maksatlary — FinLens şundan hasaplaýar.';
-
-  @override
-  String get balNothingRecordedYet => 'Entek hiç zat ýazylmady';
+  String get balAddAccount => 'Hasap goşuň';
 
   @override
   String get balAdjustFilter => 'Süzgüji sazla';

@@ -1120,14 +1120,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get balNoAccountMatch => 'No account or group matches your search.';
 
   @override
-  String get balAddFirstAccount => 'Add your first account';
+  String get balEmptyBenefit =>
+      'You never have to work out how much you actually have.';
 
   @override
-  String get balNoAccountsMessage =>
-      'Add an account and its balance. Everything else — net worth, budgets, goals — is worked out from there.';
-
-  @override
-  String get balNothingRecordedYet => 'Nothing recorded yet';
+  String get balAddAccount => 'Add an account';
 
   @override
   String get balAdjustFilter => 'Adjust filter';

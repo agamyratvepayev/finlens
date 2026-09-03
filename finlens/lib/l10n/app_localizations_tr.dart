@@ -1114,14 +1114,11 @@ class AppLocalizationsTr extends AppLocalizations {
   String get balNoAccountMatch => 'Aramanızla eşleşen hesap veya grup yok.';
 
   @override
-  String get balAddFirstAccount => 'İlk hesabınızı ekleyin';
+  String get balEmptyBenefit =>
+      'Ne kadar paranız olduğunu bir daha hesaplamanıza gerek kalmaz.';
 
   @override
-  String get balNoAccountsMessage =>
-      'Bir hesap ve bakiyesini ekleyin. Gerisi — net değer, bütçeler, hedefler — bundan hesaplanır.';
-
-  @override
-  String get balNothingRecordedYet => 'Henüz kayıt yok';
+  String get balAddAccount => 'Hesap ekleyin';
 
   @override
   String get balAdjustFilter => 'Filtreyi ayarla';
