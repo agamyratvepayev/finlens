@@ -573,6 +573,8 @@
   "ldgNothingHere": "Здесь живёт каждая операция",
   "ldgNothingHereMsg": "Записывайте расходы и поступления. Балансы, бюджеты и цели берут данные из этого списка.",
   "ldgNothingRecordedInMonth": "Нет записей за {month}",
+  "ldgFirstRunHint": "Начните с {plus} наверху",
+  "ldgRestoreFromBackup": "Восстановить из резервной копии",
   "ldgAddEntry": "Добавить запись",
   "ldgCategories": "Категории",
   "ldgAccounts": "Счета",

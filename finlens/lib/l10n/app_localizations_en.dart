@@ -2218,6 +2218,14 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String ldgFirstRunHint(String plus) {
+    return 'Start with $plus above';
+  }
+
+  @override
+  String get ldgRestoreFromBackup => 'Restore from a backup';
+
+  @override
   String get ldgAddEntry => 'Add an entry';
 
   @override

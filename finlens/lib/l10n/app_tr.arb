@@ -573,6 +573,8 @@
   "ldgNothingHere": "Her işlem burada yaşar",
   "ldgNothingHereMsg": "Harcadığınızı ve aldığınızı kaydedin. Bakiyeler, bütçeler ve hedefler bu listeden okur.",
   "ldgNothingRecordedInMonth": "{month} ayında kayıt yok",
+  "ldgFirstRunHint": "{plus} ile başla",
+  "ldgRestoreFromBackup": "Yedekten geri yükle",
   "ldgAddEntry": "Kayıt ekle",
   "ldgCategories": "Kategoriler",
   "ldgAccounts": "Hesaplar",

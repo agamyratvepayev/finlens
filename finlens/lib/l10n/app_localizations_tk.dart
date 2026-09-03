@@ -2206,6 +2206,14 @@ class AppLocalizationsTk extends AppLocalizations {
   }
 
   @override
+  String ldgFirstRunHint(String plus) {
+    return 'Ýokardaky $plus bilen başlaň';
+  }
+
+  @override
+  String get ldgRestoreFromBackup => 'Ätiýaçlyk nusgadan dikeltmek';
+
+  @override
   String get ldgAddEntry => 'Ýazgy goş';
 
   @override

@@ -10,6 +10,7 @@ import '../../core/utils/formatters.dart';
 import '../../core/utils/fx.dart';
 import '../../core/utils/search_fold.dart';
 import '../../l10n/app_localizations.dart';
+import '../../shared/restore_flow.dart';
 import '../../shared/widgets/amount_text.dart';
 import '../../shared/widgets/app_card.dart';
 import '../../shared/widgets/section_header.dart';
@@ -298,51 +299,54 @@ class _LedgerScreenState extends State<LedgerScreen> {
             ),
           ),
           Expanded(
-            // A description toggle rebuilds only this subtree, not the header.
-            child: ValueListenableBuilder<bool>(
-              valueListenable: _showDescriptions,
-              builder: (context, showDesc, _) {
-                return Column(
-                  children: [
-                    // The count and the three tools operate on rows; with nothing
-                    // ever recorded there are none, so the whole row is absent
-                    // from the tree (§2) — not disabled, not transparent.
-                    if (everRecorded)
-                      _toolRow(
-                        store,
-                        total: total,
-                        shown: shown,
-                        searching: searching,
-                        showDesc: showDesc,
-                      ),
-                    if (everRecorded && _searching) _searchField(),
-                    const SizedBox(height: Insets.sm),
-                    Expanded(
-                      child: ListView(
-                        controller: _scrollCtrl,
-                        padding: const EdgeInsets.only(bottom: Insets.xxl),
+            // §1/§3 — first run is not a row in the list, it is the screen. It
+            // has nothing to scroll and carries its own restore line pinned above
+            // the nav, so it renders directly in the Expanded rather than as a
+            // ListView child. Every other state (populated, empty month, no
+            // filter/search match) keeps the ListView below unchanged.
+            child: everRecorded
+                ? ValueListenableBuilder<bool>(
+                    // A description toggle rebuilds only this subtree, not header.
+                    valueListenable: _showDescriptions,
+                    builder: (context, showDesc, _) {
+                      return Column(
                         children: [
-                          if (days.isEmpty)
-                            _empty(store,
-                                searching: searching, everRecorded: everRecorded)
-                          else
-                            for (final day in days) ...[
-                              const SizedBox(height: 8),
-                              _dayCard(
-                                context,
-                                store,
-                                day,
-                                showDesc: showDesc,
-                                query: rowQuery,
-                              ),
-                            ],
+                          _toolRow(
+                            store,
+                            total: total,
+                            shown: shown,
+                            searching: searching,
+                            showDesc: showDesc,
+                          ),
+                          if (_searching) _searchField(),
+                          const SizedBox(height: Insets.sm),
+                          Expanded(
+                            child: ListView(
+                              controller: _scrollCtrl,
+                              padding:
+                                  const EdgeInsets.only(bottom: Insets.xxl),
+                              children: [
+                                if (days.isEmpty)
+                                  _empty(store, searching: searching)
+                                else
+                                  for (final day in days) ...[
+                                    const SizedBox(height: 8),
+                                    _dayCard(
+                                      context,
+                                      store,
+                                      day,
+                                      showDesc: showDesc,
+                                      query: rowQuery,
+                                    ),
+                                  ],
+                              ],
+                            ),
+                          ),
                         ],
-                      ),
-                    ),
-                  ],
-                );
-              },
-            ),
+                      );
+                    },
+                  )
+                : _firstRun(store),
           ),
         ],
       ),
@@ -495,31 +499,10 @@ class _LedgerScreenState extends State<LedgerScreen> {
     );
   }
 
-  Widget _empty(AppStore store,
-      {required bool searching, required bool everRecorded}) {
-    // §1/§5 — first run wins over every other empty. A filter (or a stale
-    // search) set just before the last entry was deleted must not steal the
-    // screen: a funnel over nothing is still a first run, so this is checked
-    // ahead of the searching / _filterActive branches below.
-    if (!everRecorded) {
-      return Padding(
-        padding: const EdgeInsets.only(top: 64),
-        child: EmptyState(
-          icon: Icons.receipt_long_rounded,
-          title: AppLocalizations.of(context).ldgNothingHere,
-          message: AppLocalizations.of(context).ldgNothingHereMsg,
-          action: FilledButton.icon(
-            onPressed: () => showQuickAdd(context),
-            icon: const Icon(Icons.add_rounded, size: 18),
-            label: Text(AppLocalizations.of(context).ldgAddEntry),
-            style: FilledButton.styleFrom(
-              backgroundColor: AppColors.accent,
-              foregroundColor: Colors.white,
-            ),
-          ),
-        ),
-      );
-    }
+  Widget _empty(AppStore store, {required bool searching}) {
+    // First run is handled ahead of the list entirely (§1/§3 — [_firstRun]), so
+    // this method only ever runs on a store that *has* recorded something: the
+    // branches below are the empty-search, empty-filter and empty-month states.
     if (searching) {
       return Padding(
         padding: const EdgeInsets.only(top: 64),
@@ -577,6 +560,91 @@ class _LedgerScreenState extends State<LedgerScreen> {
         textAlign: TextAlign.center,
         style: const TextStyle(fontSize: 14, color: AppColors.textTertiary),
       ),
+    );
+  }
+
+  // ── First run (spec §2–§5) ──────────────────────────────────────────────────
+
+  /// The whole screen when nothing has ever been recorded (§3): a centred block
+  /// (icon on a backdrop, title, tightly-measured message, and the line that
+  /// names the +) with a quiet restore line pinned above the tab bar. The block
+  /// sits in its own scroll viewport so it centres on a tall phone yet survives
+  /// large text on a short one, rather than overflowing.
+  Widget _firstRun(AppStore store) {
+    final l = AppLocalizations.of(context);
+    return Column(
+      children: [
+        Expanded(
+          child: LayoutBuilder(
+            builder: (context, constraints) => SingleChildScrollView(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      EmptyState(
+                        icon: Icons.receipt_long_rounded,
+                        title: l.ldgNothingHere,
+                        message: l.ldgNothingHereMsg,
+                        iconBackdrop: true,
+                        messageMaxWidth: 205,
+                        // The block's title is now the screen's only heading, the
+                        // period title having gone with first run (§1.3/§2.4).
+                        titleAsHeader: true,
+                      ),
+                      const SizedBox(height: 15),
+                      _firstRunHint(l),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+        _restoreLine(store),
+      ],
+    );
+  }
+
+  /// The one muted line that names the unlabelled + (§4): "Start with + above",
+  /// the glyph a real accent [Icons.add_rounded] echoing the button, the words
+  /// tertiary. Not tappable — it names a control, it is not a second copy of it.
+  Widget _firstRunHint(AppLocalizations l) {
+    // A NUL sentinel the localized string can never contain, substituted for
+    // {plus} so a translation is free to move the glyph.
+    final sentinel = String.fromCharCode(0);
+    return buildFirstRunHint(l.ldgFirstRunHint(sentinel), sentinel);
+  }
+
+  /// The quiet "Restore from a backup" line pinned above the tab bar (§5): the
+  /// one screen a restoring user actually lands on. It runs the real shared
+  /// restore flow (picker → confirm → load), not a signpost to More.
+  Widget _restoreLine(AppStore store) {
+    final l = AppLocalizations.of(context);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Semantics(
+          button: true,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => runRestoreFlow(context, store),
+            child: Container(
+              alignment: Alignment.center,
+              constraints: const BoxConstraints(minHeight: 44),
+              padding: const EdgeInsets.symmetric(horizontal: Insets.gutter),
+              child: Text(
+                l.ldgRestoreFromBackup,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                    fontSize: 11.5, color: AppColors.textTertiary),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: Insets.md),
+      ],
     );
   }
 
@@ -995,6 +1063,37 @@ class _LedgerScreenState extends State<LedgerScreen> {
 
 }
 
+/// Builds the first-run hint's inline spans from [rawWithSentinel] — the hint
+/// string with its `{plus}` placeholder already replaced by [sentinel] (§4.1).
+/// Splitting on the sentinel lets a translation move the glyph freely; a string
+/// that lost the placeholder yields one part, which degrades to a plain readable
+/// line with the glyph omitted rather than throwing or drawing an empty label.
+/// Top-level and `@visibleForTesting` so the fallback path can be exercised
+/// directly without a broken localization.
+@visibleForTesting
+Widget buildFirstRunHint(String rawWithSentinel, String sentinel) {
+  const baseStyle = TextStyle(fontSize: 12, color: AppColors.textTertiary);
+  final parts = rawWithSentinel.split(sentinel);
+  if (parts.length != 2) {
+    return Text(parts.join(), textAlign: TextAlign.center, style: baseStyle);
+  }
+  return Text.rich(
+    TextSpan(
+      style: baseStyle,
+      children: [
+        TextSpan(text: parts[0]),
+        const WidgetSpan(
+          alignment: PlaceholderAlignment.middle,
+          child:
+              Icon(Icons.add_rounded, size: 13, color: AppColors.accentLight),
+        ),
+        TextSpan(text: parts[1]),
+      ],
+    ),
+    textAlign: TextAlign.center,
+  );
+}
+
 /// The Ledger's pinned header (spec §1): the month as the screen title (with the
 /// eye and `+` cloned from ScreenHeader), a thin passive ratio bar, and the
 /// IN / OUT / LEFT metrics strip. The word "Ledger" appears nowhere — it lives
@@ -1027,24 +1126,37 @@ class _HeaderZone extends StatelessWidget {
   Widget build(BuildContext context) {
     // Opaque so the swipe region above receives drags across the whole zone,
     // including the gaps between the rows.
+    // §6 — with the title gone on first run, the first entry brings back the
+    // title, chevron, eye, ratio bar and metrics strip all at once. AnimatedSize
+    // (Balance's exact parameters) grows the apparatus in rather than snapping.
+    // The + sits in the fixed-height title row above the growth, so it neither
+    // moves nor resizes as the strip below expands.
     return Container(
       color: AppColors.bg,
-      child: Column(
+      child: AnimatedSize(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOut,
+        alignment: Alignment.topCenter,
+        child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Title row — the month is the title.
+          // Title row — the month is the title. On first run (§1) the leading
+          // slot renders nothing: the period is a scope value, and with nothing
+          // recorded there is no scope to name. The row's height is set by the
+          // 36pt + circle, so it stays stable whether or not the title is drawn.
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
             child: Row(
               children: [
                 Expanded(
-                    child: _PeriodTitle(
-                        store: store,
-                        onTap: onPickMonth,
-                        // Chevron + tap-to-pick go inert on first run (§2): with
-                        // nothing recorded the period sheet only moves the user
-                        // from one empty month to another.
-                        enabled: everRecorded)),
+                  child: everRecorded
+                      ? _PeriodTitle(
+                          store: store,
+                          onTap: onPickMonth,
+                          enabled: true,
+                        )
+                      : const SizedBox.shrink(),
+                ),
                 // The way out of the range lens sits beside the state it undoes
                 // (§1): a third circle, purple like the title it clears, present
                 // only while a lens is active — so in month mode this row is
@@ -1150,6 +1262,7 @@ class _HeaderZone extends StatelessWidget {
           ],
           const SizedBox(height: Insets.md),
         ],
+        ),
       ),
     );
   }

@@ -1341,6 +1341,8 @@ class EmptyState extends StatelessWidget {
     required this.message,
     this.action,
     this.titleAsHeader = false,
+    this.iconBackdrop = false,
+    this.messageMaxWidth,
   });
 
   final IconData icon;
@@ -1353,6 +1355,13 @@ class EmptyState extends StatelessWidget {
   /// opts in (§7).
   final bool titleAsHeader;
 
+  /// Renders [icon] on a filled circular backdrop instead of bare. Off by
+  /// default: the seven other call sites are unchanged.
+  final bool iconBackdrop;
+
+  /// Caps the message's line length. Null keeps the full available width.
+  final double? messageMaxWidth;
+
   @override
   Widget build(BuildContext context) {
     Widget titleText = Text(
@@ -1363,15 +1372,41 @@ class EmptyState extends StatelessWidget {
     if (titleAsHeader) {
       titleText = Semantics(header: true, child: titleText);
     }
+
+    // A bare 40pt glyph has nothing holding it once a block is centred; the
+    // opt-in backdrop is a 54pt surface circle with a 24pt glyph (§2.2). Off by
+    // default so the other call sites keep their bare 40pt icon.
+    final Widget iconWidget = iconBackdrop
+        ? Container(
+            width: 54,
+            height: 54,
+            alignment: Alignment.center,
+            decoration: const BoxDecoration(
+              color: AppColors.surface,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, size: 24, color: AppColors.textTertiary),
+          )
+        : Icon(icon, size: 40, color: AppColors.textTertiary);
+
+    Widget messageWidget =
+        Text(message, style: AppText.caption, textAlign: TextAlign.center);
+    if (messageMaxWidth != null) {
+      messageWidget = ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: messageMaxWidth!),
+        child: messageWidget,
+      );
+    }
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: Insets.xxl),
       child: Column(
         children: [
-          Icon(icon, size: 40, color: AppColors.textTertiary),
+          iconWidget,
           const SizedBox(height: Insets.md),
           titleText,
           const SizedBox(height: Insets.xs),
-          Text(message, style: AppText.caption, textAlign: TextAlign.center),
+          messageWidget,
           if (action != null) ...[const SizedBox(height: Insets.xl), action!],
         ],
       ),

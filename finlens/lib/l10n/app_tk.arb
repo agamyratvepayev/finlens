@@ -573,6 +573,8 @@
   "ldgNothingHere": "Her amal şu ýerde ýaşaýar",
   "ldgNothingHereMsg": "Näme harçlanyňyzy we alanyňyzy ýazyň. Balanslar, býudjetler we maksatlar şu sanawdan okaýar.",
   "ldgNothingRecordedInMonth": "{month} aýynda hiç zat ýazylmady",
+  "ldgFirstRunHint": "Ýokardaky {plus} bilen başlaň",
+  "ldgRestoreFromBackup": "Ätiýaçlyk nusgadan dikeltmek",
   "ldgAddEntry": "Ýazgy goş",
   "ldgCategories": "Kategoriýalar",
   "ldgAccounts": "Hasaplar",

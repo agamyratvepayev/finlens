@@ -2273,6 +2273,14 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
+  String ldgFirstRunHint(String plus) {
+    return 'Начните с $plus наверху';
+  }
+
+  @override
+  String get ldgRestoreFromBackup => 'Восстановить из резервной копии';
+
+  @override
   String get ldgAddEntry => 'Добавить запись';
 
   @override

@@ -8,8 +8,8 @@ import 'package:package_info_plus/package_info_plus.dart';
 import '../../core/persistence/backup_codec.dart';
 import '../../core/store/app_store.dart';
 import '../../l10n/app_localizations.dart';
+import '../../shared/restore_flow.dart';
 import '../../shared/widgets/app_card.dart';
-import '../../shared/widgets/destructive_sheet.dart';
 import '../../shared/widgets/screen_header.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
@@ -158,60 +158,6 @@ Future<void> _runBackup(BuildContext context, AppStore store) async {
   }
 }
 
-/// Restore: pick a backup `.json`, validate it, confirm the destructive replace,
-/// then load it. [AppStore.loadFrom] fires `notifyListeners`, so the attached
-/// persister writes the restored data to SQLite on its own — nothing here
-/// touches the database. An invalid/corrupt file shows a notice and changes
-/// nothing; cancelling the picker or the confirm is a silent no-op.
-Future<void> _runRestore(BuildContext context, AppStore store) async {
-  final l = AppLocalizations.of(context);
-  final messenger = ScaffoldMessenger.of(context);
-
-  final FilePickerResult? picked;
-  try {
-    picked = await FilePicker.pickFiles(
-      dialogTitle: l.moreRestore,
-      type: FileType.custom,
-      allowedExtensions: const ['json'],
-      withData: true,
-    );
-  } catch (_) {
-    messenger.showSnackBar(SnackBar(content: Text(l.restoreInvalidMsg)));
-    return;
-  }
-  if (picked == null || picked.files.isEmpty) return; // cancelled
-
-  final bytes = picked.files.single.bytes;
-  if (bytes == null) {
-    messenger.showSnackBar(SnackBar(content: Text(l.restoreInvalidMsg)));
-    return;
-  }
-
-  final BackupDocument doc;
-  try {
-    doc = decodeBackup(utf8.decode(bytes));
-  } catch (_) {
-    messenger.showSnackBar(SnackBar(content: Text(l.restoreInvalidMsg)));
-    return;
-  }
-
-  if (!context.mounted) return;
-  final ok = await showDestructiveConfirm(
-    context,
-    title: l.restoreConfirmTitle,
-    message: l.restoreConfirmMsg(doc.accountCount, doc.txnCount),
-    impact: [
-      ImpactLine.lost(l.restoreImpactLost),
-      ImpactLine.kept(l.restoreImpactKept),
-    ],
-    confirmLabel: l.restoreConfirmAction,
-  );
-  if (!ok) return;
-
-  store.loadFrom(doc.source);
-  messenger.showSnackBar(SnackBar(content: Text(l.restoreDoneMsg)));
-}
-
 /// The fifth tab is a settings page. The governing rule:
 ///
 /// > A row belongs on More only when the thing it reaches has no home
@@ -296,7 +242,7 @@ class MoreScreen extends StatelessWidget {
                   _ActionRow(
                     icon: Icons.restore_rounded,
                     label: l.moreRestore,
-                    onTap: () => _runRestore(context, store),
+                    onTap: () => runRestoreFlow(context, store),
                   ),
                 ]),
                 // PREFERENCES follows a card, not the screen title, so it keeps

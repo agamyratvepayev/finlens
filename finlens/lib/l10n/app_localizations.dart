@@ -3334,6 +3334,18 @@ abstract class AppLocalizations {
   /// **'Nothing recorded in {month}'**
   String ldgNothingRecordedInMonth(Object month);
 
+  /// No description provided for @ldgFirstRunHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Start with {plus} above'**
+  String ldgFirstRunHint(String plus);
+
+  /// No description provided for @ldgRestoreFromBackup.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore from a backup'**
+  String get ldgRestoreFromBackup;
+
   /// No description provided for @ldgAddEntry.
   ///
   /// In en, this message translates to:

@@ -2207,6 +2207,14 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
+  String ldgFirstRunHint(String plus) {
+    return '$plus ile başla';
+  }
+
+  @override
+  String get ldgRestoreFromBackup => 'Yedekten geri yükle';
+
+  @override
   String get ldgAddEntry => 'Kayıt ekle';
 
   @override
