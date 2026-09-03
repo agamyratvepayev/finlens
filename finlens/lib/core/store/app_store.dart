@@ -852,6 +852,38 @@ class AppStore extends ChangeNotifier {
   List<Category> categoriesOfType(CategoryType type) =>
       categories.where((c) => c.type == type).toList(growable: false);
 
+  /// The category-picker grid order (spec §3): most-used first, ties broken by
+  /// newest-created first so a just-made category is not buried under equally
+  /// unused older ones. Archived categories are already excluded by [categories].
+  ///
+  /// Usage is counted from the ledger rather than stored — the category set is
+  /// small (well under a hundred) and this runs once when the picker opens (and
+  /// again only on a keystroke), so a full [txnCountForCategory] scan per
+  /// category is cheap enough to avoid adding a persisted counter to the model.
+  List<Category> categoriesOfTypeByUsage(CategoryType type) {
+    final list = categoriesOfType(type).toList();
+    // A tie needs a stable, deterministic order; the counts are memoised so the
+    // comparator does not rescan the ledger on every pairwise call.
+    final uses = {for (final c in list) c.id: txnCountForCategory(c.id)};
+    list.sort((a, b) {
+      final byUse = uses[b.id]!.compareTo(uses[a.id]!);
+      if (byUse != 0) return byUse;
+      final da = a.createdAt, db = b.createdAt;
+      if (da != null && db != null) {
+        final byDate = db.compareTo(da); // newest first
+        if (byDate != 0) return byDate;
+      } else if (da == null && db != null) {
+        return 1; // null (seed/legacy) sorts oldest, i.e. after
+      } else if (da != null && db == null) {
+        return -1;
+      }
+      // A final, stable tiebreak so the grid order is deterministic when both
+      // usage and createdAt tie (Dart's List.sort is not itself stable).
+      return a.id.compareTo(b.id);
+    });
+    return List.unmodifiable(list);
+  }
+
   /// Categories the user can file against today — archived excluded, both types
   /// included. The More screen's Categories count; the public [categories]
   /// getter already hides archived, so this is its length by another name, kept
@@ -2583,6 +2615,7 @@ class AppStore extends ChangeNotifier {
     required CategoryType type,
     required IconData icon,
     required Color color,
+    String? emoji,
     double? monthlyBudget,
   }) {
     final category = Category(
@@ -2591,6 +2624,9 @@ class AppStore extends ChangeNotifier {
       type: type,
       icon: icon,
       color: color,
+      emoji: emoji,
+      // Stamped so the picker can break usage ties by newest-first (spec §3).
+      createdAt: today,
       monthlyBudget: monthlyBudget,
     );
     // A budget born with the category is its own `created` entry — history is

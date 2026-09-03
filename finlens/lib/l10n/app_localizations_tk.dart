@@ -135,6 +135,14 @@ class AppLocalizationsTk extends AppLocalizations {
   String get qaNoEmojiMatch => 'Emoji tapylmady';
 
   @override
+  String qaNoIconMatch(Object query) {
+    return '$query bilen gabat gelýän nyşan ýok.';
+  }
+
+  @override
+  String get qaTryEmoji => 'Emoji synanyş';
+
+  @override
   String get quickAddExpense => 'Çykdajy';
 
   @override
@@ -2672,6 +2680,31 @@ class AppLocalizationsTk extends AppLocalizations {
   String get qaNewCategory => 'Täze kategoriýa';
 
   @override
+  String get qaNewExpenseCategory => 'Täze çykdajy kategoriýasy';
+
+  @override
+  String get qaNewIncomeCategory => 'Täze girdeji kategoriýasy';
+
+  @override
+  String get qaNoCategoriesYet => 'Heniz kategoriýa ýok';
+
+  @override
+  String qaCategoryEmptyBody(Object action) {
+    return 'Ilkinjisini döretmek üçin $action düwmesine basyň.';
+  }
+
+  @override
+  String get qaCategoryExpenseHelper =>
+      'Çykdajylar üçin ulanylýar. Adyny we görnüşini soň üýtgedip bilersiňiz.';
+
+  @override
+  String get qaCategoryIncomeHelper =>
+      'Girdejiler üçin ulanylýar. Adyny we görnüşini soň üýtgedip bilersiňiz.';
+
+  @override
+  String get qaCategoryExists => 'Bu atly kategoriýa eýýäm bar';
+
+  @override
   String get qaNewShort => 'Täze';
 
   @override
@@ -2690,7 +2723,7 @@ class AppLocalizationsTk extends AppLocalizations {
 
   @override
   String qaNoCategoryMatch(Object query) {
-    return '\"$query\" boýunça kategoriýa ýok.';
+    return '$query boýunça kategoriýa ýok.';
   }
 
   @override
@@ -2727,13 +2760,6 @@ class AppLocalizationsTk extends AppLocalizations {
 
   @override
   String get qaColour => 'Reňk';
-
-  @override
-  String get qaMonthlyBudget => 'Aýlyk býujet (islege bagly)';
-
-  @override
-  String get qaCategoryPlannerNote =>
-      'Bu kategoriýa Meýilnama → Çykdajy býujetinde-de görüner, ol ýerde çykdajyny yzarlap bilersiňiz.';
 
   @override
   String get qaCreateSelect => 'Döret we saýla';
@@ -2784,12 +2810,6 @@ class AppLocalizationsTk extends AppLocalizations {
 
   @override
   String get qaSearchIcons => 'Nyşan gözle';
-
-  @override
-  String get qaResults => 'Netijeler';
-
-  @override
-  String get qaNoIconsMatch => 'Gabat gelýän nyşan ýok';
 
   @override
   String get ssRemoveSplit => 'Bölünmäni aýyr';

@@ -4,26 +4,74 @@ import '../../core/models/models.dart';
 import '../../l10n/app_localizations.dart';
 import '../../theme/app_colors.dart';
 
-/// One category tile: a 46 pt colour-tinted square above a two-line, centred
-/// label (spec 4.1). Shared by the Quick Add category picker grid and the More >
-/// Categories management grid so the two never drift — the geometry is fixed and
-/// must not change. The `selected` state fills the tile with the colour, whitens
-/// the glyph with a 2 pt ring, and weights the label; the management grid always
-/// passes `selected: false`.
+/// One category tile: a colour-tinted square above a two-line, centred label.
+/// Shared by the Quick Add category picker grid (54 pt, `reserveTwoLines: true`)
+/// and the More > Categories management grid (its original 46 pt, variable
+/// height — the defaults leave it byte-for-byte unchanged). The `selected` state
+/// fills the tile with the colour, whitens the glyph with a 2 pt ring, and
+/// weights the label; the management grid always passes `selected: false`.
+///
+/// The whole cell is one opaque tap target, so tapping the *label* selects the
+/// category just as tapping the tile does (spec §2). A category carrying an
+/// [Category.emoji] renders that glyph on a tinted tile instead of the icon; the
+/// emoji keeps its own colours (spec §7).
 class CategoryCell extends StatelessWidget {
   const CategoryCell({
     super.key,
     required this.category,
     required this.selected,
     required this.onTap,
+    this.tileSize = 46,
+    this.reserveTwoLines = false,
   });
 
   final Category category;
   final bool selected;
   final VoidCallback onTap;
 
+  /// Fixed tile edge in pt — 46 for the More grid, 54 for the picker (spec §2).
+  /// The glyph is ~half the tile; on narrower devices the *gaps* shrink, never
+  /// this size (the grid owns the gap, spec §9).
+  final double tileSize;
+
+  /// When true the label always occupies two lines' worth of height, so every
+  /// cell is the same height and rows never stagger (spec §2). It grows with the
+  /// text scale, so five columns still hold at 130 % (spec §9). Off by default so
+  /// the management grid keeps its original content-height cells.
+  final bool reserveTwoLines;
+
   @override
   Widget build(BuildContext context) {
+    final hasEmoji = category.hasEmoji;
+    // Roughly half the tile: 22 at the More grid's 46 pt, 26 at the picker's 54 pt
+    // (spec §2). Kept as an exact step so the existing 46 pt grid is unchanged.
+    final glyphSize = tileSize >= 50 ? 26.0 : 22.0;
+    final radius = tileSize >= 50 ? 14.0 : 13.0;
+    // Emoji: always a tinted tile (the glyph carries its own colours), a touch
+    // stronger when selected. Icons: filled with the colour when selected, else
+    // the same dark tint. Matches the icon picker's AccountGlyphTile so the two
+    // never drift.
+    final Color bg = hasEmoji
+        ? Color.alphaBlend(
+            category.color.withValues(alpha: selected ? 0.28 : 0.18),
+            AppColors.surfaceAlt)
+        : (selected
+            ? category.color
+            : Color.alphaBlend(
+                category.color.withValues(alpha: 0.18), AppColors.surfaceAlt));
+
+    const labelStyleBase = TextStyle(fontSize: 12, height: 1.25);
+    final label = Text(
+      category.name,
+      textAlign: TextAlign.center,
+      maxLines: 2,
+      overflow: TextOverflow.ellipsis,
+      style: labelStyleBase.copyWith(
+        color: selected ? Colors.white : AppColors.sheetAccountName,
+        fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+      ),
+    );
+
     return Semantics(
       button: true,
       selected: selected,
@@ -35,37 +83,34 @@ class CategoryCell extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 46,
-              height: 46,
+              width: tileSize,
+              height: tileSize,
+              alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: selected
-                    ? category.color
-                    : Color.alphaBlend(
-                        category.color.withValues(alpha: 0.18),
-                        AppColors.surfaceAlt),
-                borderRadius: BorderRadius.circular(13),
+                color: bg,
+                borderRadius: BorderRadius.circular(radius),
                 border:
                     selected ? Border.all(color: Colors.white, width: 2) : null,
               ),
-              child: Icon(
-                category.icon,
-                size: 22,
-                color: selected ? Colors.white : category.color,
-              ),
+              child: hasEmoji
+                  ? Text(category.emoji!,
+                      style: TextStyle(fontSize: glyphSize))
+                  : Icon(
+                      category.icon,
+                      size: glyphSize,
+                      color: selected ? Colors.white : category.color,
+                    ),
             ),
             const SizedBox(height: 6),
-            Text(
-              category.name,
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 12,
-                height: 1.25,
-                color: selected ? Colors.white : AppColors.sheetAccountName,
-                fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-              ),
-            ),
+            if (reserveTwoLines)
+              // Two lines of the label's own line-height, scaled with the user's
+              // text setting so the row grows rather than clipping at 130 %.
+              SizedBox(
+                height: MediaQuery.textScalerOf(context).scale(12) * 1.25 * 2,
+                child: label,
+              )
+            else
+              label,
           ],
         ),
       ),

@@ -22,10 +22,12 @@ class LocalDatabase {
 
   static const String dbFileName = 'finlens.db';
   // v2 (spec: New-account form) added the accounts' `color_argb` + `icon_emoji`
-  // columns and the `currencies` table for user-defined currencies. The bump is
-  // one-way: an older build rejects a v2 backup, while a v2 build reads a v1
-  // file (the new columns/table simply come back empty). See [_onUpgrade].
-  static const int schemaVersion = 2;
+  // columns and the `currencies` table for user-defined currencies. v3 (spec:
+  // category picker) adds the categories' `icon_emoji` + `created_at` columns.
+  // The bump is one-way and additive: a newer build reads an older file (the new
+  // columns simply come back empty/null), while an older build rejects a newer
+  // backup. See [_onUpgrade].
+  static const int schemaVersion = 3;
 
   static const String accountsTable = 'accounts';
   static const String categoriesTable = 'categories';
@@ -106,7 +108,9 @@ class LocalDatabase {
         icon_font_family TEXT,
         icon_font_package TEXT,
         icon_match_text_direction INTEGER,
+        icon_emoji TEXT,
         color_argb INTEGER NOT NULL,
+        created_at INTEGER,
         monthly_budget REAL,
         budget_rollover INTEGER NOT NULL,
         warn_threshold REAL NOT NULL,
@@ -213,6 +217,12 @@ class LocalDatabase {
       await db.execute(
           'ALTER TABLE $accountsTable ADD COLUMN color_argb INTEGER');
       await db.execute(_createCurrenciesTable);
+    }
+    if (oldVersion < 3) {
+      await db.execute(
+          'ALTER TABLE $categoriesTable ADD COLUMN icon_emoji TEXT');
+      await db.execute(
+          'ALTER TABLE $categoriesTable ADD COLUMN created_at INTEGER');
     }
   }
 }

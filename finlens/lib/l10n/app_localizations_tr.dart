@@ -136,6 +136,14 @@ class AppLocalizationsTr extends AppLocalizations {
   String get qaNoEmojiMatch => 'Eşleşen emoji yok';
 
   @override
+  String qaNoIconMatch(Object query) {
+    return '$query ile eşleşen simge yok.';
+  }
+
+  @override
+  String get qaTryEmoji => 'Emoji dene';
+
+  @override
   String get quickAddExpense => 'Gider';
 
   @override
@@ -2673,6 +2681,31 @@ class AppLocalizationsTr extends AppLocalizations {
   String get qaNewCategory => 'Yeni kategori';
 
   @override
+  String get qaNewExpenseCategory => 'Yeni gider kategorisi';
+
+  @override
+  String get qaNewIncomeCategory => 'Yeni gelir kategorisi';
+
+  @override
+  String get qaNoCategoriesYet => 'Henüz kategori yok';
+
+  @override
+  String qaCategoryEmptyBody(Object action) {
+    return 'İlk kategoriyi eklemek için $action düğmesine dokun.';
+  }
+
+  @override
+  String get qaCategoryExpenseHelper =>
+      'Giderler için kullanılır. Adını ve görünümünü sonra değiştirebilirsin.';
+
+  @override
+  String get qaCategoryIncomeHelper =>
+      'Gelirler için kullanılır. Adını ve görünümünü sonra değiştirebilirsin.';
+
+  @override
+  String get qaCategoryExists => 'Bu adda bir kategori zaten var';
+
+  @override
   String get qaNewShort => 'Yeni';
 
   @override
@@ -2691,7 +2724,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String qaNoCategoryMatch(Object query) {
-    return '\"$query\" ile eşleşen kategori yok.';
+    return '$query ile eşleşen kategori yok.';
   }
 
   @override
@@ -2728,13 +2761,6 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get qaColour => 'Renk';
-
-  @override
-  String get qaMonthlyBudget => 'Aylık bütçe (isteğe bağlı)';
-
-  @override
-  String get qaCategoryPlannerNote =>
-      'Bu kategori ayrıca Planlayıcı → Gider Bütçesi\'nde görünür, harcamayı ona göre izleyebilirsiniz.';
 
   @override
   String get qaCreateSelect => 'Oluştur ve seç';
@@ -2785,12 +2811,6 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get qaSearchIcons => 'Simge ara';
-
-  @override
-  String get qaResults => 'Sonuçlar';
-
-  @override
-  String get qaNoIconsMatch => 'Eşleşen simge yok';
 
   @override
   String get ssRemoveSplit => 'Bölmeyi kaldır';

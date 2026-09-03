@@ -138,6 +138,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get qaNoEmojiMatch => 'No emoji match';
 
   @override
+  String qaNoIconMatch(Object query) {
+    return 'No icon matches $query.';
+  }
+
+  @override
+  String get qaTryEmoji => 'Try emoji instead';
+
+  @override
   String get quickAddExpense => 'Expense';
 
   @override
@@ -2684,6 +2692,31 @@ class AppLocalizationsEn extends AppLocalizations {
   String get qaNewCategory => 'New category';
 
   @override
+  String get qaNewExpenseCategory => 'New expense category';
+
+  @override
+  String get qaNewIncomeCategory => 'New income category';
+
+  @override
+  String get qaNoCategoriesYet => 'No categories yet';
+
+  @override
+  String qaCategoryEmptyBody(Object action) {
+    return 'Tap $action to create the first one.';
+  }
+
+  @override
+  String get qaCategoryExpenseHelper =>
+      'Used for expenses. You can rename or restyle it later.';
+
+  @override
+  String get qaCategoryIncomeHelper =>
+      'Used for income. You can rename or restyle it later.';
+
+  @override
+  String get qaCategoryExists => 'A category with this name already exists';
+
+  @override
   String get qaNewShort => 'New';
 
   @override
@@ -2702,7 +2735,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String qaNoCategoryMatch(Object query) {
-    return 'No category matches \"$query\".';
+    return 'No category matches $query.';
   }
 
   @override
@@ -2739,13 +2772,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get qaColour => 'Colour';
-
-  @override
-  String get qaMonthlyBudget => 'Monthly budget (optional)';
-
-  @override
-  String get qaCategoryPlannerNote =>
-      'This category will also appear in Planner → Expense Budget, where you can track spending against it.';
 
   @override
   String get qaCreateSelect => 'Create & select';
@@ -2796,12 +2822,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get qaSearchIcons => 'Search icons';
-
-  @override
-  String get qaResults => 'Results';
-
-  @override
-  String get qaNoIconsMatch => 'No icons match';
 
   @override
   String get ssRemoveSplit => 'Remove split';

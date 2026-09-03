@@ -92,7 +92,9 @@ Map<String, Object?> categoryToMap(Category c) => {
       'name': c.name,
       'type_name': c.type.name,
       ..._iconColumns(c.icon),
+      'icon_emoji': c.emoji,
       'color_argb': c.color.toARGB32(),
+      'created_at': _dt(c.createdAt),
       'monthly_budget': c.monthlyBudget,
       'budget_rollover': _b(c.budgetRollover),
       'warn_threshold': c.warnThreshold,
@@ -108,7 +110,13 @@ Category categoryFromMap(Map<String, Object?> m) => Category(
       name: m['name'] as String,
       type: _enumByName(CategoryType.values, m['type_name'], CategoryType.expense),
       icon: _iconFromRow(m) ?? Icons.category_rounded,
+      // A category-picker (spec §5) field; a pre-change row has no column value,
+      // which reads back as null → "use the icon", exactly as before.
+      emoji: (m['icon_emoji'] as String?)?.isEmpty ?? true
+          ? null
+          : m['icon_emoji'] as String?,
       color: Color((m['color_argb'] as int?) ?? 0xFF9E9E9E),
+      createdAt: _dtn(m['created_at']),
       monthlyBudget: _dn(m['monthly_budget']),
       budgetRollover: _bf(m['budget_rollover']),
       warnThreshold: _d(m['warn_threshold']),

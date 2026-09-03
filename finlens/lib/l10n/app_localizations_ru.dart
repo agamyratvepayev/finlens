@@ -137,6 +137,14 @@ class AppLocalizationsRu extends AppLocalizations {
   String get qaNoEmojiMatch => 'Ничего не найдено';
 
   @override
+  String qaNoIconMatch(Object query) {
+    return 'Нет значка по запросу $query.';
+  }
+
+  @override
+  String get qaTryEmoji => 'Попробуйте эмодзи';
+
+  @override
   String get quickAddExpense => 'Расход';
 
   @override
@@ -2739,6 +2747,31 @@ class AppLocalizationsRu extends AppLocalizations {
   String get qaNewCategory => 'Новая категория';
 
   @override
+  String get qaNewExpenseCategory => 'Новая категория расходов';
+
+  @override
+  String get qaNewIncomeCategory => 'Новая категория доходов';
+
+  @override
+  String get qaNoCategoriesYet => 'Категорий пока нет';
+
+  @override
+  String qaCategoryEmptyBody(Object action) {
+    return 'Нажмите $action, чтобы создать первую.';
+  }
+
+  @override
+  String get qaCategoryExpenseHelper =>
+      'Используется для расходов. Название и вид можно изменить позже.';
+
+  @override
+  String get qaCategoryIncomeHelper =>
+      'Используется для доходов. Название и вид можно изменить позже.';
+
+  @override
+  String get qaCategoryExists => 'Категория с таким названием уже существует';
+
+  @override
   String get qaNewShort => 'Новый';
 
   @override
@@ -2757,7 +2790,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String qaNoCategoryMatch(Object query) {
-    return 'Нет категории по запросу «$query».';
+    return 'Нет категории по запросу $query.';
   }
 
   @override
@@ -2794,13 +2827,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get qaColour => 'Цвет';
-
-  @override
-  String get qaMonthlyBudget => 'Месячный бюджет (необязательно)';
-
-  @override
-  String get qaCategoryPlannerNote =>
-      'Эта категория также появится в Планировщик → Бюджет расходов, где можно отслеживать траты по ней.';
 
   @override
   String get qaCreateSelect => 'Создать и выбрать';
@@ -2852,12 +2878,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get qaSearchIcons => 'Поиск значков';
-
-  @override
-  String get qaResults => 'Результаты';
-
-  @override
-  String get qaNoIconsMatch => 'Нет подходящих значков';
 
   @override
   String get ssRemoveSplit => 'Убрать разбивку';

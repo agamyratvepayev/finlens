@@ -345,26 +345,29 @@ class _IconPickerSheetState extends State<_IconPickerSheet> {
   Widget _iconsBody(AppLocalizations l) {
     if (_query.trim().isNotEmpty) {
       final results = searchAccountIcons(_query);
-      if (results.isEmpty) {
-        return _noMatch(l.qaNoIconsMatch);
-      }
+      if (results.isEmpty) return _noIconMatch(l);
+      // During search, group headings are removed and results render as one set
+      // (spec §6) — a null label draws the grid with no heading.
       return ListView(
         padding: const EdgeInsets.only(bottom: 24),
-        children: [_iconSection(l.qaResults, results)],
+        children: [_iconSection(null, results)],
       );
     }
     return ListView(
       padding: const EdgeInsets.only(bottom: 24),
       children: [
+        // Every glyph in every group is rendered — no truncation, no "see all"
+        // (spec §6); the sheet scrolls.
         for (final entry in accountIconGroups.entries)
           _iconSection(entry.key, entry.value),
       ],
     );
   }
 
-  Widget _iconSection(String label, List<AccountIconEntry> entries) {
+  Widget _iconSection(String? label, List<AccountIconEntry> entries) {
     return _gridSection(
       label,
+      entries.length,
       [
         for (final e in entries)
           AccountGlyphTile(
@@ -383,11 +386,11 @@ class _IconPickerSheetState extends State<_IconPickerSheet> {
     if (_query.trim().isNotEmpty) {
       final results = searchEmoji(_query);
       if (results.isEmpty) {
-        return _noMatch(l.qaNoEmojiMatch);
+        return _noMatchMessage(l.qaNoEmojiMatch);
       }
       return ListView(
         padding: const EdgeInsets.only(bottom: 24),
-        children: [_emojiSection(l.qaResults, results)],
+        children: [_emojiSection(null, results)],
       );
     }
     return ListView(
@@ -399,9 +402,10 @@ class _IconPickerSheetState extends State<_IconPickerSheet> {
     );
   }
 
-  Widget _emojiSection(String label, List<EmojiEntry> entries) {
+  Widget _emojiSection(String? label, List<EmojiEntry> entries) {
     return _gridSection(
       label,
+      entries.length,
       [
         for (final e in entries)
           AccountGlyphTile(
@@ -416,22 +420,27 @@ class _IconPickerSheetState extends State<_IconPickerSheet> {
     );
   }
 
-  Widget _gridSection(String label, List<Widget> tiles) {
+  /// A grid section. When [label] is non-null the heading carries the group's
+  /// glyph [count] — `HEALTH · 7` — so the user is not left wondering whether the
+  /// group continues below (spec §6). A null label (search results) draws no
+  /// heading at all.
+  Widget _gridSection(String? label, int count, List<Widget> tiles) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 2, 16, 6),
-          child: Text(
-            label.toUpperCase(),
-            style: const TextStyle(
-              fontSize: 10.5,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 0.07 * 10.5,
-              color: AppColors.textSecondary,
+        if (label != null)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 2, 16, 6),
+            child: Text(
+              '${label.toUpperCase()} · $count',
+              style: const TextStyle(
+                fontSize: 10.5,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.07 * 10.5,
+                color: AppColors.textSecondary,
+              ),
             ),
           ),
-        ),
         Padding(
           padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
           child: Wrap(spacing: 7, runSpacing: 7, children: tiles),
@@ -440,7 +449,34 @@ class _IconPickerSheetState extends State<_IconPickerSheet> {
     );
   }
 
-  Widget _noMatch(String message) {
+  /// The icons-tab no-match (spec §6): the message in the same shape as the
+  /// category picker's — the trimmed query set off by colour, no quotes — and a
+  /// single action, `Try emoji instead`, that switches to the Emoji tab carrying
+  /// the query across. The icon set is finite; emoji is not, so the fallback
+  /// beats a dead end. The action is hidden when emoji are not allowed (the
+  /// category editor's icon-only variant).
+  Widget _noIconMatch(AppLocalizations l) {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(24, 40, 24, 24),
+      children: [
+        _colouredNoMatch(l.qaNoIconMatch(_kSentinel), _query.trim()),
+        if (widget.allowEmoji) ...[
+          const SizedBox(height: 16),
+          Center(
+            child: TextButton(
+              // Keep _query so the emoji search runs the same terms (spec §6).
+              onPressed: () => setState(() => _tab = _GlyphTab.emoji),
+              child: Text(l.qaTryEmoji,
+                  style: TextStyle(fontSize: 14, color: AppColors.accent)),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  /// A plain, uncoloured centred message (emoji tab has no fallback action).
+  Widget _noMatchMessage(String message) {
     return Padding(
       padding: const EdgeInsets.only(top: 40),
       child: Text(message,
@@ -448,7 +484,36 @@ class _IconPickerSheetState extends State<_IconPickerSheet> {
           style: const TextStyle(fontSize: 14, color: AppColors.textTertiary)),
     );
   }
+
+  /// Renders a "no match" template with its query placeholder recoloured to the
+  /// primary text colour, on one ellipsised line. A plain-ASCII sentinel is
+  /// interpolated through the localised template then split back out, so it works
+  /// wherever the placeholder sits in a locale.
+  Widget _colouredNoMatch(String template, String query) {
+    final i = template.indexOf(_kSentinel);
+    final before = i < 0 ? template : template.substring(0, i);
+    final after = i < 0 ? '' : template.substring(i + _kSentinel.length);
+    return Text.rich(
+      TextSpan(
+        style: const TextStyle(fontSize: 14, color: AppColors.textTertiary),
+        children: [
+          TextSpan(text: before),
+          TextSpan(
+              text: query,
+              style: const TextStyle(color: AppColors.textPrimary)),
+          TextSpan(text: after),
+        ],
+      ),
+      textAlign: TextAlign.center,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+    );
+  }
 }
+
+/// An unambiguous placeholder marker for splitting a localised no-match template;
+/// no query or template contains it.
+const String _kSentinel = 'ZZQUERYZZ';
 
 class _Swatch extends StatelessWidget {
   const _Swatch(

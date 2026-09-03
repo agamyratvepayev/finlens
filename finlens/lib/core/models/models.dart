@@ -175,6 +175,8 @@ class Category {
     required this.type,
     required this.icon,
     required this.color,
+    this.emoji,
+    this.createdAt,
     this.monthlyBudget,
     this.budgetRollover = false,
     this.warnThreshold = 0.8,
@@ -189,6 +191,24 @@ class Category {
   CategoryType type;
   IconData icon;
   Color color;
+
+  /// An emoji chosen in the shared icon picker's Emoji tab (category-picker
+  /// spec §6/§7), mirroring [Account.emoji]. When set it is the category's glyph,
+  /// drawn on a tile tinted with [color]; the emoji keeps its own colours.
+  /// Null means "use [icon]", the app's long-standing behaviour, so existing
+  /// rows and pre-change backups render exactly as before.
+  String? emoji;
+
+  /// When the category was created — the tiebreaker for the usage-ordered picker
+  /// grid (equal use ⇒ newest first, category-picker spec §3). Null for seed
+  /// categories and any row that predates this field (a backup restored from an
+  /// older `schemaVersion`); a null [createdAt] sorts oldest, so those settle
+  /// below equally-unused newer ones and rendering is otherwise unchanged.
+  DateTime? createdAt;
+
+  /// True when the glyph should render as an emoji rather than an [icon]
+  /// (mirrors [Account.hasEmoji]).
+  bool get hasEmoji => emoji != null && emoji!.isNotEmpty;
 
   /// null == not budgeted. Presence is what puts it in Planner > Budgets.
   double? monthlyBudget;

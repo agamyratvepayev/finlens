@@ -342,6 +342,18 @@ abstract class AppLocalizations {
   /// **'No emoji match'**
   String get qaNoEmojiMatch;
 
+  /// No description provided for @qaNoIconMatch.
+  ///
+  /// In en, this message translates to:
+  /// **'No icon matches {query}.'**
+  String qaNoIconMatch(Object query);
+
+  /// No description provided for @qaTryEmoji.
+  ///
+  /// In en, this message translates to:
+  /// **'Try emoji instead'**
+  String get qaTryEmoji;
+
   /// No description provided for @quickAddExpense.
   ///
   /// In en, this message translates to:
@@ -4180,6 +4192,48 @@ abstract class AppLocalizations {
   /// **'New category'**
   String get qaNewCategory;
 
+  /// No description provided for @qaNewExpenseCategory.
+  ///
+  /// In en, this message translates to:
+  /// **'New expense category'**
+  String get qaNewExpenseCategory;
+
+  /// No description provided for @qaNewIncomeCategory.
+  ///
+  /// In en, this message translates to:
+  /// **'New income category'**
+  String get qaNewIncomeCategory;
+
+  /// No description provided for @qaNoCategoriesYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No categories yet'**
+  String get qaNoCategoriesYet;
+
+  /// No description provided for @qaCategoryEmptyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap {action} to create the first one.'**
+  String qaCategoryEmptyBody(Object action);
+
+  /// No description provided for @qaCategoryExpenseHelper.
+  ///
+  /// In en, this message translates to:
+  /// **'Used for expenses. You can rename or restyle it later.'**
+  String get qaCategoryExpenseHelper;
+
+  /// No description provided for @qaCategoryIncomeHelper.
+  ///
+  /// In en, this message translates to:
+  /// **'Used for income. You can rename or restyle it later.'**
+  String get qaCategoryIncomeHelper;
+
+  /// No description provided for @qaCategoryExists.
+  ///
+  /// In en, this message translates to:
+  /// **'A category with this name already exists'**
+  String get qaCategoryExists;
+
   /// No description provided for @qaNewShort.
   ///
   /// In en, this message translates to:
@@ -4213,7 +4267,7 @@ abstract class AppLocalizations {
   /// No description provided for @qaNoCategoryMatch.
   ///
   /// In en, this message translates to:
-  /// **'No category matches \"{query}\".'**
+  /// **'No category matches {query}.'**
   String qaNoCategoryMatch(Object query);
 
   /// No description provided for @qaExpenseCategory.
@@ -4281,18 +4335,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Colour'**
   String get qaColour;
-
-  /// No description provided for @qaMonthlyBudget.
-  ///
-  /// In en, this message translates to:
-  /// **'Monthly budget (optional)'**
-  String get qaMonthlyBudget;
-
-  /// No description provided for @qaCategoryPlannerNote.
-  ///
-  /// In en, this message translates to:
-  /// **'This category will also appear in Planner → Expense Budget, where you can track spending against it.'**
-  String get qaCategoryPlannerNote;
 
   /// No description provided for @qaCreateSelect.
   ///
@@ -4389,18 +4431,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Search icons'**
   String get qaSearchIcons;
-
-  /// No description provided for @qaResults.
-  ///
-  /// In en, this message translates to:
-  /// **'Results'**
-  String get qaResults;
-
-  /// No description provided for @qaNoIconsMatch.
-  ///
-  /// In en, this message translates to:
-  /// **'No icons match'**
-  String get qaNoIconsMatch;
 
   /// No description provided for @ssRemoveSplit.
   ///

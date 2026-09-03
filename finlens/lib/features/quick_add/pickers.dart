@@ -612,20 +612,39 @@ class _EmptyStateCreateButton extends StatelessWidget {
   }
 }
 
-/// Spec 4.1 — category picker. A 3-column grid; its create action is the last
-/// cell of the grid (§3).
+/// Category picker (spec §1–§4). Mirrors [pickAccount]: `+ New` lives in the
+/// header and stays there in every state, the sheet is sized to its content, the
+/// grid is five columns ordered by use, and the search field appears only at ten
+/// categories. Expense and income share this one widget — only the title and the
+/// source list differ.
 Future<Category?> pickCategory(
   BuildContext context, {
   required CategoryType type,
   String? title,
   String? selectedId,
 }) {
+  final l = AppLocalizations.of(context);
   return showAppSheet<Category>(
     context,
     title: title ??
         (type == CategoryType.expense
-            ? AppLocalizations.of(context).qaExpenseCategory
-            : AppLocalizations.of(context).qaIncomeCategory),
+            ? l.qaExpenseCategory
+            : l.qaIncomeCategory),
+    // A labelled, accessible dismissal, matching the account picker.
+    cancelLabel: l.actionCancel,
+    contentSized: true,
+    // The header `+ New` is present in ALL four states, never moving and never
+    // hiding (spec §1) — including the empty state, whose body carries no button.
+    // The category set cannot change while the modal is up (creating one pops the
+    // sheet), so a single unconditional action is correct. This is the one place
+    // the category picker diverges from the account picker, which drops its
+    // header action when empty and shows a body button instead.
+    actions: [
+      _HeaderCreateAction<Category>(
+        label: l.qaNewShort,
+        onCreate: (ctx) => showNewCategorySheet(ctx, type: type),
+      ),
+    ],
     builder: (context, controller) => _CategoryPickerBody(
         controller: controller, type: type, selectedId: selectedId),
   );
@@ -651,93 +670,171 @@ class _CategoryPickerBody extends StatefulWidget {
 class _CategoryPickerBodyState extends State<_CategoryPickerBody> {
   String _query = '';
 
+  static const _kColumns = 5;
+
+  /// Ten is two full rows of the five-column grid: below it the whole set is
+  /// visible at a glance and there is nothing to filter (spec §4). Tied to the
+  /// column count — if [_kColumns] ever changes, this threshold moves with it.
+  static const _kSearchThreshold = _kColumns * 2;
+
   @override
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
-    final q = _query.trim().toLowerCase();
-    final items = store
-        .categoriesOfType(widget.type)
-        .where((c) => q.isEmpty || c.name.toLowerCase().contains(q))
+    final l = AppLocalizations.of(context);
+
+    // The list this sheet draws from, before any query. Empty here is state 1 —
+    // a different thing from a query that matched nothing, and the two must
+    // never be confused (§1). Usage-ordered, ties newest-first (§3).
+    final source = store.categoriesOfTypeByUsage(widget.type);
+    if (source.isEmpty) return _emptyState(context, l);
+
+    final showSearch = source.length >= _kSearchThreshold;
+    final rawQuery = _query.trim();
+    final hasQuery = rawQuery.isNotEmpty;
+    final q = rawQuery.toLowerCase();
+    final matches = source
+        .where((c) => !hasQuery || c.name.toLowerCase().contains(q))
         .toList();
 
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        _SearchBar(
-          hint: AppLocalizations.of(context).qaSearchCategories,
-          onChanged: (v) {
-            setState(() => _query = v);
-            // The now-unfiltered grid is taller; drop back to the top when the
-            // query empties so the user isn't left scrolled into the middle.
-            if (v.isEmpty && widget.controller.hasClients) {
-              widget.controller.jumpTo(0);
-            }
-          },
-        ),
-        Expanded(
-          child: SingleChildScrollView(
+        if (showSearch)
+          _SearchBar(
+            hint: l.qaSearchCategories,
+            onChanged: (v) {
+              setState(() => _query = v);
+              // The now-unfiltered grid is taller; drop back to the top when the
+              // query empties so the user isn't left scrolled into the middle.
+              if (v.isEmpty && widget.controller.hasClients) {
+                widget.controller.jumpTo(0);
+              }
+            },
+          ),
+        Flexible(
+          child: ListView(
             controller: widget.controller,
+            // shrinkWrap so a short grid keeps the sheet short (§2); the outer
+            // Flexible caps it and it scrolls once the grid outgrows the sheet.
+            shrinkWrap: true,
             // No spent/budget figures here — this is a picker; budget progress
             // lives on the Planner tab (§2).
-            padding:
-                const EdgeInsets.fromLTRB(14, Insets.md, 14, Insets.xxl),
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                const columns = 3;
-                const gap = 8.0;
-                final cellWidth =
-                    (constraints.maxWidth - gap * (columns - 1)) / columns;
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (items.isEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: Insets.md),
-                        child: SizedBox(
-                          width: double.infinity,
-                          child: Text(
-                            AppLocalizations.of(context).qaNoCategoryMatch(_query),
-                            textAlign: TextAlign.center,
-                            style: AppText.caption,
-                          ),
-                        ),
-                      ),
-                    // Wrap, not a stretched grid: a partial last row stays
-                    // left-aligned and cells never stretch to fill it (§5).
-                    Wrap(
-                      spacing: gap,
-                      runSpacing: 10,
-                      children: [
-                        for (final c in items)
-                          SizedBox(
-                            width: cellWidth,
-                            child: CategoryCell(
-                              category: c,
-                              selected: c.id == widget.selectedId,
-                              onTap: () => Navigator.of(context).pop(c),
-                            ),
-                          ),
-                        SizedBox(
-                          width: cellWidth,
-                          child: NewCategoryCell(
-                            onTap: () async {
-                              final created = await showNewCategorySheet(
-                                  context,
-                                  type: widget.type);
-                              if (created != null && context.mounted) {
-                                Navigator.of(context).pop(created);
-                              }
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                );
-              },
-            ),
+            padding: const EdgeInsets.fromLTRB(14, Insets.md, 14, Insets.xxl),
+            children: [
+              // State 4 — and ONLY state 4: categories exist, a real query was
+              // typed, and it matched nothing. An empty/whitespace query can
+              // never reach here (§1, §4).
+              if (hasQuery && matches.isEmpty)
+                _noMatchLine(context, l, rawQuery),
+              if (matches.isNotEmpty) _grid(context, matches),
+            ],
           ),
         ),
       ],
+    );
+  }
+
+  /// The five-column grid (§2). Tiles are a fixed 54 pt; the leftover width is
+  /// distributed into the gaps, so on a narrow device the gaps shrink and the
+  /// tile does not (§9). No create tile — that action lives in the header — and
+  /// no group headings (§3): the usage order carries the meaning.
+  Widget _grid(BuildContext context, List<Category> items) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const tile = 54.0;
+        final gap =
+            ((constraints.maxWidth - tile * _kColumns) / (_kColumns - 1))
+                .clamp(2.0, 16.0);
+        return Wrap(
+          spacing: gap,
+          runSpacing: 12,
+          children: [
+            for (final c in items)
+              SizedBox(
+                width: tile,
+                child: CategoryCell(
+                  category: c,
+                  selected: c.id == widget.selectedId,
+                  tileSize: tile,
+                  reserveTwoLines: true,
+                  onTap: () => Navigator.of(context).pop(c),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+  /// State 1 (§1): two lines of copy and no button. `+ New` is in the header,
+  /// ~60 pt above this message, so a second control here would be the same
+  /// action twice.
+  Widget _emptyState(BuildContext context, AppLocalizations l) {
+    final bottom = MediaQuery.of(context).padding.bottom;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        Insets.xxl,
+        Insets.lg,
+        Insets.xxl,
+        Insets.xl + bottom,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Semantics(
+            header: true,
+            child: Text(
+              l.qaNoCategoriesYet,
+              style: AppText.rowTitle.copyWith(fontSize: 16),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          const SizedBox(height: Insets.xs),
+          Text(
+            // The sentence names the control literally, so it is composed from
+            // the same localised `+ New` the header shows — never a hard-coded
+            // string (spec §8 / §11).
+            l.qaCategoryEmptyBody('+ ${l.qaNewShort}'),
+            style: AppText.caption,
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// State 4's one line (§4): no quotation marks, the query trimmed and set off
+  /// by the primary text colour against the message's secondary colour, held to
+  /// one ellipsised line so it never grows the sheet. Same technique as the
+  /// account picker: a sentinel is interpolated through the localised template
+  /// then split back out, so it works wherever the placeholder sits in a locale.
+  Widget _noMatchLine(BuildContext context, AppLocalizations l, String query) {
+    const sentinel = '\u0000';
+    final template = l.qaNoCategoryMatch(sentinel);
+    final i = template.indexOf(sentinel);
+    final before = i < 0 ? template : template.substring(0, i);
+    final after = i < 0 ? '' : template.substring(i + sentinel.length);
+    return Semantics(
+      liveRegion: true,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: Insets.xl),
+        child: Text.rich(
+          TextSpan(
+            style: AppText.caption,
+            children: [
+              TextSpan(text: before),
+              TextSpan(
+                text: query,
+                style: const TextStyle(color: AppColors.textPrimary),
+              ),
+              TextSpan(text: after),
+            ],
+          ),
+          textAlign: TextAlign.center,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ),
     );
   }
 }
@@ -1051,32 +1148,22 @@ class _SearchBarState extends State<_SearchBar> {
   }
 }
 
-// ── Contextual create: New Category (spec 4.1) ──────────────────────────────
+// ── Contextual create: New Category (spec §7) ───────────────────────────────
 
-const _categoryIcons = <IconData>[
-  Icons.shopping_basket_rounded,
-  Icons.home_rounded,
-  Icons.play_circle_rounded,
-  Icons.local_shipping_rounded,
-  Icons.shopping_bag_rounded,
-  Icons.self_improvement_rounded,
-  Icons.local_cafe_rounded,
-  Icons.favorite_rounded,
-  Icons.school_rounded,
-  Icons.pets_rounded,
-  Icons.flight_rounded,
-  Icons.subscriptions_rounded,
-];
-
+/// The new-category form (spec §7), opened by the picker's header `+ New`. The
+/// direction is already known and never asked for — only the title, the helper
+/// line and the created category's type differ between expense and income.
 Future<Category?> showNewCategorySheet(
   BuildContext context, {
   required CategoryType type,
   String initialName = '',
 }) {
+  final l = AppLocalizations.of(context);
   return showAppSheet<Category>(
     context,
-    title: AppLocalizations.of(context).qaNewCategory,
-    initialSize: 0.85,
+    title:
+        type == CategoryType.expense ? l.qaNewExpenseCategory : l.qaNewIncomeCategory,
+    initialSize: 0.6,
     builder: (context, controller) => _NewCategoryForm(
       controller: controller,
       type: type,
@@ -1103,147 +1190,231 @@ class _NewCategoryForm extends StatefulWidget {
 class _NewCategoryFormState extends State<_NewCategoryForm> {
   late final TextEditingController _name =
       TextEditingController(text: widget.initialName);
-  final _budget = TextEditingController();
-  IconData _icon = _categoryIcons.first;
+  final _nameFocus = FocusNode();
+
+  // The category glyph: an [_icon] OR an [_emoji], on a tile tinted with
+  // [_color]. Defaults are the app's long-standing new-category defaults — the
+  // shopping-basket icon and the first category-palette colour — until the user
+  // opens the picker (spec §7).
+  IconData? _icon = Icons.shopping_basket_rounded;
+  String? _emoji;
   Color _color = AppColors.categoryPalette.first;
 
   @override
+  void initState() {
+    super.initState();
+    _name.addListener(_onChanged);
+  }
+
+  void _onChanged() => setState(() {});
+
+  @override
   void dispose() {
+    _name.removeListener(_onChanged);
     _name.dispose();
-    _budget.dispose();
+    _nameFocus.dispose();
     super.dispose();
   }
 
-  bool get _valid => _name.text.trim().isNotEmpty;
+  /// A duplicate name in the SAME direction is rejected (spec §7): two categories
+  /// with one name split every report that groups by category. An expense and an
+  /// income category may still share a name.
+  bool _duplicateName(AppStore store) {
+    final n = _name.text.trim().toLowerCase();
+    if (n.isEmpty) return false;
+    return store
+        .categoriesOfType(widget.type)
+        .any((c) => c.name.trim().toLowerCase() == n);
+  }
+
+  bool _valid(AppStore store) =>
+      _name.text.trim().isNotEmpty && !_duplicateName(store);
+
+  /// Shows the keyboard on a tap anywhere in the name row, even when the field
+  /// already holds focus — requestFocus is a no-op then, so a keyboard dismissed
+  /// by a drag never returns without asking the platform directly. The same fix
+  /// the account form uses (spec §7 / account spec §8a).
+  void _focusName() {
+    if (!_nameFocus.hasFocus) _nameFocus.requestFocus();
+    SystemChannels.textInput.invokeMethod<void>('TextInput.show');
+  }
+
+  Future<void> _openIconPicker() async {
+    final result = await showIconPicker(
+      context,
+      typeColor: _color,
+      colorValue: _color.toARGB32(),
+      icon: _emoji == null ? _icon : null,
+      emoji: _emoji,
+    );
+    if (result == null) return;
+    setState(() {
+      if (result.colorValue != null) _color = Color(result.colorValue!);
+      if (result.emoji != null) {
+        _emoji = result.emoji;
+        _icon = null;
+      } else {
+        _icon = result.icon;
+        _emoji = null;
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
+    final l = AppLocalizations.of(context);
+    final duplicate = _duplicateName(store);
     return Column(
       children: [
         Expanded(
           child: ListView(
             controller: widget.controller,
-            padding: const EdgeInsets.only(bottom: Insets.lg),
+            padding: const EdgeInsets.fromLTRB(
+                Insets.gutter, Insets.md, Insets.gutter, Insets.xl),
             children: [
-              FormSection(
-                children: [
-                  TextFieldRow(
-                    icon: Icons.label_rounded,
-                    label: AppLocalizations.of(context).qaCategoryName,
-                    controller: _name,
-                    hint: AppLocalizations.of(context).qaExampleCategory,
-                    autofocus: widget.initialName.isEmpty,
-                  ),
-                ],
-              ),
-              SectionLabelSmall(AppLocalizations.of(context).qaIcon),
+              // One row: the name field with the icon tile as its leading control
+              // — byte-for-byte the account form's pattern (spec §7).
+              _nameRow(l),
+              if (duplicate)
+                Padding(
+                  padding:
+                      const EdgeInsets.fromLTRB(Insets.xs, Insets.sm, 0, 0),
+                  child: Text(l.qaCategoryExists,
+                      style: const TextStyle(
+                          fontSize: 12, color: AppColors.negative)),
+                ),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: Insets.gutter),
-                child: AppCard(
-                  padding: const EdgeInsets.all(Insets.md),
-                  child: Wrap(
-                    spacing: Insets.md,
-                    runSpacing: Insets.md,
-                    children: [
-                      for (final icon in _categoryIcons)
-                        GestureDetector(
-                          onTap: () => setState(() => _icon = icon),
-                          child: Container(
-                            width: 44,
-                            height: 44,
-                            decoration: BoxDecoration(
-                              color: icon == _icon
-                                  ? AppColors.tint(_color, 0.22)
-                                  : AppColors.surfaceHigh,
-                              borderRadius: BorderRadius.circular(Radii.md),
-                              border: icon == _icon
-                                  ? Border.all(color: _color, width: 1.5)
-                                  : null,
-                            ),
-                            child: Icon(
-                              icon,
-                              size: 20,
-                              color: icon == _icon
-                                  ? _color
-                                  : AppColors.textSecondary,
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
+                padding:
+                    const EdgeInsets.fromLTRB(Insets.xs, Insets.sm, 0, 0),
+                child: Text(
+                  widget.type == CategoryType.expense
+                      ? l.qaCategoryExpenseHelper
+                      : l.qaCategoryIncomeHelper,
+                  style: const TextStyle(
+                      fontSize: 12, height: 1.4, color: AppColors.textSecondary),
                 ),
-              ),
-              SectionLabelSmall(AppLocalizations.of(context).qaColour),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: Insets.gutter),
-                child: AppCard(
-                  padding: const EdgeInsets.all(Insets.md),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      for (final c in AppColors.categoryPalette)
-                        GestureDetector(
-                          onTap: () => setState(() => _color = c),
-                          child: Container(
-                            width: 34,
-                            height: 34,
-                            decoration: BoxDecoration(
-                              color: c,
-                              shape: BoxShape.circle,
-                              border: c == _color
-                                  ? Border.all(
-                                      color: Colors.white,
-                                      width: 2,
-                                    )
-                                  : null,
-                            ),
-                            child: c == _color
-                                ? const Icon(
-                                    Icons.check_rounded,
-                                    size: 17,
-                                    color: Colors.white,
-                                  )
-                                : null,
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: Insets.lg),
-              if (widget.type == CategoryType.expense)
-                FormSection(
-                  children: [
-                    TextFieldRow(
-                      icon: Icons.attach_money_rounded,
-                      label: AppLocalizations.of(context).qaMonthlyBudget,
-                      controller: _budget,
-                      hint: '0',
-                    ),
-                  ],
-                ),
-              InfoNote(
-                AppLocalizations.of(context).qaCategoryPlannerNote,
               ),
             ],
           ),
         ),
         _SheetFooter(
-          label: AppLocalizations.of(context).qaCreateSelect,
-          enabled: _valid,
+          label: l.qaCreateSelect,
+          enabled: _valid(store),
           onPressed: () {
             final created = store.addCategory(
               name: _name.text.trim(),
               type: widget.type,
-              icon: _icon,
+              icon: _icon ?? Icons.category_rounded,
               color: _color,
-              monthlyBudget: double.tryParse(_budget.text.trim()),
+              emoji: _emoji,
             );
             Navigator.of(context).pop(created);
           },
         ),
       ],
+    );
+  }
+
+  Widget _nameRow(AppLocalizations l) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.sheetCard,
+        borderRadius: BorderRadius.circular(11),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      child: Row(
+        children: [
+          _iconTile(l),
+          const SizedBox(width: Insets.md),
+          // Everything but the tile focuses the field; the whole area is one
+          // opaque tap target so a tap between the label and the field still
+          // opens the keyboard (spec §7).
+          Expanded(
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: _focusName,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(l.qaCategoryName,
+                      style: AppText.caption.copyWith(fontSize: 11.5)),
+                  TextField(
+                    controller: _name,
+                    focusNode: _nameFocus,
+                    autofocus: true,
+                    style: AppText.body.copyWith(fontSize: 15),
+                    cursorColor: AppColors.accentSoft,
+                    decoration: InputDecoration(
+                      isDense: true,
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.only(top: 2),
+                      hintText: l.qaExampleCategory,
+                      hintStyle:
+                          const TextStyle(color: AppColors.textTertiary),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// The leading tile of the name row — the category's glyph, tappable, ≥44×44 pt,
+  /// carrying a pencil badge so it reads as its own button (spec §7). Opens the
+  /// shared icon picker (§6).
+  Widget _iconTile(AppLocalizations l) {
+    final color = _color;
+    return Semantics(
+      button: true,
+      label: l.qaIcon,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: _openIconPicker,
+        child: SizedBox(
+          width: 44,
+          height: 44,
+          child: Stack(
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: Color.alphaBlend(
+                        color.withValues(alpha: 0.18), AppColors.surfaceAlt),
+                    borderRadius: BorderRadius.circular(11),
+                  ),
+                  alignment: Alignment.center,
+                  child: _emoji != null
+                      ? Text(_emoji!, style: const TextStyle(fontSize: 20))
+                      : Icon(_icon ?? Icons.category_rounded,
+                          size: 20, color: color),
+                ),
+              ),
+              Positioned(
+                right: 0,
+                bottom: 0,
+                child: Container(
+                  width: 15,
+                  height: 15,
+                  decoration: const BoxDecoration(
+                    color: AppColors.sheetCard,
+                    shape: BoxShape.circle,
+                  ),
+                  alignment: Alignment.center,
+                  child: const Icon(Icons.edit_rounded,
+                      size: 9, color: AppColors.textSecondary),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
