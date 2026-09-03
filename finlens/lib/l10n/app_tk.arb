@@ -661,7 +661,7 @@
   "qaNone": "Ýok",
   "qaNote": "Bellik",
   "qaAddNote": "Bellik goş",
-  "qaOptional": "Islege bagly",
+  "qaNotePlaceholder": "Bu näme üçindi?",
   "qaSplit": "Böl",
   "qaSplitCategories": "{count} kategoriýa",
   "qaGroupRequired": "Hökman",

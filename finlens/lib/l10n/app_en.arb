@@ -845,7 +845,7 @@
   "qaNone": "None",
   "qaNote": "Note",
   "qaAddNote": "Add a note",
-  "qaOptional": "Optional",
+  "qaNotePlaceholder": "What was this for?",
   "qaSplit": "Split",
   "qaSplitCategories": "{count} categories",
   "@qaSplitCategories": { "placeholders": { "count": {} } },

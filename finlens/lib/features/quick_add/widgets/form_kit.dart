@@ -43,6 +43,9 @@ class TxnFieldRow extends StatelessWidget {
     this.emptyText,
     this.valueColor,
     this.onTap,
+    this.hideLabel = false,
+    this.valueMaxLines = 1,
+    this.semanticValue,
   });
 
   final IconData icon;
@@ -57,6 +60,20 @@ class TxnFieldRow extends StatelessWidget {
 
   final VoidCallback? onTap;
 
+  /// The Note row drops its label so the note itself gets the full width
+  /// (spec §3): the icon already says what the row is, and a label side-by-side
+  /// would leave prose ~25 characters. Only the Note row sets this.
+  final bool hideLabel;
+
+  /// How many lines the value may occupy before it ellipsises. 1 everywhere but
+  /// the Note row, which is allowed two (spec §3 — two is the ceiling).
+  final int valueMaxLines;
+
+  /// The value announced to a screen reader, in full and untruncated — the Note
+  /// row's preview is clipped, but assistive tech must read the whole note
+  /// (spec §5). Null falls back to the visible value.
+  final String? semanticValue;
+
   @override
   Widget build(BuildContext context) {
     final s = formScale(context);
@@ -64,6 +81,67 @@ class TxnFieldRow extends StatelessWidget {
     final readOnly = onTap == null;
     final filled = value != null;
     final shown = value ?? emptyText ?? '';
+
+    // Note row: no label, note fills the width (left-aligned) across up to two
+    // lines, and the row grows past 48px to fit the second line. Kept in this
+    // one widget so it shares the icon column, gap and chevron metrics with its
+    // Date/Tags siblings and the list rhythm cannot drift.
+    if (hideLabel) {
+      final noteRow = ConstrainedBox(
+        constraints: BoxConstraints(minHeight: 48 * s),
+        child: Padding(
+          padding: EdgeInsets.symmetric(
+            horizontal: kRowPadding * s,
+            vertical: 15 * s,
+          ),
+          child: Row(
+            children: [
+              SizedBox(
+                width: kIconColumn * s,
+                child: Icon(icon, size: 18 * s, color: AppColors.formDim2),
+              ),
+              SizedBox(width: kIconGap * s),
+              Expanded(
+                child: Text(
+                  shown,
+                  maxLines: valueMaxLines,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 15 * s * t,
+                    fontWeight: FontWeight.w400,
+                    height: 1.2,
+                    color: filled
+                        ? (valueColor ?? AppColors.textPrimary)
+                        : AppColors.formDim2,
+                  ),
+                ),
+              ),
+              if (!readOnly) ...[
+                SizedBox(width: 5 * s),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  size: 17 * s,
+                  color: AppColors.formChevron,
+                ),
+              ],
+            ],
+          ),
+        ),
+      );
+      final tappable = readOnly
+          ? noteRow
+          : InkWell(
+              onTap: onTap,
+              borderRadius: BorderRadius.circular(14 * s),
+              child: noteRow,
+            );
+      return Semantics(
+        button: !readOnly,
+        label: semanticValue ?? shown,
+        excludeSemantics: true,
+        child: tappable,
+      );
+    }
 
     final row = SizedBox(
       height: 48 * s,

@@ -3784,11 +3784,11 @@ abstract class AppLocalizations {
   /// **'Add a note'**
   String get qaAddNote;
 
-  /// No description provided for @qaOptional.
+  /// No description provided for @qaNotePlaceholder.
   ///
   /// In en, this message translates to:
-  /// **'Optional'**
-  String get qaOptional;
+  /// **'What was this for?'**
+  String get qaNotePlaceholder;
 
   /// No description provided for @qaSplit.
   ///

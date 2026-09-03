@@ -2532,7 +2532,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get qaAddNote => 'Добавить заметку';
 
   @override
-  String get qaOptional => 'Необязательно';
+  String get qaNotePlaceholder => 'Для чего это было?';
 
   @override
   String get qaSplit => 'Разбить';

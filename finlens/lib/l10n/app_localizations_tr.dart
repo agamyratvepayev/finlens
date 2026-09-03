@@ -2466,7 +2466,7 @@ class AppLocalizationsTr extends AppLocalizations {
   String get qaAddNote => 'Not ekle';
 
   @override
-  String get qaOptional => 'İsteğe bağlı';
+  String get qaNotePlaceholder => 'Ne içindi?';
 
   @override
   String get qaSplit => 'Böl';

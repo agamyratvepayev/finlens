@@ -19,6 +19,9 @@ class FieldSpec {
     this.valueColor,
     this.onTap,
     this.flashId,
+    this.hideLabel = false,
+    this.valueMaxLines = 1,
+    this.semanticValue,
   });
 
   final IconData icon;
@@ -31,6 +34,12 @@ class FieldSpec {
   /// Ties this row to a [Blocker.flashId] so an incomplete Save can flash it
   /// (spec §3). Null for rows that are never a validation target.
   final String? flashId;
+
+  /// The Note row hides its label, allows the value two lines, and announces
+  /// the full note (spec §3, §5). Every other field leaves these at defaults.
+  final bool hideLabel;
+  final int valueMaxLines;
+  final String? semanticValue;
 }
 
 /// The hero card's content: a number the keypad drives, or free text.
@@ -301,6 +310,9 @@ class TransactionFormShell extends StatelessWidget {
                       ? AppColors.negative
                       : f.valueColor,
                   onTap: f.onTap,
+                  hideLabel: f.hideLabel,
+                  valueMaxLines: f.valueMaxLines,
+                  semanticValue: f.semanticValue,
                 ),
               ),
           ],

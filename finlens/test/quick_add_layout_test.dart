@@ -78,12 +78,14 @@ void main() {
       return box.right;
     }
 
-    // The ruler test: the five values share one x, whatever their length.
+    // The ruler test: the values share one x, whatever their length. The Note
+    // row is deliberately exempt — it drops its label and left-aligns the note
+    // across the full width (see quick_add_note_test.dart), so it neither shares
+    // this right edge nor carries a label.
     final edges = [
       rightEdgeOf('Choose account'),
       rightEdgeOf('Choose category'),
       rightEdgeOf('None'),
-      rightEdgeOf('Add a note'),
     ];
     for (final e in edges) {
       expect(e, closeTo(edges.first, 0.5));
@@ -94,7 +96,6 @@ void main() {
       tester.getRect(find.text('From')).left,
       tester.getRect(find.text('To')).left,
       tester.getRect(find.text('Tag')).left,
-      tester.getRect(find.text('Note')).left,
     ];
     for (final l in labelLefts) {
       expect(l, closeTo(labelLefts.first, 0.5));

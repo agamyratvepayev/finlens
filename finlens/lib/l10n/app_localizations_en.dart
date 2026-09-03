@@ -2477,7 +2477,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get qaAddNote => 'Add a note';
 
   @override
-  String get qaOptional => 'Optional';
+  String get qaNotePlaceholder => 'What was this for?';
 
   @override
   String get qaSplit => 'Split';

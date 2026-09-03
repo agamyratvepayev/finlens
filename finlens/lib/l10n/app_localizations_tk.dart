@@ -2465,7 +2465,7 @@ class AppLocalizationsTk extends AppLocalizations {
   String get qaAddNote => 'Bellik goş';
 
   @override
-  String get qaOptional => 'Islege bagly';
+  String get qaNotePlaceholder => 'Bu näme üçindi?';
 
   @override
   String get qaSplit => 'Böl';

@@ -661,7 +661,7 @@
   "qaNone": "Yok",
   "qaNote": "Not",
   "qaAddNote": "Not ekle",
-  "qaOptional": "İsteğe bağlı",
+  "qaNotePlaceholder": "Ne içindi?",
   "qaSplit": "Böl",
   "qaSplitCategories": "{count} kategori",
   "qaGroupRequired": "Gerekli",
