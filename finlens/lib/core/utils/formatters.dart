@@ -11,19 +11,83 @@
 library;
 
 import '../../l10n/app_localizations.dart';
-
-const _symbols = <String, String>{
-  'USD': r'$',
-  'EUR': '€',
-  'TRY': '₺',
-  'TMT': 'm', // Turkmen manat
-  'GBP': '£',
-  'JPY': '¥',
-};
+import '../models/currency_def.dart';
 
 const _minus = '−';
 
-String currencySymbol(String code) => _symbols[code] ?? '$code ';
+/// The token placed *before* an amount by the legacy prefix path: a bare symbol
+/// (`$`, `€`, `m`) when the currency has one, else the code plus a trailing
+/// space (`CHF `) so a code prefix never runs into the digits. Built-in symbols
+/// are unchanged from the old hard-coded map; unknown codes keep the `'$code '`
+/// fallback. Custom currencies never reach here — [money] formats them through
+/// their own metadata-driven branch.
+String currencySymbol(String code) {
+  final def = currencyDef(code);
+  return def.tokenIsSymbol ? def.symbol! : '$code ';
+}
+
+/// Formats a custom currency from its [CurrencyDef] metadata (spec §7a): fixed
+/// decimal places, and a token whose side ([symbolBefore]) and spacing (symbol
+/// flush, code spaced) follow the currency's own rules rather than the app's
+/// value-driven defaults. Kept separate so built-in currencies stay byte-for-
+/// byte identical to the legacy formatter that the direction/sign tests protect.
+String _moneyCustom(
+  double value,
+  CurrencyDef def, {
+  required bool showSign,
+  required bool masked,
+  required bool signless,
+  required bool roundUp,
+  required bool noDecimals,
+}) {
+  final negative = value < 0;
+  var abs = value.abs();
+  if (roundUp) abs = abs.ceilToDouble();
+  final decimals = (noDecimals || roundUp) ? 0 : def.decimals;
+
+  String number;
+  if (masked) {
+    number = '••••';
+  } else {
+    final factor = decimals == 0 ? 1 : _pow10(decimals);
+    final rounded = decimals == 0 ? abs.roundToDouble() : abs;
+    final whole = _group(rounded.truncate().toString());
+    number = decimals == 0
+        ? whole
+        : '$whole.${(rounded * factor).round().remainder(factor).toString().padLeft(decimals, '0')}';
+  }
+
+  final sign = signless ? '' : (negative ? _minus : (showSign ? '+' : ''));
+  // Spacing depends on the token, not the position: a symbol hugs the number, a
+  // code is spaced from it (spec §7a).
+  final token = def.token;
+  final gap = def.tokenIsSymbol ? '' : ' ';
+  return def.symbolBefore
+      ? '$sign$token$gap$number'
+      : '$sign$number$gap$token';
+}
+
+int _pow10(int n) {
+  var r = 1;
+  for (var i = 0; i < n; i++) {
+    r *= 10;
+  }
+  return r;
+}
+
+/// Formats [value] using an arbitrary [def] **without** registering it — the
+/// live `Preview` row in the Add-currency sheet (spec §7a), where the currency
+/// does not exist yet. Shares the metadata-driven path so the preview is exactly
+/// what the currency will render once saved.
+String formatCurrencyExample(CurrencyDef def, double value) => _moneyCustom(
+      value,
+      def,
+      showSign: false,
+      masked: false,
+      signless: false,
+      roundUp: false,
+      noDecimals: false,
+    );
 
 String _group(String digits) {
   final buf = StringBuffer();
@@ -52,6 +116,19 @@ String money(
   bool roundUp = false,
   bool noDecimals = false,
 }) {
+  // Custom currencies carry their own placement/spacing/decimal rules (spec
+  // §7a); built-ins fall through to the legacy value-driven formatter below,
+  // unchanged, so the sign/direction tests still hold.
+  final custom = customCurrencyDef(currency);
+  if (custom != null) {
+    return _moneyCustom(value, custom,
+        showSign: showSign,
+        masked: masked,
+        signless: signless,
+        roundUp: roundUp,
+        noDecimals: noDecimals);
+  }
+
   final symbol = currencySymbol(currency);
   if (masked) return '$symbol••••';
 

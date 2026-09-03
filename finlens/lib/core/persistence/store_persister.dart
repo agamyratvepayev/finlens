@@ -47,6 +47,7 @@ class StorePersister {
     final tagRows = await database.readAll(LocalDatabase.tagsTable);
     final goalRows = await database.readAll(LocalDatabase.goalsTable);
     final taskRows = await database.readAll(LocalDatabase.tasksTable);
+    final currencyRows = await database.readAll(LocalDatabase.currenciesTable);
 
     final isEmpty = accountRows.isEmpty &&
         categoryRows.isEmpty &&
@@ -69,6 +70,7 @@ class StorePersister {
       goals: goalRows.map(goalFromMap).toList(),
       tasks: taskRows.map(taskFromMap).toList(),
       tags: tagRows.map(tagFromMap).toList(),
+      customCurrencies: currencyRows.map(currencyDefFromMap).toList(),
       idSeq: int.tryParse(meta['id_seq'] ?? ''),
       tagSchema: int.tryParse(meta['tag_schema'] ?? ''),
       budgetHistorySince:
@@ -147,6 +149,8 @@ class StorePersister {
     final tags = _store.snapshotTags.map(tagToMap).toList();
     final goals = _store.snapshotGoals.map(goalToMap).toList();
     final tasks = _store.snapshotTasks.map(taskToMap).toList();
+    final currencies =
+        _store.snapshotCustomCurrencies.map(currencyDefToMap).toList();
 
     await _database.db.transaction((txn) async {
       final batch = txn.batch();
@@ -172,6 +176,9 @@ class StorePersister {
       }
       for (final row in tasks) {
         batch.insert(LocalDatabase.tasksTable, row);
+      }
+      for (final row in currencies) {
+        batch.insert(LocalDatabase.currenciesTable, row);
       }
 
       for (final entry in _metaRows().entries) {

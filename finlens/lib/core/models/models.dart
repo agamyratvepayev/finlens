@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'enums.dart';
 
 export 'enums.dart';
+export 'currency_def.dart';
 
 /// Spec 6.1 — Account.
 ///
@@ -30,6 +31,8 @@ class Account {
     this.archived = false,
     this.countAsSpendable = true,
     this.icon,
+    this.emoji,
+    this.colorValue,
     this.openedOn,
     this.openingDate,
   });
@@ -53,6 +56,19 @@ class Account {
   bool countAsSpendable;
   IconData? icon;
 
+  /// An emoji chosen in the icon picker's Emoji tab (spec §7b). When set it is
+  /// the account's glyph, drawn on a tile tinted with [color]; the emoji keeps
+  /// its own colours. Mutually exclusive with a deliberately-chosen [icon] —
+  /// picking one clears the other at the call site.
+  String? emoji;
+
+  /// A colour the user picked freely in the icon picker (spec §7b), stored as an
+  /// ARGB int. Null means "follow the type", so [color] falls back to
+  /// [group]'s colour — the app's long-standing default. The account's type
+  /// stays legible regardless: Balance conveys it through its group heading, not
+  /// this colour.
+  int? colorValue;
+
   /// When the account started existing. null means "always" — seed accounts
   /// predate the ledger, so they show on any reporting date.
   final DateTime? openedOn;
@@ -63,7 +79,16 @@ class Account {
   DateTime? openingDate;
 
   IconData get displayIcon => icon ?? group.icon;
-  Color get color => group.color;
+
+  /// The account's own colour: a freely-chosen [colorValue] when set, else the
+  /// type's colour (spec §7b). Callers that draw the account's glyph tile pick
+  /// this up automatically; the type dot in the New-account form still shows
+  /// `group.color` so the type reads true.
+  Color? get customColor => colorValue == null ? null : Color(colorValue!);
+  Color get color => customColor ?? group.color;
+
+  /// True when the glyph should render as an emoji rather than an [IconData].
+  bool get hasEmoji => emoji != null && emoji!.isNotEmpty;
   bool get isAsset => group.isAsset;
   bool get isLiability => group.isLiability;
 
@@ -97,6 +122,8 @@ class Account {
       archived: archived ?? this.archived,
       countAsSpendable: countAsSpendable ?? this.countAsSpendable,
       icon: icon,
+      emoji: emoji,
+      colorValue: colorValue,
       openedOn: openedOn,
       openingDate: openingDate,
     );

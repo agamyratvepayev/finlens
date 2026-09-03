@@ -268,14 +268,124 @@ List<IconData> iconSuggestionsFor(AccountGroup group) {
 /// The default glyph chosen the instant a group is picked (spec §5.5).
 IconData defaultIconFor(AccountGroup group) => iconSuggestionsFor(group).first;
 
-/// Filters the catalog by a folded, locale-insensitive match on the icon name
-/// and its keywords, so `araba` and `car` both surface the car (spec §5.6).
+/// Best-effort Russian + Turkmen search terms for the catalog, keyed by the
+/// entry's English [AccountIconEntry.name] (spec §7b; user-approved). Kept apart
+/// from the inline en+tr keywords so this four-language addition is reviewable in
+/// one place and easy to hand to a native reviewer. Folded into
+/// [searchAccountIcons] at query time. Turkmen borrows Turkish where the two
+/// coincide (they often do); flagged as approximate.
+const Map<String, List<String>> _ruTkIconTerms = {
+  'Bank': ['банк', 'bank'],
+  'Wallet': ['кошелёк', 'gapjyk'],
+  'Cash': ['наличные', 'nagt'],
+  'Money': ['деньги', 'pul'],
+  'Piggy bank': ['копилка', 'gazna'],
+  'Purse': ['кошелёк', 'gapjyk'],
+  'Banknote': ['банкнота', 'pul'],
+  'Exchange': ['обмен', 'çalyşma', 'kurs'],
+  'ATM': ['банкомат', 'bankomat'],
+  'Credit card': ['карта', 'kart'],
+  'Credit score': ['кредит', 'karz'],
+  'Membership': ['членство', 'agzalyk'],
+  'Gift card': ['подарок', 'sowgat'],
+  'Payment': ['оплата', 'töleg'],
+  'Cash card': ['карта', 'kart'],
+  'Contactless': ['бесконтакт', 'galtaşyksyz'],
+  'Work': ['работа', 'iş'],
+  'Briefcase': ['портфель', 'sumka'],
+  'Badge': ['пропуск', 'şahsyýetnama'],
+  'Freelance': ['фриланс', 'kompýuter'],
+  'Deal': ['сделка', 'ylalaşyk'],
+  'Invoice': ['счёт', 'hasap'],
+  'Receipt': ['чек', 'kwitansiýa'],
+  'Raise': ['доход', 'girdeji'],
+  'People': ['люди', 'adamlar', 'maşgala'],
+  'Person': ['человек', 'adam'],
+  'Home': ['дом', 'öý'],
+  'Rent': ['аренда', 'kärende', 'kira'],
+  'Apartment': ['квартира', 'jaý'],
+  'Electricity': ['электричество', 'elektrik'],
+  'Water': ['вода', 'suw'],
+  'Gas': ['газ', 'gaz'],
+  'Internet': ['интернет', 'internet'],
+  'Phone': ['телефон', 'telefon'],
+  'Cleaning': ['уборка', 'arassaçylyk'],
+  'Furniture': ['мебель', 'mebel'],
+  'Car': ['машина', 'awtoulag', 'ulag'],
+  'Auto loan': ['автокредит', 'ulag karzy'],
+  'Fuel': ['бензин', 'ýangyç'],
+  'Bus': ['автобус', 'awtobus'],
+  'Train': ['поезд', 'otly'],
+  'Taxi': ['такси', 'taksi'],
+  'Motorbike': ['мотоцикл', 'motosikl'],
+  'Bike': ['велосипед', 'welosiped'],
+  'Flight': ['самолёт', 'uçar', 'uçuş'],
+  'Groceries': ['продукты', 'bazar'],
+  'Shopping': ['покупки', 'söwda'],
+  'Basket': ['корзина', 'sebet'],
+  'Mall': ['магазин', 'dükan'],
+  'Restaurant': ['ресторан', 'restoran', 'nahar'],
+  'Cafe': ['кафе', 'kafe', 'kofe'],
+  'Fast food': ['фастфуд', 'çalt nahar'],
+  'Store': ['магазин', 'dükan'],
+  'Drinks': ['напитки', 'içgi'],
+  'Health': ['здоровье', 'saglyk'],
+  'Hospital': ['больница', 'keselhana'],
+  'Doctor': ['врач', 'lukman'],
+  'Pharmacy': ['аптека', 'derman'],
+  'Gym': ['спортзал', 'sport'],
+  'Wellness': ['спа', 'dynç'],
+  'Personal': ['личное', 'şahsy'],
+  'School': ['школа', 'mekdep', 'okuw'],
+  'Books': ['книги', 'kitap'],
+  'Science': ['наука', 'ylym'],
+  'Course': ['курс', 'kurs'],
+  'Study': ['учёба', 'okuw'],
+  'Diploma': ['диплом', 'diplom'],
+  'Vacation': ['отпуск', 'dynç alyş', 'plaj'],
+  'Luggage': ['багаж', 'ýük'],
+  'Hotel': ['отель', 'myhmanhana'],
+  'Trip': ['поездка', 'syýahat'],
+  'Games': ['игры', 'oýun'],
+  'Cinema': ['кино', 'kino', 'film'],
+  'Music': ['музыка', 'saz'],
+  'Party': ['вечеринка', 'baýramçylyk'],
+  'Growth': ['рост', 'ösüş'],
+  'Stocks': ['акции', 'paýlar', 'birža'],
+  'Trading': ['трейдинг', 'söwda'],
+  'Portfolio': ['портфель', 'portfel'],
+  'Crypto': ['крипто', 'kripto'],
+  'Gold': ['золото', 'altyn'],
+  'Pension': ['пенсия', 'pensiýa'],
+  'Fund': ['фонд', 'gazna'],
+  'Property': ['недвижимость', 'emläk'],
+  'Jewellery': ['украшения', 'şaý-sepler'],
+  'Watch': ['часы', 'sagat'],
+  'Electronics': ['электроника', 'elektronika'],
+  'Assets': ['имущество', 'emläk'],
+  'Land': ['земля', 'ýer'],
+  'Boat': ['лодка', 'gämi'],
+  'Camera': ['камера', 'kamera'],
+  'General': ['общее', 'umumy', 'başga'],
+  'Star': ['звезда', 'ýyldyz'],
+  'Pets': ['питомец', 'öý haýwany'],
+  'Kids': ['дети', 'çagalar'],
+  'Charity': ['благотворительность', 'haýyr-sahawat'],
+  'Gift': ['подарок', 'sowgat'],
+  'Goal': ['цель', 'maksat'],
+  'Idea': ['идея', 'pikir'],
+};
+
+/// Filters the catalog by a folded, locale-insensitive match on the icon name,
+/// its inline en+tr keywords, and the supplementary ru+tk terms, so `araba`,
+/// `car`, `машина` and `awtoulag` all surface the car (spec §5.6 / §7b).
 List<AccountIconEntry> searchAccountIcons(String query) {
   final q = foldSearch(query.trim());
   final out = <AccountIconEntry>[];
   for (final entries in accountIconGroups.values) {
     for (final e in entries) {
-      final hay = foldSearch([e.name, ...e.keywords].join(' '));
+      final extra = _ruTkIconTerms[e.name] ?? const [];
+      final hay = foldSearch([e.name, ...e.keywords, ...extra].join(' '));
       if (q.isEmpty || hay.contains(q)) out.add(e);
     }
   }

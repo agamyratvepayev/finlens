@@ -156,6 +156,192 @@ abstract class AppLocalizations {
   /// **'Bank Loans'**
   String get accountGroupBankLoans;
 
+  /// No description provided for @accountGroupSpendableDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Current account, cash, your debit card'**
+  String get accountGroupSpendableDesc;
+
+  /// No description provided for @accountGroupSetAsideDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Savings you don\'t plan to spend yet'**
+  String get accountGroupSetAsideDesc;
+
+  /// No description provided for @accountGroupReceivablesDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Money someone owes and will pay back'**
+  String get accountGroupReceivablesDesc;
+
+  /// No description provided for @accountGroupInvestmentsDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Stocks, funds, crypto, a pension pot'**
+  String get accountGroupInvestmentsDesc;
+
+  /// No description provided for @accountGroupValuablesDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'A car, gold, property you could sell'**
+  String get accountGroupValuablesDesc;
+
+  /// No description provided for @accountGroupCreditCardsDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Cards you spend on and repay later'**
+  String get accountGroupCreditCardsDesc;
+
+  /// No description provided for @accountGroupPayablesDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Bills and debts you haven\'t paid yet'**
+  String get accountGroupPayablesDesc;
+
+  /// No description provided for @accountGroupBankLoansDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'A mortgage, car loan or student loan'**
+  String get accountGroupBankLoansDesc;
+
+  /// No description provided for @naType.
+  ///
+  /// In en, this message translates to:
+  /// **'Type'**
+  String get naType;
+
+  /// No description provided for @naRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'REQUIRED'**
+  String get naRequired;
+
+  /// No description provided for @naAccountType.
+  ///
+  /// In en, this message translates to:
+  /// **'Account type'**
+  String get naAccountType;
+
+  /// No description provided for @curSearch.
+  ///
+  /// In en, this message translates to:
+  /// **'Search currencies'**
+  String get curSearch;
+
+  /// No description provided for @curRecent.
+  ///
+  /// In en, this message translates to:
+  /// **'RECENT'**
+  String get curRecent;
+
+  /// No description provided for @curAll.
+  ///
+  /// In en, this message translates to:
+  /// **'ALL CURRENCIES'**
+  String get curAll;
+
+  /// No description provided for @curAdd.
+  ///
+  /// In en, this message translates to:
+  /// **'Add'**
+  String get curAdd;
+
+  /// No description provided for @curAddTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a currency'**
+  String get curAddTitle;
+
+  /// No description provided for @curCode.
+  ///
+  /// In en, this message translates to:
+  /// **'Code'**
+  String get curCode;
+
+  /// No description provided for @curName.
+  ///
+  /// In en, this message translates to:
+  /// **'Name'**
+  String get curName;
+
+  /// No description provided for @curSymbolOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Symbol · optional'**
+  String get curSymbolOptional;
+
+  /// No description provided for @curBeforeAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Before amount'**
+  String get curBeforeAmount;
+
+  /// No description provided for @curDecimals.
+  ///
+  /// In en, this message translates to:
+  /// **'Decimal places'**
+  String get curDecimals;
+
+  /// No description provided for @curPreview.
+  ///
+  /// In en, this message translates to:
+  /// **'Preview'**
+  String get curPreview;
+
+  /// No description provided for @curAddButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Add currency'**
+  String get curAddButton;
+
+  /// No description provided for @curInert.
+  ///
+  /// In en, this message translates to:
+  /// **'Used only in this app. No exchange rate is applied.'**
+  String get curInert;
+
+  /// No description provided for @curCodeExists.
+  ///
+  /// In en, this message translates to:
+  /// **'This code is already in use.'**
+  String get curCodeExists;
+
+  /// No description provided for @curNoMatch.
+  ///
+  /// In en, this message translates to:
+  /// **'No currency matches \"{query}\".'**
+  String curNoMatch(Object query);
+
+  /// No description provided for @qaBackgroundColour.
+  ///
+  /// In en, this message translates to:
+  /// **'Background colour'**
+  String get qaBackgroundColour;
+
+  /// No description provided for @qaIconsTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Icons'**
+  String get qaIconsTab;
+
+  /// No description provided for @qaEmojiTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Emoji'**
+  String get qaEmojiTab;
+
+  /// No description provided for @qaSearchEmoji.
+  ///
+  /// In en, this message translates to:
+  /// **'Search emoji'**
+  String get qaSearchEmoji;
+
+  /// No description provided for @qaNoEmojiMatch.
+  ///
+  /// In en, this message translates to:
+  /// **'No emoji match'**
+  String get qaNoEmojiMatch;
+
   /// No description provided for @quickAddExpense.
   ///
   /// In en, this message translates to:

@@ -178,7 +178,7 @@ class _EditCategoryScreenState extends State<EditCategoryScreen> {
 
   Future<void> _pickIcon() async {
     final picked =
-        await showIconPicker(context, color: _color, selected: _icon);
+        await showCategoryIconPicker(context, color: _color, selected: _icon);
     if (picked != null) setState(() => _icon = picked);
   }
 

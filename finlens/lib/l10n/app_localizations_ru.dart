@@ -36,6 +36,107 @@ class AppLocalizationsRu extends AppLocalizations {
   String get accountGroupBankLoans => 'Банковские кредиты';
 
   @override
+  String get accountGroupSpendableDesc =>
+      'Текущий счёт, наличные, дебетовая карта';
+
+  @override
+  String get accountGroupSetAsideDesc => 'Сбережения, которые пока не тратите';
+
+  @override
+  String get accountGroupReceivablesDesc =>
+      'Деньги, которые вам должны и вернут';
+
+  @override
+  String get accountGroupInvestmentsDesc => 'Акции, фонды, крипта, пенсия';
+
+  @override
+  String get accountGroupValuablesDesc =>
+      'Машина, золото, недвижимость на продажу';
+
+  @override
+  String get accountGroupCreditCardsDesc =>
+      'Карты, которыми платите и потом гасите';
+
+  @override
+  String get accountGroupPayablesDesc =>
+      'Счета и долги, которые ещё не оплатили';
+
+  @override
+  String get accountGroupBankLoansDesc => 'Ипотека, автокредит или на учёбу';
+
+  @override
+  String get naType => 'Тип';
+
+  @override
+  String get naRequired => 'ОБЯЗАТЕЛЬНО';
+
+  @override
+  String get naAccountType => 'Тип счёта';
+
+  @override
+  String get curSearch => 'Поиск валют';
+
+  @override
+  String get curRecent => 'НЕДАВНИЕ';
+
+  @override
+  String get curAll => 'ВСЕ ВАЛЮТЫ';
+
+  @override
+  String get curAdd => 'Добавить';
+
+  @override
+  String get curAddTitle => 'Добавить валюту';
+
+  @override
+  String get curCode => 'Код';
+
+  @override
+  String get curName => 'Название';
+
+  @override
+  String get curSymbolOptional => 'Символ · необязательно';
+
+  @override
+  String get curBeforeAmount => 'Перед суммой';
+
+  @override
+  String get curDecimals => 'Знаков после запятой';
+
+  @override
+  String get curPreview => 'Предпросмотр';
+
+  @override
+  String get curAddButton => 'Добавить валюту';
+
+  @override
+  String get curInert =>
+      'Используется только в этом приложении. Курс не применяется.';
+
+  @override
+  String get curCodeExists => 'Этот код уже используется.';
+
+  @override
+  String curNoMatch(Object query) {
+    return 'Нет валют по запросу «$query».';
+  }
+
+  @override
+  String get qaBackgroundColour => 'Цвет фона';
+
+  @override
+  String get qaIconsTab => 'Значки';
+
+  @override
+  String get qaEmojiTab => 'Эмодзи';
+
+  @override
+  String get qaSearchEmoji => 'Поиск эмодзи';
+
+  @override
+  String get qaNoEmojiMatch => 'Ничего не найдено';
+
+  @override
   String get quickAddExpense => 'Расход';
 
   @override

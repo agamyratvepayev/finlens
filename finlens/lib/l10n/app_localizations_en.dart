@@ -36,6 +36,108 @@ class AppLocalizationsEn extends AppLocalizations {
   String get accountGroupBankLoans => 'Bank Loans';
 
   @override
+  String get accountGroupSpendableDesc =>
+      'Current account, cash, your debit card';
+
+  @override
+  String get accountGroupSetAsideDesc => 'Savings you don\'t plan to spend yet';
+
+  @override
+  String get accountGroupReceivablesDesc =>
+      'Money someone owes and will pay back';
+
+  @override
+  String get accountGroupInvestmentsDesc =>
+      'Stocks, funds, crypto, a pension pot';
+
+  @override
+  String get accountGroupValuablesDesc =>
+      'A car, gold, property you could sell';
+
+  @override
+  String get accountGroupCreditCardsDesc =>
+      'Cards you spend on and repay later';
+
+  @override
+  String get accountGroupPayablesDesc =>
+      'Bills and debts you haven\'t paid yet';
+
+  @override
+  String get accountGroupBankLoansDesc =>
+      'A mortgage, car loan or student loan';
+
+  @override
+  String get naType => 'Type';
+
+  @override
+  String get naRequired => 'REQUIRED';
+
+  @override
+  String get naAccountType => 'Account type';
+
+  @override
+  String get curSearch => 'Search currencies';
+
+  @override
+  String get curRecent => 'RECENT';
+
+  @override
+  String get curAll => 'ALL CURRENCIES';
+
+  @override
+  String get curAdd => 'Add';
+
+  @override
+  String get curAddTitle => 'Add a currency';
+
+  @override
+  String get curCode => 'Code';
+
+  @override
+  String get curName => 'Name';
+
+  @override
+  String get curSymbolOptional => 'Symbol · optional';
+
+  @override
+  String get curBeforeAmount => 'Before amount';
+
+  @override
+  String get curDecimals => 'Decimal places';
+
+  @override
+  String get curPreview => 'Preview';
+
+  @override
+  String get curAddButton => 'Add currency';
+
+  @override
+  String get curInert => 'Used only in this app. No exchange rate is applied.';
+
+  @override
+  String get curCodeExists => 'This code is already in use.';
+
+  @override
+  String curNoMatch(Object query) {
+    return 'No currency matches \"$query\".';
+  }
+
+  @override
+  String get qaBackgroundColour => 'Background colour';
+
+  @override
+  String get qaIconsTab => 'Icons';
+
+  @override
+  String get qaEmojiTab => 'Emoji';
+
+  @override
+  String get qaSearchEmoji => 'Search emoji';
+
+  @override
+  String get qaNoEmojiMatch => 'No emoji match';
+
+  @override
   String get quickAddExpense => 'Expense';
 
   @override

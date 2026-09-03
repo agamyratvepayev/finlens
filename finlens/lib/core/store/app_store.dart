@@ -26,6 +26,7 @@ class AppStore extends ChangeNotifier {
     required List<Goal> goals,
     required List<Task> tasks,
     List<Tag> tags = const [],
+    List<CurrencyDef> customCurrencies = const [],
     DateTime? budgetHistorySince,
     int? idSeq,
     int? tagSchema,
@@ -35,6 +36,7 @@ class AppStore extends ChangeNotifier {
         _goals = List.of(goals),
         _tasks = List.of(tasks),
         _tags = List.of(tags),
+        _customCurrencies = List.of(customCurrencies),
         // Budget-detail CHANGES records forward-only: the day this store first
         // ran with the feature. A persistence layer would pass its stored value
         // so the footnote never moves; absent one (this app resets every launch),
@@ -56,6 +58,8 @@ class AppStore extends ChangeNotifier {
     _pruneOrphanGoals();
     _seedGoalHistory();
     _syncGoalLatches();
+    // Make any restored custom currencies formattable app-wide immediately.
+    setCustomCurrencies(_customCurrencies);
   }
 
   /// An empty store — the first-run state before anything has been persisted.
@@ -171,6 +175,12 @@ class AppStore extends ChangeNotifier {
   final List<Task> _tasks;
   final List<Tag> _tags;
 
+  /// User-defined currencies (spec §7a). Display metadata only — no rate is
+  /// stored or applied (§10). Registered into the module-global currency catalog
+  /// on construction and on every mutation so the dependency-free [money]
+  /// formatter can render them anywhere without reaching the store.
+  final List<CurrencyDef> _customCurrencies;
+
   /// Remembers a task's status just before it was archived (deleted), so Archive
   /// > Undo can restore `open` or `paused` (§9). In-memory only — like every
   /// other piece of view/undo state, it does not survive a relaunch.
@@ -190,6 +200,8 @@ class AppStore extends ChangeNotifier {
   List<Goal> get snapshotGoals => List.unmodifiable(_goals);
   List<Task> get snapshotTasks => List.unmodifiable(_tasks);
   List<Tag> get snapshotTags => List.unmodifiable(_tags);
+  List<CurrencyDef> get snapshotCustomCurrencies =>
+      List.unmodifiable(_customCurrencies);
 
   /// The id counter to persist and restore across launches (see the constructor).
   int get idSeq => _idSeq;
@@ -2394,6 +2406,12 @@ class AppStore extends ChangeNotifier {
     _tags
       ..clear()
       ..addAll(source._tags);
+    _customCurrencies
+      ..clear()
+      ..addAll(source._customCurrencies);
+    // Adopt the restored custom currencies into the global catalog so a Restore
+    // makes them formattable immediately (spec §7a round-trip).
+    setCustomCurrencies(_customCurrencies);
     // The source store already ran [_migrateTags] in its own constructor; adopt
     // its schema so this store does not re-migrate already-reified ids.
     _tagSchema = source._tagSchema;
@@ -2423,6 +2441,31 @@ class AppStore extends ChangeNotifier {
     return current;
   }
 
+  // ── Currencies (user-defined) ─────────────────────────────────────────────
+
+  /// The currency codes already in use across the user's accounts, most-recent
+  /// first — the `RECENT` group in the currency picker (spec §6). Recency is
+  /// approximated by reverse account order (newer accounts sit later in the
+  /// list). Returns an empty list when nothing has been chosen yet, so the
+  /// caller can omit the group entirely.
+  List<String> get recentCurrencyCodes {
+    final seen = <String>{};
+    final out = <String>[];
+    for (final a in _accounts.reversed) {
+      if (seen.add(a.currency)) out.add(a.currency);
+    }
+    return out;
+  }
+
+  /// Adds a user-defined currency (spec §7a) and re-registers the catalog so it
+  /// formats everywhere at once. The caller is responsible for the duplicate-code
+  /// guard ([currencyCodeExists]); this assumes a fresh, upper-cased code.
+  void addCustomCurrency(CurrencyDef def) {
+    _customCurrencies.add(def.copyWith(custom: true));
+    setCustomCurrencies(_customCurrencies);
+    notifyListeners();
+  }
+
   // ── Mutations: accounts ───────────────────────────────────────────────────
 
   Account addAccount({
@@ -2434,6 +2477,8 @@ class AppStore extends ChangeNotifier {
     int? paymentDue,
     bool countAsSpendable = true,
     IconData? icon,
+    String? emoji,
+    int? colorValue,
   }) {
     // Liabilities are held as negative balances throughout the app.
     final signed = group.isLiability
@@ -2449,6 +2494,8 @@ class AppStore extends ChangeNotifier {
       paymentDue: paymentDue,
       countAsSpendable: countAsSpendable,
       icon: icon,
+      emoji: emoji,
+      colorValue: colorValue,
       openedOn: today,
       // A new account's history begins the day it is created, so its opening
       // receipt is filed under today (spec §9 "Account created today").

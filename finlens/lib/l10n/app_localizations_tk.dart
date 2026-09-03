@@ -36,6 +36,105 @@ class AppLocalizationsTk extends AppLocalizations {
   String get accountGroupBankLoans => 'Bank karzlary';
 
   @override
+  String get accountGroupSpendableDesc => 'Talap hasaby, nagt, debet kartyňyz';
+
+  @override
+  String get accountGroupSetAsideDesc =>
+      'Häzirlikçe harçlamajak süýşürintgiňiz';
+
+  @override
+  String get accountGroupReceivablesDesc =>
+      'Biriniň size bergisi, yzyna berjek puly';
+
+  @override
+  String get accountGroupInvestmentsDesc => 'Paýlar, gaznalar, kripto, pensiýa';
+
+  @override
+  String get accountGroupValuablesDesc => 'Awtoulag, altyn, satyp boljak emläk';
+
+  @override
+  String get accountGroupCreditCardsDesc => 'Harçlap soň töleýän kartlaryňyz';
+
+  @override
+  String get accountGroupPayablesDesc =>
+      'Entek tölenmedik hasaplar we bergiler';
+
+  @override
+  String get accountGroupBankLoansDesc => 'Öý, ulag ýa-da okuw karzy';
+
+  @override
+  String get naType => 'Görnüş';
+
+  @override
+  String get naRequired => 'HÖKMANY';
+
+  @override
+  String get naAccountType => 'Hasap görnüşi';
+
+  @override
+  String get curSearch => 'Pul birligini gözle';
+
+  @override
+  String get curRecent => 'SOŇKY';
+
+  @override
+  String get curAll => 'ÄHLI PUL BIRLIKLERI';
+
+  @override
+  String get curAdd => 'Goş';
+
+  @override
+  String get curAddTitle => 'Pul birligini goş';
+
+  @override
+  String get curCode => 'Kod';
+
+  @override
+  String get curName => 'At';
+
+  @override
+  String get curSymbolOptional => 'Nyşan · islege bagly';
+
+  @override
+  String get curBeforeAmount => 'Möçberden öň';
+
+  @override
+  String get curDecimals => 'Ondalyk orun';
+
+  @override
+  String get curPreview => 'Deslapdan görnüş';
+
+  @override
+  String get curAddButton => 'Pul birligini goş';
+
+  @override
+  String get curInert =>
+      'Diňe şu programmada ulanylýar. Alyş-çalyş kursy ulanylmaýar.';
+
+  @override
+  String get curCodeExists => 'Bu kod eýýäm ulanylýar.';
+
+  @override
+  String curNoMatch(Object query) {
+    return '\"$query\" bilen gabat gelýän pul birligi ýok.';
+  }
+
+  @override
+  String get qaBackgroundColour => 'Fon reňki';
+
+  @override
+  String get qaIconsTab => 'Nyşanlar';
+
+  @override
+  String get qaEmojiTab => 'Emoji';
+
+  @override
+  String get qaSearchEmoji => 'Emoji gözle';
+
+  @override
+  String get qaNoEmojiMatch => 'Emoji tapylmady';
+
+  @override
   String get quickAddExpense => 'Çykdajy';
 
   @override

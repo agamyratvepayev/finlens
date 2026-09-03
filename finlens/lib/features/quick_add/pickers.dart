@@ -7,6 +7,7 @@ import '../../core/models/models.dart';
 import '../../core/store/app_store.dart';
 import '../../core/utils/formatters.dart';
 import '../../core/utils/fx.dart';
+import '../../core/utils/search_fold.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/amount_text.dart';
 import '../../shared/widgets/app_card.dart';
@@ -18,14 +19,7 @@ import '../../theme/app_theme.dart';
 import '../../theme/app_typography.dart';
 import 'account_icons.dart';
 import 'icon_picker_sheet.dart';
-
-/// The trailing column [FormRow] reserves for its chevron: an 18pt
-/// `Icons.chevron_right_rounded` preceded by 2pt of left padding (see
-/// `shared/widgets/form_fields.dart`). The amount rows in the New account
-/// details card reserve the same column so every value shares one right edge
-/// (§2). Local to this file on purpose — it mirrors FormRow's internals and
-/// must not be promoted to a global token.
-const double _kFormRowChevronWidth = 20.0;
+import 'widgets/amount_hero.dart';
 
 /// Shell shared by every picker and create sheet: a drag handle, a title bar
 /// and a scrollable body.
@@ -1293,31 +1287,34 @@ class _NewAccountForm extends StatefulWidget {
 
 class _NewAccountFormState extends State<_NewAccountForm> {
   final _name = TextEditingController();
-  // A positive magnitude: the opening balance for an asset, or what is owed for
-  // a liability. addAccount stores the liability version negative.
-  final _balance = TextEditingController();
-  final _limit = TextEditingController(); // Credit Cards
-  final _paymentDay = TextEditingController(); // Bank Loans
+  final _nameFocus = FocusNode();
 
-  // Focus is requested when the user taps anywhere along an amount row's
-  // trailing region, replacing the tap target the old fixed 92pt box gave (§1).
-  final _balanceFocus = FocusNode();
-  final _limitFocus = FocusNode();
-  final _paymentDayFocus = FocusNode();
-
-  AccountGroup? _group; // nothing selected initially (spec §5.3)
+  AccountGroup? _group; // nothing selected initially (spec §2)
   String _currency = Fx.baseCurrency;
+
+  // The account glyph: an [_icon] OR an [_emoji], drawn on a tile tinted with
+  // the chosen colour ([_colorValue]; null = follow the type). [_iconExplicit]
+  // records whether the user picked deliberately, so a later type change swaps
+  // only an untouched default (spec §7b).
   IconData? _icon;
+  String? _emoji;
+  int? _colorValue;
+  bool _iconExplicit = false;
+
+  // Starting balance and (type-specific) credit limit are held as the raw typed
+  // strings the amount sheet drives; payment day is a 1..31 day-of-month.
+  String _amountRaw = '';
+  String _limitRaw = '';
+  int? _paymentDay;
 
   @override
   void initState() {
     super.initState();
-    for (final c in [_name, _balance, _limit, _paymentDay]) {
-      c.addListener(_onChanged);
-    }
-    if (widget.initialGroup != null) {
-      _group = widget.initialGroup;
-      _icon = defaultIconFor(widget.initialGroup!);
+    _name.addListener(_onChanged);
+    final g = widget.initialGroup;
+    if (g != null) {
+      _group = g;
+      _icon = defaultIconFor(g); // a default, not an explicit choice
     }
   }
 
@@ -1325,13 +1322,9 @@ class _NewAccountFormState extends State<_NewAccountForm> {
 
   @override
   void dispose() {
-    for (final c in [_name, _balance, _limit, _paymentDay]) {
-      c.removeListener(_onChanged);
-      c.dispose();
-    }
-    _balanceFocus.dispose();
-    _limitFocus.dispose();
-    _paymentDayFocus.dispose();
+    _name.removeListener(_onChanged);
+    _name.dispose();
+    _nameFocus.dispose();
     super.dispose();
   }
 
@@ -1344,10 +1337,10 @@ class _NewAccountFormState extends State<_NewAccountForm> {
     final g = _group;
     return _name.text.trim().isNotEmpty ||
         g != widget.initialGroup ||
-        _balance.text.trim().isNotEmpty ||
-        _limit.text.trim().isNotEmpty ||
-        _paymentDay.text.trim().isNotEmpty ||
-        (g != null && _icon != defaultIconFor(g));
+        _amountRaw.isNotEmpty ||
+        _limitRaw.isNotEmpty ||
+        _paymentDay != null ||
+        _iconExplicit;
   }
 
   /// Dismissal guard (spec §5.1): an untouched form closes silently; a filled
@@ -1367,20 +1360,6 @@ class _NewAccountFormState extends State<_NewAccountForm> {
     );
   }
 
-  bool get _limitValid {
-    final t = _limit.text.trim();
-    if (t.isEmpty) return true;
-    final v = double.tryParse(t);
-    return v != null && v > 0;
-  }
-
-  bool get _dayValid {
-    final t = _paymentDay.text.trim();
-    if (t.isEmpty) return true;
-    final v = int.tryParse(t);
-    return v != null && v >= 1 && v <= 31;
-  }
-
   bool _duplicateName(AppStore store) {
     final n = _name.text.trim().toLowerCase();
     if (n.isEmpty) return false;
@@ -1390,24 +1369,104 @@ class _NewAccountFormState extends State<_NewAccountForm> {
   bool _valid(AppStore store) {
     if (_name.text.trim().isEmpty || _group == null) return false;
     if (_duplicateName(store)) return false;
-    if (_group == AccountGroup.creditCards && !_limitValid) return false;
-    if (_group == AccountGroup.bankLoans && !_dayValid) return false;
     return true;
   }
 
   void _selectGroup(AccountGroup g) {
     setState(() {
       _group = g;
-      // A default glyph is chosen the instant a group is picked; a later group
-      // change keeps the chosen glyph if it still belongs, else swaps it (§5.5).
-      final set = iconSuggestionsFor(g);
-      if (_icon == null || !set.contains(_icon)) _icon = defaultIconFor(g);
+      // The default glyph follows the type until the user picks one explicitly
+      // (spec §7b): only an untouched default is overwritten.
+      if (!_iconExplicit) {
+        _icon = defaultIconFor(g);
+        _emoji = null;
+      }
     });
+  }
+
+  /// The colour the account's glyph renders in: a freely-chosen [_colorValue] or
+  /// the type's colour (spec §7b). Before a type is chosen it falls back to the
+  /// accent so the tile is never colourless.
+  Color get _glyphColor => _colorValue != null
+      ? Color(_colorValue!)
+      : (_group?.color ?? AppColors.accent);
+
+  Future<void> _openIconPicker() async {
+    final result = await showIconPicker(
+      context,
+      typeColor: _group?.color ?? AppColors.accent,
+      colorValue: _colorValue,
+      icon: _emoji == null ? _icon : null,
+      emoji: _emoji,
+    );
+    if (result == null) return;
+    setState(() {
+      _iconExplicit = true;
+      _colorValue = result.colorValue;
+      if (result.emoji != null) {
+        _emoji = result.emoji;
+        _icon = null;
+      } else {
+        _icon = result.icon;
+        _emoji = null;
+      }
+    });
+  }
+
+  /// Shows the keyboard on a tap anywhere in the name row, even when the field
+  /// already holds focus — requestFocus is a no-op then, so a keyboard dismissed
+  /// by a drag never returns without asking the platform directly (spec §8a).
+  void _focusName() {
+    if (!_nameFocus.hasFocus) _nameFocus.requestFocus();
+    SystemChannels.textInput.invokeMethod<void>('TextInput.show');
+  }
+
+  Future<void> _editBalance() async {
+    final l = AppLocalizations.of(context);
+    final result = await showAmountEntrySheet(
+      context,
+      title: _isLiability ? l.qaAmountOwed : l.eaStartingBalance,
+      raw: _amountRaw,
+      currency: _currency,
+    );
+    if (result != null) {
+      setState(() {
+        _amountRaw = result.raw;
+        _currency = result.currency;
+      });
+    }
+  }
+
+  Future<void> _editLimit() async {
+    final l = AppLocalizations.of(context);
+    final result = await showAmountEntrySheet(
+      context,
+      title: l.eaCreditLimit,
+      raw: _limitRaw,
+      currency: _currency,
+    );
+    if (result != null) {
+      setState(() {
+        _limitRaw = result.raw;
+        _currency = result.currency;
+      });
+    }
+  }
+
+  Future<void> _openTypeSheet() async {
+    final picked = await showAccountTypeSheet(context, selected: _group);
+    if (picked != null) _selectGroup(picked);
+  }
+
+  Future<void> _pickPaymentDay() async {
+    final picked = await _showDayPicker(context, _paymentDay);
+    if (picked != null) setState(() => _paymentDay = picked);
   }
 
   @override
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
+    final l = AppLocalizations.of(context);
     final group = _group;
     final duplicate = _duplicateName(store);
 
@@ -1416,66 +1475,99 @@ class _NewAccountFormState extends State<_NewAccountForm> {
         Expanded(
           child: ListView(
             controller: widget.controller,
-            padding: const EdgeInsets.only(bottom: Insets.lg),
+            // Bottom padding clears the footer so the last row is never flush
+            // against it (§8b); the footer is a sibling below, not floating, so
+            // it can never overlap content.
+            padding: const EdgeInsets.fromLTRB(
+                Insets.gutter, Insets.md, Insets.gutter, Insets.xl),
             children: [
-              FormSection(
-                children: [
-                  TextFieldRow(
-                    icon: Icons.drive_file_rename_outline_rounded,
-                    label: AppLocalizations.of(context).qaAccountName,
-                    controller: _name,
-                    hint: AppLocalizations.of(context).qaExampleAccount,
-                    autofocus: true,
-                  ),
-                ],
-              ),
+              // Row 1 — name field whose leading tile IS the account glyph (§1).
+              _nameRow(l),
               if (duplicate)
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                      Insets.gutter + Insets.xs, 0, Insets.gutter, Insets.md),
-                  child: Text(
-                    AppLocalizations.of(context).qaAccountExists,
-                    style: const TextStyle(fontSize: 12, color: AppColors.negative),
-                  ),
+                  padding:
+                      const EdgeInsets.fromLTRB(Insets.xs, Insets.sm, 0, 0),
+                  child: Text(l.qaAccountExists,
+                      style: const TextStyle(
+                          fontSize: 12, color: AppColors.negative)),
                 ),
-              _groupList(AppLocalizations.of(context).qaAssets.toUpperCase(),
-                  AccountGroup.assets),
-              const SizedBox(height: Insets.md),
-              _groupList(
-                  AppLocalizations.of(context).qaLiabilities.toUpperCase(),
-                  AccountGroup.liabilities),
-              // The group drives everything below it; animate rows in and out
-              // so the sheet never jumps (spec §5.4).
-              AnimatedSize(
-                duration: const Duration(milliseconds: 180),
-                curve: Curves.easeOut,
-                alignment: Alignment.topCenter,
-                child: group == null
-                    ? const SizedBox(width: double.infinity)
-                    : _detailsAndIcon(group),
+              const SizedBox(height: Insets.lg),
+              // Row 2 — the type row.
+              _card([_typeRow(l)]),
+              const SizedBox(height: Insets.lg),
+              // Row 3 — starting balance + currency (and any type-specific rows).
+              _card([
+                _StartingBalanceRow(
+                  label: _isLiability ? l.qaAmountOwed : l.eaStartingBalance,
+                  raw: _amountRaw,
+                  currency: _currency,
+                  onTap: _editBalance,
+                ),
+                if (group == AccountGroup.creditCards) ...[
+                  _hair(),
+                  FormRow(
+                    label: l.eaCreditLimit,
+                    value: _limitRaw.isEmpty
+                        ? '—'
+                        : money(AmountEntry.value(_limitRaw),
+                            currency: _currency, forceDecimals: true),
+                    showChevron: true,
+                    onTap: _editLimit,
+                  ),
+                ],
+                if (group == AccountGroup.bankLoans) ...[
+                  _hair(),
+                  FormRow(
+                    label: l.qaPaymentDay,
+                    value: _paymentDay?.toString() ?? '—',
+                    showChevron: true,
+                    onTap: _pickPaymentDay,
+                  ),
+                ],
+              ]),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(Insets.xs, Insets.sm, 0, 0),
+                child: Text(
+                  _isLiability ? l.qaOwedHint : l.qaStartingBalanceHint,
+                  // Secondary, not the faintest tertiary: with the field no
+                  // longer shouting, this is the main thing drawing attention
+                  // to it (§3).
+                  style: const TextStyle(
+                      fontSize: 12, height: 1.4, color: AppColors.textSecondary),
+                ),
               ),
+              if (group == AccountGroup.bankLoans)
+                Padding(
+                  padding:
+                      const EdgeInsets.fromLTRB(Insets.xs, Insets.xs, 0, 0),
+                  child: Text(l.qaPaymentDayHint,
+                      style: const TextStyle(
+                          fontSize: 11,
+                          height: 1.45,
+                          color: AppColors.textTertiary)),
+                ),
             ],
           ),
         ),
         _SheetFooter(
-          label: AppLocalizations.of(context).qaCreateSelect,
+          label: l.qaCreateSelect,
           enabled: _valid(store),
           onPressed: () {
-            final magnitude = double.tryParse(_balance.text.trim()) ?? 0;
             final created = store.addAccount(
               name: _name.text.trim(),
               group: group!,
               currency: _currency,
-              // addAccount signs liabilities negative; the user types positive.
-              startingBalance: magnitude,
-              // Only the final group's fields are persisted (spec §5.4).
-              creditLimit: group == AccountGroup.creditCards
-                  ? double.tryParse(_limit.text.trim())
-                  : null,
-              paymentDue: group == AccountGroup.bankLoans
-                  ? int.tryParse(_paymentDay.text.trim())
-                  : null,
-              icon: _icon,
+              // addAccount signs liabilities negative; the user enters positive.
+              startingBalance: AmountEntry.value(_amountRaw),
+              creditLimit:
+                  group == AccountGroup.creditCards && _limitRaw.isNotEmpty
+                      ? AmountEntry.value(_limitRaw)
+                      : null,
+              paymentDue:
+                  group == AccountGroup.bankLoans ? _paymentDay : null,
+              icon: _emoji == null ? _icon : null,
+              emoji: _emoji,
+              colorValue: _colorValue,
             );
             Navigator.of(context).pop(created);
           },
@@ -1484,383 +1576,1005 @@ class _NewAccountFormState extends State<_NewAccountForm> {
     );
   }
 
-  Widget _groupList(String label, List<AccountGroup> groups) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding:
-              const EdgeInsets.fromLTRB(Insets.gutter, 0, Insets.gutter, 5),
-          child: Semantics(
-            header: true,
-            child: Text(
-              label,
-              style: const TextStyle(
-                fontSize: 10.5,
-                fontWeight: FontWeight.w600,
-                letterSpacing: 0.07 * 10.5,
-                color: AppColors.textTertiary,
-              ),
-            ),
-          ),
+  Widget _card(List<Widget> children) => Container(
+        decoration: BoxDecoration(
+          color: AppColors.sheetCard,
+          borderRadius: BorderRadius.circular(11),
         ),
-        Container(
-          margin: const EdgeInsets.symmetric(horizontal: Insets.gutter),
-          decoration: BoxDecoration(
-            color: AppColors.sheetCard,
-            borderRadius: BorderRadius.circular(9),
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: Column(
-            children: [
-              for (var i = 0; i < groups.length; i++) ...[
-                if (i > 0)
-                  Container(
-                      height: 1,
-                      color: Colors.white.withValues(alpha: 0.06)),
-                _groupRow(groups[i]),
-              ],
-            ],
-          ),
-        ),
-      ],
-    );
-  }
+        clipBehavior: Clip.antiAlias,
+        child: Column(children: children),
+      );
 
-  Widget _groupRow(AccountGroup g) {
-    final selected = _group == g;
-    return Semantics(
-      button: true,
-      selected: selected,
-      label:
-          '${g.label(AppLocalizations.of(context))}, ${g.isAsset ? AppLocalizations.of(context).qaAssets : AppLocalizations.of(context).qaLiabilities}',
-      child: InkWell(
-        onTap: () => _selectGroup(g),
-        child: Container(
-          constraints: const BoxConstraints(minHeight: 44),
-          color: selected ? AppColors.accent.withValues(alpha: 0.16) : null,
-          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
-          child: Row(
-            children: [
-              Container(
-                width: 7,
-                height: 7,
-                decoration:
-                    BoxDecoration(color: g.color, shape: BoxShape.circle),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  g.label(AppLocalizations.of(context)),
-                  style: TextStyle(
-                    fontSize: 13.5,
-                    color:
-                        selected ? Colors.white : AppColors.sheetAccountName,
-                    fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-                  ),
-                ),
-              ),
-              if (selected)
-                const Icon(Icons.check_rounded,
-                    size: 18, color: AppColors.accentLight),
-            ],
-          ),
-        ),
+  Widget _nameRow(AppLocalizations l) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.sheetCard,
+        borderRadius: BorderRadius.circular(11),
       ),
-    );
-  }
-
-  Widget _detailsAndIcon(AccountGroup group) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const SizedBox(height: Insets.md),
-        Container(
-          margin: const EdgeInsets.symmetric(horizontal: Insets.gutter),
-          decoration: BoxDecoration(
-            color: AppColors.sheetCard,
-            borderRadius: BorderRadius.circular(11),
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: Column(
-            children: [
-              FormRow(
-                label: AppLocalizations.of(context).eaCurrency,
-                value: _currency,
-                showChevron: true,
-                onTap: () async {
-                  final picked = await pickCurrency(context, _currency);
-                  if (picked != null) setState(() => _currency = picked);
-                },
-              ),
-              _hair(),
-              _amountRow(
-                label: _isLiability ? AppLocalizations.of(context).qaAmountOwed : AppLocalizations.of(context).eaStartingBalance,
-                controller: _balance,
-                focusNode: _balanceFocus,
-                valueColor:
-                    _isLiability ? AppColors.negative : AppColors.textPrimary,
-              ),
-              if (group == AccountGroup.creditCards) ...[
-                _hair(),
-                _amountRow(
-                  label: AppLocalizations.of(context).eaCreditLimit,
-                  controller: _limit,
-                  focusNode: _limitFocus,
-                  valueColor: AppColors.textPrimary,
-                  error: !_limitValid,
-                ),
-              ],
-              if (group == AccountGroup.bankLoans) ...[
-                _hair(),
-                _amountRow(
-                  label: AppLocalizations.of(context).qaPaymentDay,
-                  controller: _paymentDay,
-                  focusNode: _paymentDayFocus,
-                  valueColor: AppColors.textPrimary,
-                  showSymbol: false,
-                  integer: true,
-                  maxLength: 2,
-                  error: !_dayValid,
-                ),
-              ],
-            ],
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(18, 7, 18, 0),
-          child: Text(
-            _isLiability
-                ? AppLocalizations.of(context).qaOwedHint
-                : AppLocalizations.of(context).qaStartingBalanceHint,
-            style: const TextStyle(
-                fontSize: 11, height: 1.45, color: AppColors.textTertiary),
-          ),
-        ),
-        if (group == AccountGroup.bankLoans)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(18, 4, 18, 0),
-            child: Text(
-              AppLocalizations.of(context).qaPaymentDayHint,
-              style: const TextStyle(
-                  fontSize: 11, height: 1.45, color: AppColors.textTertiary),
-            ),
-          ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
-          child: Text(
-            AppLocalizations.of(context).qaIcon.toUpperCase(),
-            style: const TextStyle(
-              fontSize: 10.5,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 0.07 * 10.5,
-              color: AppColors.textTertiary,
-            ),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(
-              Insets.gutter, 0, Insets.gutter, Insets.md),
-          child: SizedBox(
-            height: 44,
-            child: Row(
-              children: [
-                for (var i = 0; i < iconSuggestionsFor(group).length; i++) ...[
-                  if (i > 0) const SizedBox(width: 7),
-                  AccountGlyphTile(
-                    icon: iconSuggestionsFor(group)[i],
-                    color: group.color,
-                    selected: _icon == iconSuggestionsFor(group)[i],
-                    onTap: () =>
-                        setState(() => _icon = iconSuggestionsFor(group)[i]),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      child: Row(
+        children: [
+          _iconTile(l),
+          const SizedBox(width: Insets.md),
+          // Everything but the tile focuses the field (§1). The whole area is
+          // one opaque tap target so a tap between the label and the field still
+          // opens the keyboard.
+          Expanded(
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: _focusName,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(l.qaAccountName,
+                      style: AppText.caption.copyWith(fontSize: 11.5)),
+                  TextField(
+                    controller: _name,
+                    focusNode: _nameFocus,
+                    autofocus: true,
+                    style: AppText.body.copyWith(fontSize: 15),
+                    cursorColor: AppColors.accentSoft,
+                    decoration: InputDecoration(
+                      isDense: true,
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.only(top: 2),
+                      hintText: l.qaExampleAccount,
+                      hintStyle:
+                          const TextStyle(color: AppColors.textTertiary),
+                    ),
                   ),
                 ],
-                const Spacer(),
-                _gridButton(group),
-              ],
+              ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
-  Widget _gridButton(AccountGroup group) {
+  /// The leading tile of the name row — the account's glyph, tappable, ≥44×44 pt,
+  /// carrying a pencil badge so it reads as its own button (§1/§7b).
+  Widget _iconTile(AppLocalizations l) {
+    final color = _glyphColor;
     return Semantics(
       button: true,
-      label: AppLocalizations.of(context).qaMoreIcons,
+      label: l.qaIcon,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
-        onTap: () async {
-          final picked = await showIconPicker(context,
-              color: group.color, selected: _icon);
-          if (picked != null) setState(() => _icon = picked);
-        },
-        child: Container(
-          width: 36,
-          height: 36,
-          decoration: BoxDecoration(
-            color: AppColors.taskDim,
-            borderRadius: BorderRadius.circular(10),
+        onTap: _openIconPicker,
+        child: SizedBox(
+          width: 44,
+          height: 44,
+          child: Stack(
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: Color.alphaBlend(
+                        color.withValues(alpha: 0.18), AppColors.surfaceAlt),
+                    borderRadius: BorderRadius.circular(11),
+                  ),
+                  alignment: Alignment.center,
+                  child: _emoji != null
+                      ? Text(_emoji!, style: const TextStyle(fontSize: 20))
+                      : Icon(_icon ?? Icons.account_balance_wallet_rounded,
+                          size: 20, color: color),
+                ),
+              ),
+              Positioned(
+                right: 0,
+                bottom: 0,
+                child: Container(
+                  width: 15,
+                  height: 15,
+                  decoration: const BoxDecoration(
+                    color: AppColors.sheetCard,
+                    shape: BoxShape.circle,
+                  ),
+                  alignment: Alignment.center,
+                  child: const Icon(Icons.edit_rounded,
+                      size: 9, color: AppColors.textSecondary),
+                ),
+              ),
+            ],
           ),
-          child: const Icon(Icons.grid_view_rounded,
-              size: 18, color: AppColors.accentLight),
         ),
       ),
+    );
+  }
+
+  /// The type row (§2). Unselected shows `REQUIRED`; once a type is chosen the
+  /// value slot holds the type's colour dot and name, and `REQUIRED` is gone.
+  Widget _typeRow(AppLocalizations l) {
+    final g = _group;
+    return FormRow(
+      label: l.naType,
+      showChevron: true,
+      onTap: _openTypeSheet,
+      trailing: g == null
+          ? Text(l.naRequired,
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.06 * 11,
+                color: AppColors.textTertiary,
+              ))
+          : Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration:
+                      BoxDecoration(color: g.color, shape: BoxShape.circle),
+                ),
+                const SizedBox(width: 8),
+                Text(g.label(l),
+                    style: const TextStyle(
+                        fontSize: 14.5, color: AppColors.textPrimary)),
+              ],
+            ),
     );
   }
 
   Widget _hair() =>
       Container(height: 1, color: Colors.white.withValues(alpha: 0.07));
+}
 
-  Widget _amountRow({
-    required String label,
-    required TextEditingController controller,
-    required FocusNode focusNode,
-    required Color valueColor,
-    bool showSymbol = true,
-    bool integer = false,
-    int? maxLength,
-    bool error = false,
-  }) {
-    final color = error ? AppColors.negative : valueColor;
-    const fieldStyle = TextStyle(fontSize: 14.5, fontWeight: FontWeight.w600);
+/// The one-line example shown beneath each type in the account-type sheet
+/// (spec §4). Recognition beats classification, so these are examples, not
+/// definitions; two pairs are deliberately contrasted (debit vs credit card,
+/// receivable vs payable) and must not drift into similarity.
+String accountGroupDesc(AccountGroup g, AppLocalizations l) => switch (g) {
+      AccountGroup.spendable => l.accountGroupSpendableDesc,
+      AccountGroup.setAside => l.accountGroupSetAsideDesc,
+      AccountGroup.receivables => l.accountGroupReceivablesDesc,
+      AccountGroup.investments => l.accountGroupInvestmentsDesc,
+      AccountGroup.valuables => l.accountGroupValuablesDesc,
+      AccountGroup.creditCards => l.accountGroupCreditCardsDesc,
+      AccountGroup.payables => l.accountGroupPayablesDesc,
+      AccountGroup.bankLoans => l.accountGroupBankLoansDesc,
+    };
 
-    // §1 — size the field to its content so the symbol hugs the first digit and
-    // the pair grows together. Measuring is cleaner than IntrinsicWidth here: an
-    // IntrinsicWidth around an EditableText has no well-defined intrinsic width
-    // and reflows unpredictably as the caret moves. Empty → measure the "0"
-    // hint so the field never collapses and the symbol lands right beside it.
-    // The comfortable touch area is the wrapping GestureDetector, not a padded
-    // field (which is what stranded the symbol from the 0 in the first place).
-    final painter = TextPainter(
-      text: TextSpan(
-        text: controller.text.isEmpty ? '0' : controller.text,
-        style: fieldStyle,
-      ),
-      textDirection: TextDirection.ltr,
-      textScaler: MediaQuery.textScalerOf(context),
-    )..layout();
-    // +2 keeps the caret at the right edge from clipping as digits are added.
-    final fieldWidth = painter.width + 2;
+/// The account-type sheet (spec §4): the two groups (ASSETS, LIABILITIES) with
+/// the eight types in their current order, each with a one-line example. One tap
+/// selects and closes; reopening shows a check on the selected row; nothing is
+/// preselected on first open.
+Future<AccountGroup?> showAccountTypeSheet(BuildContext context,
+    {AccountGroup? selected}) {
+  final l = AppLocalizations.of(context);
+  return showAppSheet<AccountGroup>(
+    context,
+    title: l.naAccountType,
+    initialSize: 0.85,
+    cancelLabel: l.actionCancel,
+    builder: (context, controller) => ListView(
+      controller: controller,
+      padding: const EdgeInsets.fromLTRB(
+          Insets.gutter, 0, Insets.gutter, Insets.xxl),
+      children: [
+        _typeGroup(context, l.qaAssets, AccountGroup.assets, selected),
+        const SizedBox(height: Insets.lg),
+        _typeGroup(context, l.qaLiabilities, AccountGroup.liabilities, selected),
+      ],
+    ),
+  );
+}
 
-    final field = Flexible(
-      // Loose so a very long value at 320pt shrinks and scrolls instead of
-      // overflowing the row; short values still take exactly [fieldWidth].
-      fit: FlexFit.loose,
-      child: SizedBox(
-        width: fieldWidth,
-        child: TextField(
-          controller: controller,
-          focusNode: focusNode,
-          textAlign: TextAlign.right,
-          keyboardType: integer
-              ? TextInputType.number
-              : const TextInputType.numberWithOptions(decimal: true),
-          inputFormatters: [
-            FilteringTextInputFormatter.allow(
-                integer ? RegExp(r'[0-9]') : RegExp(r'[0-9.]')),
-            if (maxLength != null) LengthLimitingTextInputFormatter(maxLength),
-          ],
-          cursorColor: AppColors.accent,
-          style: fieldStyle.copyWith(color: color),
-          decoration: const InputDecoration(
-            isDense: true,
-            contentPadding: EdgeInsets.zero,
-            border: InputBorder.none,
-            hintText: '0',
-            hintStyle: TextStyle(color: AppColors.textTertiary),
-          ),
+Widget _typeGroup(BuildContext context, String label,
+    List<AccountGroup> groups, AccountGroup? selected) {
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(Insets.xs, 0, 0, Insets.sm),
+        child: Semantics(
+          header: true,
+          child: Text(label.toUpperCase(), style: AppText.label),
         ),
       ),
-    );
-
-    return ConstrainedBox(
-      // §3 — match FormRow's row height so hairlines fall at even intervals;
-      // mirrors the minHeight pattern already used by _groupRow.
-      constraints: const BoxConstraints(minHeight: 44),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-        child: Row(
+      AppCard(
+        child: Column(
           children: [
-            Flexible(
-              child: Text(
-                label,
-                style:
-                    const TextStyle(fontSize: 14.5, color: AppColors.textPrimary),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+            for (var i = 0; i < groups.length; i++) ...[
+              if (i > 0) const RowDivider(indent: Insets.md),
+              _AccountTypeRow(
+                group: groups[i],
+                selected: groups[i] == selected,
+                onTap: () => Navigator.of(context).pop(groups[i]),
               ),
-            ),
-            // The whole right half is one tap target that focuses the field,
-            // preserving the reach of the old fixed 92pt box (§1). Its content
-            // right-aligns so the value hugs the shared right edge.
-            Expanded(
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: focusNode.requestFocus,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
+            ],
+          ],
+        ),
+      ),
+    ],
+  );
+}
+
+class _AccountTypeRow extends StatelessWidget {
+  const _AccountTypeRow(
+      {required this.group, required this.selected, required this.onTap});
+
+  final AccountGroup group;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return Semantics(
+      button: true,
+      selected: selected,
+      child: InkWell(
+        onTap: onTap,
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 44),
+          padding: const EdgeInsets.symmetric(
+              horizontal: Insets.md, vertical: 10),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                width: 8,
+                height: 8,
+                decoration:
+                    BoxDecoration(color: group.color, shape: BoxShape.circle),
+              ),
+              const SizedBox(width: Insets.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    if (showSymbol)
-                      Padding(
-                        padding: const EdgeInsets.only(right: 1),
-                        child: Text(currencySymbol(_currency),
-                            style: fieldStyle.copyWith(color: color)),
-                      ),
-                    field,
-                    // §2 — reserve the same trailing column FormRow gives its
-                    // chevron so every value in the card shares one right edge.
-                    const SizedBox(width: _kFormRowChevronWidth),
+                    Text(group.label(l),
+                        style: const TextStyle(
+                            fontSize: 15, color: AppColors.textPrimary)),
+                    const SizedBox(height: 2),
+                    Text(
+                      accountGroupDesc(group, l),
+                      // ≤ 2 lines in every locale (spec §4).
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                          fontSize: 12,
+                          height: 1.3,
+                          color: AppColors.textSecondary),
+                    ),
                   ],
                 ),
               ),
-            ),
-          ],
+              if (selected)
+                const Padding(
+                  padding: EdgeInsets.only(left: Insets.sm),
+                  child: Icon(Icons.check_rounded,
+                      size: 18, color: AppColors.accentSoft),
+                ),
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
+/// The starting-balance row (spec §3): the amount and currency read as one unit
+/// — integer bright, decimals one step dimmer and contiguous, ~6 pt before the
+/// currency code, the chevron against it. When the amount does not fit on one
+/// line the row falls back to two lines (label above, amount below) rather than
+/// ever truncating or shrinking the amount.
+class _StartingBalanceRow extends StatelessWidget {
+  const _StartingBalanceRow({
+    required this.label,
+    required this.raw,
+    required this.currency,
+    required this.onTap,
+  });
+
+  final String label;
+  final String raw;
+  final String currency;
+  final VoidCallback onTap;
+
+  static const _labelStyle =
+      TextStyle(fontSize: 14.5, color: AppColors.textPrimary);
+  static const _intStyle = TextStyle(
+      fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textPrimary);
+  static const _decStyle = TextStyle(
+      fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textTertiary);
+  static const _codeStyle = TextStyle(
+      fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.textSecondary);
+
+  static String _groupDigits(String digits) {
+    final buf = StringBuffer();
+    for (var i = 0; i < digits.length; i++) {
+      if (i > 0 && (digits.length - i) % 3 == 0) buf.write(',');
+      buf.write(digits[i]);
+    }
+    return buf.toString();
+  }
+
+  static double _measure(String s, TextStyle style, TextScaler scaler) {
+    final tp = TextPainter(
+      text: TextSpan(text: s, style: style),
+      textDirection: TextDirection.ltr,
+      textScaler: scaler,
+    )..layout();
+    return tp.width;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final def = currencyDef(currency);
+    final v = AmountEntry.value(raw).abs();
+    final wholeStr = _groupDigits(v.truncate().toString());
+    String decStr = '';
+    if (def.decimals > 0) {
+      var factor = 1;
+      for (var i = 0; i < def.decimals; i++) {
+        factor *= 10;
+      }
+      final cents = (v * factor).round() % factor;
+      decStr = '.${cents.toString().padLeft(def.decimals, '0')}';
+    }
+
+    final amount = Text.rich(
+      TextSpan(children: [
+        TextSpan(text: wholeStr, style: _intStyle),
+        if (decStr.isNotEmpty) TextSpan(text: decStr, style: _decStyle),
+      ]),
+      textAlign: TextAlign.right,
+      maxLines: 1,
+      softWrap: false,
+    );
+    final code = Padding(
+      padding: const EdgeInsets.only(left: 6),
+      child: Text(def.code, style: _codeStyle),
+    );
+    const chevron = Padding(
+      padding: EdgeInsets.only(left: 2),
+      child: Icon(Icons.chevron_right_rounded,
+          size: 18, color: AppColors.textTertiary),
+    );
+
+    return Semantics(
+      button: true,
+      label: '$label ${money(AmountEntry.value(raw), currency: currency)}',
+      child: InkWell(
+        onTap: onTap,
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 44),
+          padding: const EdgeInsets.symmetric(
+              horizontal: Insets.md, vertical: 9),
+          child: LayoutBuilder(
+            builder: (context, c) {
+              final scaler = MediaQuery.textScalerOf(context);
+              final labelW = _measure(label, _labelStyle, scaler);
+              final amountW =
+                  _measure(wholeStr + decStr, _intStyle, scaler);
+              final codeW = _measure(def.code, _codeStyle, scaler) + 6;
+              const chevronW = 20.0;
+              // One line only if the label and the amount unit both fit with a
+              // little breathing room between them (§3).
+              final oneLine =
+                  labelW + 16 + amountW + codeW + chevronW <= c.maxWidth;
+
+              if (oneLine) {
+                return Row(
+                  children: [
+                    Expanded(
+                        child: Text(label,
+                            style: _labelStyle,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis)),
+                    amount,
+                    code,
+                    chevron,
+                  ],
+                );
+              }
+              // Two-line fallback — label above, the full amount below, never
+              // truncated or shrunk (§3).
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(label, style: _labelStyle),
+                  const SizedBox(height: 4),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [Flexible(child: amount), code, chevron],
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The starting-balance / amount sheet (spec §5). Reuses the app's own numeric
+/// hero + keypad (the Quick Add amount field), adds a currency control that
+/// opens the currency picker, and caps the integer part at 12 digits (enforced
+/// by [AmountEntry]). Returns the raw amount string and the (possibly changed)
+/// currency code.
+Future<({String raw, String currency})?> showAmountEntrySheet(
+  BuildContext context, {
+  required String title,
+  required String raw,
+  required String currency,
+  String? helper,
+}) {
+  final l = AppLocalizations.of(context);
+  return showAppSheet<({String raw, String currency})>(
+    context,
+    title: title,
+    contentSized: true,
+    cancelLabel: l.actionCancel,
+    builder: (context, controller) =>
+        _AmountEntrySheet(initialRaw: raw, initialCurrency: currency, helper: helper),
+  );
+}
+
+class _AmountEntrySheet extends StatefulWidget {
+  const _AmountEntrySheet(
+      {required this.initialRaw, required this.initialCurrency, this.helper});
+
+  final String initialRaw;
+  final String initialCurrency;
+  final String? helper;
+
+  @override
+  State<_AmountEntrySheet> createState() => _AmountEntrySheetState();
+}
+
+class _AmountEntrySheetState extends State<_AmountEntrySheet> {
+  late String _raw = widget.initialRaw;
+  late String _currency = widget.initialCurrency;
+
+  void _press(String key) => setState(() => _raw = AmountEntry.press(_raw, key));
+  void _back() => setState(() => _raw = AmountEntry.backspace(_raw));
+
+  Future<void> _changeCurrency() async {
+    final picked = await pickCurrency(context, _currency);
+    if (picked != null) setState(() => _currency = picked);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const SizedBox(height: Insets.sm),
+        NumericHeroCard(
+          label: '',
+          raw: _raw,
+          currency: _currency,
+          accent: AppColors.accent,
+          accentDim: AppColors.accent.withValues(alpha: 0.35),
+          focused: true,
+          onTap: () {},
+          onCurrencyTap: _changeCurrency,
+        ),
+        if (widget.helper != null)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+                Insets.gutter + Insets.xs, Insets.sm, Insets.gutter, 0),
+            child: Text(widget.helper!,
+                style: const TextStyle(
+                    fontSize: 12, height: 1.4, color: AppColors.textSecondary)),
+          ),
+        const SizedBox(height: Insets.sm),
+        NumericKeypad(onKey: _press, onBackspace: _back),
+        _SheetFooter(
+          label: l.actionDone,
+          onPressed: () =>
+              Navigator.of(context).pop((raw: _raw, currency: _currency)),
+        ),
+      ],
+    );
+  }
+}
+
+/// A 1..31 day-of-month picker for a bank loan's payment day (spec: preserved
+/// pre-existing field).
+Future<int?> _showDayPicker(BuildContext context, int? current) {
+  final l = AppLocalizations.of(context);
+  return showAppSheet<int>(
+    context,
+    title: l.qaPaymentDay,
+    initialSize: 0.6,
+    builder: (context, controller) => GridView.count(
+      controller: controller,
+      crossAxisCount: 7,
+      padding: const EdgeInsets.fromLTRB(
+          Insets.gutter, 0, Insets.gutter, Insets.xxl),
+      mainAxisSpacing: 6,
+      crossAxisSpacing: 6,
+      children: [
+        for (var d = 1; d <= 31; d++)
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => Navigator.of(context).pop(d),
+            child: Container(
+              decoration: BoxDecoration(
+                color: d == current
+                    ? AppColors.accent
+                    : AppColors.sheetCard,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              alignment: Alignment.center,
+              child: Text('$d',
+                  style: TextStyle(
+                      fontSize: 14,
+                      color: d == current
+                          ? Colors.white
+                          : AppColors.textPrimary)),
+            ),
+          ),
+      ],
+    ),
+  );
+}
+
+/// The currency picker (spec §6). Search over ~180 built-in currencies plus any
+/// the user has defined, a `RECENT` group of the codes already in use (omitted
+/// when there are none), and a header `+ Add` that opens the Add-currency sheet
+/// and — mirroring the account picker's create-and-select — selects the new
+/// currency on success.
 Future<String?> pickCurrency(BuildContext context, String current) {
-  const codes = ['USD', 'EUR', 'TRY', 'TMT', 'GBP', 'JPY'];
+  final l = AppLocalizations.of(context);
   return showAppSheet<String>(
     context,
-    title: AppLocalizations.of(context).eaCurrency,
-    initialSize: 0.5,
-    builder: (context, controller) => ListView(
-      controller: controller,
-      padding: const EdgeInsets.fromLTRB(
-        Insets.gutter,
-        0,
-        Insets.gutter,
-        Insets.xxl,
+    title: l.eaCurrency,
+    initialSize: 0.85,
+    cancelLabel: l.actionCancel,
+    actions: [
+      _HeaderCreateAction<String>(
+        label: l.curAdd,
+        onCreate: (ctx) => showAddCurrencySheet(ctx),
       ),
+    ],
+    builder: (context, controller) =>
+        _CurrencyPickerBody(controller: controller, current: current),
+  );
+}
+
+class _CurrencyPickerBody extends StatefulWidget {
+  const _CurrencyPickerBody({required this.controller, required this.current});
+
+  final ScrollController controller;
+  final String current;
+
+  @override
+  State<_CurrencyPickerBody> createState() => _CurrencyPickerBodyState();
+}
+
+class _CurrencyPickerBodyState extends State<_CurrencyPickerBody> {
+  String _query = '';
+
+  /// The full catalog: user-defined currencies first (so a custom code shadows a
+  /// built-in of the same code), then the built-ins, de-duplicated by code and
+  /// sorted alphabetically — the `ALL CURRENCIES` ordering the spec asks for.
+  List<CurrencyDef> _allCurrencies(AppStore store) {
+    final byCode = <String, CurrencyDef>{};
+    for (final c in kBuiltInCurrencies) {
+      byCode[c.code] = c;
+    }
+    for (final c in store.snapshotCustomCurrencies) {
+      byCode[c.code] = c;
+    }
+    final list = byCode.values.toList()
+      ..sort((a, b) => a.code.compareTo(b.code));
+    return list;
+  }
+
+  bool _matches(CurrencyDef c, String q) {
+    if (q.isEmpty) return true;
+    final fold = foldSearch(q);
+    return foldSearch(c.code).contains(fold) ||
+        foldSearch(c.name).contains(fold);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final store = StoreScope.of(context);
+    final l = AppLocalizations.of(context);
+    final q = _query.trim();
+
+    final recentCodes = _query.trim().isEmpty ? store.recentCurrencyCodes : const <String>[];
+    final all = _allCurrencies(store).where((c) => _matches(c, q)).toList();
+
+    return Column(
       children: [
-        AppCard(
-          child: Column(
+        const SizedBox(height: Insets.sm),
+        _SearchBar(
+          hint: l.curSearch,
+          onChanged: (v) => setState(() => _query = v),
+        ),
+        const SizedBox(height: Insets.md),
+        Expanded(
+          child: ListView(
+            controller: widget.controller,
+            padding: const EdgeInsets.fromLTRB(
+                Insets.gutter, 0, Insets.gutter, Insets.xxl),
             children: [
-              for (var i = 0; i < codes.length; i++) ...[
-                if (i > 0) const RowDivider(indent: Insets.md),
-                FormRow(
-                  label: '${codes[i]}  ${currencySymbol(codes[i])}',
-                  onTap: () => Navigator.of(context).pop(codes[i]),
-                  trailing: codes[i] == current
-                      ? const Icon(
-                          Icons.check_rounded,
-                          size: 18,
-                          color: AppColors.accentSoft,
-                        )
-                      : null,
-                ),
+              if (recentCodes.isNotEmpty) ...[
+                _CurrencyGroupLabel(l.curRecent),
+                _currencyCard(
+                    recentCodes.map(currencyDef).toList(), context),
+                const SizedBox(height: Insets.lg),
               ],
+              _CurrencyGroupLabel(l.curAll),
+              if (all.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: Insets.xl),
+                  child: Text(
+                    l.curNoMatch(q),
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                        fontSize: 14, color: AppColors.textTertiary),
+                  ),
+                )
+              else
+                _currencyCard(all, context),
             ],
           ),
         ),
       ],
-    ),
+    );
+  }
+
+  Widget _currencyCard(List<CurrencyDef> defs, BuildContext context) {
+    return AppCard(
+      child: Column(
+        children: [
+          for (var i = 0; i < defs.length; i++) ...[
+            if (i > 0) const RowDivider(indent: Insets.md),
+            _CurrencyRow(
+              def: defs[i],
+              selected: defs[i].code == widget.current,
+              onTap: () => Navigator.of(context).pop(defs[i].code),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _CurrencyGroupLabel extends StatelessWidget {
+  const _CurrencyGroupLabel(this.text);
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(Insets.xs, 0, 0, Insets.sm),
+      child: Semantics(
+        header: true,
+        child: Text(text.toUpperCase(), style: AppText.label),
+      ),
+    );
+  }
+}
+
+class _CurrencyRow extends StatelessWidget {
+  const _CurrencyRow(
+      {required this.def, required this.selected, required this.onTap});
+
+  final CurrencyDef def;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    // Code + name (spec §6), with the symbol as a muted trailing hint so the
+    // token the user will see is visible before they commit.
+    return FormRow(
+      label: def.code,
+      subtitle: def.name,
+      value: def.tokenIsSymbol ? def.symbol : null,
+      valueColor: AppColors.textTertiary,
+      onTap: onTap,
+      trailing: selected
+          ? const Icon(Icons.check_rounded,
+              size: 18, color: AppColors.accentSoft)
+          : null,
+    );
+  }
+}
+
+/// The Add-currency sheet (spec §7a). Creates a user-defined currency — display
+/// metadata only, never a rate (§10) — and returns its code so the picker can
+/// select it. A duplicate code keeps `Add currency` disabled with an inline
+/// error; an absent symbol falls back to the code, shown live in `Preview`.
+Future<String?> showAddCurrencySheet(BuildContext context) {
+  final l = AppLocalizations.of(context);
+  return showAppSheet<String>(
+    context,
+    title: l.curAddTitle,
+    initialSize: 0.8,
+    cancelLabel: l.actionCancel,
+    builder: (context, controller) => _AddCurrencyForm(controller: controller),
   );
+}
+
+class _AddCurrencyForm extends StatefulWidget {
+  const _AddCurrencyForm({required this.controller});
+  final ScrollController controller;
+
+  @override
+  State<_AddCurrencyForm> createState() => _AddCurrencyFormState();
+}
+
+class _AddCurrencyFormState extends State<_AddCurrencyForm> {
+  final _code = TextEditingController();
+  final _name = TextEditingController();
+  final _symbol = TextEditingController();
+  bool _before = true;
+  int _decimals = 2;
+
+  @override
+  void initState() {
+    super.initState();
+    for (final c in [_code, _name, _symbol]) {
+      c.addListener(() => setState(() {}));
+    }
+  }
+
+  @override
+  void dispose() {
+    for (final c in [_code, _name, _symbol]) {
+      c.dispose();
+    }
+    super.dispose();
+  }
+
+  String get _codeUp => _code.text.trim().toUpperCase();
+  bool get _duplicate => _codeUp.isNotEmpty && currencyCodeExists(_codeUp);
+  bool get _valid =>
+      _codeUp.isNotEmpty && _name.text.trim().isNotEmpty && !_duplicate;
+
+  CurrencyDef _def() => CurrencyDef(
+        code: _codeUp,
+        name: _name.text.trim(),
+        symbol: _symbol.text.trim().isEmpty ? null : _symbol.text.trim(),
+        decimals: _decimals,
+        symbolBefore: _before,
+        custom: true,
+      );
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    // At a large text scale two controls on one line stop fitting; the spec says
+    // split them rather than compress (§7a). One breakpoint governs both rows.
+    final split = MediaQuery.textScalerOf(context).scale(14) > 18;
+    // Preview uses a fixed example so the shape (grouping, decimals, token side
+    // and spacing) is legible before saving.
+    final preview =
+        formatCurrencyExample(_def().copyWith(code: _codeUp.isEmpty ? 'CUR' : _codeUp), 9850);
+
+    return Column(
+      children: [
+        Expanded(
+          child: ListView(
+            controller: widget.controller,
+            padding: const EdgeInsets.fromLTRB(
+                Insets.gutter, Insets.sm, Insets.gutter, Insets.lg),
+            children: [
+              Container(
+                decoration: BoxDecoration(
+                  color: AppColors.sheetCard,
+                  borderRadius: BorderRadius.circular(11),
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: Column(
+                  children: [
+                    _codeNameRow(l, split),
+                    _hair(),
+                    _symbolBeforeRow(l, split),
+                    _hair(),
+                    FormRow(
+                      label: l.curDecimals,
+                      value: '$_decimals',
+                      showChevron: true,
+                      onTap: _pickDecimals,
+                    ),
+                  ],
+                ),
+              ),
+              if (_duplicate)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                      Insets.xs, Insets.sm, 0, 0),
+                  child: Text(l.curCodeExists,
+                      style: const TextStyle(
+                          fontSize: 12, color: AppColors.negative)),
+                ),
+              const SizedBox(height: Insets.lg),
+              // Preview row — reflects code, symbol, switch and decimals live.
+              Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 12, vertical: 12),
+                decoration: BoxDecoration(
+                  color: AppColors.sheetCard,
+                  borderRadius: BorderRadius.circular(11),
+                ),
+                child: Row(
+                  children: [
+                    Text(l.curPreview,
+                        style: const TextStyle(
+                            fontSize: 14.5, color: AppColors.textSecondary)),
+                    const Spacer(),
+                    Text(preview,
+                        style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textPrimary)),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(Insets.xs, Insets.sm, 0, 0),
+                child: Text(l.curInert,
+                    style: const TextStyle(
+                        fontSize: 11,
+                        height: 1.45,
+                        color: AppColors.textTertiary)),
+              ),
+            ],
+          ),
+        ),
+        _SheetFooter(
+          label: l.curAddButton,
+          enabled: _valid,
+          onPressed: () {
+            final store = StoreScope.read(context);
+            final def = _def();
+            store.addCustomCurrency(def);
+            Navigator.of(context).pop(def.code);
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _hair() =>
+      Container(height: 1, color: Colors.white.withValues(alpha: 0.07));
+
+  /// Row 1 — Code (fixed ~78pt column) │ hairline │ Name (fills). Splits into
+  /// two stacked rows at a large text scale (§7a).
+  Widget _codeNameRow(AppLocalizations l, bool split) {
+    final code = _miniField(
+      label: l.curCode,
+      controller: _code,
+      formatters: [
+        LengthLimitingTextInputFormatter(5),
+        FilteringTextInputFormatter.allow(RegExp('[A-Za-z]')),
+        TextInputFormatter.withFunction((_, n) =>
+            n.copyWith(text: n.text.toUpperCase())),
+      ],
+      textCapitalization: TextCapitalization.characters,
+    );
+    final name = _miniField(label: l.curName, controller: _name);
+    if (split) {
+      return Column(children: [code, _hair(), name]);
+    }
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SizedBox(width: 92, child: code),
+          _hair(),
+          Expanded(child: name),
+        ],
+      ),
+    );
+  }
+
+  /// Row 2 — Symbol (fills) │ hairline │ Before amount switch. Splits at scale.
+  Widget _symbolBeforeRow(AppLocalizations l, bool split) {
+    final symbol = _miniField(
+      label: l.curSymbolOptional,
+      controller: _symbol,
+      // The placeholder shows the current code so the fallback is visible
+      // without a sentence explaining it (§7a).
+      hint: _codeUp.isEmpty ? null : _codeUp,
+    );
+    final toggle = ToggleRow(
+      label: l.curBeforeAmount,
+      value: _before,
+      onChanged: (v) => setState(() => _before = v),
+    );
+    if (split) {
+      return Column(children: [symbol, _hair(), toggle]);
+    }
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Expanded(child: symbol),
+          _hair(),
+          SizedBox(width: 168, child: toggle),
+        ],
+      ),
+    );
+  }
+
+  Widget _miniField({
+    required String label,
+    required TextEditingController controller,
+    String? hint,
+    List<TextInputFormatter>? formatters,
+    TextCapitalization textCapitalization = TextCapitalization.none,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(label, style: AppText.caption.copyWith(fontSize: 11.5)),
+          TextField(
+            controller: controller,
+            inputFormatters: formatters,
+            textCapitalization: textCapitalization,
+            style: AppText.body.copyWith(fontSize: 15),
+            cursorColor: AppColors.accentSoft,
+            decoration: InputDecoration(
+              isDense: true,
+              border: InputBorder.none,
+              contentPadding: const EdgeInsets.only(top: 2),
+              hintText: hint,
+              hintStyle: const TextStyle(color: AppColors.textTertiary),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _pickDecimals() async {
+    final l = AppLocalizations.of(context);
+    final picked = await showAppSheet<int>(
+      context,
+      title: l.curDecimals,
+      contentSized: true,
+      builder: (context, controller) => ListView(
+        controller: controller,
+        shrinkWrap: true,
+        padding: const EdgeInsets.fromLTRB(
+            Insets.gutter, 0, Insets.gutter, Insets.xxl),
+        children: [
+          AppCard(
+            child: Column(
+              children: [
+                for (var i = 0; i <= 3; i++) ...[
+                  if (i > 0) const RowDivider(indent: Insets.md),
+                  FormRow(
+                    label: '$i',
+                    onTap: () => Navigator.of(context).pop(i),
+                    trailing: i == _decimals
+                        ? const Icon(Icons.check_rounded,
+                            size: 18, color: AppColors.accentSoft)
+                        : null,
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+    if (picked != null) setState(() => _decimals = picked);
+  }
 }
 
 /// Small uppercase label used inside sheets.

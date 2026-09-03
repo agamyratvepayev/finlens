@@ -37,6 +37,8 @@ Map<String, Object?> accountToMap(Account a) => {
       'archived': _b(a.archived),
       'count_as_spendable': _b(a.countAsSpendable),
       ..._iconColumns(a.icon),
+      'icon_emoji': a.emoji,
+      'color_argb': a.colorValue,
       'opened_on': _dt(a.openedOn),
       'opening_date': _dt(a.openingDate),
     };
@@ -54,8 +56,33 @@ Account accountFromMap(Map<String, Object?> m) => Account(
       archived: _bf(m['archived']),
       countAsSpendable: _bf(m['count_as_spendable']),
       icon: _iconFromRow(m),
+      emoji: (m['icon_emoji'] as String?)?.isEmpty ?? true
+          ? null
+          : m['icon_emoji'] as String?,
+      colorValue: m['color_argb'] as int?,
       openedOn: _dtn(m['opened_on']),
       openingDate: _dtn(m['opening_date']),
+    );
+
+// ── Currencies (user-defined) ────────────────────────────────────────────────
+
+Map<String, Object?> currencyDefToMap(CurrencyDef c) => {
+      'code': c.code,
+      'name': c.name,
+      'symbol': c.symbol,
+      'decimals': c.decimals,
+      'symbol_before': _b(c.symbolBefore),
+    };
+
+CurrencyDef currencyDefFromMap(Map<String, Object?> m) => CurrencyDef(
+      code: m['code'] as String,
+      name: (m['name'] as String?) ?? (m['code'] as String),
+      symbol: (m['symbol'] as String?)?.isEmpty ?? true
+          ? null
+          : m['symbol'] as String?,
+      decimals: (m['decimals'] as int?) ?? 2,
+      symbolBefore: _bf(m['symbol_before']),
+      custom: true,
     );
 
 // ── Categories ──────────────────────────────────────────────────────────────

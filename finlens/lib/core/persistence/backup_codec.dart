@@ -72,6 +72,8 @@ String encodeBackup(AppStore store, {required DateTime exportedAt}) {
     'tags': store.snapshotTags.map(tagToMap).toList(),
     'goals': store.snapshotGoals.map(goalToMap).toList(),
     'tasks': store.snapshotTasks.map(taskToMap).toList(),
+    'currencies':
+        store.snapshotCustomCurrencies.map(currencyDefToMap).toList(),
   };
   return const JsonEncoder.withIndent('  ').convert(doc);
 }
@@ -126,6 +128,7 @@ BackupDocument decodeBackup(String jsonText) {
       tags: rows('tags').map(tagFromMap).toList(),
       goals: rows('goals').map(goalFromMap).toList(),
       tasks: rows('tasks').map(taskFromMap).toList(),
+      customCurrencies: rows('currencies').map(currencyDefFromMap).toList(),
       idSeq: metaInt('id_seq'),
       tagSchema: metaInt('tag_schema'),
       budgetHistorySince:

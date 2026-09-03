@@ -21,7 +21,11 @@ class LocalDatabase {
   final Database db;
 
   static const String dbFileName = 'finlens.db';
-  static const int schemaVersion = 1;
+  // v2 (spec: New-account form) added the accounts' `color_argb` + `icon_emoji`
+  // columns and the `currencies` table for user-defined currencies. The bump is
+  // one-way: an older build rejects a v2 backup, while a v2 build reads a v1
+  // file (the new columns/table simply come back empty). See [_onUpgrade].
+  static const int schemaVersion = 2;
 
   static const String accountsTable = 'accounts';
   static const String categoriesTable = 'categories';
@@ -29,6 +33,7 @@ class LocalDatabase {
   static const String tagsTable = 'tags';
   static const String goalsTable = 'goals';
   static const String tasksTable = 'tasks';
+  static const String currenciesTable = 'currencies';
   static const String metaTable = 'meta';
 
   /// Entity tables in a dependency-neutral order (there are no FK constraints,
@@ -40,6 +45,7 @@ class LocalDatabase {
     tagsTable,
     goalsTable,
     tasksTable,
+    currenciesTable,
   ];
 
   /// Opens (creating on first run) the app database. On desktop the plain
@@ -85,9 +91,12 @@ class LocalDatabase {
         icon_font_family TEXT,
         icon_font_package TEXT,
         icon_match_text_direction INTEGER,
+        icon_emoji TEXT,
+        color_argb INTEGER,
         opened_on INTEGER,
         opening_date INTEGER
       )''');
+    batch.execute(_createCurrenciesTable);
     batch.execute('''
       CREATE TABLE $categoriesTable(
         id TEXT PRIMARY KEY,
@@ -183,6 +192,27 @@ class LocalDatabase {
     await batch.commit(noResult: true);
   }
 
-  /// No migrations yet (schema v1). Future schema bumps add cases here.
-  static Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {}
+  /// The user-defined currencies table (spec §7a). Custom currencies are pure
+  /// display metadata — no rate is stored, because none is applied (§10).
+  static const String _createCurrenciesTable = '''
+      CREATE TABLE $currenciesTable(
+        code TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        symbol TEXT,
+        decimals INTEGER NOT NULL,
+        symbol_before INTEGER NOT NULL
+      )''';
+
+  /// Additive migrations only — every column/table added since v1 is nullable or
+  /// brand-new, so an existing v1 database upgrades in place without rewriting a
+  /// row. A fresh install runs [_onCreate] at the current version and skips this.
+  static Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      await db.execute(
+          'ALTER TABLE $accountsTable ADD COLUMN icon_emoji TEXT');
+      await db.execute(
+          'ALTER TABLE $accountsTable ADD COLUMN color_argb INTEGER');
+      await db.execute(_createCurrenciesTable);
+    }
+  }
 }

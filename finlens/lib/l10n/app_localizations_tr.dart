@@ -36,6 +36,106 @@ class AppLocalizationsTr extends AppLocalizations {
   String get accountGroupBankLoans => 'Banka kredileri';
 
   @override
+  String get accountGroupSpendableDesc =>
+      'Vadesiz hesap, nakit, banka kartınız';
+
+  @override
+  String get accountGroupSetAsideDesc =>
+      'Şimdilik harcamayı düşünmediğiniz birikim';
+
+  @override
+  String get accountGroupReceivablesDesc =>
+      'Birinin size borcu, geri ödeyeceği para';
+
+  @override
+  String get accountGroupInvestmentsDesc =>
+      'Hisse, fon, kripto, emeklilik birikimi';
+
+  @override
+  String get accountGroupValuablesDesc => 'Araba, altın, satabileceğiniz mülk';
+
+  @override
+  String get accountGroupCreditCardsDesc => 'Harcayıp sonra ödediğiniz kartlar';
+
+  @override
+  String get accountGroupPayablesDesc => 'Henüz ödemediğiniz fatura ve borçlar';
+
+  @override
+  String get accountGroupBankLoansDesc => 'Konut, taşıt veya öğrenim kredisi';
+
+  @override
+  String get naType => 'Tür';
+
+  @override
+  String get naRequired => 'GEREKLİ';
+
+  @override
+  String get naAccountType => 'Hesap türü';
+
+  @override
+  String get curSearch => 'Para birimi ara';
+
+  @override
+  String get curRecent => 'SON KULLANILAN';
+
+  @override
+  String get curAll => 'TÜM PARA BİRİMLERİ';
+
+  @override
+  String get curAdd => 'Ekle';
+
+  @override
+  String get curAddTitle => 'Para birimi ekle';
+
+  @override
+  String get curCode => 'Kod';
+
+  @override
+  String get curName => 'Ad';
+
+  @override
+  String get curSymbolOptional => 'Simge · isteğe bağlı';
+
+  @override
+  String get curBeforeAmount => 'Tutardan önce';
+
+  @override
+  String get curDecimals => 'Ondalık basamak';
+
+  @override
+  String get curPreview => 'Önizleme';
+
+  @override
+  String get curAddButton => 'Para birimi ekle';
+
+  @override
+  String get curInert =>
+      'Yalnızca bu uygulamada kullanılır. Döviz kuru uygulanmaz.';
+
+  @override
+  String get curCodeExists => 'Bu kod zaten kullanımda.';
+
+  @override
+  String curNoMatch(Object query) {
+    return '\"$query\" ile eşleşen para birimi yok.';
+  }
+
+  @override
+  String get qaBackgroundColour => 'Arka plan rengi';
+
+  @override
+  String get qaIconsTab => 'Simgeler';
+
+  @override
+  String get qaEmojiTab => 'Emoji';
+
+  @override
+  String get qaSearchEmoji => 'Emoji ara';
+
+  @override
+  String get qaNoEmojiMatch => 'Eşleşen emoji yok';
+
+  @override
   String get quickAddExpense => 'Gider';
 
   @override

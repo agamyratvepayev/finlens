@@ -1,24 +1,41 @@
 import 'package:flutter/material.dart';
 
 import '../../l10n/app_localizations.dart';
+import '../../shared/widgets/screen_header.dart' show SegmentedPicker;
 import '../../theme/app_colors.dart';
 import 'account_icons.dart';
+import 'emoji_catalog.dart';
 
-/// A single glyph tile in the group's colour (spec §5.5/§5.6). Unselected tiles
-/// show a dark tint of the colour with the glyph in the colour; the selected
-/// tile is filled with the colour and carries a 2 pt white ring.
+/// What the icon picker returns (spec §7b): a glyph — either a Material [icon]
+/// **or** an [emoji] string — together with the chosen [colorValue] (an ARGB
+/// int, or null to follow the account type's colour). Exactly one of [icon] /
+/// [emoji] is non-null.
+class IconSelection {
+  const IconSelection({this.icon, this.emoji, this.colorValue});
+
+  final IconData? icon;
+  final String? emoji;
+  final int? colorValue;
+}
+
+/// A single glyph tile in [color] (spec §7b). Renders either a Material [icon]
+/// (tinted with the colour, filled when selected) or an [emoji] (which keeps its
+/// own colours, on a tile tinted with the colour). The selected tile carries a
+/// 2 pt accent ring — a ring reads better than a check in a dense grid.
 class AccountGlyphTile extends StatelessWidget {
   const AccountGlyphTile({
     super.key,
-    required this.icon,
+    this.icon,
+    this.emoji,
     required this.color,
     required this.selected,
     required this.onTap,
     this.size = 36,
     this.name,
-  });
+  }) : assert(icon != null || emoji != null);
 
-  final IconData icon;
+  final IconData? icon;
+  final String? emoji;
   final Color color;
   final bool selected;
   final VoidCallback onTap;
@@ -27,6 +44,19 @@ class AccountGlyphTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isEmoji = emoji != null;
+    // Icons: filled with the colour when selected, else a dark tint with the
+    // glyph in the colour. Emoji: always a tinted tile (the glyph carries its
+    // own colours), a touch stronger when selected.
+    final Color bg = isEmoji
+        ? Color.alphaBlend(
+            color.withValues(alpha: selected ? 0.28 : 0.18),
+            AppColors.surfaceAlt)
+        : (selected
+            ? color
+            : Color.alphaBlend(
+                color.withValues(alpha: 0.18), AppColors.surfaceAlt));
+
     return Semantics(
       button: true,
       selected: selected,
@@ -38,61 +68,135 @@ class AccountGlyphTile extends StatelessWidget {
           width: size,
           height: size,
           decoration: BoxDecoration(
-            color: selected
-                ? color
-                : Color.alphaBlend(
-                    color.withValues(alpha: 0.18), AppColors.surfaceAlt),
+            color: bg,
             borderRadius: BorderRadius.circular(size >= 42 ? 11 : 10),
-            border:
-                selected ? Border.all(color: Colors.white, width: 2) : null,
+            border: selected
+                ? Border.all(color: AppColors.accentLight, width: 2)
+                : null,
           ),
-          child: Icon(
-            icon,
-            size: size * 0.5,
-            color: selected ? Colors.white : color,
-          ),
+          alignment: Alignment.center,
+          child: isEmoji
+              ? Text(emoji!, style: TextStyle(fontSize: size * 0.5))
+              : Icon(
+                  icon,
+                  size: size * 0.5,
+                  color: selected && !isEmoji ? Colors.white : color,
+                ),
         ),
       ),
     );
   }
 }
 
-/// The full icon picker (spec §5.6): grouped grid, every tile in [color], with
-/// a locale-aware search. Opens over the New account sheet and returns the
-/// chosen glyph (or [selected] unchanged on Done).
-Future<IconData?> showIconPicker(
+/// The icon picker (spec §7b): a colour row, an `Icons`/`Emoji` switch, search,
+/// and a grouped grid whose glyphs render in the currently-selected colour. One
+/// tap on a glyph selects it *and* the current colour, and closes. Opens over
+/// the New account sheet.
+///
+/// [typeColor] is the account type's colour — the fallback when the user has not
+/// picked one. [colorValue] is the account's current custom colour (null = follow
+/// the type). [icon]/[emoji] carry the current glyph so it starts selected.
+Future<IconSelection?> showIconPicker(
   BuildContext context, {
-  required Color color,
-  IconData? selected,
+  required Color typeColor,
+  int? colorValue,
+  IconData? icon,
+  String? emoji,
+  bool allowEmoji = true,
+  bool allowColor = true,
 }) {
-  return showModalBottomSheet<IconData>(
+  return showModalBottomSheet<IconSelection>(
     context: context,
     isScrollControlled: true,
-    backgroundColor: AppColors.surface, // #161618
+    backgroundColor: AppColors.surface,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
     ),
-    builder: (_) => _IconPickerSheet(color: color, selected: selected),
+    builder: (_) => _IconPickerSheet(
+      typeColor: typeColor,
+      colorValue: colorValue,
+      icon: icon,
+      emoji: emoji,
+      allowEmoji: allowEmoji,
+      allowColor: allowColor,
+    ),
   );
 }
 
-class _IconPickerSheet extends StatefulWidget {
-  const _IconPickerSheet({required this.color, this.selected});
+/// An icon-only variant for the category editor (which chooses its colour on a
+/// separate row and stores an [IconData], never an emoji). Reuses the same grid
+/// and search but hides the colour row and the Emoji tab, preserving the
+/// category editor's existing behaviour after the account picker's rework.
+Future<IconData?> showCategoryIconPicker(
+  BuildContext context, {
+  required Color color,
+  IconData? selected,
+}) async {
+  final result = await showIconPicker(
+    context,
+    typeColor: color,
+    colorValue: color.toARGB32(),
+    icon: selected,
+    allowEmoji: false,
+    allowColor: false,
+  );
+  return result?.icon;
+}
 
-  final Color color;
-  final IconData? selected;
+class _IconPickerSheet extends StatefulWidget {
+  const _IconPickerSheet({
+    required this.typeColor,
+    this.colorValue,
+    this.icon,
+    this.emoji,
+    this.allowEmoji = true,
+    this.allowColor = true,
+  });
+
+  final Color typeColor;
+  final int? colorValue;
+  final IconData? icon;
+  final String? emoji;
+  final bool allowEmoji;
+  final bool allowColor;
 
   @override
   State<_IconPickerSheet> createState() => _IconPickerSheetState();
 }
 
+enum _GlyphTab { icons, emoji }
+
 class _IconPickerSheetState extends State<_IconPickerSheet> {
   String _query = '';
+  late _GlyphTab _tab;
+
+  /// The chosen colour as an ARGB int, or null to follow the type. The rendered
+  /// colour is [_effectiveColor].
+  int? _colorValue;
+
+  @override
+  void initState() {
+    super.initState();
+    _colorValue = widget.colorValue;
+    // Land on the tab holding the current glyph so it starts selected.
+    _tab = widget.emoji != null ? _GlyphTab.emoji : _GlyphTab.icons;
+  }
+
+  Color get _effectiveColor =>
+      _colorValue == null ? widget.typeColor : Color(_colorValue!);
+
+  void _pickColor(Color c) => setState(() => _colorValue = c.toARGB32());
+
+  void _selectIcon(IconData icon) =>
+      Navigator.of(context).pop(IconSelection(icon: icon, colorValue: _colorValue));
+
+  void _selectEmoji(String emoji) => Navigator.of(context)
+      .pop(IconSelection(emoji: emoji, colorValue: _colorValue));
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
-    final results = _query.trim().isEmpty ? null : searchAccountIcons(_query);
 
     return Padding(
       padding: EdgeInsets.only(bottom: bottomInset),
@@ -114,7 +218,7 @@ class _IconPickerSheetState extends State<_IconPickerSheet> {
               child: Row(
                 children: [
                   Expanded(
-                    child: Text(AppLocalizations.of(context).qaChooseIcon,
+                    child: Text(l.qaIcon,
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
@@ -123,55 +227,38 @@ class _IconPickerSheetState extends State<_IconPickerSheet> {
                   ),
                   GestureDetector(
                     behavior: HitTestBehavior.opaque,
-                    onTap: () => Navigator.of(context).pop(widget.selected),
-                    child: Text(AppLocalizations.of(context).actionDone,
+                    onTap: () => Navigator.of(context).pop(),
+                    child: Text(l.actionCancel,
                         style: TextStyle(fontSize: 14, color: AppColors.accent)),
                   ),
                 ],
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-                decoration: BoxDecoration(
-                  color: AppColors.sheetCard,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.search_rounded,
-                        size: 16, color: AppColors.textTertiary),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: TextField(
-                        onChanged: (v) => setState(() => _query = v),
-                        cursorColor: AppColors.accent,
-                        style: const TextStyle(
-                            fontSize: 14, color: AppColors.textPrimary),
-                        decoration: InputDecoration(
-                          isDense: true,
-                          contentPadding: EdgeInsets.zero,
-                          border: InputBorder.none,
-                          hintText: AppLocalizations.of(context).qaSearchIcons,
-                          hintStyle: TextStyle(color: AppColors.textTertiary),
-                        ),
-                      ),
-                    ),
-                  ],
+            // Colour row — heading depends on the tab (spec §7b). Hidden in the
+            // category editor, which chooses its colour elsewhere.
+            if (widget.allowColor) ...[
+              _colorRow(l),
+              const SizedBox(height: 12),
+            ],
+            // Icons / Emoji switch — hidden when emoji are not allowed.
+            if (widget.allowEmoji)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
+                child: SegmentedPicker<_GlyphTab>(
+                  values: const [_GlyphTab.icons, _GlyphTab.emoji],
+                  selected: _tab,
+                  labelOf: (t) =>
+                      t == _GlyphTab.icons ? l.qaIconsTab : l.qaEmojiTab,
+                  onChanged: (t) => setState(() {
+                    _tab = t;
+                    _query = '';
+                  }),
                 ),
               ),
-            ),
+            _searchBar(l),
             Expanded(
-              child: results != null
-                  ? _grid(AppLocalizations.of(context).qaResults, results)
-                  : ListView(
-                      padding: const EdgeInsets.only(bottom: 24),
-                      children: [
-                        for (final entry in accountIconGroups.entries)
-                          _section(entry.key, entry.value),
-                      ],
-                    ),
+              child:
+                  _tab == _GlyphTab.icons ? _iconsBody(l) : _emojiBody(l),
             ),
           ],
         ),
@@ -179,22 +266,157 @@ class _IconPickerSheetState extends State<_IconPickerSheet> {
     );
   }
 
-  Widget _grid(String label, List<AccountIconEntry> entries) {
-    if (entries.isEmpty) {
-      return Padding(
-        padding: const EdgeInsets.only(top: 40),
-        child: Text(AppLocalizations.of(context).qaNoIconsMatch,
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 14, color: AppColors.textTertiary)),
+  Widget _colorRow(AppLocalizations l) {
+    final heading =
+        _tab == _GlyphTab.emoji ? l.qaBackgroundColour : l.qaColour;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
+          child: Text(
+            heading.toUpperCase(),
+            style: const TextStyle(
+              fontSize: 10.5,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.07 * 10.5,
+              color: AppColors.textSecondary,
+            ),
+          ),
+        ),
+        SizedBox(
+          height: 40,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            children: [
+              for (final c in AppColors.accountSwatches) ...[
+                _Swatch(
+                  color: c,
+                  selected: c.toARGB32() == _effectiveColor.toARGB32(),
+                  onTap: () => _pickColor(c),
+                ),
+                const SizedBox(width: 10),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _searchBar(AppLocalizations l) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+        decoration: BoxDecoration(
+          color: AppColors.sheetCard,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.search_rounded,
+                size: 16, color: AppColors.textTertiary),
+            const SizedBox(width: 8),
+            Expanded(
+              child: TextField(
+                onChanged: (v) => setState(() => _query = v),
+                cursorColor: AppColors.accent,
+                style: const TextStyle(
+                    fontSize: 14, color: AppColors.textPrimary),
+                decoration: InputDecoration(
+                  isDense: true,
+                  contentPadding: EdgeInsets.zero,
+                  border: InputBorder.none,
+                  hintText: _tab == _GlyphTab.icons
+                      ? l.qaSearchIcons
+                      : l.qaSearchEmoji,
+                  hintStyle: const TextStyle(color: AppColors.textTertiary),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _iconsBody(AppLocalizations l) {
+    if (_query.trim().isNotEmpty) {
+      final results = searchAccountIcons(_query);
+      if (results.isEmpty) {
+        return _noMatch(l.qaNoIconsMatch);
+      }
+      return ListView(
+        padding: const EdgeInsets.only(bottom: 24),
+        children: [_iconSection(l.qaResults, results)],
       );
     }
     return ListView(
       padding: const EdgeInsets.only(bottom: 24),
-      children: [_section(label, entries)],
+      children: [
+        for (final entry in accountIconGroups.entries)
+          _iconSection(entry.key, entry.value),
+      ],
     );
   }
 
-  Widget _section(String label, List<AccountIconEntry> entries) {
+  Widget _iconSection(String label, List<AccountIconEntry> entries) {
+    return _gridSection(
+      label,
+      [
+        for (final e in entries)
+          AccountGlyphTile(
+            icon: e.icon,
+            name: e.name,
+            color: _effectiveColor,
+            size: 42,
+            selected: e.icon == widget.icon && widget.emoji == null,
+            onTap: () => _selectIcon(e.icon),
+          ),
+      ],
+    );
+  }
+
+  Widget _emojiBody(AppLocalizations l) {
+    if (_query.trim().isNotEmpty) {
+      final results = searchEmoji(_query);
+      if (results.isEmpty) {
+        return _noMatch(l.qaNoEmojiMatch);
+      }
+      return ListView(
+        padding: const EdgeInsets.only(bottom: 24),
+        children: [_emojiSection(l.qaResults, results)],
+      );
+    }
+    return ListView(
+      padding: const EdgeInsets.only(bottom: 24),
+      children: [
+        for (final entry in emojiGroups.entries)
+          _emojiSection(entry.key, entry.value),
+      ],
+    );
+  }
+
+  Widget _emojiSection(String label, List<EmojiEntry> entries) {
+    return _gridSection(
+      label,
+      [
+        for (final e in entries)
+          AccountGlyphTile(
+            emoji: e.emoji,
+            name: e.emoji,
+            color: _effectiveColor,
+            size: 42,
+            selected: e.emoji == widget.emoji,
+            onTap: () => _selectEmoji(e.emoji),
+          ),
+      ],
+    );
+  }
+
+  Widget _gridSection(String label, List<Widget> tiles) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -212,23 +434,50 @@ class _IconPickerSheetState extends State<_IconPickerSheet> {
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
-          child: Wrap(
-            spacing: 7,
-            runSpacing: 7,
-            children: [
-              for (final e in entries)
-                AccountGlyphTile(
-                  icon: e.icon,
-                  name: e.name,
-                  color: widget.color,
-                  size: 42,
-                  selected: e.icon == widget.selected,
-                  onTap: () => Navigator.of(context).pop(e.icon),
-                ),
-            ],
-          ),
+          child: Wrap(spacing: 7, runSpacing: 7, children: tiles),
         ),
       ],
+    );
+  }
+
+  Widget _noMatch(String message) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 40),
+      child: Text(message,
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontSize: 14, color: AppColors.textTertiary)),
+    );
+  }
+}
+
+class _Swatch extends StatelessWidget {
+  const _Swatch(
+      {required this.color, required this.selected, required this.onTap});
+
+  final Color color;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      selected: selected,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+            border: selected
+                ? Border.all(color: Colors.white, width: 2.5)
+                : null,
+          ),
+        ),
+      ),
     );
   }
 }

@@ -137,6 +137,23 @@ abstract final class AppColors {
     Color(0xFF8E8E93),
   ];
 
+  /// The swatch row offered by the New-account icon picker (spec §7b). A wider
+  /// spread than the category palette — it spans the account-group hues plus a
+  /// few extras — so a user can colour an account freely without losing the type
+  /// (which Balance always shows through its group heading, never this colour).
+  static const accountSwatches = <Color>[
+    Color(0xFF30D158), // green
+    Color(0xFF0A84FF), // blue
+    Color(0xFF5E5CE6), // accent purple
+    Color(0xFFBF5AF2), // violet
+    Color(0xFFFF9F0A), // amber
+    Color(0xFFFF453A), // red
+    Color(0xFFFF375F), // pink
+    Color(0xFF64D2FF), // cyan
+    Color(0xFFAC8E68), // bronze
+    Color(0xFF8E8E93), // grey
+  ];
+
   // ── Balance filter sheet ──
   // A denser utility surface that sits one step above [surfaceAlt] (the sheet
   // body). These have no equivalent in the ramps above, so they earn their own
