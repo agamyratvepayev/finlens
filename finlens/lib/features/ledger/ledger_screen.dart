@@ -1068,9 +1068,9 @@ class _LedgerScreenState extends State<LedgerScreen> {
 /// Splitting on the sentinel lets a translation move the glyph freely; a string
 /// that lost the placeholder yields one part, which degrades to a plain readable
 /// line with the glyph omitted rather than throwing or drawing an empty label.
-/// Top-level and `@visibleForTesting` so the fallback path can be exercised
-/// directly without a broken localization.
-@visibleForTesting
+/// Top-level and public so the Planner's first-run tabs share the one hint
+/// implementation (§4.4), and so the fallback path can be exercised in a test
+/// without a broken localization.
 Widget buildFirstRunHint(String rawWithSentinel, String sentinel) {
   const baseStyle = TextStyle(fontSize: 12, color: AppColors.textTertiary);
   final parts = rawWithSentinel.split(sentinel);

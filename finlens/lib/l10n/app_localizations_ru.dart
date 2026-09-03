@@ -1546,11 +1546,11 @@ class AppLocalizationsRu extends AppLocalizations {
   String get plTabSchedule => 'График';
 
   @override
-  String get plNoBudgetsYet => 'Бюджет — это лимит категории';
+  String get plNoBudgetsYet => 'Да, это вам по карману';
 
   @override
   String get plNoBudgetsMsg =>
-      'Задайте категории месячный лимит — и каждая трата по ней пойдёт в счёт этого лимита.';
+      'Лимит трат ответит на этот вопрос раньше, чем вы о нём задумаетесь.';
 
   @override
   String get plBudgeted => 'В бюджете';
@@ -1562,20 +1562,11 @@ class AppLocalizationsRu extends AppLocalizations {
   String get plSet => 'Задать';
 
   @override
-  String get plNoGoalsYet => 'Цели отвечают на «когда»';
+  String get plNoGoalsYet => 'Это лишь вопрос времени';
 
   @override
   String get plNoGoalsMsg =>
-      'Задайте цель, и FinLens рассчитает месячный темп.';
-
-  @override
-  String get plNewGoal => 'Новая цель';
-
-  @override
-  String get plNewTask => 'Новая задача';
-
-  @override
-  String get plNewBudget => 'Новый бюджет';
+      'Задайте сумму и дату — останется один вопрос: как скоро.';
 
   @override
   String get plCompleteReady => 'Готово · можно в архив';
@@ -1599,11 +1590,11 @@ class AppLocalizationsRu extends AppLocalizations {
   String get schThisWeek => 'На этой неделе';
 
   @override
-  String get plNothingScheduled => 'Планируйте, что впереди';
+  String get plNothingScheduled => 'Никаких сюрпризов';
 
   @override
   String get plNothingSchedMsg =>
-      'Счета, зарплаты и подписки, которые вы планируете, появятся здесь до того, как случатся.';
+      'Будущие платежи в календаре — и сегодняшний баланс говорит правду.';
 
   @override
   String get plLeftThisMonth => 'Осталось за месяц';

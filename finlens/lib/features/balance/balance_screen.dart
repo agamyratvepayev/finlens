@@ -1343,6 +1343,8 @@ class EmptyState extends StatelessWidget {
     this.titleAsHeader = false,
     this.iconBackdrop = false,
     this.messageMaxWidth,
+    this.iconSize,
+    this.textBlockHeight,
   });
 
   final IconData icon;
@@ -1361,6 +1363,16 @@ class EmptyState extends StatelessWidget {
 
   /// Caps the message's line length. Null keeps the full available width.
   final double? messageMaxWidth;
+
+  /// Overrides the glyph size. Null keeps the default — 24pt on a backdrop, 40pt
+  /// bare. The Planner's first-run tabs pass per-glyph values so three icons of
+  /// different natural heights read at one cap height (§4.2).
+  final double? iconSize;
+
+  /// Pins the title+message region to a fixed height, top-aligned. Null lets it
+  /// grow to its content. The Planner passes one shared height across its three
+  /// tabs so the icon lands on the same y whichever tab is showing (§4.3).
+  final double? textBlockHeight;
 
   @override
   Widget build(BuildContext context) {
@@ -1385,9 +1397,10 @@ class EmptyState extends StatelessWidget {
               color: AppColors.surface,
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, size: 24, color: AppColors.textTertiary),
+            child: Icon(icon,
+                size: iconSize ?? 24, color: AppColors.textTertiary),
           )
-        : Icon(icon, size: 40, color: AppColors.textTertiary);
+        : Icon(icon, size: iconSize ?? 40, color: AppColors.textTertiary);
 
     Widget messageWidget =
         Text(message, style: AppText.caption, textAlign: TextAlign.center);
@@ -1398,15 +1411,31 @@ class EmptyState extends StatelessWidget {
       );
     }
 
+    // The title and message, optionally pinned to a fixed height. Top-aligned so
+    // a shorter message leaves its slack at the foot of the box, not above the
+    // icon — which is exactly what keeps the icon from sliding down (§4.3).
+    Widget textBlock = Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        titleText,
+        const SizedBox(height: Insets.xs),
+        messageWidget,
+      ],
+    );
+    if (textBlockHeight != null) {
+      textBlock = SizedBox(
+        height: textBlockHeight,
+        child: Align(alignment: Alignment.topCenter, child: textBlock),
+      );
+    }
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: Insets.xxl),
       child: Column(
         children: [
           iconWidget,
           const SizedBox(height: Insets.md),
-          titleText,
-          const SizedBox(height: Insets.xs),
-          messageWidget,
+          textBlock,
           if (action != null) ...[const SizedBox(height: Insets.xl), action!],
         ],
       ),

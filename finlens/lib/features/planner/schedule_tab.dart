@@ -15,15 +15,14 @@ import '../../shared/widgets/screen_header.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/app_typography.dart';
-import '../balance/balance_screen.dart' show EmptyState;
 import '../balance/same_transactions_screen.dart';
 import '../ledger/transfer_detail_screen.dart';
-import '../quick_add/quick_add_sheet.dart';
 import 'archive_screen.dart';
 import 'mark_paid_sheet.dart';
 import 'schedule_history_screen.dart';
 import 'schedule_horizon.dart';
 import 'task_detail_screen.dart';
+import 'widgets/planner_empty.dart';
 
 // ── A section of the list (§3) ──────────────────────────────────────────────
 
@@ -268,7 +267,9 @@ class _ScheduleTabState extends State<ScheduleTab> {
     // `_nothingDue`, which fires on an empty section list within this horizon.
     final noTasksAtAll = store.openTasks.isEmpty;
     if (noTasksAtAll) {
-      return _emptyState(context, l);
+      // No pill — the header + is the only action, named by the hint line; the
+      // block centres below the tabs (§4). The gate is unchanged.
+      return const PlannerEmptyState(tab: PlannerEmptyTab.schedule);
     }
 
     final sections = _buildSections(store, h, today, l);
@@ -359,26 +360,6 @@ class _ScheduleTabState extends State<ScheduleTab> {
       net.abs(),
       style: AppText.label.copyWith(color: color),
       color: color,
-    );
-  }
-
-  Widget _emptyState(BuildContext context, AppLocalizations l) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 56),
-      child: EmptyState(
-        icon: Icons.event_available_rounded,
-        title: l.plNothingScheduled,
-        message: l.plNothingSchedMsg,
-        action: FilledButton.icon(
-          onPressed: () => showQuickAdd(context, type: QuickAddType.newTask),
-          icon: const Icon(Icons.add_rounded, size: 18),
-          label: Text(l.plNewTask),
-          style: FilledButton.styleFrom(
-            backgroundColor: AppColors.accent,
-            foregroundColor: Colors.white,
-          ),
-        ),
-      ),
     );
   }
 

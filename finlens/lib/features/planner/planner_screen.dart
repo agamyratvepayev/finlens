@@ -12,7 +12,6 @@ import '../../shared/widgets/section_header.dart' show HorizontalSectionSwipe;
 import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/app_typography.dart';
-import '../balance/balance_screen.dart' show EmptyState;
 import '../quick_add/quick_add_sheet.dart';
 import 'archive_screen.dart';
 import 'budget_detail_screen.dart';
@@ -24,6 +23,7 @@ import 'schedule_horizon.dart';
 import 'schedule_tab.dart';
 import 'widgets/goal_scope_sheet.dart';
 import 'widgets/month_picker_sheet.dart';
+import 'widgets/planner_empty.dart';
 
 /// Spec 5 вЂ” the forward-looking module. Three tabs, each answering its own
 /// question in its own summary header (spec 6.2, "Tek Г¶zet kuralД±").
@@ -88,6 +88,23 @@ class _PlannerScreenState extends State<PlannerScreen> {
       store.budgetedCategories.isEmpty &&
       store.unbudgetedSpendingCategories(_month).isEmpty;
 
+  /// True when the Planner has never held anything: no budgets and no unbudgeted
+  /// spending, no goals, no tasks, and nothing in Archive. The eye would mask
+  /// nothing and the ••• would open an empty screen, so neither is drawn (§2).
+  ///
+  /// Archive is part of the test on purpose: a store whose only goals are
+  /// archived reads as empty everywhere else, and hiding ••• there would strand
+  /// the one route to them (`archivedCount` counts archived goals, removed
+  /// budgets, archived accounts, and paused/completed/deleted tasks).
+  ///
+  /// Planner-wide, never per tab — the header sits above the segmented control,
+  /// so a per-tab test would make the eye flicker as the user swipes.
+  bool _plannerUntouched(AppStore store) =>
+      _budgetsEmpty(store) &&
+      store.goals.isEmpty &&
+      store.openTasks.isEmpty &&
+      store.archivedCount == 0;
+
   /// Row 1's leading control per tab. Budgets shows the month; Schedule shows
   /// the horizon; Goals shows the filter scope. Each slot collapses to empty when
   /// its own tab is empty (§1/§5) — a control that could only step from one empty
@@ -129,6 +146,11 @@ class _PlannerScreenState extends State<PlannerScreen> {
     final store = StoreScope.of(context);
     final l = AppLocalizations.of(context);
 
+    // On a never-touched Planner there is nothing money-shaped to mask and
+    // nothing archived, so the eye and the ••• both leave the header, exactly as
+    // the Ledger's first-run header does — leaving one control, the + (§2).
+    final untouched = _plannerUntouched(store);
+
     return SafeArea(
       bottom: false,
       child: Column(
@@ -138,6 +160,7 @@ class _PlannerScreenState extends State<PlannerScreen> {
           // list leaves the slot empty (§1).
           ScreenHeader(
             titleWidget: _titleWidget(context, store),
+            showEye: !untouched,
             onAdd: () {
               // Each tab's + creates that tab's own thing (§5). Goals use their
               // own full-screen form (the WATCHING picker and targetв†”date pair
@@ -156,18 +179,23 @@ class _PlannerScreenState extends State<PlannerScreen> {
                     : QuickAddType.newBudget,
               );
             },
-            trailing: IconButton(
-              visualDensity: VisualDensity.compact,
-              padding: EdgeInsets.zero,
-              constraints:
-                  const BoxConstraints.tightFor(width: 36, height: 36),
-              icon: const Icon(Icons.more_horiz_rounded, size: 22),
-              color: AppColors.textPrimary,
-              // Spec 5.8 вЂ” Archive lives behind the вЂўвЂўвЂў menu, never a tab.
-              onPressed: () => Navigator.of(context, rootNavigator: true).push(
-                MaterialPageRoute(builder: (_) => const ArchiveScreen()),
-              ),
-            ),
+            // The ••• (Archive) is drawn only once there is something archived to
+            // reach; on an untouched Planner it would open an empty screen (§2).
+            trailing: untouched
+                ? null
+                : IconButton(
+                    visualDensity: VisualDensity.compact,
+                    padding: EdgeInsets.zero,
+                    constraints:
+                        const BoxConstraints.tightFor(width: 36, height: 36),
+                    icon: const Icon(Icons.more_horiz_rounded, size: 22),
+                    color: AppColors.textPrimary,
+                    // Spec 5.8 — Archive lives behind the ••• menu, never a tab.
+                    onPressed: () =>
+                        Navigator.of(context, rootNavigator: true).push(
+                      MaterialPageRoute(builder: (_) => const ArchiveScreen()),
+                    ),
+                  ),
           ),
           // Row 2 вЂ” a segmented control, above the summary (spec В§1). Margin 14
           // each side (not the 20 gutter) per the container spec.
@@ -203,8 +231,21 @@ class _PlannerScreenState extends State<PlannerScreen> {
         // answered by the first card. The cards are sections в†’ cards, nothing
         // else.
         1 => const SizedBox.shrink(),
-        2 => ScheduleSummary(store: store, horizon: _horizon),
-        _ => _BudgetSummary(store: store, month: _month),
+        // The projection bar reads only when there is a task to project. The
+        // gate is the Schedule tab's own empty test (`openTasks.isEmpty`), the
+        // exact condition its empty state shows on, so a projection over zero
+        // tasks can never draw (§3.2). Tasks that fall past the horizon keep the
+        // summary — the projection still describes them.
+        2 => store.openTasks.isEmpty
+            ? const SizedBox.shrink()
+            : ScheduleSummary(store: store, horizon: _horizon),
+        // The hero reads only with a budget to measure. `$0 left of $0` — over
+        // spending or not — is a claim about nothing, so it is absent both when
+        // the tab is empty and in the spending-without-budget case, where the NO
+        // BUDGET SET panel carries the tab instead (§3.1).
+        _ => store.totalBudget > 0
+            ? _BudgetSummary(store: store, month: _month)
+            : const SizedBox.shrink(),
       };
 
   Widget _content(AppStore store) => switch (_tab) {
@@ -444,7 +485,7 @@ class _BudgetSummary extends StatelessWidget {
               Expanded(
                 child: Text(
                   isCurrent
-                      ? '${l.plPctSpent(percent(ratio, decimals: 0))} В· '
+                      ? '${l.plPctSpent(percent(ratio, decimals: 0))} · '
                           '${l.plDayOfMonth(store.dayOfMonthFor(month), store.daysInMonthOf(month))}'
                       : l.plPctSpent(percent(ratio, decimals: 0)),
                   style: AppText.caption.copyWith(fontSize: 11.5),
@@ -481,30 +522,10 @@ class _BudgetsTab extends StatelessWidget {
     final budgets = store.budgetedCategories;
     final unbudgeted = store.unbudgetedSpendingCategories(month);
 
+    // No pill — the header + is the only way in, named by the hint line (§4.1).
+    // The block centres itself in the space below the tabs (§4.5).
     if (budgets.isEmpty && unbudgeted.isEmpty) {
-      final l = AppLocalizations.of(context);
-      return Padding(
-        padding: const EdgeInsets.only(top: 56),
-        child: EmptyState(
-          icon: Icons.donut_small_rounded,
-          title: l.plNoBudgetsYet,
-          message: l.plNoBudgetsMsg,
-          // The way out, matching New goal and New task (§2): same shape, colour
-          // and icon size. Routes through the category-first budget flow — Quick
-          // Add intercepts newBudget before the sheet builds — so this button and
-          // this tab's + do the same thing (§2.1).
-          action: FilledButton.icon(
-            onPressed: () =>
-                showQuickAdd(context, type: QuickAddType.newBudget),
-            icon: const Icon(Icons.add_rounded, size: 18),
-            label: Text(l.plNewBudget),
-            style: FilledButton.styleFrom(
-              backgroundColor: AppColors.accent,
-              foregroundColor: Colors.white,
-            ),
-          ),
-        ),
-      );
+      return const PlannerEmptyState(tab: PlannerEmptyTab.budgets);
     }
 
     // Over-limit categories first, then the rest in their existing order.
@@ -779,7 +800,7 @@ class _NoBudgetSectionState extends State<_NoBudgetSection> {
                 const Spacer(),
                 Text(l.plCategoriesCount(widget.categories.length),
                     style: headerStyle),
-                Text(' В· ', style: headerStyle),
+                Text(' · ', style: headerStyle),
                 AmountText(total, style: headerStyle),
               ],
             ),
@@ -883,27 +904,11 @@ class _GoalsTab extends StatelessWidget {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
 
-    // The real "no goals yet" state is unchanged — it owns the New goal button
-    // and the header slot is empty above it (§5). It is keyed on the whole goal
-    // list, never the filtered one.
+    // The real "no goals yet" state — keyed on the whole goal list, never the
+    // filtered one. No pill: the header + is the only action, named by the hint
+    // line, and the block centres below the tabs (§4).
     if (store.goals.isEmpty) {
-      return Padding(
-        padding: const EdgeInsets.only(top: 56),
-        child: EmptyState(
-          icon: Icons.flag_rounded,
-          title: l.plNoGoalsYet,
-          message: l.plNoGoalsMsg,
-          action: FilledButton.icon(
-            onPressed: () => openGoalEditor(context),
-            icon: const Icon(Icons.add_rounded, size: 18),
-            label: Text(l.plNewGoal),
-            style: FilledButton.styleFrom(
-              backgroundColor: AppColors.accent,
-              foregroundColor: Colors.white,
-            ),
-          ),
-        ),
-      );
+      return const PlannerEmptyState(tab: PlannerEmptyTab.goals);
     }
 
     final sections = store.activeGoalSections(filter: filter);

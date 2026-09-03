@@ -2251,13 +2251,13 @@ abstract class AppLocalizations {
   /// No description provided for @plNoBudgetsYet.
   ///
   /// In en, this message translates to:
-  /// **'Budgets cap a category'**
+  /// **'Yes, you can afford it'**
   String get plNoBudgetsYet;
 
   /// No description provided for @plNoBudgetsMsg.
   ///
   /// In en, this message translates to:
-  /// **'Give one a monthly limit and every transaction in it counts against that limit.'**
+  /// **'A spending limit answers that question before you have to think about it.'**
   String get plNoBudgetsMsg;
 
   /// No description provided for @plBudgeted.
@@ -2281,32 +2281,14 @@ abstract class AppLocalizations {
   /// No description provided for @plNoGoalsYet.
   ///
   /// In en, this message translates to:
-  /// **'Goals answer “when”'**
+  /// **'Make it a matter of time'**
   String get plNoGoalsYet;
 
   /// No description provided for @plNoGoalsMsg.
   ///
   /// In en, this message translates to:
-  /// **'Set a target and FinLens works out the monthly pace.'**
+  /// **'Give it a number and a date, and the only question left is how soon.'**
   String get plNoGoalsMsg;
-
-  /// No description provided for @plNewGoal.
-  ///
-  /// In en, this message translates to:
-  /// **'New goal'**
-  String get plNewGoal;
-
-  /// No description provided for @plNewTask.
-  ///
-  /// In en, this message translates to:
-  /// **'New task'**
-  String get plNewTask;
-
-  /// No description provided for @plNewBudget.
-  ///
-  /// In en, this message translates to:
-  /// **'New budget'**
-  String get plNewBudget;
 
   /// No description provided for @plCompleteReady.
   ///
@@ -2353,13 +2335,13 @@ abstract class AppLocalizations {
   /// No description provided for @plNothingScheduled.
   ///
   /// In en, this message translates to:
-  /// **'Plan what\'s coming'**
+  /// **'Nothing catches you out'**
   String get plNothingScheduled;
 
   /// No description provided for @plNothingSchedMsg.
   ///
   /// In en, this message translates to:
-  /// **'Bills, salaries and subscriptions you schedule land here before they happen.'**
+  /// **'What\'s coming, on a calendar, so today\'s balance tells you the truth.'**
   String get plNothingSchedMsg;
 
   /// No description provided for @plLeftThisMonth.

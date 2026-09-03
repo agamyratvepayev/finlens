@@ -1503,11 +1503,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get plTabSchedule => 'Schedule';
 
   @override
-  String get plNoBudgetsYet => 'Budgets cap a category';
+  String get plNoBudgetsYet => 'Yes, you can afford it';
 
   @override
   String get plNoBudgetsMsg =>
-      'Give one a monthly limit and every transaction in it counts against that limit.';
+      'A spending limit answers that question before you have to think about it.';
 
   @override
   String get plBudgeted => 'Budgeted';
@@ -1519,20 +1519,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get plSet => 'Set';
 
   @override
-  String get plNoGoalsYet => 'Goals answer “when”';
+  String get plNoGoalsYet => 'Make it a matter of time';
 
   @override
   String get plNoGoalsMsg =>
-      'Set a target and FinLens works out the monthly pace.';
-
-  @override
-  String get plNewGoal => 'New goal';
-
-  @override
-  String get plNewTask => 'New task';
-
-  @override
-  String get plNewBudget => 'New budget';
+      'Give it a number and a date, and the only question left is how soon.';
 
   @override
   String get plCompleteReady => 'Complete · ready to archive';
@@ -1556,11 +1547,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get schThisWeek => 'This week';
 
   @override
-  String get plNothingScheduled => 'Plan what\'s coming';
+  String get plNothingScheduled => 'Nothing catches you out';
 
   @override
   String get plNothingSchedMsg =>
-      'Bills, salaries and subscriptions you schedule land here before they happen.';
+      'What\'s coming, on a calendar, so today\'s balance tells you the truth.';
 
   @override
   String get plLeftThisMonth => 'Left this month';

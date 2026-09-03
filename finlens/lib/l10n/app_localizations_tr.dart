@@ -1493,11 +1493,11 @@ class AppLocalizationsTr extends AppLocalizations {
   String get plTabSchedule => 'Takvim';
 
   @override
-  String get plNoBudgetsYet => 'Bütçe bir kategoriyi sınırlar';
+  String get plNoBudgetsYet => 'Evet, buna bütçen var';
 
   @override
   String get plNoBudgetsMsg =>
-      'Bir kategoriye aylık limit verin; içindeki her işlem o limitten düşer.';
+      'Bir harcama limiti, o soruyu sen düşünmek zorunda kalmadan cevaplar.';
 
   @override
   String get plBudgeted => 'Bütçelenen';
@@ -1509,20 +1509,11 @@ class AppLocalizationsTr extends AppLocalizations {
   String get plSet => 'Ayarla';
 
   @override
-  String get plNoGoalsYet => 'Hedefler “ne zaman” sorusunu yanıtlar';
+  String get plNoGoalsYet => 'Artık sadece zaman meselesi';
 
   @override
   String get plNoGoalsMsg =>
-      'Bir hedef belirleyin, FinLens aylık hızı hesaplasın.';
-
-  @override
-  String get plNewGoal => 'Yeni hedef';
-
-  @override
-  String get plNewTask => 'Yeni görev';
-
-  @override
-  String get plNewBudget => 'Yeni bütçe';
+      'Bir tutar ve bir tarih ver; geriye tek soru kalır: ne kadar sürede.';
 
   @override
   String get plCompleteReady => 'Tamamlandı · arşive hazır';
@@ -1546,11 +1537,11 @@ class AppLocalizationsTr extends AppLocalizations {
   String get schThisWeek => 'Bu hafta';
 
   @override
-  String get plNothingScheduled => 'Yaklaşanları planlayın';
+  String get plNothingScheduled => 'Sürpriz fatura kalmasın';
 
   @override
   String get plNothingSchedMsg =>
-      'Planladığınız faturalar, maaşlar ve abonelikler, gerçekleşmeden önce burada belirir.';
+      'Gelecek ödemeler takvimde olunca, bugünkü bakiye sana doğruyu söyler.';
 
   @override
   String get plLeftThisMonth => 'Bu ay kalan';
