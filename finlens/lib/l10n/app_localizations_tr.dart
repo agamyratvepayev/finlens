@@ -857,39 +857,17 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
-  String get insEmptyNoAccountsTitle => 'Henüz gösterilecek bir şey yok';
+  String get insEmptyNoAccountsTitle => 'Gerçekte ne oldu';
 
   @override
   String get insEmptyNoAccountsBody =>
-      'Insight paranızın ne yaptığını gösterir — nereden geldi, nereye gitti ve geriye ne kaldı.';
+      'Seni neyin büyüttüğünü, neyin erittiğini gör.';
 
   @override
-  String get insEmptyNoRecordsTitle => 'Henüz hiçbir şey hareket etmedi';
+  String get insStartInBalance => 'Bakiye\'de başla';
 
   @override
-  String insEmptyHoldings(String amount, int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count hesap',
-      one: '$count hesap',
-    );
-    return 'Hesaplarınızda $amount · $_temp0';
-  }
-
-  @override
-  String insEmptyHoldingsNoAmount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count hesap',
-      one: '$count hesap',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String get insEmptyRecordSomething => 'Bir şey kaydet';
+  String get insStartInLedger => 'Defter\'de başla';
 
   @override
   String get insEmptyAllHiddenTitle => 'Her hesap gizli';
@@ -936,18 +914,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get insA11yEmptyNoAccounts =>
-      'Henüz gösterilecek bir şey yok. Insight paranızın ne yaptığını gösterir. Bir hesap ekleyin.';
-
-  @override
-  String insA11yEmptyNoRecords(String amount, int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count hesap',
-      one: '$count hesap',
-    );
-    return 'Net değer değişmedi. Henüz hiçbir şey hareket etmedi. Hesaplarınızda $amount, $_temp0.';
-  }
+      'Gerçekte ne oldu. Seni neyin büyüttüğünü, neyin erittiğini gör.';
 
   @override
   String get insA11yEmptyAllHidden =>

@@ -11,18 +11,18 @@ import '../../core/utils/formatters.dart';
 import '../../core/utils/fx.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/amount_text.dart';
+import '../../shared/widgets/app_bottom_nav.dart';
 import '../../shared/widgets/app_card.dart';
 import '../../shared/widgets/range_picker_sheet.dart';
 import '../../shared/widgets/screen_header.dart';
 import '../../shared/widgets/section_header.dart';
-import '../../shared/widgets/undo_bar.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/app_typography.dart';
 import '../balance/balance_filter.dart';
 import '../ledger/ledger_scope.dart';
 import '../ledger/scoped_ledger_screen.dart';
-import '../quick_add/quick_add_sheet.dart';
+import '../shell/app_shell.dart';
 import 'category_detail_screen.dart';
 import 'insight_filter.dart';
 import 'see_all_screen.dart';
@@ -121,39 +121,6 @@ class _InsightScreenState extends State<InsightScreen> {
   void _openFilter() =>
       showInsightFilterSheet(context, StoreScope.read(context).insightWindow);
 
-  /// Quick Add records what happened, not what the reader is viewing: the sheet
-  /// keeps its `today` default (spec §8). But a record that lands outside the
-  /// window makes nothing on screen change, which reads as a failed save — so if
-  /// the total grew while the windowed count did not, show a transient bar
-  /// naming the date and offering to move the window to contain it.
-  Future<void> _add() async {
-    final store = StoreScope.read(context);
-    final window = store.insightWindow;
-    final beforeIds = store.txns.map((t) => t.id).toSet();
-    final beforeWindow = store.txnsInWindow(window).length;
-
-    await showQuickAdd(context);
-    if (!mounted) return;
-
-    final added =
-        store.txns.where((t) => !beforeIds.contains(t.id)).toList();
-    final afterWindow = store.txnsInWindow(window).length;
-    if (added.isEmpty || afterWindow != beforeWindow) return;
-
-    // A record landed outside the window. Name its date and offer to go there —
-    // the period (in the current unit) containing it.
-    final landed = added.first.date;
-    final l = AppLocalizations.of(context);
-    final target = currentPresetFor(store.insightPeriodUnit)
-        .resolve(DateTime(landed.year, landed.month, landed.day));
-    showUndoBar(
-      context,
-      message: l.insSavedOutsideWindow(dayMonth(landed, l)),
-      actionLabel: l.insGoToDate,
-      onUndo: () => store.setInsightWindow(target),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
@@ -171,31 +138,38 @@ class _InsightScreenState extends State<InsightScreen> {
       windowEmptyForVisible: report.isEmpty,
     );
 
+    // One predicate now feeds the whole header. With nothing ever recorded
+    // there is no window worth stepping, no figures to filter, and nothing money
+    // -shaped to mask (spec §1) — so the header is absent entirely rather than a
+    // row of controls that can only move between equally empty reports. Once a
+    // record exists, the window title, filter and eye all return together.
+    final hasRecords = !report.noRecords;
+
     return SafeArea(
       bottom: false,
       child: Column(
         children: [
-          _InsightHeader(
-            label: insightWindowLabel(w, l),
-            isCustom: w.preset == null,
-            filterActive: report.filterActive,
-            hiddenCount: report.hiddenCount,
-            // The filter appears only once a transaction exists — filtering a
-            // report with no figures does nothing visible (spec §2). The eye
-            // appears once there is money on screen; in state 1 there is none.
-            showFilter: !report.noRecords,
-            showEye: !report.noAccounts,
-            onTapTitle: _pickRange,
-            onNext: () => _step(1),
-            onPrevious: () => _step(-1),
-            onClearCustom: _clearCustom,
-            onFilter: _openFilter,
-            onAdd: _add,
-          ),
+          if (hasRecords)
+            _InsightHeader(
+              label: insightWindowLabel(w, l),
+              isCustom: w.preset == null,
+              filterActive: report.filterActive,
+              hiddenCount: report.hiddenCount,
+              onTapTitle: _pickRange,
+              onNext: () => _step(1),
+              onPrevious: () => _step(-1),
+              onClearCustom: _clearCustom,
+              onFilter: _openFilter,
+            ),
           Expanded(
             child: switch (state) {
-              InsightEmpty.noAccounts => const _NoAccountsBody(),
-              InsightEmpty.noRecords => _NoRecordsBody(report: report),
+              // States 1 and 2 are one screen: a reader with accounts but no
+              // entries has no *change* to report, and their standing total is
+              // already the Balance tab's subject (spec §2). They differ only in
+              // where the signpost points.
+              InsightEmpty.noAccounts ||
+              InsightEmpty.noRecords =>
+                _IntroBody(report: report),
               InsightEmpty.allHidden => _AllHiddenBody(
                   report: report,
                   onShowAll: () => StoreScope.read(context)
@@ -456,9 +430,11 @@ InsightEmpty insightEmptyState({
 
 // ── Header (spec §2) ─────────────────────────────────────────────────────────
 // Cloned from the Ledger's header rather than extended onto ScreenHeader: this
-// row carries THREE tools (filter, eye, add) plus an optional custom-range clear,
-// which ScreenHeader's single `trailing` slot cannot express without changing
-// every other caller.
+// row carries two tools (filter, eye) plus an optional custom-range clear, which
+// ScreenHeader's single `trailing` slot cannot express without changing every
+// other caller. Insight is a reading surface — it owns no creation, so there is
+// no `+` here (empty-screen spec §1). The header itself is absent while nothing
+// has been recorded; once it renders, both tools always render with it.
 
 class _InsightHeader extends StatelessWidget {
   const _InsightHeader({
@@ -466,32 +442,22 @@ class _InsightHeader extends StatelessWidget {
     required this.isCustom,
     required this.filterActive,
     required this.hiddenCount,
-    required this.showFilter,
-    required this.showEye,
     required this.onTapTitle,
     required this.onNext,
     required this.onPrevious,
     required this.onClearCustom,
     required this.onFilter,
-    required this.onAdd,
   });
 
   final String label;
   final bool isCustom;
   final bool filterActive;
   final int hiddenCount;
-
-  /// The filter button renders only once a transaction exists (spec §2).
-  final bool showFilter;
-
-  /// The eye renders only once there is money on screen (spec §2).
-  final bool showEye;
   final VoidCallback onTapTitle;
   final VoidCallback onNext;
   final VoidCallback onPrevious;
   final VoidCallback onClearCustom;
   final VoidCallback onFilter;
-  final VoidCallback onAdd;
 
   @override
   Widget build(BuildContext context) {
@@ -558,39 +524,28 @@ class _InsightHeader extends StatelessWidget {
             ),
             const SizedBox(width: 7),
           ],
-          if (showFilter) ...[
-            Semantics(
-              value:
-                  filterActive ? l.insFilterActive(hiddenCount) : l.insFilterOff,
-              child: _CircleButton(
-                icon: filterActive
-                    ? Icons.filter_alt_rounded
-                    : Icons.filter_alt_outlined,
-                // Active mirrors the `+` treatment: accent fill, white glyph —
-                // the only visual cue that the report is filtered (spec §2).
-                accent: filterActive,
-                tint: filterActive ? Colors.white : AppColors.textSecondary,
-                tooltip: l.insFilterAccounts,
-                onTap: onFilter,
-              ),
+          Semantics(
+            value:
+                filterActive ? l.insFilterActive(hiddenCount) : l.insFilterOff,
+            child: _CircleButton(
+              icon: filterActive
+                  ? Icons.filter_alt_rounded
+                  : Icons.filter_alt_outlined,
+              // Active fills accent with a white glyph — the only visual cue
+              // that the report is filtered (spec §2).
+              accent: filterActive,
+              tint: filterActive ? Colors.white : AppColors.textSecondary,
+              tooltip: l.insFilterAccounts,
+              onTap: onFilter,
             ),
-            const SizedBox(width: 7),
-          ],
-          if (showEye) ...[
-            _CircleButton(
-              icon: store.masked
-                  ? Icons.visibility_off_rounded
-                  : Icons.visibility_rounded,
-              tint: AppColors.textSecondary,
-              onTap: store.toggleMasked,
-            ),
-            const SizedBox(width: 7),
-          ],
+          ),
+          const SizedBox(width: 7),
           _CircleButton(
-            icon: Icons.add_rounded,
-            accent: true,
-            tint: Colors.white,
-            onTap: onAdd,
+            icon: store.masked
+                ? Icons.visibility_off_rounded
+                : Icons.visibility_rounded,
+            tint: AppColors.textSecondary,
+            onTap: store.toggleMasked,
           ),
         ],
       ),
@@ -728,23 +683,35 @@ class _EmptyButton extends StatelessWidget {
 }
 
 /// A text link for state 4 / §6 (spec §9): 13pt accentLight, moves the window —
-/// it does not create anything, so it is never a filled button.
+/// it does not create anything, so it is never a filled button. The intro block
+/// (states 1–2) reuses it as its signpost and passes [minHeight] to grow the
+/// tap target to 44pt without changing the visual register; every other caller
+/// leaves it null, so their rendered tree is unchanged.
 class _EmptyLink extends StatelessWidget {
-  const _EmptyLink({required this.label, required this.onTap});
+  const _EmptyLink({required this.label, required this.onTap, this.minHeight});
   final String label;
   final VoidCallback onTap;
+  final double? minHeight;
 
   @override
   Widget build(BuildContext context) {
+    final text = Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
+      child: Text(label,
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontSize: 13, color: AppColors.accentLight)),
+    );
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(Radii.sm),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
-        child: Text(label,
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 13, color: AppColors.accentLight)),
-      ),
+      // Null (states 3–4) keeps the original tree exactly; the intro block asks
+      // for a 44pt-tall tappable box around the same 13pt text.
+      child: minHeight == null
+          ? text
+          : ConstrainedBox(
+              constraints: BoxConstraints(minHeight: minHeight!),
+              child: Center(heightFactor: 1, child: text),
+            ),
     );
   }
 }
@@ -759,18 +726,30 @@ Widget _emptyBodyLine(String text) => Text(text,
     style: const TextStyle(
         fontSize: 12.5, height: 1.45, color: AppColors.textTertiary));
 
-/// State 1 — no accounts (spec §3.1). No hero: a confident $0 on a screen that
-/// knows nothing about the reader is the one lie this tab must not tell.
-class _NoAccountsBody extends StatelessWidget {
-  const _NoAccountsBody();
+/// States 1 and 2 — the intro block (empty-screen spec §2). No account yet, or
+/// accounts but nothing recorded: either way there is no *change* to report, so
+/// the two states share one body and differ only in where the signpost points.
+///
+/// No hero and no holdings line: a confident $0 says nothing this tab is for
+/// (the standing total is the Balance tab's subject), and Insight's subject is
+/// which way net worth moved and what moved it — of which there is none yet.
+class _IntroBody extends StatelessWidget {
+  const _IntroBody({required this.report});
+  final _Report report;
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
+    // The signpost fixes *this* state: with no accounts the reader belongs in
+    // Balance; with accounts but no entries, in Ledger (spec §4). `noAccounts`
+    // is already computed on the report.
+    final toBalance = report.noAccounts;
+
     return _EmptyScaffold(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          // Icon + title + body are one node for the reader (spec §4.2).
           Semantics(
             container: true,
             label: l.insA11yEmptyNoAccounts,
@@ -778,9 +757,22 @@ class _NoAccountsBody extends StatelessWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.bar_chart_rounded,
-                      size: 40, color: AppColors.textQuaternary),
-                  const SizedBox(height: 16),
+                  // A 54pt surface circle with a 24pt glyph, matching the landed
+                  // Ledger/Planner empty-state backdrop (spec §2 / §2.1). Built
+                  // inline rather than via the shared EmptyState — that widget is
+                  // deliberately not adopted here (hard boundary).
+                  Container(
+                    width: 54,
+                    height: 54,
+                    alignment: Alignment.center,
+                    decoration: const BoxDecoration(
+                      color: AppColors.surface,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.bar_chart_rounded,
+                        size: 24, color: AppColors.textTertiary),
+                  ),
+                  const SizedBox(height: Insets.md),
                   _emptyTitle(l.insEmptyNoAccountsTitle),
                   const SizedBox(height: 7),
                   _emptyBodyLine(l.insEmptyNoAccountsBody),
@@ -788,64 +780,17 @@ class _NoAccountsBody extends StatelessWidget {
               ),
             ),
           ),
-          // showNewAccountSheet, not EditAccountScreen — that edits an account
-          // that already exists (spec §3.1). Reuses moreAddAccount (spec §10).
-          _EmptyButton(
-            label: l.moreAddAccount,
-            onTap: () => showNewAccountSheet(context),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// State 2 — accounts, no records yet (spec §3.2). The standing total is the one
-/// fact the reader has already given the app, reflected back.
-class _NoRecordsBody extends StatelessWidget {
-  const _NoRecordsBody({required this.report});
-  final _Report report;
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    final store = report.store;
-    final today =
-        DateTime(AppStore.today.year, AppStore.today.month, AppStore.today.day);
-    final holdings = store.netWorthOn(today);
-    final count = store.accounts.length;
-    // When every account opens at zero, "$0 · 3 accounts" reads as a fault, so
-    // the second line drops the amount (spec §3.2).
-    final noAmount = holdings.abs() < _Report.eps;
-    final holdingsLine = noAmount
-        ? l.insEmptyHoldingsNoAmount(count)
-        : l.insEmptyHoldings(money(holdings, masked: store.masked), count);
-    final a11y = l.insA11yEmptyNoRecords(
-        money(holdings, masked: store.masked), count);
-
-    return _EmptyScaffold(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
+          // The signpost is part of the block, not pinned to the foot (spec §2):
+          // 20pt below the body, its own button node (spec §4.2), a 44pt target.
+          const SizedBox(height: 20),
           Semantics(
-            container: true,
-            label: a11y,
-            child: ExcludeSemantics(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const _EmptyHero(),
-                  const SizedBox(height: 16),
-                  _emptyTitle(l.insEmptyNoRecordsTitle),
-                  const SizedBox(height: 6),
-                  _emptyBodyLine(holdingsLine),
-                ],
-              ),
+            button: true,
+            child: _EmptyLink(
+              label: toBalance ? l.insStartInBalance : l.insStartInLedger,
+              minHeight: 44,
+              onTap: () => AppShellScope.maybeOf(context)
+                  ?.goToTab(toBalance ? NavTab.balance : NavTab.ledger),
             ),
-          ),
-          _EmptyButton(
-            label: l.insEmptyRecordSomething,
-            onTap: () => showQuickAdd(context),
           ),
         ],
       ),

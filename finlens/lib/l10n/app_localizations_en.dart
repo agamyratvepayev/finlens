@@ -863,39 +863,17 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get insEmptyNoAccountsTitle => 'Nothing to report yet';
+  String get insEmptyNoAccountsTitle => 'What actually happened';
 
   @override
   String get insEmptyNoAccountsBody =>
-      'Insight shows what your money did — where it came from, where it went, and what it left you with.';
+      'See what\'s building you up, and what\'s wearing you down.';
 
   @override
-  String get insEmptyNoRecordsTitle => 'Nothing has moved yet';
+  String get insStartInBalance => 'Start in Balance';
 
   @override
-  String insEmptyHoldings(String amount, int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count accounts',
-      one: '1 account',
-    );
-    return 'Your accounts hold $amount · $_temp0';
-  }
-
-  @override
-  String insEmptyHoldingsNoAmount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count accounts',
-      one: '1 account',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String get insEmptyRecordSomething => 'Record something';
+  String get insStartInLedger => 'Start in Ledger';
 
   @override
   String get insEmptyAllHiddenTitle => 'Every account is hidden';
@@ -942,18 +920,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get insA11yEmptyNoAccounts =>
-      'Nothing to report yet. Insight shows what your money did. Add an account.';
-
-  @override
-  String insA11yEmptyNoRecords(String amount, int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count accounts',
-      one: '1 account',
-    );
-    return 'Net worth unchanged. Nothing has moved yet. Your accounts hold $amount across $_temp0.';
-  }
+      'What actually happened. See what\'s building you up, and what\'s wearing you down.';
 
   @override
   String get insA11yEmptyAllHidden =>

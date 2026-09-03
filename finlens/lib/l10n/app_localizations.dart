@@ -1322,38 +1322,26 @@ abstract class AppLocalizations {
   /// No description provided for @insEmptyNoAccountsTitle.
   ///
   /// In en, this message translates to:
-  /// **'Nothing to report yet'**
+  /// **'What actually happened'**
   String get insEmptyNoAccountsTitle;
 
   /// No description provided for @insEmptyNoAccountsBody.
   ///
   /// In en, this message translates to:
-  /// **'Insight shows what your money did — where it came from, where it went, and what it left you with.'**
+  /// **'See what\'s building you up, and what\'s wearing you down.'**
   String get insEmptyNoAccountsBody;
 
-  /// No description provided for @insEmptyNoRecordsTitle.
+  /// No description provided for @insStartInBalance.
   ///
   /// In en, this message translates to:
-  /// **'Nothing has moved yet'**
-  String get insEmptyNoRecordsTitle;
+  /// **'Start in Balance'**
+  String get insStartInBalance;
 
-  /// No description provided for @insEmptyHoldings.
+  /// No description provided for @insStartInLedger.
   ///
   /// In en, this message translates to:
-  /// **'Your accounts hold {amount} · {count, plural, =1{1 account} other{{count} accounts}}'**
-  String insEmptyHoldings(String amount, int count);
-
-  /// No description provided for @insEmptyHoldingsNoAmount.
-  ///
-  /// In en, this message translates to:
-  /// **'{count, plural, =1{1 account} other{{count} accounts}}'**
-  String insEmptyHoldingsNoAmount(int count);
-
-  /// No description provided for @insEmptyRecordSomething.
-  ///
-  /// In en, this message translates to:
-  /// **'Record something'**
-  String get insEmptyRecordSomething;
+  /// **'Start in Ledger'**
+  String get insStartInLedger;
 
   /// No description provided for @insEmptyAllHiddenTitle.
   ///
@@ -1400,14 +1388,8 @@ abstract class AppLocalizations {
   /// No description provided for @insA11yEmptyNoAccounts.
   ///
   /// In en, this message translates to:
-  /// **'Nothing to report yet. Insight shows what your money did. Add an account.'**
+  /// **'What actually happened. See what\'s building you up, and what\'s wearing you down.'**
   String get insA11yEmptyNoAccounts;
-
-  /// No description provided for @insA11yEmptyNoRecords.
-  ///
-  /// In en, this message translates to:
-  /// **'Net worth unchanged. Nothing has moved yet. Your accounts hold {amount} across {count, plural, =1{1 account} other{{count} accounts}}.'**
-  String insA11yEmptyNoRecords(String amount, int count);
 
   /// No description provided for @insA11yEmptyAllHidden.
   ///

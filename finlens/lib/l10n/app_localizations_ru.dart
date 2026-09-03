@@ -886,43 +886,17 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String get insEmptyNoAccountsTitle => 'Пока нечего показать';
+  String get insEmptyNoAccountsTitle => 'Что на самом деле произошло';
 
   @override
   String get insEmptyNoAccountsBody =>
-      'Insight показывает, куда ушли деньги, откуда пришли и что осталось.';
+      'Посмотрите, что вас укрепляет, а что истощает.';
 
   @override
-  String get insEmptyNoRecordsTitle => 'Пока ничего не менялось';
+  String get insStartInBalance => 'Начать в «Баланс»';
 
   @override
-  String insEmptyHoldings(String amount, int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count счёта',
-      many: '$count счетов',
-      few: '$count счёта',
-      one: '$count счёт',
-    );
-    return 'На счетах $amount · $_temp0';
-  }
-
-  @override
-  String insEmptyHoldingsNoAmount(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count счёта',
-      many: '$count счетов',
-      few: '$count счёта',
-      one: '$count счёт',
-    );
-    return '$_temp0';
-  }
-
-  @override
-  String get insEmptyRecordSomething => 'Записать операцию';
+  String get insStartInLedger => 'Начать в «Операции»';
 
   @override
   String get insEmptyAllHiddenTitle => 'Все счета скрыты';
@@ -973,20 +947,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get insA11yEmptyNoAccounts =>
-      'Пока нечего показать. Insight показывает, что стало с деньгами. Добавьте счёт.';
-
-  @override
-  String insA11yEmptyNoRecords(String amount, int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count счёта',
-      many: '$count счетов',
-      few: '$count счёта',
-      one: '$count счёт',
-    );
-    return 'Стоимость не изменилась. Пока ничего не менялось. На счетах $amount, $_temp0.';
-  }
+      'Что на самом деле произошло. Посмотрите, что вас укрепляет, а что истощает.';
 
   @override
   String get insA11yEmptyAllHidden =>
