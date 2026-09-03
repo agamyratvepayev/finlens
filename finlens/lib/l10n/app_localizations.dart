@@ -3976,6 +3976,18 @@ abstract class AppLocalizations {
   /// **'New account'**
   String get qaNewAccount;
 
+  /// No description provided for @qaNoAccountsYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No accounts yet'**
+  String get qaNoAccountsYet;
+
+  /// No description provided for @qaNoAccountsYetBody.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'ll need one to record this transaction.'**
+  String get qaNoAccountsYetBody;
+
   /// No description provided for @qaNewCategory.
   ///
   /// In en, this message translates to:
@@ -4006,11 +4018,11 @@ abstract class AppLocalizations {
   /// **'Search categories'**
   String get qaSearchCategories;
 
-  /// No description provided for @qaNoAccountMatch.
+  /// No description provided for @qaAccountSearchNoMatch.
   ///
   /// In en, this message translates to:
-  /// **'No account matches \"{query}\".'**
-  String qaNoAccountMatch(Object query);
+  /// **'No account matches {query}.'**
+  String qaAccountSearchNoMatch(Object query);
 
   /// No description provided for @qaNoCategoryMatch.
   ///

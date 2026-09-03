@@ -2628,6 +2628,13 @@ class AppLocalizationsRu extends AppLocalizations {
   String get qaNewAccount => 'Новый счёт';
 
   @override
+  String get qaNoAccountsYet => 'Счетов пока нет';
+
+  @override
+  String get qaNoAccountsYetBody =>
+      'Для записи этой операции понадобится счёт.';
+
+  @override
   String get qaNewCategory => 'Новая категория';
 
   @override
@@ -2643,8 +2650,8 @@ class AppLocalizationsRu extends AppLocalizations {
   String get qaSearchCategories => 'Поиск по категориям';
 
   @override
-  String qaNoAccountMatch(Object query) {
-    return 'Нет счёта по запросу «$query».';
+  String qaAccountSearchNoMatch(Object query) {
+    return 'Нет счёта по запросу $query.';
   }
 
   @override

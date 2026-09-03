@@ -2563,6 +2563,13 @@ class AppLocalizationsTk extends AppLocalizations {
   String get qaNewAccount => 'Täze hasap';
 
   @override
+  String get qaNoAccountsYet => 'Heniz hasabyňyz ýok';
+
+  @override
+  String get qaNoAccountsYetBody =>
+      'Bu amaly bellige almak üçin bir hasap gerek.';
+
+  @override
   String get qaNewCategory => 'Täze kategoriýa';
 
   @override
@@ -2578,8 +2585,8 @@ class AppLocalizationsTk extends AppLocalizations {
   String get qaSearchCategories => 'Kategoriýa gözle';
 
   @override
-  String qaNoAccountMatch(Object query) {
-    return '\"$query\" boýunça hasap ýok.';
+  String qaAccountSearchNoMatch(Object query) {
+    return '$query bilen gabat gelýän hasap ýok.';
   }
 
   @override

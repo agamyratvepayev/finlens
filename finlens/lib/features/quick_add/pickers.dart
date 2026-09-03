@@ -51,6 +51,13 @@ Future<T?> showAppSheet<T>(
   // When supplied, a muted Cancel affordance is rendered at the right end of
   // the title row (spec §5). It routes through [onDismiss] when present.
   String? cancelLabel,
+  // When true the sheet hugs its content instead of opening at [initialSize]:
+  // a `Column(mainAxisSize: .min)` whose body grows with what is in it and
+  // scrolls once it hits the same max extent (account-picker spec §4).
+  // DraggableScrollableSheet cannot size to content, so this takes a separate
+  // layout path; every other caller keeps the draggable fraction-sized sheet
+  // untouched.
+  bool contentSized = false,
 }) {
   return showModalBottomSheet<T>(
     context: context,
@@ -76,6 +83,7 @@ Future<T?> showAppSheet<T>(
         maxSize: maxSize,
         onDismiss: onDismiss,
         cancelLabel: cancelLabel,
+        contentSized: contentSized,
       );
     },
   );
@@ -95,6 +103,7 @@ class _AppSheetBody extends StatefulWidget {
     required this.maxSize,
     this.onDismiss,
     this.cancelLabel,
+    this.contentSized = false,
   });
 
   final String title;
@@ -104,6 +113,7 @@ class _AppSheetBody extends StatefulWidget {
   final double maxSize;
   final Future<bool> Function()? onDismiss;
   final String? cancelLabel;
+  final bool contentSized;
 
   @override
   State<_AppSheetBody> createState() => _AppSheetBodyState();
@@ -111,6 +121,10 @@ class _AppSheetBody extends StatefulWidget {
 
 class _AppSheetBodyState extends State<_AppSheetBody> {
   DraggableScrollableController? _dragController;
+
+  /// Owned only on the content-sized path (spec §4), where there is no
+  /// DraggableScrollableSheet to hand the body a controller of its own.
+  ScrollController? _contentController;
 
   /// Re-entrancy latch: the swipe listener can fire repeatedly at the minimum
   /// extent, and Cancel/scrim can race the confirmation sheet.
@@ -122,11 +136,13 @@ class _AppSheetBodyState extends State<_AppSheetBody> {
   void initState() {
     super.initState();
     if (_guarded) _dragController = DraggableScrollableController();
+    if (widget.contentSized) _contentController = ScrollController();
   }
 
   @override
   void dispose() {
     _dragController?.dispose();
+    _contentController?.dispose();
     super.dispose();
   }
 
@@ -156,9 +172,91 @@ class _AppSheetBodyState extends State<_AppSheetBody> {
     }
   }
 
+  /// Drag handle and title row — shared verbatim by both the draggable and the
+  /// content-sized paths so the chrome never drifts between them.
+  List<Widget> _chrome() {
+    final hasCancel = widget.cancelLabel != null;
+    return [
+      const SizedBox(height: Insets.md),
+      Container(
+        width: 36,
+        height: 4,
+        decoration: BoxDecoration(
+          color: AppColors.surfaceHigh,
+          borderRadius: BorderRadius.circular(2),
+        ),
+      ),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(
+          Insets.gutter,
+          Insets.lg,
+          Insets.gutter,
+          Insets.md,
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                widget.title,
+                style: AppText.title.copyWith(fontSize: 19),
+                // Only constrain wrapping when a Cancel could collide
+                // with the title; unguarded sheets keep prior behavior.
+                maxLines: hasCancel ? 1 : null,
+                overflow: hasCancel ? TextOverflow.ellipsis : null,
+              ),
+            ),
+            ...widget.actions,
+            if (hasCancel)
+              _SheetCancelButton(
+                label: widget.cancelLabel!,
+                onTap: _attemptDismiss,
+              ),
+          ],
+        ),
+      ),
+    ];
+  }
+
+  /// Content-sized presentation (spec §4): the sheet hugs its content and only
+  /// scrolls once it reaches the same max extent the draggable path caps at.
+  /// The body is [Flexible] so short states stay short and long lists scroll.
+  Widget _buildContentSized(BuildContext context) {
+    final media = MediaQuery.of(context);
+    // Sit above the keyboard, and never taller than the space that leaves ≥44pt
+    // of barrier tappable below the status bar. Subtracting the keyboard inset
+    // here (and padding for it below) keeps the search field and a row visible
+    // when the keyboard is open on a small device (§7).
+    final maxHeight = (media.size.height -
+            media.viewInsets.bottom -
+            media.padding.top -
+            44)
+        .clamp(0.0, media.size.height);
+    return Padding(
+      padding: EdgeInsets.only(bottom: media.viewInsets.bottom),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: maxHeight),
+        child: Container(
+          clipBehavior: Clip.antiAlias,
+          decoration: const BoxDecoration(
+            color: AppColors.surfaceAlt,
+            borderRadius:
+                BorderRadius.vertical(top: Radius.circular(Radii.sheet)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ..._chrome(),
+              Flexible(child: widget.builder(context, _contentController!)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final hasCancel = widget.cancelLabel != null;
+    if (widget.contentSized) return _buildContentSized(context);
     return DraggableScrollableSheet(
       controller: _dragController,
       initialChildSize: widget.initialSize,
@@ -178,44 +276,7 @@ class _AppSheetBodyState extends State<_AppSheetBody> {
           ),
           child: Column(
             children: [
-              const SizedBox(height: Insets.md),
-              Container(
-                width: 36,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceHigh,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  Insets.gutter,
-                  Insets.lg,
-                  Insets.gutter,
-                  Insets.md,
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        widget.title,
-                        style: AppText.title.copyWith(fontSize: 19),
-                        // Only constrain wrapping when a Cancel could collide
-                        // with the title; unguarded sheets keep prior behavior.
-                        maxLines: hasCancel ? 1 : null,
-                        overflow:
-                            hasCancel ? TextOverflow.ellipsis : null,
-                      ),
-                    ),
-                    ...widget.actions,
-                    if (hasCancel)
-                      _SheetCancelButton(
-                        label: widget.cancelLabel!,
-                        onTap: _attemptDismiss,
-                      ),
-                  ],
-                ),
-              ),
+              ..._chrome(),
               Expanded(child: widget.builder(context, controller)),
             ],
           ),
@@ -289,16 +350,33 @@ Future<Account?> pickAccount(
   bool Function(Account)? filter,
   String? excludeId,
 }) {
+  // The account set cannot change while this modal is up (the only path that
+  // creates one pops the sheet), so the state 1 / 2-4 split is fixed at open.
+  // With no accounts to offer, the "+ New account" header action disappears and
+  // the create affordance moves into the empty state's body instead (spec §2).
+  final store = StoreScope.read(context);
+  final hasAccounts = store.visibleAccounts
+      .where((a) => a.id != excludeId)
+      .where((a) => filter?.call(a) ?? true)
+      .isNotEmpty;
+  final l = AppLocalizations.of(context);
   return showAppSheet<Account>(
     context,
-    title: title ?? AppLocalizations.of(context).qaSelectAccount,
-    actions: [
-      _HeaderCreateAction<Account>(
-        label: AppLocalizations.of(context).qaNewAccount,
-        // Do not prefill the name from the picker's search query (spec §3).
-        onCreate: (ctx) => showNewAccountSheet(ctx),
-      ),
-    ],
+    title: title ?? l.qaSelectAccount,
+    // An accessible, labelled dismissal (spec §6) — the picker previously had
+    // only the drag handle. Matches the New account sheet's Cancel exactly;
+    // with nothing to discard it simply pops.
+    cancelLabel: l.actionCancel,
+    contentSized: true,
+    actions: hasAccounts
+        ? [
+            _HeaderCreateAction<Account>(
+              label: l.qaNewAccount,
+              // Do not prefill the name from the picker's search query (§3).
+              onCreate: (ctx) => showNewAccountSheet(ctx),
+            ),
+          ]
+        : const [],
     builder: (context, controller) => _AccountPickerBody(
       controller: controller,
       filter: filter,
@@ -328,22 +406,38 @@ class _AccountPickerBodyState extends State<_AccountPickerBody> {
   @override
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
-    final q = _query.trim().toLowerCase();
-    final all = store.visibleAccounts
+    final l = AppLocalizations.of(context);
+
+    // The list this sheet draws from, before any query. Empty here means the
+    // store has nothing to offer — state 1 — which is a different thing from a
+    // query that matched nothing, and the two must never be confused (§1).
+    final source = store.visibleAccounts
         .where((a) => a.id != widget.excludeId)
         .where((a) => widget.filter?.call(a) ?? true)
-        .where((a) => q.isEmpty || a.name.toLowerCase().contains(q))
+        .toList();
+
+    // State 1: no accounts at all. No search field, no header action, no
+    // keyboard — just the title and an empty state whose button is the sole
+    // create affordance (§2). Not scrollable: there is nothing to scroll (§4).
+    if (source.isEmpty) return _emptyState(context, l);
+
+    final rawQuery = _query.trim();
+    final hasQuery = rawQuery.isNotEmpty;
+    final q = rawQuery.toLowerCase();
+    final matches = source
+        .where((a) => !hasQuery || a.name.toLowerCase().contains(q))
         .toList();
 
     final grouped = <AccountGroup, List<Account>>{};
-    for (final a in all) {
+    for (final a in matches) {
       grouped.putIfAbsent(a.group, () => []).add(a);
     }
 
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
         _SearchBar(
-          hint: AppLocalizations.of(context).qaSearchAccounts,
+          hint: l.qaSearchAccounts,
           onChanged: (v) {
             setState(() => _query = v);
             // The now-unfiltered list is longer; the old offset belonged to a
@@ -353,9 +447,12 @@ class _AccountPickerBodyState extends State<_AccountPickerBody> {
             }
           },
         ),
-        Expanded(
+        Flexible(
           child: ListView(
             controller: widget.controller,
+            // shrinkWrap so a short list keeps the sheet short (§4); the outer
+            // Flexible caps it and it scrolls once the list outgrows the sheet.
+            shrinkWrap: true,
             padding: const EdgeInsets.fromLTRB(
               Insets.gutter,
               Insets.sm,
@@ -363,20 +460,14 @@ class _AccountPickerBodyState extends State<_AccountPickerBody> {
               Insets.xxl,
             ),
             children: [
-              if (all.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: Insets.xl),
-                  child: Text(
-                    AppLocalizations.of(context).qaNoAccountMatch(_query),
-                    textAlign: TextAlign.center,
-                    style: AppText.caption,
-                  ),
-                ),
+              // State 4 — and ONLY state 4: accounts exist, a real query was
+              // typed, and it matched nothing. An empty/whitespace query can
+              // never reach here (§1, §7).
+              if (hasQuery && matches.isEmpty) _noMatchLine(context, l, rawQuery),
               for (final entry in grouped.entries) ...[
                 Padding(
                   padding: const EdgeInsets.fromLTRB(4, Insets.md, 4, Insets.sm),
-                  child: Text(
-                      entry.key.label(AppLocalizations.of(context)).toUpperCase(),
+                  child: Text(entry.key.label(l).toUpperCase(),
                       style: AppText.label),
                 ),
                 AppCard(
@@ -410,6 +501,119 @@ class _AccountPickerBodyState extends State<_AccountPickerBody> {
           ),
         ),
       ],
+    );
+  }
+
+  /// State 1 body (§2, §5): a heading, a direction-neutral line, and a
+  /// full-weight filled primary button — the only control in the sheet.
+  Widget _emptyState(BuildContext context, AppLocalizations l) {
+    final bottom = MediaQuery.of(context).padding.bottom;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        Insets.xxl,
+        Insets.lg,
+        Insets.xxl,
+        Insets.xl + bottom,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Semantics(
+            header: true,
+            child: Text(
+              l.qaNoAccountsYet,
+              style: AppText.rowTitle.copyWith(fontSize: 16),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          const SizedBox(height: Insets.xs),
+          Text(
+            l.qaNoAccountsYetBody,
+            style: AppText.caption,
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: Insets.xl),
+          _EmptyStateCreateButton(
+            label: l.qaNewAccount,
+            onCreate: () => showNewAccountSheet(context),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// State 4's one line: no quotation marks, the query set off by the primary
+  /// text colour against the message's secondary colour, trimmed, and held to a
+  /// single ellipsised line so it never wraps or grows the sheet (§3).
+  ///
+  /// The query is a real l10n placeholder: a sentinel is interpolated through
+  /// the localised template, then split back out so the query alone can be
+  /// recoloured — this keeps working wherever the placeholder sits in a locale
+  /// (Turkish leads with it, English and Russian trail).
+  Widget _noMatchLine(BuildContext context, AppLocalizations l, String query) {
+    const sentinel = '\u0000';
+    final template = l.qaAccountSearchNoMatch(sentinel);
+    final i = template.indexOf(sentinel);
+    final before = i < 0 ? template : template.substring(0, i);
+    final after = i < 0 ? '' : template.substring(i + sentinel.length);
+    return Semantics(
+      liveRegion: true,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: Insets.xl),
+        child: Text.rich(
+          TextSpan(
+            style: AppText.caption,
+            children: [
+              TextSpan(text: before),
+              TextSpan(
+                text: query,
+                style: const TextStyle(color: AppColors.textPrimary),
+              ),
+              TextSpan(text: after),
+            ],
+          ),
+          textAlign: TextAlign.center,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ),
+    );
+  }
+}
+
+/// State 1's create action: a full-weight filled primary (spec §5), distinct
+/// from the Balance zero-data screen's unfilled action on purpose — here it is
+/// the sheet's only control, so nothing competes with it. On success it pops
+/// the picker with the created account selected, exactly as the header action
+/// does.
+class _EmptyStateCreateButton extends StatelessWidget {
+  const _EmptyStateCreateButton({required this.label, required this.onCreate});
+
+  final String label;
+  final Future<Account?> Function() onCreate;
+
+  @override
+  Widget build(BuildContext context) {
+    return FilledButton(
+      onPressed: () async {
+        final created = await onCreate();
+        if (created != null && context.mounted) {
+          Navigator.of(context).pop(created);
+        }
+      },
+      style: FilledButton.styleFrom(
+        backgroundColor: AppColors.accent,
+        foregroundColor: Colors.white,
+        // ≥44pt tap target (§8); horizontal padding keeps it content-width, not
+        // stretched edge to edge.
+        minimumSize: const Size(0, 48),
+        padding: const EdgeInsets.symmetric(horizontal: Insets.xxl),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(Radii.md),
+        ),
+        textStyle: AppText.button,
+      ),
+      child: Text(label),
     );
   }
 }
@@ -666,27 +870,33 @@ Widget _pickRow(
   Widget? trailing,
   required VoidCallback onTap,
 }) {
-  return InkWell(
-    onTap: onTap,
-    child: Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: Insets.md,
-        vertical: Insets.md,
-      ),
-      child: Row(
-        children: [
-          IconTile(icon, color: color, size: 32),
-          const SizedBox(width: Insets.md),
-          Expanded(
-            child: Text(
-              title,
-              style: AppText.rowTitle.copyWith(fontWeight: FontWeight.w500),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+  // Announce as a button (§6) without touching the row's dot, name, balance,
+  // alignment or tap behaviour (hard boundary): the label is composed from the
+  // row's own descendants.
+  return Semantics(
+    button: true,
+    child: InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: Insets.md,
+          vertical: Insets.md,
+        ),
+        child: Row(
+          children: [
+            IconTile(icon, color: color, size: 32),
+            const SizedBox(width: Insets.md),
+            Expanded(
+              child: Text(
+                title,
+                style: AppText.rowTitle.copyWith(fontWeight: FontWeight.w500),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
-          ),
-          ?trailing,
-        ],
+            ?trailing,
+          ],
+        ),
       ),
     ),
   );

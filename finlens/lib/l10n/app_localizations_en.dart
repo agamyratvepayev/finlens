@@ -2572,6 +2572,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get qaNewAccount => 'New account';
 
   @override
+  String get qaNoAccountsYet => 'No accounts yet';
+
+  @override
+  String get qaNoAccountsYetBody =>
+      'You\'ll need one to record this transaction.';
+
+  @override
   String get qaNewCategory => 'New category';
 
   @override
@@ -2587,8 +2594,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get qaSearchCategories => 'Search categories';
 
   @override
-  String qaNoAccountMatch(Object query) {
-    return 'No account matches \"$query\".';
+  String qaAccountSearchNoMatch(Object query) {
+    return 'No account matches $query.';
   }
 
   @override

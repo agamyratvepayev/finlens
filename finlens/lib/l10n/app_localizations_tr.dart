@@ -2563,6 +2563,13 @@ class AppLocalizationsTr extends AppLocalizations {
   String get qaNewAccount => 'Yeni hesap';
 
   @override
+  String get qaNoAccountsYet => 'Henüz hesabınız yok';
+
+  @override
+  String get qaNoAccountsYetBody =>
+      'Bu işlemi kaydetmek için bir hesap gerekiyor.';
+
+  @override
   String get qaNewCategory => 'Yeni kategori';
 
   @override
@@ -2578,8 +2585,8 @@ class AppLocalizationsTr extends AppLocalizations {
   String get qaSearchCategories => 'Kategori ara';
 
   @override
-  String qaNoAccountMatch(Object query) {
-    return '\"$query\" ile eşleşen hesap yok.';
+  String qaAccountSearchNoMatch(Object query) {
+    return '$query ile eşleşen hesap yok.';
   }
 
   @override
