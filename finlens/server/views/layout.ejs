@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="<%= lang %>">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title><%= t.meta.title %></title>
+  <meta name="description" content="<%= t.meta.description %>" />
+  <link rel="canonical" href="<%= canonical %>" />
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="<%= t.meta.title %>" />
+  <meta property="og:description" content="<%= t.meta.description %>" />
+  <meta property="og:url" content="<%= canonical %>" />
+  <meta property="og:image" content="<%= baseUrl %>/public/img/og.svg" />
+  <meta name="twitter:card" content="summary_large_image" />
+
+  <link rel="icon" type="image/svg+xml" href="/public/img/favicon.svg" />
+  <link rel="alternate" hreflang="ru" href="<%= baseUrl %><%= switchPaths.ru %>" />
+  <link rel="alternate" hreflang="tk" href="<%= baseUrl %><%= switchPaths.tk %>" />
+  <link rel="alternate" hreflang="en" href="<%= baseUrl %><%= switchPaths.en %>" />
+  <link rel="stylesheet" href="/public/css/styles.css" />
+</head>
+<body>
+  <a class="skip-link" href="#main"><%= t.nav.contact %></a>
+  <%- include('partials/header') %>
+  <main id="main">
+    <%- body %>
+  </main>
+  <%- include('partials/footer') %>
+  <script src="/public/js/main.js" defer></script>
+</body>
+</html>

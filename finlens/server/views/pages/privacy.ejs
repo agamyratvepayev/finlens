@@ -1,0 +1,10 @@
+<section class="section">
+  <div class="container container--narrow prose">
+    <a class="back-link" href="/<%= lang %>">← FinLens</a>
+    <h1 class="section__title"><%= t.privacy.title %></h1>
+    <p class="prose__meta"><%= t.privacy.updated %></p>
+    <% t.privacy.body.forEach(function (para) { %>
+      <p><%= para %></p>
+    <% }); %>
+  </div>
+</section>

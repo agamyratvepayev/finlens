@@ -1,0 +1,141 @@
+{
+  "meta": {
+    "title": "FinLens — your money, under control",
+    "description": "FinLens is a personal-finance app: accounts, transactions, budgets, goals and clear statistics. Dark theme, multi-currency, and your data stays on your phone.",
+    "ogAlt": "FinLens app screens"
+  },
+  "nav": {
+    "features": "Features",
+    "screens": "Screens",
+    "how": "How it works",
+    "faq": "FAQ",
+    "contact": "Contact"
+  },
+  "hero": {
+    "badge": "Coming soon to Google Play",
+    "title": "Your money, at a glance",
+    "subtitle": "FinLens brings accounts, transactions, budgets and goals into one app. A clean dark theme, multi-currency support, and full control over your data.",
+    "ctaPrimary": "Request access",
+    "ctaSecondary": "Explore features",
+    "note": "Your data is stored locally on your device.",
+    "phoneAlt": "FinLens balance screen"
+  },
+  "features": {
+    "title": "Everything you need to track your finances",
+    "subtitle": "Five sections that cover everyday money management — from balance to analytics.",
+    "items": [
+      {
+        "icon": "balance",
+        "name": "Balance",
+        "desc": "All accounts, assets and liabilities in one place. Net worth is calculated automatically, grouped clearly."
+      },
+      {
+        "icon": "ledger",
+        "name": "Ledger",
+        "desc": "Add income, expenses and transfers in seconds. Categories, tags and search keep your history at hand."
+      },
+      {
+        "icon": "planner",
+        "name": "Planner",
+        "desc": "Category budgets and limits, savings goals, recurring payments and a schedule of what's coming up."
+      },
+      {
+        "icon": "insight",
+        "name": "Insight",
+        "desc": "Clear charts of spending and income, monthly trends, and a real understanding of where money goes."
+      },
+      {
+        "icon": "more",
+        "name": "More",
+        "desc": "Multi-currency, tags, a privacy mode that hides amounts, plus backup and restore of your data."
+      }
+    ]
+  },
+  "screens": {
+    "title": "Considered down to the detail",
+    "subtitle": "A dark theme, bold figures and tidy typography make it a pleasure to use every day.",
+    "items": ["Balance", "Ledger", "Plans", "Insight"]
+  },
+  "how": {
+    "title": "Getting started is simple",
+    "steps": [
+      {
+        "title": "Add your accounts",
+        "desc": "Cash, cards, deposits, loans — set up your accounts and opening balances in a couple of minutes."
+      },
+      {
+        "title": "Record transactions",
+        "desc": "Log income and expenses by category. Recurring payments can be set up just once."
+      },
+      {
+        "title": "Track your progress",
+        "desc": "Budgets, goals and analytics give you the full picture and help keep your money on track."
+      }
+    ]
+  },
+  "faq": {
+    "title": "Frequently asked questions",
+    "items": [
+      {
+        "q": "Where is my data stored?",
+        "a": "Your data is stored locally on your device. You can back it up and restore it whenever you need."
+      },
+      {
+        "q": "Are manat and other currencies supported?",
+        "a": "Yes. FinLens supports multiple currencies, including the Turkmen manat (TMT), and can keep accounts in different currencies."
+      },
+      {
+        "q": "Which languages are supported?",
+        "a": "The interface is available in Turkmen and Russian."
+      },
+      {
+        "q": "How much does the app cost?",
+        "a": "We're preparing to launch. Leave a request through the form below and we'll let you know as soon as it's available."
+      },
+      {
+        "q": "Are there ads?",
+        "a": "The app is built around usability and privacy, without intrusive advertising."
+      }
+    ]
+  },
+  "contact": {
+    "title": "Request access",
+    "subtitle": "Want to be the first to know about the launch, or have a question? Drop us a line.",
+    "name": "Name",
+    "namePh": "What should we call you",
+    "email": "Email",
+    "emailPh": "you@example.com",
+    "message": "Message",
+    "messagePh": "Your question or feedback",
+    "submit": "Send",
+    "success": "Thank you! Your message has been received — we'll be in touch.",
+    "errorGeneric": "Couldn't send the message. Please check the fields and try again.",
+    "errName": "Please enter your name (at least 2 characters).",
+    "errEmail": "Please enter a valid email.",
+    "errMessage": "Please enter a message (at least 5 characters).",
+    "errRate": "Too many attempts. Please try again later.",
+    "privacyNote": "By submitting the form you agree to our privacy policy."
+  },
+  "footer": {
+    "tagline": "Personal finance, under control.",
+    "rights": "All rights reserved.",
+    "privacy": "Privacy policy",
+    "language": "Language"
+  },
+  "privacy": {
+    "title": "Privacy policy",
+    "updated": "Updated: September 2026",
+    "body": [
+      "This page explains how we handle the data you send through the form on this site.",
+      "Through the contact form we receive the name, email and message you provide. We use this data only to reply to you and to notify you about the app launch.",
+      "We do not share your data with third parties and do not use it for advertising. Technical data (IP address, device type) is stored for spam protection.",
+      "The FinLens app itself stores your financial data locally on your device. We have no access to it.",
+      "For any questions about your data, contact us through the form on this site."
+    ]
+  },
+  "notFound": {
+    "title": "Page not found",
+    "desc": "The link may be outdated or mistyped.",
+    "home": "Go home"
+  }
+}

@@ -1,0 +1,36 @@
+<header class="site-header" data-header>
+  <div class="container site-header__inner">
+    <a class="brand" href="/<%= lang %>" aria-label="FinLens">
+      <span class="brand__mark" aria-hidden="true">
+        <svg viewBox="0 0 32 32" width="28" height="28" fill="none">
+          <rect x="2" y="2" width="28" height="28" rx="8" fill="#5E5CE6" />
+          <path d="M11 22V10h9M11 16h7" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+      </span>
+      <span class="brand__name">FinLens</span>
+    </a>
+
+    <nav class="site-nav" aria-label="Primary">
+      <a href="/<%= lang %>#features"><%= t.nav.features %></a>
+      <a href="/<%= lang %>#screens"><%= t.nav.screens %></a>
+      <a href="/<%= lang %>#how"><%= t.nav.how %></a>
+      <a href="/<%= lang %>#faq"><%= t.nav.faq %></a>
+    </nav>
+
+    <div class="site-header__actions">
+      <%- include('lang-switcher') %>
+      <a class="btn btn--primary btn--sm" href="/<%= lang %>#contact"><%= t.nav.contact %></a>
+      <button class="nav-toggle" type="button" aria-label="Menu" aria-expanded="false" data-nav-toggle>
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </div>
+
+  <div class="mobile-nav" data-mobile-nav hidden>
+    <a href="/<%= lang %>#features"><%= t.nav.features %></a>
+    <a href="/<%= lang %>#screens"><%= t.nav.screens %></a>
+    <a href="/<%= lang %>#how"><%= t.nav.how %></a>
+    <a href="/<%= lang %>#faq"><%= t.nav.faq %></a>
+    <a href="/<%= lang %>#contact"><%= t.nav.contact %></a>
+  </div>
+</header>

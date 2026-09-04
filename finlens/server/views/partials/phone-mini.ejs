@@ -1,0 +1,42 @@
+<div class="phone phone--mini">
+  <div class="phone__screen">
+    <div class="mock mock--mini">
+      <div class="mock__topbar"><span class="mock__title"><%= caption %></span></div>
+
+      <% if (variant === 0) { %>
+        <div class="mock__hero mock__hero--sm">
+          <span class="mock__label">NET WORTH</span>
+          <span class="mock__amount mock__amount--sm">124 850</span>
+        </div>
+        <div class="mock__bars">
+          <span style="height:60%"></span><span style="height:80%"></span>
+          <span style="height:45%"></span><span style="height:70%"></span>
+        </div>
+      <% } else if (variant === 1) { %>
+        <div class="mock__list">
+          <div class="mock__item"><span class="tile" style="background:var(--negative)"></span><span class="mock__item-txt">Market<em>−240</em></span></div>
+          <div class="mock__item"><span class="tile" style="background:var(--positive)"></span><span class="mock__item-txt">Aýlyk<em>+8 500</em></span></div>
+          <div class="mock__item"><span class="tile" style="background:var(--info)"></span><span class="mock__item-txt">Geçirim<em>1 000</em></span></div>
+          <div class="mock__item"><span class="tile" style="background:var(--negative)"></span><span class="mock__item-txt">Ýangyç<em>−180</em></span></div>
+        </div>
+      <% } else if (variant === 2) { %>
+        <div class="mock__budgets">
+          <div class="bar"><span class="bar__label">Iýmit</span><span class="bar__track"><i style="width:72%;background:var(--warning)"></i></span></div>
+          <div class="bar"><span class="bar__label">Ulag</span><span class="bar__track"><i style="width:40%;background:var(--positive)"></i></span></div>
+          <div class="bar"><span class="bar__label">Dynç</span><span class="bar__track"><i style="width:90%;background:var(--negative)"></i></span></div>
+          <div class="bar"><span class="bar__label">Öý</span><span class="bar__track"><i style="width:55%;background:var(--info)"></i></span></div>
+        </div>
+      <% } else { %>
+        <div class="mock__donut">
+          <div class="donut"></div>
+        </div>
+        <div class="mock__legend">
+          <span><i style="background:var(--accent)"></i>42%</span>
+          <span><i style="background:var(--positive)"></i>28%</span>
+          <span><i style="background:var(--warning)"></i>18%</span>
+          <span><i style="background:var(--info)"></i>12%</span>
+        </div>
+      <% } %>
+    </div>
+  </div>
+</div>

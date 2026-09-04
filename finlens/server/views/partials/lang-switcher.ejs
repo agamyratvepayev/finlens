@@ -1,0 +1,10 @@
+<div class="lang-switcher" role="group" aria-label="<%= t.footer.language %>">
+  <% supported.forEach(function (l) { %>
+    <a
+      class="lang-switcher__item<%= l === lang ? ' is-active' : '' %>"
+      href="<%= switchPaths[l] %>"
+      hreflang="<%= l %>"
+      <%= l === lang ? 'aria-current="true"' : '' %>
+    ><%= l.toUpperCase() %></a>
+  <% }); %>
+</div>

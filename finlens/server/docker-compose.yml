@@ -1,0 +1,32 @@
+# Local dev dependencies for the FinLens landing server.
+#   docker compose up -d
+# Postgres exposed on 5432, Redis on 6379 — matches .env.example defaults.
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: finlens
+      POSTGRES_PASSWORD: finlens
+      POSTGRES_DB: finlens_landing
+    ports:
+      - "5432:5432"
+    volumes:
+      - finlens_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U finlens -d finlens_landing"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - finlens_redis:/data
+
+volumes:
+  finlens_pg:
+  finlens_redis:

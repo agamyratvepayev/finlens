@@ -1,0 +1,168 @@
+<%
+  // Inline SVG icons for the feature cards, keyed by item.icon.
+  const icons = {
+    balance: '<path d="M4 7h16M4 12h16M4 17h10" stroke-width="2" stroke-linecap="round"/>',
+    ledger: '<path d="M6 3h9l5 5v13H6z" stroke-width="2" stroke-linejoin="round"/><path d="M9 12h7M9 16h7" stroke-width="2" stroke-linecap="round"/>',
+    planner: '<rect x="4" y="5" width="16" height="16" rx="2" stroke-width="2"/><path d="M4 9h16M8 3v4M16 3v4" stroke-width="2" stroke-linecap="round"/>',
+    insight: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2" stroke-width="2" stroke-linecap="round"/>',
+    more: '<circle cx="6" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="18" cy="12" r="1.6"/>'
+  };
+  const accents = { balance: 'var(--positive)', ledger: 'var(--info)', planner: 'var(--goal)', insight: 'var(--accent)', more: 'var(--warning)' };
+%>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="container hero__inner">
+    <div class="hero__copy">
+      <span class="badge"><span class="badge__dot"></span><%= t.hero.badge %></span>
+      <h1 class="hero__title"><%= t.hero.title %></h1>
+      <p class="hero__subtitle"><%= t.hero.subtitle %></p>
+      <div class="hero__actions">
+        <a class="btn btn--primary" href="#contact"><%= t.hero.ctaPrimary %></a>
+        <a class="btn btn--ghost" href="#features"><%= t.hero.ctaSecondary %></a>
+      </div>
+      <p class="hero__note">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" aria-hidden="true"><path d="M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z" stroke-width="2" stroke-linejoin="round"/></svg>
+        <%= t.hero.note %>
+      </p>
+    </div>
+
+    <div class="hero__art" aria-hidden="true">
+      <%- include('../partials/phone-balance') %>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section id="features" class="section">
+  <div class="container">
+    <div class="section__head">
+      <h2 class="section__title"><%= t.features.title %></h2>
+      <p class="section__subtitle"><%= t.features.subtitle %></p>
+    </div>
+    <div class="feature-grid">
+      <% t.features.items.forEach(function (item) { %>
+        <article class="feature-card">
+          <span class="feature-card__icon" style="--tile:<%= accents[item.icon] %>">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" aria-hidden="true"><%- icons[item.icon] %></svg>
+          </span>
+          <h3 class="feature-card__name"><%= item.name %></h3>
+          <p class="feature-card__desc"><%= item.desc %></p>
+        </article>
+      <% }); %>
+    </div>
+  </div>
+</section>
+
+<!-- SCREENS -->
+<section id="screens" class="section section--alt">
+  <div class="container">
+    <div class="section__head">
+      <h2 class="section__title"><%= t.screens.title %></h2>
+      <p class="section__subtitle"><%= t.screens.subtitle %></p>
+    </div>
+    <div class="screens-row">
+      <% t.screens.items.forEach(function (caption, i) { %>
+        <figure class="screen">
+          <%- include('../partials/phone-mini', { variant: i, caption: caption }) %>
+          <figcaption><%= caption %></figcaption>
+        </figure>
+      <% }); %>
+    </div>
+  </div>
+</section>
+
+<!-- HOW -->
+<section id="how" class="section">
+  <div class="container">
+    <div class="section__head">
+      <h2 class="section__title"><%= t.how.title %></h2>
+    </div>
+    <ol class="steps">
+      <% t.how.steps.forEach(function (step, i) { %>
+        <li class="step">
+          <span class="step__num"><%= i + 1 %></span>
+          <div>
+            <h3 class="step__title"><%= step.title %></h3>
+            <p class="step__desc"><%= step.desc %></p>
+          </div>
+        </li>
+      <% }); %>
+    </ol>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section id="faq" class="section section--alt">
+  <div class="container container--narrow">
+    <div class="section__head">
+      <h2 class="section__title"><%= t.faq.title %></h2>
+    </div>
+    <div class="faq">
+      <% t.faq.items.forEach(function (qa) { %>
+        <details class="faq__item">
+          <summary class="faq__q"><%= qa.q %><span class="faq__chevron" aria-hidden="true"></span></summary>
+          <p class="faq__a"><%= qa.a %></p>
+        </details>
+      <% }); %>
+    </div>
+  </div>
+</section>
+
+<!-- CONTACT -->
+<section id="contact" class="section">
+  <div class="container container--narrow">
+    <div class="section__head">
+      <h2 class="section__title"><%= t.contact.title %></h2>
+      <p class="section__subtitle"><%= t.contact.subtitle %></p>
+    </div>
+
+    <% if (typeof sent !== 'undefined' && sent) { %>
+      <div class="alert alert--success" role="status">
+        <%= t.contact.success %>
+      </div>
+    <% } %>
+    <% if (typeof formError !== 'undefined' && formError) { %>
+      <div class="alert alert--error" role="alert">
+        <%= t.contact[formError] %>
+      </div>
+    <% } %>
+
+    <form class="contact-form" action="/<%= lang %>/contact" method="post" novalidate>
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+      <!-- honeypot: real users never see or fill this -->
+      <div class="hp" aria-hidden="true">
+        <label>Website<input type="text" name="website" tabindex="-1" autocomplete="off" /></label>
+      </div>
+
+      <div class="field">
+        <label for="name"><%= t.contact.name %></label>
+        <input type="text" id="name" name="name" placeholder="<%= t.contact.namePh %>"
+               value="<%= values.name %>" required minlength="2" maxlength="120"
+               <%= errors.name ? 'aria-invalid="true"' : '' %> />
+        <% if (errors.name) { %><span class="field__error"><%= t.contact[errors.name] %></span><% } %>
+      </div>
+
+      <div class="field">
+        <label for="email"><%= t.contact.email %></label>
+        <input type="email" id="email" name="email" placeholder="<%= t.contact.emailPh %>"
+               value="<%= values.email %>" required maxlength="254"
+               <%= errors.email ? 'aria-invalid="true"' : '' %> />
+        <% if (errors.email) { %><span class="field__error"><%= t.contact[errors.email] %></span><% } %>
+      </div>
+
+      <div class="field">
+        <label for="message"><%= t.contact.message %></label>
+        <textarea id="message" name="message" rows="4" placeholder="<%= t.contact.messagePh %>"
+                  required minlength="5" maxlength="4000"
+                  <%= errors.message ? 'aria-invalid="true"' : '' %>><%= values.message %></textarea>
+        <% if (errors.message) { %><span class="field__error"><%= t.contact[errors.message] %></span><% } %>
+      </div>
+
+      <button class="btn btn--primary btn--block" type="submit"><%= t.contact.submit %></button>
+      <p class="contact-form__note">
+        <a href="/<%= lang %>/privacy"><%= t.contact.privacyNote %></a>
+      </p>
+    </form>
+  </div>
+</section>

@@ -1,0 +1,141 @@
+{
+  "meta": {
+    "title": "FinLens — şahsy maliýäňiz gözegçilikde",
+    "description": "FinLens — şahsy maliýe hasabaty üçin programma: hasaplar, amallar, býujetler, maksatlar we düşnükli statistika. Garaňky tema, köp walýuta, maglumatlar telefonyňyzda saklanýar.",
+    "ogAlt": "FinLens programmasynyň ekranlary"
+  },
+  "nav": {
+    "features": "Mümkinçilikler",
+    "screens": "Ekranlar",
+    "how": "Nähili işleýär",
+    "faq": "Soraglar",
+    "contact": "Habarlaşmak"
+  },
+  "hero": {
+    "badge": "Ýakynda Google Play-de",
+    "title": "Puluňyz — aýaňyzyň içinde ýaly",
+    "subtitle": "FinLens hasaplary, amallary, býujetleri we maksatlary bir programmada birleşdirýär. Düşnükli garaňky tema, köp walýuta we maglumatlaryňyza doly gözegçilik.",
+    "ctaPrimary": "Ýüz tutma galdyrmak",
+    "ctaSecondary": "Mümkinçiliklere göz aýlaň",
+    "note": "Maglumatlar enjamyňyzda ýerli saklanýar.",
+    "phoneAlt": "FinLens balans ekrany"
+  },
+  "features": {
+    "title": "Maliýe hasaby üçin gerek zatlaryň hemmesi",
+    "subtitle": "Gündelik hasaby üpjün edýän bäş bölüm — balansdan derňewe çenli.",
+    "items": [
+      {
+        "icon": "balance",
+        "name": "Balans",
+        "desc": "Ähli hasaplar, aktiwler we borçlar bir ýerde. Arassa maýa toparlar boýunça awtomatiki hasaplanýar."
+      },
+      {
+        "icon": "ledger",
+        "name": "Amallar",
+        "desc": "Girdejileri, çykdajylary we geçirimleri çalt goşuň. Kategoriýalar, bellikler we gözleg — taryh elmydama elýeterli."
+      },
+      {
+        "icon": "planner",
+        "name": "Meýilnama",
+        "desc": "Kategoriýalar boýunça býujetler we çäkler, tygşytlaýyş maksatlary, yzygiderli tölegler we amal grafigi."
+      },
+      {
+        "icon": "insight",
+        "name": "Derňew",
+        "desc": "Çykdajy we girdeji grafikleri, aýlar boýunça meýiller we puluň nirä gidýändigine düşünmek."
+      },
+      {
+        "icon": "more",
+        "name": "Has köp",
+        "desc": "Köp walýuta, bellikler, mukdarlary gizleýän gizlin tertip, ätiýaçlyk nusgasy we maglumatlary dikeltmek."
+      }
+    ]
+  },
+  "screens": {
+    "title": "Inçelik bilen oýlanyşylan",
+    "subtitle": "Garaňky tema, uly mukdarlar we tertipli tipografiýa — her gün ulanmak amatly.",
+    "items": ["Balans", "Amallar", "Meýilnamalar", "Derňew"]
+  },
+  "how": {
+    "title": "Başlamak aňsat",
+    "steps": [
+      {
+        "title": "Hasaplary goşuň",
+        "desc": "Nagt pul, kartlar, goýumlar, karzlar — hasaplaryňyzy we başlangyç galyndylaryny birnäçe minutda giriziň."
+      },
+      {
+        "title": "Amallary bellik ediň",
+        "desc": "Girdeji we çykdajylary kategoriýalar boýunça belläň. Yzygiderli tölegleri bir gezek sazlap bolýar."
+      },
+      {
+        "title": "Ösüşe gözegçilik ediň",
+        "desc": "Býujetler, maksatlar we derňew doly suraty görkezýär we puly gözegçilikde saklamaga kömek edýär."
+      }
+    ]
+  },
+  "faq": {
+    "title": "Ýygy-ýygydan berilýän soraglar",
+    "items": [
+      {
+        "q": "Maglumatlarym nirede saklanýar?",
+        "a": "Maglumatlar enjamyňyzda ýerli saklanýar. Zerur bolsa ätiýaçlyk nusgasyny alyp we dikeldip bilersiňiz."
+      },
+      {
+        "q": "Manat we beýleki walýutalar goldanylýarmy?",
+        "a": "Hawa. FinLens birnäçe walýutany, şol sanda türkmen manadyny (TMT), goldaýar we dürli walýutalarda hasap ýöredip bilýär."
+      },
+      {
+        "q": "Programma haýsy dillerde elýeterli?",
+        "a": "Interfeýs türkmen we rus dillerinde elýeterli."
+      },
+      {
+        "q": "Programma näçe durýar?",
+        "a": "Başlangyja taýýarlanýarys. Aşakdaky forma arkaly ýüz tutmaňyzy galdyryň — elýeterli bolan badyna habar bereris."
+      },
+      {
+        "q": "Mahabat barmy?",
+        "a": "Programma amatlylyga we gizlinlige üns berip döredilýär, päsgel berýän mahabatsyz."
+      }
+    ]
+  },
+  "contact": {
+    "title": "Ýüz tutma galdyryň",
+    "subtitle": "Başlangyç barada ilkinji bolup bilmek isleýärsiňizmi ýa-da soragyňyz barmy? Bize ýazyň.",
+    "name": "At",
+    "namePh": "Size nähili ýüzlenmeli",
+    "email": "Email",
+    "emailPh": "you@example.com",
+    "message": "Habar",
+    "messagePh": "Soragyňyz ýa-da islegiňiz",
+    "submit": "Ibermek",
+    "success": "Sag boluň! Habaryňyz kabul edildi, siz bilen habarlaşarys.",
+    "errorGeneric": "Habary ibermek başartmady. Meýdanlary barlaň we gaýtadan synanyşyň.",
+    "errName": "Adyňyzy giriziň (azyndan 2 harp).",
+    "errEmail": "Dogry email giriziň.",
+    "errMessage": "Habar giriziň (azyndan 5 harp).",
+    "errRate": "Örän köp synanyşyk. Soňrak synanyşyň.",
+    "privacyNote": "Formany ibermek bilen, gizlinlik syýasatymyz bilen razylaşýarsyňyz."
+  },
+  "footer": {
+    "tagline": "Şahsy maliýäňiz gözegçilikde.",
+    "rights": "Ähli hukuklar goralan.",
+    "privacy": "Gizlinlik syýasaty",
+    "language": "Dil"
+  },
+  "privacy": {
+    "title": "Gizlinlik syýasaty",
+    "updated": "Täzelendi: sentýabr 2026",
+    "body": [
+      "Bu sahypa bu saýtdaky forma arkaly iberýän maglumatlaryňyzy nähili gaýtadan işleýändigimizi düşündirýär.",
+      "Habarlaşma formasy arkaly siz görkezen adyňyzy, email we habar tekstini alýarys. Bu maglumatlary diňe size jogap bermek we programmanyň başlangyjy barada habar bermek üçin ulanýarys.",
+      "Maglumatlaryňyzy üçünji taraplara bermeýäris we mahabat üçin ulanmaýarys. Tehniki maglumatlar (IP salgy, enjam görnüşi) spamdan goramak üçin saklanýar.",
+      "FinLens programmasynyň özi maliýe maglumatlaryňyzy enjamda ýerli saklaýar. Bizde olara elýeterlilik ýok.",
+      "Maglumatlaryňyz bilen baglanyşykly soraglar boýunça saýtdaky forma arkaly bize ýüz tutuň."
+    ]
+  },
+  "notFound": {
+    "title": "Sahypa tapylmady",
+    "desc": "Belki, salgy köneldi ýa-da ýalňyş girizildi.",
+    "home": "Baş sahypa"
+  }
+}
