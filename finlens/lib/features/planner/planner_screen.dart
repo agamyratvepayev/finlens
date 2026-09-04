@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../../core/l10n/enum_labels.dart';
 import '../../core/models/models.dart';
@@ -39,8 +39,7 @@ class _PlannerScreenState extends State<PlannerScreen> {
 
   /// Planner's own month вЂ” never `store.period`. Stepping it leaves Ledger and
   /// Insight untouched (spec 5.1: Planner stops driving the global period).
-  late DateTime _month =
-      DateTime(AppStore.today.year, AppStore.today.month);
+  late DateTime _month = DateTime(AppStore.today.year, AppStore.today.month);
 
   /// Schedule's own forward horizon (В§1). Its own state вЂ” it never reads or
   /// writes `_month`, `store.period` or anything global.
@@ -51,8 +50,7 @@ class _PlannerScreenState extends State<PlannerScreen> {
   /// persistence), and never touches `_month`, `store.period` or any other tab.
   GoalFilter _goalFilter = GoalFilter.all;
 
-  void _stepTab(int delta) =>
-      setState(() => _tab = (_tab + delta + 3) % 3);
+  void _stepTab(int delta) => setState(() => _tab = (_tab + delta + 3) % 3);
 
   Future<void> _openHorizonSheet(BuildContext context) async {
     final today = AppStore.today;
@@ -88,6 +86,17 @@ class _PlannerScreenState extends State<PlannerScreen> {
       store.budgetedCategories.isEmpty &&
       store.unbudgetedSpendingCategories(_month).isEmpty;
 
+  /// Whether the current tab shows its first-run empty state — the exact test
+  /// each tab uses for its own empty branch, lifted here so the build can lay the
+  /// block against the whole body behind the header and segmented control (§1).
+  /// When true, the content slot becomes a hit-transparent spacer and
+  /// [PlannerEmptyState] is drawn full-height behind the chrome.
+  bool _currentTabEmpty(AppStore store) => switch (_tab) {
+    1 => store.goals.isEmpty,
+    2 => store.openTasks.isEmpty,
+    _ => _budgetsEmpty(store),
+  };
+
   /// True when the Planner has never held anything: no budgets and no unbudgeted
   /// spending, no goals, no tasks, and nothing in Archive. The eye would mask
   /// nothing and the ••• would open an empty screen, so neither is drawn (§2).
@@ -110,36 +119,39 @@ class _PlannerScreenState extends State<PlannerScreen> {
   /// its own tab is empty (§1/§5) — a control that could only step from one empty
   /// view to another is not drawn.
   Widget _titleWidget(BuildContext context, AppStore store) => switch (_tab) {
-        // Hidden with no budgeted and no unbudgeted-spending categories. A month
-        // with spending but no budgets keeps the control — the NO BUDGET SET panel
-        // renders and stepping the month is meaningful.
-        0 => _budgetsEmpty(store)
-            ? const SizedBox.shrink()
-            : _MonthControl(
-                month: _month,
-                onTap: () => showPlannerMonthPicker(
-                  context,
-                  initial: _month,
-                  onPick: (m) => setState(() => _month = m),
-                ),
+    // Hidden with no budgeted and no unbudgeted-spending categories. A month
+    // with spending but no budgets keeps the control — the NO BUDGET SET panel
+    // renders and stepping the month is meaningful.
+    0 =>
+      _budgetsEmpty(store)
+          ? const SizedBox.shrink()
+          : _MonthControl(
+              month: _month,
+              onTap: () => showPlannerMonthPicker(
+                context,
+                initial: _month,
+                onPick: (m) => setState(() => _month = m),
               ),
-        // Hidden only with no tasks at all — the same test `_emptyState` fires on
-        // (`openTasks.isEmpty`). Tasks that all fall past the horizon keep the
-        // control: it is how `_nothingDue`'s own "next 3 months" link reaches them.
-        2 => store.openTasks.isEmpty
-            ? const SizedBox.shrink()
-            : ScheduleControl(
-                horizon: _horizon,
-                onTap: () => _openHorizonSheet(context),
-              ),
-        _ => store.goals.isEmpty
-            ? const SizedBox.shrink()
-            : GoalScopeControl(
-                filter: _goalFilter,
-                counts: store.goalFilterCounts(),
-                onTap: () => _openGoalScopeSheet(context),
-              ),
-      };
+            ),
+    // Hidden only with no tasks at all — the same test `_emptyState` fires on
+    // (`openTasks.isEmpty`). Tasks that all fall past the horizon keep the
+    // control: it is how `_nothingDue`'s own "next 3 months" link reaches them.
+    2 =>
+      store.openTasks.isEmpty
+          ? const SizedBox.shrink()
+          : ScheduleControl(
+              horizon: _horizon,
+              onTap: () => _openHorizonSheet(context),
+            ),
+    _ =>
+      store.goals.isEmpty
+          ? const SizedBox.shrink()
+          : GoalScopeControl(
+              filter: _goalFilter,
+              counts: store.goalFilterCounts(),
+              onTap: () => _openGoalScopeSheet(context),
+            ),
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -150,75 +162,110 @@ class _PlannerScreenState extends State<PlannerScreen> {
     // nothing archived, so the eye and the ••• both leave the header, exactly as
     // the Ledger's first-run header does — leaving one control, the + (§2).
     final untouched = _plannerUntouched(store);
+    final tabEmpty = _currentTabEmpty(store);
 
     return SafeArea(
       bottom: false,
-      child: Column(
+      child: Stack(
+        // The chrome Column keeps the same tight, full-body constraints it had
+        // before the Stack, so every populated state is laid out exactly as it
+        // was; only the first-run block behind is added.
+        fit: StackFit.expand,
         children: [
-          // Row 1 вЂ” the period is the title. Budgets shows the month control,
-          // Schedule the horizon, Goals the filter scope; only an empty goal
-          // list leaves the slot empty (§1).
-          ScreenHeader(
-            titleWidget: _titleWidget(context, store),
-            showEye: !untouched,
-            onAdd: () {
-              // Each tab's + creates that tab's own thing (§5). Goals use their
-              // own full-screen form (the WATCHING picker and targetв†”date pair
-              // don't fit the numeric-hero sheet); Budgets and Schedule route
-              // through Quick Add, which intercepts newBudget into the
-              // category-first budget flow. Budgets no longer falls through to
-              // an expense form.
-              if (_tab == 1) {
-                openGoalEditor(context);
-                return;
-              }
-              showQuickAdd(
-                context,
-                type: _tab == 2
-                    ? QuickAddType.newTask
-                    : QuickAddType.newBudget,
-              );
-            },
-            // The ••• (Archive) is drawn only once there is something archived to
-            // reach; on an untouched Planner it would open an empty screen (§2).
-            trailing: untouched
-                ? null
-                : IconButton(
-                    visualDensity: VisualDensity.compact,
-                    padding: EdgeInsets.zero,
-                    constraints:
-                        const BoxConstraints.tightFor(width: 36, height: 36),
-                    icon: const Icon(Icons.more_horiz_rounded, size: 22),
-                    color: AppColors.textPrimary,
-                    // Spec 5.8 — Archive lives behind the ••• menu, never a tab.
-                    onPressed: () =>
-                        Navigator.of(context, rootNavigator: true).push(
-                      MaterialPageRoute(builder: (_) => const ArchiveScreen()),
-                    ),
-                  ),
-          ),
-          // Row 2 вЂ” a segmented control, above the summary (spec В§1). Margin 14
-          // each side (not the 20 gutter) per the container spec.
-          Padding(
-            padding: const EdgeInsets.fromLTRB(14, 0, 14, Insets.md),
-            child: _SegmentedTabs(
-              labels: [l.plTabBudgets, l.plTabGoals, l.plTabSchedule],
-              index: _tab,
-              onChanged: (i) => setState(() => _tab = i),
-            ),
-          ),
-          // Row 3 + content вЂ” swipe anywhere below the tabs to change tab.
-          Expanded(
-            child: HorizontalSectionSwipe(
-              onNext: () => _stepTab(1),
-              onPrevious: () => _stepTab(-1),
-              child: Column(
-                children: [
-                  _summary(store),
-                  Expanded(child: _content(store)),
-                ],
+          // First run: the current tab's empty block is laid against the whole
+          // tab body so its icon lands on the same y as Balance's and the
+          // Ledger's — and on the same y across the three tabs (§1). It sits
+          // behind the header and the segmented control, which paint over it
+          // rather than pushing it down. It carries its own tab-swipe so a
+          // horizontal drag over the (hit-transparent) content slot above still
+          // changes tab.
+          if (tabEmpty)
+            Positioned.fill(
+              child: HorizontalSectionSwipe(
+                onNext: () => _stepTab(1),
+                onPrevious: () => _stepTab(-1),
+                child: PlannerEmptyState(tab: PlannerEmptyTab.values[_tab]),
               ),
             ),
+          Column(
+            children: [
+              // Row 1 вЂ” the period is the title. Budgets shows the month control,
+              // Schedule the horizon, Goals the filter scope; only an empty goal
+              // list leaves the slot empty (§1).
+              ScreenHeader(
+                titleWidget: _titleWidget(context, store),
+                showEye: !untouched,
+                onAdd: () {
+                  // Each tab's + creates that tab's own thing (§5). Goals use their
+                  // own full-screen form (the WATCHING picker and targetв†”date pair
+                  // don't fit the numeric-hero sheet); Budgets and Schedule route
+                  // through Quick Add, which intercepts newBudget into the
+                  // category-first budget flow. Budgets no longer falls through to
+                  // an expense form.
+                  if (_tab == 1) {
+                    openGoalEditor(context);
+                    return;
+                  }
+                  showQuickAdd(
+                    context,
+                    type: _tab == 2
+                        ? QuickAddType.newTask
+                        : QuickAddType.newBudget,
+                  );
+                },
+                // The ••• (Archive) is drawn only once there is something archived to
+                // reach; on an untouched Planner it would open an empty screen (§2).
+                trailing: untouched
+                    ? null
+                    : IconButton(
+                        visualDensity: VisualDensity.compact,
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints.tightFor(
+                          width: 36,
+                          height: 36,
+                        ),
+                        icon: const Icon(Icons.more_horiz_rounded, size: 22),
+                        color: AppColors.textPrimary,
+                        // Spec 5.8 — Archive lives behind the ••• menu, never a tab.
+                        onPressed: () =>
+                            Navigator.of(context, rootNavigator: true).push(
+                              MaterialPageRoute(
+                                builder: (_) => const ArchiveScreen(),
+                              ),
+                            ),
+                      ),
+              ),
+              // Row 2 вЂ” a segmented control, above the summary (spec В§1). Margin 14
+              // each side (not the 20 gutter) per the container spec.
+              Padding(
+                padding: const EdgeInsets.fromLTRB(14, 0, 14, Insets.md),
+                child: _SegmentedTabs(
+                  labels: [l.plTabBudgets, l.plTabGoals, l.plTabSchedule],
+                  index: _tab,
+                  onChanged: (i) => setState(() => _tab = i),
+                ),
+              ),
+              // Row 3 + content вЂ” swipe anywhere below the tabs to change tab.
+              Expanded(
+                child: HorizontalSectionSwipe(
+                  onNext: () => _stepTab(1),
+                  onPrevious: () => _stepTab(-1),
+                  child: Column(
+                    children: [
+                      _summary(store),
+                      // First run: a hit-transparent spacer so the block behind
+                      // takes the taps and scroll; the header and tabs above still
+                      // take theirs. Populated: the tab's own content.
+                      Expanded(
+                        child: tabEmpty
+                            ? const SizedBox.expand()
+                            : _content(store),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -226,41 +273,43 @@ class _PlannerScreenState extends State<PlannerScreen> {
   }
 
   Widget _summary(AppStore store) => switch (_tab) {
-        // No summary block above the Goals sections (В§2): goals of mixed
-        // direction have no meaningful sum, and a "1 needs attention" count is
-        // answered by the first card. The cards are sections в†’ cards, nothing
-        // else.
-        1 => const SizedBox.shrink(),
-        // The projection bar reads only when there is a task to project. The
-        // gate is the Schedule tab's own empty test (`openTasks.isEmpty`), the
-        // exact condition its empty state shows on, so a projection over zero
-        // tasks can never draw (§3.2). Tasks that fall past the horizon keep the
-        // summary — the projection still describes them.
-        2 => store.openTasks.isEmpty
-            ? const SizedBox.shrink()
-            : ScheduleSummary(store: store, horizon: _horizon),
-        // The hero reads only with a budget to measure. `$0 left of $0` — over
-        // spending or not — is a claim about nothing, so it is absent both when
-        // the tab is empty and in the spending-without-budget case, where the NO
-        // BUDGET SET panel carries the tab instead (§3.1).
-        _ => store.totalBudget > 0
-            ? _BudgetSummary(store: store, month: _month)
-            : const SizedBox.shrink(),
-      };
+    // No summary block above the Goals sections (В§2): goals of mixed
+    // direction have no meaningful sum, and a "1 needs attention" count is
+    // answered by the first card. The cards are sections в†’ cards, nothing
+    // else.
+    1 => const SizedBox.shrink(),
+    // The projection bar reads only when there is a task to project. The
+    // gate is the Schedule tab's own empty test (`openTasks.isEmpty`), the
+    // exact condition its empty state shows on, so a projection over zero
+    // tasks can never draw (§3.2). Tasks that fall past the horizon keep the
+    // summary — the projection still describes them.
+    2 =>
+      store.openTasks.isEmpty
+          ? const SizedBox.shrink()
+          : ScheduleSummary(store: store, horizon: _horizon),
+    // The hero reads only with a budget to measure. `$0 left of $0` — over
+    // spending or not — is a claim about nothing, so it is absent both when
+    // the tab is empty and in the spending-without-budget case, where the NO
+    // BUDGET SET panel carries the tab instead (§3.1).
+    _ =>
+      store.totalBudget > 0
+          ? _BudgetSummary(store: store, month: _month)
+          : const SizedBox.shrink(),
+  };
 
   Widget _content(AppStore store) => switch (_tab) {
-        1 => _GoalsTab(
-            store: store,
-            filter: _goalFilter,
-            onShowAll: () => setState(() => _goalFilter = GoalFilter.all),
-          ),
-        2 => ScheduleTab(
-            store: store,
-            horizon: _horizon,
-            onHorizonChange: (h) => setState(() => _horizon = h),
-          ),
-        _ => _BudgetsTab(store: store, month: _month),
-      };
+    1 => _GoalsTab(
+      store: store,
+      filter: _goalFilter,
+      onShowAll: () => setState(() => _goalFilter = GoalFilter.all),
+    ),
+    2 => ScheduleTab(
+      store: store,
+      horizon: _horizon,
+      onHorizonChange: (h) => setState(() => _horizon = h),
+    ),
+    _ => _BudgetsTab(store: store, month: _month),
+  };
 }
 
 /// Row 1's month control on the Budgets tab вЂ” a title-weight `August 2026 вЊ„`
@@ -370,8 +419,9 @@ class _SegmentedTabs extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: 13.5,
-                      fontWeight:
-                          i == index ? FontWeight.w600 : FontWeight.w400,
+                      fontWeight: i == index
+                          ? FontWeight.w600
+                          : FontWeight.w400,
                       color: i == index
                           ? AppColors.textPrimary
                           : AppColors.textSecondary,
@@ -422,8 +472,9 @@ class _BudgetSummary extends StatelessWidget {
     // privacy eye and stays grammatical; the word carries the meaning the bare
     // figure can't (spec В§2).
     final budgetStr = money(budget, masked: store.masked);
-    final phrase =
-        over ? l.plOverAmount(budgetStr) : l.plLeftOfAmount(budgetStr);
+    final phrase = over
+        ? l.plOverAmount(budgetStr)
+        : l.plLeftOfAmount(budgetStr);
     final phraseColor = over ? AppColors.negative : AppColors.textSecondary;
 
     return Padding(
@@ -486,7 +537,7 @@ class _BudgetSummary extends StatelessWidget {
                 child: Text(
                   isCurrent
                       ? '${l.plPctSpent(percent(ratio, decimals: 0))} · '
-                          '${l.plDayOfMonth(store.dayOfMonthFor(month), store.daysInMonthOf(month))}'
+                            '${l.plDayOfMonth(store.dayOfMonthFor(month), store.daysInMonthOf(month))}'
                       : l.plPctSpent(percent(ratio, decimals: 0)),
                   style: AppText.caption.copyWith(fontSize: 11.5),
                   maxLines: 1,
@@ -500,8 +551,7 @@ class _BudgetSummary extends StatelessWidget {
                 const SizedBox(width: Insets.sm),
                 Container(width: 2, height: 10, color: AppColors.textPrimary),
                 const SizedBox(width: 5),
-                Text(l.plPace,
-                    style: AppText.caption.copyWith(fontSize: 11.5)),
+                Text(l.plPace, style: AppText.caption.copyWith(fontSize: 11.5)),
               ],
             ],
           ),
@@ -531,13 +581,11 @@ class _BudgetsTab extends StatelessWidget {
     // Over-limit categories first, then the rest in their existing order.
     bool over(Category c) =>
         store.spentInCategory(c.id, month) > (store.effectiveLimitOf(c) ?? 0);
-    final ordered = [
-      ...budgets.where(over),
-      ...budgets.where((c) => !over(c)),
-    ];
+    final ordered = [...budgets.where(over), ...budgets.where((c) => !over(c))];
 
-    final totalLabelStyle =
-        AppText.label.copyWith(color: AppColors.textSecondary);
+    final totalLabelStyle = AppText.label.copyWith(
+      color: AppColors.textSecondary,
+    );
 
     return ListView(
       padding: const EdgeInsets.only(bottom: Insets.xxl),
@@ -607,8 +655,8 @@ class _BudgetRow extends StatelessWidget {
     final semantics = over
         ? l.plSemRowOver(category.name, spentStr, limitStr)
         : warn
-            ? l.plSemRowNear(category.name, spentStr, limitStr)
-            : l.plSemRowNormal(category.name, spentStr, limitStr);
+        ? l.plSemRowNear(category.name, spentStr, limitStr)
+        : l.plSemRowNormal(category.name, spentStr, limitStr);
 
     return Padding(
       // Own gutter padding + the 8pt inter-card gap (spec §1), exactly the
@@ -657,7 +705,9 @@ class _BudgetRow extends StatelessWidget {
                               Expanded(
                                 child: Text(
                                   category.name,
-                                  style: AppText.rowTitle.copyWith(height: 1.15),
+                                  style: AppText.rowTitle.copyWith(
+                                    height: 1.15,
+                                  ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
@@ -798,8 +848,10 @@ class _NoBudgetSectionState extends State<_NoBudgetSection> {
                   ),
                 ),
                 const Spacer(),
-                Text(l.plCategoriesCount(widget.categories.length),
-                    style: headerStyle),
+                Text(
+                  l.plCategoriesCount(widget.categories.length),
+                  style: headerStyle,
+                ),
                 Text(' · ', style: headerStyle),
                 AmountText(total, style: headerStyle),
               ],
@@ -1039,12 +1091,17 @@ class _GoalCard extends StatelessWidget {
     // figures a cent apart never print as an identical pair.
     final showWhole = wholeStr != currentStr;
 
-    final maskedCurrent = money(m.current, signless: true, masked: store.masked);
+    final maskedCurrent = money(
+      m.current,
+      signless: true,
+      masked: store.masked,
+    );
     // The pair keeps a spoken "of" for the screen reader: two bare figures in
     // sequence say nothing about their relation, unlike the stacked visual (5).
     // Masking mirrors the visual -- the current amount masks, the whole does not.
-    final amountPair =
-        showWhole ? l.goalAmountOf(maskedCurrent, wholeStr) : maskedCurrent;
+    final amountPair = showWhole
+        ? l.goalAmountOf(maskedCurrent, wholeStr)
+        : maskedCurrent;
 
     return Padding(
       // Tighter bottom margin than a budget card (В§1): 8, not Insets.md.
@@ -1062,16 +1119,20 @@ class _GoalCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(14),
               onTap: () => Navigator.of(context, rootNavigator: true).push(
                 MaterialPageRoute(
-                  builder: (_) =>
-                      GoalDetailScreen(goalId: goal.id, backLabel: l.plTabGoals),
+                  builder: (_) => GoalDetailScreen(
+                    goalId: goal.id,
+                    backLabel: l.plTabGoals,
+                  ),
                 ),
               ),
               // 8 vertical В· 12 horizontal (В§1): the two text lines and the bar
               // set the height, the padding is what's tuned вЂ” no fixed height,
               // so the card grows intact at large text scale.
               child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                padding: const EdgeInsets.symmetric(
+                  vertical: 8,
+                  horizontal: 12,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -1081,8 +1142,9 @@ class _GoalCard extends StatelessWidget {
                           m.reached
                               ? Icons.check_rounded
                               : store.goalIcon(goal),
-                          color:
-                              m.reached ? AppColors.positive : AppColors.goal,
+                          color: m.reached
+                              ? AppColors.positive
+                              : AppColors.goal,
                           size: 26,
                         ),
                         const SizedBox(width: 10),
@@ -1097,13 +1159,13 @@ class _GoalCard extends StatelessWidget {
                             children: [
                               Expanded(
                                 child: Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.start,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
                                       goal.name,
-                                      style: AppText.rowTitle
-                                          .copyWith(height: 1.15),
+                                      style: AppText.rowTitle.copyWith(
+                                        height: 1.15,
+                                      ),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                     ),
@@ -1114,7 +1176,9 @@ class _GoalCard extends StatelessWidget {
                                         fontSize: 11.5,
                                         height: 1.15,
                                         color: goalVerdictColor(
-                                            m, verdict.attention),
+                                          m,
+                                          verdict.attention,
+                                        ),
                                       ),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
@@ -1132,8 +1196,9 @@ class _GoalCard extends StatelessWidget {
                                   // without it the second lines drift a point.
                                   AmountText.balance(
                                     m.current,
-                                    style: AppText.amount
-                                        .copyWith(height: 1.15),
+                                    style: AppText.amount.copyWith(
+                                      height: 1.15,
+                                    ),
                                     color: m.reached
                                         ? AppColors.positive
                                         : null,

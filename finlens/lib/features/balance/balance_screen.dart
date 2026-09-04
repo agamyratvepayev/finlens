@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../../core/l10n/enum_labels.dart';
@@ -28,10 +30,10 @@ enum BalanceSection { all, assets, liabilities }
 
 extension BalanceSectionL10n on BalanceSection {
   String label(AppLocalizations l) => switch (this) {
-        BalanceSection.all => l.balanceSectionAll,
-        BalanceSection.assets => l.balanceSectionAssets,
-        BalanceSection.liabilities => l.balanceSectionLiabilities,
-      };
+    BalanceSection.all => l.balanceSectionAll,
+    BalanceSection.assets => l.balanceSectionAssets,
+    BalanceSection.liabilities => l.balanceSectionLiabilities,
+  };
 }
 
 /// Spec 1.1 — Balance.
@@ -126,9 +128,8 @@ class _BalanceScreenState extends State<BalanceScreen> {
   }
 
   void _advanceSection() => _setSection(
-        BalanceSection.values[
-            (_section.index + 1) % BalanceSection.values.length],
-      );
+    BalanceSection.values[(_section.index + 1) % BalanceSection.values.length],
+  );
 
   /// Wraps in both directions, same as the label tap — no swipe is ever a
   /// no-op. Dart's `%` is Euclidean (always non-negative for a positive
@@ -147,20 +148,36 @@ class _BalanceScreenState extends State<BalanceScreen> {
     // zero and that user is not new) and not "all filtered away" (a filtered
     // user still has accounts). Only a store with literally no account is a
     // first run.
-    final hasAccounts =
-        AccountGroup.values.any((g) => store.groupCount(g) > 0);
+    final hasAccounts = AccountGroup.values.any((g) => store.groupCount(g) > 0);
 
     return SafeArea(
       bottom: false,
-      child: Column(
+      child: Stack(
+        // The chrome Column keeps the same tight, full-body constraints it had
+        // before the Stack, so the populated screen is laid out exactly as it
+        // was; only the first-run block behind is added.
+        fit: StackFit.expand,
         children: [
-          _header(store, hasAccounts),
-          Expanded(
-            child: HorizontalSectionSwipe(
-              onNext: () => _stepSection(1),
-              onPrevious: () => _stepSection(-1),
-              child: _list(store, hasAccounts),
-            ),
+          // First run: the empty block is laid against the whole tab body so its
+          // icon lands on the same y as the Ledger's and the Planner's (§1). It
+          // sits behind the header, which paints over its top edge — the two
+          // never consume each other's height. Absent once an account exists.
+          if (!hasAccounts) Positioned.fill(child: _firstRunPane()),
+          Column(
+            children: [
+              _header(store, hasAccounts),
+              Expanded(
+                child: hasAccounts
+                    ? HorizontalSectionSwipe(
+                        onNext: () => _stepSection(1),
+                        onPrevious: () => _stepSection(-1),
+                        child: _list(store, hasAccounts),
+                      )
+                    // A hit-transparent spacer: the block behind takes the taps
+                    // and the scroll, the header above still takes the +'s taps.
+                    : const SizedBox.expand(),
+              ),
+            ],
           ),
         ],
       ),
@@ -203,10 +220,7 @@ class _BalanceScreenState extends State<BalanceScreen> {
               // centring a shorter child and nudging it as it fades.
               layoutBuilder: (currentChild, previousChildren) => Stack(
                 alignment: Alignment.topLeft,
-                children: [
-                  ...previousChildren,
-                  ?currentChild,
-                ],
+                children: [...previousChildren, ?currentChild],
               ),
               child: hasAccounts
                   ? Column(
@@ -221,8 +235,9 @@ class _BalanceScreenState extends State<BalanceScreen> {
                           const SizedBox(height: 8),
                           _RatioBar(
                             assets: filter.sectionTotal(store, assets: true),
-                            liabilities:
-                                filter.sectionTotal(store, assets: false).abs(),
+                            liabilities: filter
+                                .sectionTotal(store, assets: false)
+                                .abs(),
                           ),
                         ],
                         // The tools left the hero's line for a row of their own,
@@ -312,9 +327,9 @@ class _BalanceScreenState extends State<BalanceScreen> {
       BalanceSection.all => (filter.netWorth(store), null),
       BalanceSection.assets => (filter.sectionTotal(store, assets: true), null),
       BalanceSection.liabilities => (
-          filter.sectionTotal(store, assets: false),
-          AppColors.negative,
-        ),
+        filter.sectionTotal(store, assets: false),
+        AppColors.negative,
+      ),
     };
 
     final amountColumn = Column(
@@ -400,7 +415,9 @@ class _BalanceScreenState extends State<BalanceScreen> {
                 icon: _anyOpen
                     ? Icons.unfold_less_rounded
                     : Icons.unfold_more_rounded,
-                tooltip: _anyOpen ? AppLocalizations.of(context).actionCollapseAll : AppLocalizations.of(context).actionExpandAll,
+                tooltip: _anyOpen
+                    ? AppLocalizations.of(context).actionCollapseAll
+                    : AppLocalizations.of(context).actionExpandAll,
                 filled: !_anyOpen,
                 onTap: _toggleAll,
               ),
@@ -414,8 +431,9 @@ class _BalanceScreenState extends State<BalanceScreen> {
                 iconColor: filter.isActive ? AppColors.textPrimary : null,
                 tooltip: AppLocalizations.of(context).balFilterCategories,
                 semanticValue: filter.isActive
-                    ? AppLocalizations.of(context)
-                        .balFilterActive(filter.hiddenItemCount(store))
+                    ? AppLocalizations.of(
+                        context,
+                      ).balFilterActive(filter.hiddenItemCount(store))
                     : AppLocalizations.of(context).balFilterOff,
                 onTap: () => showBalanceFilterSheet(context),
               ),
@@ -437,11 +455,13 @@ class _BalanceScreenState extends State<BalanceScreen> {
   /// tools.
   Widget _counter(AppStore store) {
     final filter = store.balanceFilter;
-    final groups =
-        _visibleGroups.where((g) => store.accountsIn(g).isNotEmpty).toList();
+    final groups = _visibleGroups
+        .where((g) => store.accountsIn(g).isNotEmpty)
+        .toList();
     final groupsTotal = groups.length;
-    final groupsVisible =
-        groups.where((g) => filter.isGroupVisible(store, g)).length;
+    final groupsVisible = groups
+        .where((g) => filter.isGroupVisible(store, g))
+        .length;
     var accountsTotal = 0;
     var accountsVisible = 0;
     for (final g in groups) {
@@ -464,8 +484,12 @@ class _BalanceScreenState extends State<BalanceScreen> {
           children: [
             ..._countSpans(groupsVisible, groupsTotal, 'group', 'groups'),
             const TextSpan(text: ' · '),
-            ..._countSpans(accountsVisible, accountsTotal, 'account',
-                'accounts'),
+            ..._countSpans(
+              accountsVisible,
+              accountsTotal,
+              'account',
+              'accounts',
+            ),
           ],
         ),
       ),
@@ -474,7 +498,12 @@ class _BalanceScreenState extends State<BalanceScreen> {
 
   /// One half of the counter — short "N nouns" when nothing is hidden, or the
   /// bright "V of T nouns" reading (V emphasised) when it is narrowed.
-  List<InlineSpan> _countSpans(int visible, int total, String one, String many) {
+  List<InlineSpan> _countSpans(
+    int visible,
+    int total,
+    String one,
+    String many,
+  ) {
     final noun = total == 1 ? one : many;
     if (visible == total) {
       return [TextSpan(text: '$total $noun')];
@@ -562,10 +591,10 @@ class _BalanceScreenState extends State<BalanceScreen> {
   bool get _anyOpen => _visibleGroups.any(_isOpen);
 
   List<AccountGroup> get _visibleGroups => switch (_section) {
-        BalanceSection.all => AccountGroup.values,
-        BalanceSection.assets => AccountGroup.assets,
-        BalanceSection.liabilities => AccountGroup.liabilities,
-      };
+    BalanceSection.all => AccountGroup.values,
+    BalanceSection.assets => AccountGroup.assets,
+    BalanceSection.liabilities => AccountGroup.liabilities,
+  };
 
   void _toggleAll() {
     setState(() {
@@ -580,8 +609,9 @@ class _BalanceScreenState extends State<BalanceScreen> {
 
   void _openSearch() {
     setState(() => _searching = true);
-    WidgetsBinding.instance
-        .addPostFrameCallback((_) => _searchFocus.requestFocus());
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => _searchFocus.requestFocus(),
+    );
   }
 
   void _closeSearch() {
@@ -608,13 +638,13 @@ class _BalanceScreenState extends State<BalanceScreen> {
       backgroundColor: AppColors.surfaceAlt,
       builder: (sheetContext) {
         Widget check(AccountSort option) => Opacity(
-              opacity: option == current ? 1 : 0,
-              child: const Icon(
-                Icons.check_rounded,
-                size: 18,
-                color: AppColors.accentSoft,
-              ),
-            );
+          opacity: option == current ? 1 : 0,
+          child: const Icon(
+            Icons.check_rounded,
+            size: 18,
+            color: AppColors.accentSoft,
+          ),
+        );
         return SafeArea(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -661,7 +691,11 @@ class _BalanceScreenState extends State<BalanceScreen> {
               // order I made myself".
               const Padding(
                 padding: EdgeInsets.symmetric(horizontal: Insets.gutter),
-                child: Divider(height: 1, thickness: 1, color: AppColors.divider),
+                child: Divider(
+                  height: 1,
+                  thickness: 1,
+                  color: AppColors.divider,
+                ),
               ),
               ListTile(
                 leading: check(AccountSort.custom),
@@ -702,7 +736,7 @@ class _BalanceScreenState extends State<BalanceScreen> {
       // No accounts at all is the "add your first account" case; accounts that
       // exist but are all filtered out fall through to per-section empty rows.
       // hasAccounts is the same test the header uses — one definition of empty.
-      if (!hasAccounts) return _emptyState();
+      if (!hasAccounts) return _firstRunPane();
     }
 
     // Section headers only show on All: on a filtered section the total already
@@ -729,11 +763,19 @@ class _BalanceScreenState extends State<BalanceScreen> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           if (_section != BalanceSection.liabilities && assetsHasContent)
-            _sectionBlock(store,
-                assets: true, groups: assets, showHeader: showHeaders),
+            _sectionBlock(
+              store,
+              assets: true,
+              groups: assets,
+              showHeader: showHeaders,
+            ),
           if (_section != BalanceSection.assets && liabsHasContent)
-            _sectionBlock(store,
-                assets: false, groups: liabilities, showHeader: showHeaders),
+            _sectionBlock(
+              store,
+              assets: false,
+              groups: liabilities,
+              showHeader: showHeaders,
+            ),
         ],
       ),
     );
@@ -779,73 +821,64 @@ class _BalanceScreenState extends State<BalanceScreen> {
   /// Shown when a section's accounts are all filtered out — never a $0 group
   /// row. Offers the one way back: reopen the filter sheet.
   Widget _filteredAwayRow() => Padding(
-        padding: const EdgeInsets.symmetric(vertical: Insets.xl),
-        child: Column(
-          children: [
-            Text(
-              AppLocalizations.of(context).balNoVisibleCategories,
-              style: AppText.body.copyWith(color: AppColors.textTertiary),
-            ),
-            TextButton(
-              onPressed: () => showBalanceFilterSheet(context),
-              style: TextButton.styleFrom(
-                foregroundColor: AppColors.accent,
-                minimumSize: const Size(0, 36),
-              ),
-              child: Text(AppLocalizations.of(context).balAdjustFilter),
-            ),
-          ],
+    padding: const EdgeInsets.symmetric(vertical: Insets.xl),
+    child: Column(
+      children: [
+        Text(
+          AppLocalizations.of(context).balNoVisibleCategories,
+          style: AppText.body.copyWith(color: AppColors.textTertiary),
         ),
-      );
+        TextButton(
+          onPressed: () => showBalanceFilterSheet(context),
+          style: TextButton.styleFrom(
+            foregroundColor: AppColors.accent,
+            minimumSize: const Size(0, 36),
+          ),
+          child: Text(AppLocalizations.of(context).balAdjustFilter),
+        ),
+      ],
+    ),
+  );
 
   Widget _noResults() => Padding(
-        padding: const EdgeInsets.only(top: 72),
-        child: EmptyState(
-          icon: Icons.search_off_rounded,
-          title: AppLocalizations.of(context).balNoResults,
-          message: AppLocalizations.of(context).balNoAccountMatch,
-        ),
-      );
+    padding: const EdgeInsets.only(top: 72),
+    child: EmptyState(
+      icon: Icons.search_off_rounded,
+      title: AppLocalizations.of(context).balNoResults,
+      message: AppLocalizations.of(context).balNoAccountMatch,
+    ),
+  );
 
   /// The one place an "add account" call to action belongs: what is redundant
   /// noise in a populated list is the only way forward in an empty one. The
   /// action is a low-emphasis text button — a one-time account creation should
   /// not compete with the persistent + — and it stays beside the sentence that
   /// motivates it rather than migrating to the corner glyph (§4).
-  Widget _emptyState() {
+  ///
+  /// The block is centred against the whole body by [FirstRunBlock]; see the
+  /// Stack in [build]. The link keeps a ≥44 tap target (a widget test pins it)
+  /// but uses a shrink-wrapped tap target and a scale-down label so its height
+  /// is the deterministic figure the shared action box reserves, not Material's
+  /// padded default — which the reserved height could not have predicted (§4).
+  Widget _firstRunPane() {
     final l = AppLocalizations.of(context);
-    // Centred between the + row above and the nav bar below (§3). The screen has
-    // no upward-nudge convention, so geometric centring is correct — no optical
-    // offset invented. A ConstrainedBox pinned to the viewport height keeps it
-    // centred when there is room and lets it scroll rather than clip when there
-    // is not (a large text scale, or a short/landscape viewport — §8).
-    return LayoutBuilder(
-      builder: (context, constraints) => SingleChildScrollView(
-        child: ConstrainedBox(
-          constraints: BoxConstraints(minHeight: constraints.maxHeight),
-          child: Center(
-            child: EmptyState(
-              icon: Icons.account_balance_wallet_rounded,
-              title: l.balNoAccountsYet,
-              titleAsHeader: true,
-              message: l.balEmptyBenefit,
-              action: TextButton(
-                onPressed: () => showNewAccountSheet(context),
-                style: TextButton.styleFrom(
-                  foregroundColor: AppColors.accent,
-                  // A visually light control that is still physically full-size:
-                  // ≥44×44 via the tap target, not a larger font (§4).
-                  minimumSize: const Size(44, 44),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: Insets.lg,
-                    vertical: 10,
-                  ),
-                ),
-                child: Text(l.balAddAccount),
-              ),
-            ),
+    return FirstRunBlock(
+      icon: Icons.account_balance_wallet_rounded,
+      title: l.balNoAccountsYet,
+      message: l.balEmptyBenefit,
+      action: TextButton(
+        onPressed: () => showNewAccountSheet(context),
+        style: TextButton.styleFrom(
+          foregroundColor: AppColors.accent,
+          minimumSize: const Size(44, 44),
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          padding: const EdgeInsets.symmetric(
+            horizontal: Insets.lg,
+            vertical: _firstRunLinkVPad,
           ),
+          textStyle: _firstRunLinkTextStyle,
         ),
+        child: FittedBox(fit: BoxFit.scaleDown, child: Text(l.balAddAccount)),
       ),
     );
   }
@@ -868,7 +901,9 @@ class _BalanceScreenState extends State<BalanceScreen> {
     // — never rendered as an empty row.
     final filter = store.balanceFilter;
     var groups = source
-        .where((g) => store.groupCount(g) > 0 && filter.isGroupVisible(store, g))
+        .where(
+          (g) => store.groupCount(g) > 0 && filter.isGroupVisible(store, g),
+        )
         .toList();
 
     if (_query.isNotEmpty) {
@@ -885,9 +920,9 @@ class _BalanceScreenState extends State<BalanceScreen> {
     }
     // Search only sees visible accounts — one hidden inside a group must not
     // surface a match (spec §4.4.11).
-    return store.balanceFilter.visibleAccounts(store, group).any(
-          (a) => a.name.toLowerCase().contains(q),
-        );
+    return store.balanceFilter
+        .visibleAccounts(store, group)
+        .any((a) => a.name.toLowerCase().contains(q));
   }
 
   /// Children of [group], narrowed by the query and sorted by [_sort] —
@@ -895,13 +930,19 @@ class _BalanceScreenState extends State<BalanceScreen> {
   /// the (fixed) group order.
   List<Account> _children(AppStore store, AccountGroup group) {
     final q = _query.toLowerCase();
-    final groupMatches =
-        group.label(AppLocalizations.of(context)).toLowerCase().contains(q);
+    final groupMatches = group
+        .label(AppLocalizations.of(context))
+        .toLowerCase()
+        .contains(q);
 
     final list = store.balanceFilter
         .visibleAccounts(store, group)
-        .where((a) =>
-            _query.isEmpty || groupMatches || a.name.toLowerCase().contains(q))
+        .where(
+          (a) =>
+              _query.isEmpty ||
+              groupMatches ||
+              a.name.toLowerCase().contains(q),
+        )
         .toList();
 
     if (store.balanceSort == AccountSort.custom) {
@@ -912,8 +953,9 @@ class _BalanceScreenState extends State<BalanceScreen> {
       for (final a in store.balanceOrder.orderedAccounts(store, group)) {
         rank[a.id] = i++;
       }
-      list.sort((a, b) =>
-          (rank[a.id] ?? 1 << 30).compareTo(rank[b.id] ?? 1 << 30));
+      list.sort(
+        (a, b) => (rank[a.id] ?? 1 << 30).compareTo(rank[b.id] ?? 1 << 30),
+      );
       return list;
     }
 
@@ -931,7 +973,8 @@ class _BalanceScreenState extends State<BalanceScreen> {
   Widget _categoryBlock(AppStore store, AccountGroup group) {
     // A group matched only through one of its accounts opens itself, so the
     // match the user typed is actually visible.
-    final matchedOnChild = _query.isNotEmpty &&
+    final matchedOnChild =
+        _query.isNotEmpty &&
         !group
             .label(AppLocalizations.of(context))
             .toLowerCase()
@@ -945,8 +988,9 @@ class _BalanceScreenState extends State<BalanceScreen> {
     // stale figure.
     final filter = store.balanceFilter;
     final filteredTotal = filter.filteredTotal(store, group);
-    final sectionTotal =
-        filter.sectionTotal(store, assets: group.isAsset).abs();
+    final sectionTotal = filter
+        .sectionTotal(store, assets: group.isAsset)
+        .abs();
     final share = sectionTotal == 0
         ? 0.0
         : (filteredTotal.abs() / sectionTotal).clamp(0.0, 1.0);
@@ -1003,7 +1047,8 @@ class _BalanceScreenState extends State<BalanceScreen> {
                       semanticLabel: (a, i, n) =>
                           '${a.name}, position ${i + 1} of $n in ${group.label(AppLocalizations.of(context))}',
                       onDragStart: (_) => setState(
-                          () => _activeDrag = _ActiveDrag.account(group)),
+                        () => _activeDrag = _ActiveDrag.account(group),
+                      ),
                       onDragEnd: () => setState(() => _activeDrag = null),
                       onReorder: (moved, target) => _onAccountReorder(
                         store,
@@ -1016,10 +1061,18 @@ class _BalanceScreenState extends State<BalanceScreen> {
                         account: a,
                         balance: store.balanceOf(a.id),
                         subtitle: group.isLiability
-                            ? liabilitySubtitle(store, a, AppLocalizations.of(context)).text
+                            ? liabilitySubtitle(
+                                store,
+                                a,
+                                AppLocalizations.of(context),
+                              ).text
                             : null,
                         subtitleColor: group.isLiability
-                            ? liabilitySubtitle(store, a, AppLocalizations.of(context)).color
+                            ? liabilitySubtitle(
+                                store,
+                                a,
+                                AppLocalizations.of(context),
+                              ).color
                             : null,
                         // The whole row is one tap target now: name, amount and
                         // the space between all open the account's ledger.
@@ -1038,7 +1091,8 @@ class _BalanceScreenState extends State<BalanceScreen> {
   /// The order to move relative to: the live custom order when already in
   /// Custom, otherwise a snapshot of what is on screen right now, so flipping to
   /// Custom rearranges nothing beyond the move the user just made.
-  CustomOrder _baseOrder(AppStore store) => store.balanceSort == AccountSort.custom
+  CustomOrder _baseOrder(AppStore store) =>
+      store.balanceSort == AccountSort.custom
       ? store.balanceOrder
       : _snapshotDisplayedOrder(store);
 
@@ -1077,8 +1131,10 @@ class _BalanceScreenState extends State<BalanceScreen> {
     // True when this drag flips an automatic sort to Custom — the bar names
     // that, so the changed sort is not a silent surprise.
     final flipped = store.balanceSort != AccountSort.custom;
-    _pendingMove =
-        _PendingMove(order: store.balanceOrder, sort: store.balanceSort);
+    _pendingMove = _PendingMove(
+      order: store.balanceOrder,
+      sort: store.balanceSort,
+    );
     store.setBalanceOrder(next, sort: AccountSort.custom);
     _showUndoBar(store, flipped: flipped);
   }
@@ -1111,20 +1167,21 @@ class _BalanceScreenState extends State<BalanceScreen> {
 
   int Function(Account, Account) _accountComparator(AppStore store) =>
       (a, b) => switch (store.balanceSort) {
-            AccountSort.valueDesc => store
-                .balanceInBase(b.id)
-                .abs()
-                .compareTo(store.balanceInBase(a.id).abs()),
-            AccountSort.valueAsc => store
-                .balanceInBase(a.id)
-                .abs()
-                .compareTo(store.balanceInBase(b.id).abs()),
-            AccountSort.nameAsc => a.name.compareTo(b.name),
-            AccountSort.activity => store
-                .accountActivity(b.id)
-                .compareTo(store.accountActivity(a.id)),
-            AccountSort.custom => 0,
-          };
+        AccountSort.valueDesc =>
+          store
+              .balanceInBase(b.id)
+              .abs()
+              .compareTo(store.balanceInBase(a.id).abs()),
+        AccountSort.valueAsc =>
+          store
+              .balanceInBase(a.id)
+              .abs()
+              .compareTo(store.balanceInBase(b.id).abs()),
+        AccountSort.nameAsc => a.name.compareTo(b.name),
+        AccountSort.activity =>
+          store.accountActivity(b.id).compareTo(store.accountActivity(a.id)),
+        AccountSort.custom => 0,
+      };
 
   // ── Drag containment cue ──────────────────────────────────────────────────
 
@@ -1143,9 +1200,8 @@ class _BalanceScreenState extends State<BalanceScreen> {
     return group == d.group ? 1 : 0.42;
   }
 
-  void _openAccountLedger(Account account) => _openLedger(
-        AccountScope(account.id),
-      );
+  void _openAccountLedger(Account account) =>
+      _openLedger(AccountScope(account.id));
 
   void _openGroupLedger(AccountGroup group) => _openLedger(GroupScope(group));
 
@@ -1183,11 +1239,7 @@ class _PendingMove {
 // ── Header pieces ───────────────────────────────────────────────────────────
 
 class _ListSectionHeader extends StatelessWidget {
-  const _ListSectionHeader(
-    this.label,
-    this.total, {
-    required this.assets,
-  });
+  const _ListSectionHeader(this.label, this.total, {required this.assets});
 
   final String label;
   final double total;
@@ -1263,11 +1315,11 @@ class _RatioBar extends StatelessWidget {
   }
 
   Widget _seg(Color color) => DecoratedBox(
-        decoration: BoxDecoration(
-          color: color,
-          borderRadius: BorderRadius.circular(2),
-        ),
-      );
+    decoration: BoxDecoration(
+      color: color,
+      borderRadius: BorderRadius.circular(2),
+    ),
+  );
 }
 
 class _DatePill extends StatelessWidget {
@@ -1345,6 +1397,7 @@ class EmptyState extends StatelessWidget {
     this.messageMaxWidth,
     this.iconSize,
     this.textBlockHeight,
+    this.actionHeight,
   });
 
   final IconData icon;
@@ -1369,10 +1422,19 @@ class EmptyState extends StatelessWidget {
   /// different natural heights read at one cap height (§4.2).
   final double? iconSize;
 
-  /// Pins the title+message region to a fixed height, top-aligned. Null lets it
-  /// grow to its content. The Planner passes one shared height across its three
-  /// tabs so the icon lands on the same y whichever tab is showing (§4.3).
+  /// Floors the title+message region to a shared height, top-aligned. Null lets
+  /// it grow to its content. The five first-run screens pass one height derived
+  /// across all their title/message pairs so the icon lands on the same y on
+  /// every screen (§2/§3). It is a *minimum*, not a fixed height: when a
+  /// measurement and a render disagree the region grows rather than clipping.
   final double? textBlockHeight;
+
+  /// Floors the action row to a shared height, so the block below the message is
+  /// one height on every first-run screen — Balance's link and the hint reserve
+  /// the same box (§4). Null renders the action at its natural height (every
+  /// out-of-scope call site). Also a minimum, for the same reason as
+  /// [textBlockHeight].
+  final double? actionHeight;
 
   @override
   Widget build(BuildContext context) {
@@ -1397,13 +1459,19 @@ class EmptyState extends StatelessWidget {
               color: AppColors.surface,
               shape: BoxShape.circle,
             ),
-            child: Icon(icon,
-                size: iconSize ?? 24, color: AppColors.textTertiary),
+            child: Icon(
+              icon,
+              size: iconSize ?? 24,
+              color: AppColors.textTertiary,
+            ),
           )
         : Icon(icon, size: iconSize ?? 40, color: AppColors.textTertiary);
 
-    Widget messageWidget =
-        Text(message, style: AppText.caption, textAlign: TextAlign.center);
+    Widget messageWidget = Text(
+      message,
+      style: AppText.caption,
+      textAlign: TextAlign.center,
+    );
     if (messageMaxWidth != null) {
       messageWidget = ConstrainedBox(
         constraints: BoxConstraints(maxWidth: messageMaxWidth!),
@@ -1423,9 +1491,21 @@ class EmptyState extends StatelessWidget {
       ],
     );
     if (textBlockHeight != null) {
-      textBlock = SizedBox(
-        height: textBlockHeight,
+      // A minimum, not a fixed height: content one pixel taller than the derived
+      // figure grows the region instead of clipping it (§3).
+      textBlock = ConstrainedBox(
+        constraints: BoxConstraints(minHeight: textBlockHeight!),
         child: Align(alignment: Alignment.topCenter, child: textBlock),
+      );
+    }
+
+    Widget? actionWidget = action;
+    if (actionWidget != null && actionHeight != null) {
+      // The reserved fourth-row box, shared by Balance's link and the hint (§4).
+      // A minimum for the same reason the text block is — it never clips.
+      actionWidget = ConstrainedBox(
+        constraints: BoxConstraints(minHeight: actionHeight!),
+        child: Align(alignment: Alignment.topCenter, child: action!),
       );
     }
 
@@ -1436,9 +1516,173 @@ class EmptyState extends StatelessWidget {
           iconWidget,
           const SizedBox(height: Insets.md),
           textBlock,
-          if (action != null) ...[const SizedBox(height: Insets.xl), action!],
+          if (actionWidget != null) ...[
+            const SizedBox(height: Insets.xl),
+            actionWidget,
+          ],
         ],
       ),
+    );
+  }
+}
+
+// ── First-run empty block, shared by Balance / Ledger / Planner ×3 ────────────
+//
+// The five first-run screens draw one block — a backed icon, a title, a message
+// and a fourth row — meant to read as one screen with different words in it. To
+// land the icon on the same y on every screen they must all lay the block
+// against the same reference: the whole tab body, from the safe area to the top
+// of the bottom nav. Each screen does that by putting [FirstRunBlock] in a
+// Stack behind its own chrome (header · segmented control · restore line), so
+// the chrome paints over the block rather than consuming its height (§1). Two
+// derived heights, computed once here across all five string pairs, keep the
+// blocks the same size whatever the locale or text scale (§2/§4).
+
+/// The link the Balance screen shows as its fourth row, and the style it renders
+/// at. Measured here so the reserved action height (below) mirrors the button's
+/// real height rather than guessing at Material's tap-target math.
+const _firstRunLinkTextStyle = TextStyle(
+  fontSize: 14,
+  fontWeight: FontWeight.w500,
+);
+
+/// The hint's base style, kept in step with `buildFirstRunHint`.
+const _firstRunHintTextStyle = TextStyle(fontSize: 12);
+
+/// Balance's link carries this vertical padding, and floors its height at 44 —
+/// the tap target a widget test pins. Mirrored in [firstRunActionHeight] so the
+/// reserved box never sits under the button.
+const _firstRunLinkVPad = 10.0;
+const _firstRunLinkMinHeight = 44.0;
+
+double _measureFirstRun(
+  String text,
+  TextStyle style,
+  double maxWidth,
+  TextScaler scaler,
+) {
+  final painter = TextPainter(
+    text: TextSpan(text: text, style: style),
+    textDirection: TextDirection.ltr,
+    textAlign: TextAlign.center,
+    textScaler: scaler,
+  )..layout(maxWidth: maxWidth);
+  return painter.height;
+}
+
+/// The tallest title + message stack across all five first-run screens at this
+/// width and text scale (§2). Measured with the exact styles [EmptyState]
+/// renders. A locale that runs one message to an extra line grows the box for
+/// all five together, never one alone.
+double firstRunTextBlockHeight(
+  AppLocalizations l,
+  double textWidth,
+  TextScaler scaler,
+) {
+  final titleStyle = AppText.rowTitle.copyWith(fontSize: 16);
+  const messageStyle = AppText.caption;
+  final pairs = <(String, String)>[
+    (l.balNoAccountsYet, l.balEmptyBenefit),
+    (l.ldgNothingHere, l.ldgNothingHereMsg),
+    (l.plNoBudgetsYet, l.plNoBudgetsMsg),
+    (l.plNoGoalsYet, l.plNoGoalsMsg),
+    (l.plNothingScheduled, l.plNothingSchedMsg),
+  ];
+  var maxTitle = 0.0;
+  var maxMessage = 0.0;
+  for (final (title, message) in pairs) {
+    final t = _measureFirstRun(title, titleStyle, textWidth, scaler);
+    final m = _measureFirstRun(message, messageStyle, textWidth, scaler);
+    if (t > maxTitle) maxTitle = t;
+    if (m > maxMessage) maxMessage = m;
+  }
+  return maxTitle + Insets.xs + maxMessage;
+}
+
+/// The reserved height of the fourth row, shared by all five screens (§4). The
+/// taller of Balance's link (its measured label plus its vertical padding, never
+/// below its 44pt tap target) and the hint's single measured line. The link term
+/// dominates at normal scales, so all five reserve one box regardless of which
+/// fourth row they hold.
+double firstRunActionHeight(
+  AppLocalizations l,
+  double textWidth,
+  TextScaler scaler,
+) {
+  final sentinel = String.fromCharCode(0);
+  final linkH = _measureFirstRun(
+    l.balAddAccount,
+    _firstRunLinkTextStyle,
+    textWidth,
+    scaler,
+  );
+  final linkBox = math.max(
+    linkH + 2 * _firstRunLinkVPad,
+    _firstRunLinkMinHeight,
+  );
+  final hintH = _measureFirstRun(
+    l.ldgFirstRunHint(sentinel),
+    _firstRunHintTextStyle,
+    textWidth,
+    scaler,
+  );
+  return math.max(linkBox, hintH);
+}
+
+/// One first-run block, centred against the full height it is given (§1). Place
+/// it in a `Positioned.fill` behind the screen's chrome: the `LayoutBuilder`
+/// then measures the whole body, so every screen centres the block on the same
+/// y. It scrolls rather than clipping when large text or a short viewport leaves
+/// no room to centre (§1/§3). The icon rides a 54pt backdrop, so its centre is
+/// the block's centre whatever the glyph's own size — the per-tab [iconSize]
+/// nudges never move it.
+class FirstRunBlock extends StatelessWidget {
+  const FirstRunBlock({
+    super.key,
+    required this.icon,
+    required this.title,
+    required this.message,
+    required this.action,
+    this.iconSize,
+  });
+
+  final IconData icon;
+  final String title;
+  final String message;
+  final Widget action;
+  final double? iconSize;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final scaler = MediaQuery.textScalerOf(context);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final textWidth = (constraints.maxWidth - Insets.xxl * 2).clamp(
+          0.0,
+          double.infinity,
+        );
+        final textBlockHeight = firstRunTextBlockHeight(l, textWidth, scaler);
+        final actionHeight = firstRunActionHeight(l, textWidth, scaler);
+        return SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            child: Center(
+              child: EmptyState(
+                icon: icon,
+                iconSize: iconSize,
+                iconBackdrop: true,
+                title: title,
+                message: message,
+                titleAsHeader: true,
+                textBlockHeight: textBlockHeight,
+                actionHeight: actionHeight,
+                action: action,
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

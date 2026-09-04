@@ -18,7 +18,7 @@ import '../../shared/widgets/txn_row.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/app_typography.dart';
-import '../balance/balance_screen.dart' show EmptyState;
+import '../balance/balance_screen.dart' show FirstRunBlock;
 import '../balance/same_transactions_screen.dart';
 import '../quick_add/quick_add_sheet.dart';
 import 'ledger_day.dart';
@@ -53,8 +53,9 @@ class _LedgerScreenState extends State<LedgerScreen> {
   void initState() {
     super.initState();
     // read (not of): initState must not register an inherited dependency.
-    _showDescriptions =
-        ValueNotifier(StoreScope.read(context).ledgerShowDescriptions);
+    _showDescriptions = ValueNotifier(
+      StoreScope.read(context).ledgerShowDescriptions,
+    );
   }
 
   @override
@@ -259,94 +260,109 @@ class _LedgerScreenState extends State<LedgerScreen> {
 
     return SafeArea(
       bottom: false,
-      child: Column(
+      child: Stack(
+        // The chrome Column keeps the same tight, full-body constraints it had
+        // before the Stack, so every populated / empty-month state is laid out
+        // exactly as it was; only the first-run block behind is added.
+        fit: StackFit.expand,
         children: [
-          // Header zone (pinned): title + ratio bar + metrics strip form one
-          // horizontal-swipe region that steps the month (§2). The list below
-          // keeps its own vertical scroll and row swipe actions.
-          HorizontalSectionSwipe(
-            // §2 — with nothing recorded every month is equally empty, so the
-            // swipe must not step off the one screen that has the +. The widget
-            // stays in the tree (stable layout); its callbacks are inert no-ops
-            // until the first entry lands, at which point they resume stepping.
-            onNext: everRecorded
-                ? () {
-                    HapticFeedback.lightImpact();
-                    store.shiftPeriod(1);
-                  }
-                : () {},
-            onPrevious: everRecorded
-                ? () {
-                    HapticFeedback.lightImpact();
-                    store.shiftPeriod(-1);
-                  }
-                : () {},
-            child: _HeaderZone(
-              store: store,
-              everRecorded: everRecorded,
-              income: income,
-              expense: expense,
-              left: left,
-              ratio: ratio,
-              onPickMonth: () => showLedgerPeriodSheet(
-                context,
-                store,
-                // Reopening during a lens lands on the calendar page, pre-filled
-                // with the active range.
-                openOnCalendar: store.isRangeLensActive,
+          // First run: the empty block is laid against the whole tab body so its
+          // icon lands on the same y as Balance's and the Planner's (§1). It
+          // sits behind the header and the restore line, both of which paint
+          // over it rather than shortening its area. Absent once anything is
+          // recorded.
+          if (!everRecorded) Positioned.fill(child: _firstRunBlock()),
+          Column(
+            children: [
+              // Header zone (pinned): title + ratio bar + metrics strip form one
+              // horizontal-swipe region that steps the month (§2). The list below
+              // keeps its own vertical scroll and row swipe actions.
+              HorizontalSectionSwipe(
+                // §2 — with nothing recorded every month is equally empty, so the
+                // swipe must not step off the one screen that has the +. The widget
+                // stays in the tree (stable layout); its callbacks are inert no-ops
+                // until the first entry lands, at which point they resume stepping.
+                onNext: everRecorded
+                    ? () {
+                        HapticFeedback.lightImpact();
+                        store.shiftPeriod(1);
+                      }
+                    : () {},
+                onPrevious: everRecorded
+                    ? () {
+                        HapticFeedback.lightImpact();
+                        store.shiftPeriod(-1);
+                      }
+                    : () {},
+                child: _HeaderZone(
+                  store: store,
+                  everRecorded: everRecorded,
+                  income: income,
+                  expense: expense,
+                  left: left,
+                  ratio: ratio,
+                  onPickMonth: () => showLedgerPeriodSheet(
+                    context,
+                    store,
+                    // Reopening during a lens lands on the calendar page, pre-filled
+                    // with the active range.
+                    openOnCalendar: store.isRangeLensActive,
+                  ),
+                  onAdd: () => showQuickAdd(context),
+                ),
               ),
-              onAdd: () => showQuickAdd(context),
-            ),
-          ),
-          Expanded(
-            // §1/§3 — first run is not a row in the list, it is the screen. It
-            // has nothing to scroll and carries its own restore line pinned above
-            // the nav, so it renders directly in the Expanded rather than as a
-            // ListView child. Every other state (populated, empty month, no
-            // filter/search match) keeps the ListView below unchanged.
-            child: everRecorded
-                ? ValueListenableBuilder<bool>(
-                    // A description toggle rebuilds only this subtree, not header.
-                    valueListenable: _showDescriptions,
-                    builder: (context, showDesc, _) {
-                      return Column(
-                        children: [
-                          _toolRow(
-                            store,
-                            total: total,
-                            shown: shown,
-                            searching: searching,
-                            showDesc: showDesc,
-                          ),
-                          if (_searching) _searchField(),
-                          const SizedBox(height: Insets.sm),
-                          Expanded(
-                            child: ListView(
-                              controller: _scrollCtrl,
-                              padding:
-                                  const EdgeInsets.only(bottom: Insets.xxl),
-                              children: [
-                                if (days.isEmpty)
-                                  _empty(store, searching: searching)
-                                else
-                                  for (final day in days) ...[
-                                    const SizedBox(height: 8),
-                                    _dayCard(
-                                      context,
-                                      store,
-                                      day,
-                                      showDesc: showDesc,
-                                      query: rowQuery,
-                                    ),
+              Expanded(
+                // §1/§3 — first run is not a row in the list, it is the screen. It
+                // has nothing to scroll and carries its own restore line pinned above
+                // the nav, so it renders directly in the Expanded rather than as a
+                // ListView child. Every other state (populated, empty month, no
+                // filter/search match) keeps the ListView below unchanged.
+                child: everRecorded
+                    ? ValueListenableBuilder<bool>(
+                        // A description toggle rebuilds only this subtree, not header.
+                        valueListenable: _showDescriptions,
+                        builder: (context, showDesc, _) {
+                          return Column(
+                            children: [
+                              _toolRow(
+                                store,
+                                total: total,
+                                shown: shown,
+                                searching: searching,
+                                showDesc: showDesc,
+                              ),
+                              if (_searching) _searchField(),
+                              const SizedBox(height: Insets.sm),
+                              Expanded(
+                                child: ListView(
+                                  controller: _scrollCtrl,
+                                  padding: const EdgeInsets.only(
+                                    bottom: Insets.xxl,
+                                  ),
+                                  children: [
+                                    if (days.isEmpty)
+                                      _empty(store, searching: searching)
+                                    else
+                                      for (final day in days) ...[
+                                        const SizedBox(height: 8),
+                                        _dayCard(
+                                          context,
+                                          store,
+                                          day,
+                                          showDesc: showDesc,
+                                          query: rowQuery,
+                                        ),
+                                      ],
                                   ],
-                              ],
-                            ),
-                          ),
-                        ],
-                      );
-                    },
-                  )
-                : _firstRun(store),
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      )
+                    : _firstRun(store),
+              ),
+            ],
           ),
         ],
       ),
@@ -413,7 +429,9 @@ class _LedgerScreenState extends State<LedgerScreen> {
                       : Icons.keyboard_double_arrow_down_rounded,
                   tooltip: AppLocalizations.of(context).ldgShowDescriptions,
                   iconColor: showDesc ? AppColors.accentLight : null,
-                  semanticValue: showDesc ? AppLocalizations.of(context).stateOn : AppLocalizations.of(context).stateOff,
+                  semanticValue: showDesc
+                      ? AppLocalizations.of(context).stateOn
+                      : AppLocalizations.of(context).stateOff,
                   onTap: _toggleDescriptions,
                 ),
                 Tool(
@@ -423,7 +441,9 @@ class _LedgerScreenState extends State<LedgerScreen> {
                   tooltip: AppLocalizations.of(context).ldgFilterTransactions,
                   iconColor: _filterActive ? AppColors.textPrimary : null,
                   semanticValue: _filterActive
-                      ? AppLocalizations.of(context).ldgFilterActive('$shown', '$total')
+                      ? AppLocalizations.of(
+                          context,
+                        ).ldgFilterActive('$shown', '$total')
                       : AppLocalizations.of(context).stateOff,
                   onTap: () => _openFilter(store),
                 ),
@@ -442,7 +462,12 @@ class _LedgerScreenState extends State<LedgerScreen> {
 
   Widget _searchField() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(Insets.gutter, Insets.sm, Insets.gutter, 0),
+      padding: const EdgeInsets.fromLTRB(
+        Insets.gutter,
+        Insets.sm,
+        Insets.gutter,
+        0,
+      ),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         decoration: BoxDecoration(
@@ -522,7 +547,10 @@ class _LedgerScreenState extends State<LedgerScreen> {
             Text(
               AppLocalizations.of(context).ldgNoMatchFilter,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 14, color: AppColors.textTertiary),
+              style: const TextStyle(
+                fontSize: 14,
+                color: AppColors.textTertiary,
+              ),
             ),
             const SizedBox(height: 8),
             GestureDetector(
@@ -556,7 +584,8 @@ class _LedgerScreenState extends State<LedgerScreen> {
       padding: const EdgeInsets.only(top: 64),
       child: Text(
         AppLocalizations.of(context).ldgNothingRecordedInMonth(
-            monthLong(store.period.month, AppLocalizations.of(context))),
+          monthLong(store.period.month, AppLocalizations.of(context)),
+        ),
         textAlign: TextAlign.center,
         style: const TextStyle(fontSize: 14, color: AppColors.textTertiary),
       ),
@@ -565,56 +594,41 @@ class _LedgerScreenState extends State<LedgerScreen> {
 
   // ── First run (spec §2–§5) ──────────────────────────────────────────────────
 
-  /// The whole screen when nothing has ever been recorded (§3): a centred block
-  /// (icon on a backdrop, title, tightly-measured message, and the line that
-  /// names the +) with a quiet restore line pinned above the tab bar. The block
-  /// sits in its own scroll viewport so it centres on a tall phone yet survives
-  /// large text on a short one, rather than overflowing.
+  /// The first-run overlay drawn over [_firstRunBlock] (§1): a hit-transparent
+  /// spacer, so the centred block behind takes the taps and the scroll, and the
+  /// quiet restore line pinned above the tab bar — still on top, still tappable.
+  /// The block is no longer sized against this column's leftover height; it is
+  /// laid against the whole body by the Stack in [build], so its icon lands on
+  /// the same y as Balance's and the Planner's rather than being pushed up by
+  /// the restore line.
   Widget _firstRun(AppStore store) {
-    final l = AppLocalizations.of(context);
     return Column(
       children: [
-        Expanded(
-          child: LayoutBuilder(
-            builder: (context, constraints) => SingleChildScrollView(
-              child: ConstrainedBox(
-                constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                child: Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      EmptyState(
-                        icon: Icons.receipt_long_rounded,
-                        title: l.ldgNothingHere,
-                        message: l.ldgNothingHereMsg,
-                        iconBackdrop: true,
-                        messageMaxWidth: 205,
-                        // The block's title is now the screen's only heading, the
-                        // period title having gone with first run (§1.3/§2.4).
-                        titleAsHeader: true,
-                      ),
-                      const SizedBox(height: 15),
-                      _firstRunHint(l),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
+        const Expanded(child: SizedBox.expand()),
         _restoreLine(store),
       ],
     );
   }
 
-  /// The one muted line that names the unlabelled + (§4): "Start with + above",
-  /// the glyph a real accent [Icons.add_rounded] echoing the button, the words
-  /// tertiary. Not tappable — it names a control, it is not a second copy of it.
-  Widget _firstRunHint(AppLocalizations l) {
+  /// The centred first-run block: icon on a backdrop, title, message, and the
+  /// muted line that names the unlabelled + — "Start with + above", the glyph a
+  /// real accent echoing the button (§2–§4). The line sits in the reserved
+  /// fourth-row box and scales down rather than wrapping, exactly as the
+  /// Planner's does. Laid against the whole body by [FirstRunBlock].
+  Widget _firstRunBlock() {
+    final l = AppLocalizations.of(context);
     // A NUL sentinel the localized string can never contain, substituted for
     // {plus} so a translation is free to move the glyph.
     final sentinel = String.fromCharCode(0);
-    return buildFirstRunHint(l.ldgFirstRunHint(sentinel), sentinel);
+    return FirstRunBlock(
+      icon: Icons.receipt_long_rounded,
+      title: l.ldgNothingHere,
+      message: l.ldgNothingHereMsg,
+      action: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: buildFirstRunHint(l.ldgFirstRunHint(sentinel), sentinel),
+      ),
+    );
   }
 
   /// The quiet "Restore from a backup" line pinned above the tab bar (§5): the
@@ -638,7 +652,9 @@ class _LedgerScreenState extends State<LedgerScreen> {
                 l.ldgRestoreFromBackup,
                 textAlign: TextAlign.center,
                 style: const TextStyle(
-                    fontSize: 11.5, color: AppColors.textTertiary),
+                  fontSize: 11.5,
+                  color: AppColors.textTertiary,
+                ),
               ),
             ),
           ),
@@ -718,15 +734,17 @@ class _LedgerScreenState extends State<LedgerScreen> {
   Widget _dayBand(AppStore store, LedgerDay day) {
     final shows = day.showsDayTotal;
     final net = day.total;
-    final dateLabel =
-        dateGroupLabel(day.date, AppLocalizations.of(context)).toUpperCase();
+    final dateLabel = dateGroupLabel(
+      day.date,
+      AppLocalizations.of(context),
+    ).toUpperCase();
     final totalLabel = money(net, signless: true, masked: store.masked);
 
     final Color netColor = net > 0
         ? AppColors.positive
         : net < 0
-            ? AppColors.amountChildNeg
-            : AppColors.textSecondary; // a busy day netting to zero (§9)
+        ? AppColors.amountChildNeg
+        : AppColors.textSecondary; // a busy day netting to zero (§9)
 
     return Semantics(
       header: true,
@@ -828,8 +846,13 @@ class _LedgerScreenState extends State<LedgerScreen> {
     // Order fixed once from the period counts (non-zero desc, then zeros
     // alphabetically). Hiding empties (§1) removes rows; it never reorders the
     // survivors, so the relative order is stable across a direction change.
-    int order(String aId, String aName, String bId, String bName,
-        Map<String, int> counts) {
+    int order(
+      String aId,
+      String aName,
+      String bId,
+      String bName,
+      Map<String, int> counts,
+    ) {
       final ca = counts[aId] ?? 0, cb = counts[bId] ?? 0;
       if ((ca == 0) != (cb == 0)) return ca == 0 ? 1 : -1;
       if (ca != cb && ca != 0) return cb.compareTo(ca);
@@ -841,11 +864,11 @@ class _LedgerScreenState extends State<LedgerScreen> {
     // change, and ledger_screen unions the two id sets back into _categoryIds.
     final expenseCats = [
       for (final c in store.categories)
-        if (c.type == CategoryType.expense) c
+        if (c.type == CategoryType.expense) c,
     ]..sort((a, b) => order(a.id, a.name, b.id, b.name, catCount));
     final incomeCats = [
       for (final c in store.categories)
-        if (c.type == CategoryType.income) c
+        if (c.type == CategoryType.income) c,
     ]..sort((a, b) => order(a.id, a.name, b.id, b.name, catCount));
     final accs = [...store.accounts]
       ..sort((a, b) => order(a.id, a.name, b.id, b.name, accCount));
@@ -874,15 +897,15 @@ class _LedgerScreenState extends State<LedgerScreen> {
     }
 
     List<FilterChipItem> catItems(List<Category> list, TxnType? dir) => [
-          for (final c in list)
-            FilterChipItem(
-              id: c.id,
-              label: c.name,
-              icon: c.icon,
-              color: c.color,
-              count: catCtx(c, dir),
-            ),
-        ];
+      for (final c in list)
+        FilterChipItem(
+          id: c.id,
+          label: c.name,
+          icon: c.icon,
+          color: c.color,
+          count: catCtx(c, dir),
+        ),
+    ];
     List<FilterChipItem> accItems(TxnType? dir) {
       final counts = accCountDir[dir] ?? const <String, int>{};
       return [
@@ -969,11 +992,11 @@ class _LedgerScreenState extends State<LedgerScreen> {
         selections: {
           'expenseCategories': {
             for (final id in _categoryIds)
-              if (catType[id] == CategoryType.expense) id
+              if (catType[id] == CategoryType.expense) id,
           },
           'incomeCategories': {
             for (final id in _categoryIds)
-              if (catType[id] == CategoryType.income) id
+              if (catType[id] == CategoryType.income) id,
           },
           'accounts': {..._accountIds},
           'tags': {..._tagIds},
@@ -1000,58 +1023,68 @@ class _LedgerScreenState extends State<LedgerScreen> {
       blocks: [
         // A direction that carries no category replaces both category sections
         // with one explanatory line (spec §5.3).
-        NoteFilterBlock((dir) => switch (dir) {
-              TxnType.transfer => l.ldgTransfersHaveNoCategory,
-              TxnType.rebalance => l.ldgRevaluationsMoveNoCash,
-              _ => null,
-            }),
-        SectionFilterBlock(FilterSection(
-          key: 'expenseCategories',
-          label: l.ldgExpenses.toUpperCase(),
-          a11yLabel: l.ldgExpenseCategoriesA11y,
-          kind: FilterSectionKind.rows,
-          showCount: true,
-          rich: true,
-          hideEmpty: true,
-          truncateAt: 5,
-          moreLabel: (n) => l.ldgMoreCategories('$n'),
-          itemsFor: (dir) => catItems(expenseCats, dir),
-        )),
-        SectionFilterBlock(FilterSection(
-          key: 'incomeCategories',
-          label: l.ldgIncomes.toUpperCase(),
-          a11yLabel: l.ldgIncomeSourcesA11y,
-          kind: FilterSectionKind.rows,
-          showCount: true,
-          rich: true,
-          hideEmpty: true,
-          truncateAt: 5,
-          moreLabel: (n) => l.ldgMoreCategories('$n'),
-          itemsFor: (dir) => catItems(incomeCats, dir),
-        )),
-        SectionFilterBlock(FilterSection(
-          key: 'accounts',
-          label: l.ldgAccounts.toUpperCase(),
-          kind: FilterSectionKind.rows,
-          showCount: true,
-          rich: true,
-          hideEmpty: true,
-          truncateAt: 5,
-          moreLabel: (n) => l.ldgMoreAccounts('$n'),
-          itemsFor: accItems,
-        )),
-        if (tags.isNotEmpty)
-          SectionFilterBlock(FilterSection(
-            key: 'tags',
-            label: l.ldgTags.toUpperCase(),
-            kind: FilterSectionKind.chips,
+        NoteFilterBlock(
+          (dir) => switch (dir) {
+            TxnType.transfer => l.ldgTransfersHaveNoCategory,
+            TxnType.rebalance => l.ldgRevaluationsMoveNoCash,
+            _ => null,
+          },
+        ),
+        SectionFilterBlock(
+          FilterSection(
+            key: 'expenseCategories',
+            label: l.ldgExpenses.toUpperCase(),
+            a11yLabel: l.ldgExpenseCategoriesA11y,
+            kind: FilterSectionKind.rows,
             showCount: true,
             rich: true,
             hideEmpty: true,
-            truncateAt: 6,
-            moreLabel: (n) => l.ldgMoreTags('$n'),
-            itemsFor: tagItems,
-          )),
+            truncateAt: 5,
+            moreLabel: (n) => l.ldgMoreCategories('$n'),
+            itemsFor: (dir) => catItems(expenseCats, dir),
+          ),
+        ),
+        SectionFilterBlock(
+          FilterSection(
+            key: 'incomeCategories',
+            label: l.ldgIncomes.toUpperCase(),
+            a11yLabel: l.ldgIncomeSourcesA11y,
+            kind: FilterSectionKind.rows,
+            showCount: true,
+            rich: true,
+            hideEmpty: true,
+            truncateAt: 5,
+            moreLabel: (n) => l.ldgMoreCategories('$n'),
+            itemsFor: (dir) => catItems(incomeCats, dir),
+          ),
+        ),
+        SectionFilterBlock(
+          FilterSection(
+            key: 'accounts',
+            label: l.ldgAccounts.toUpperCase(),
+            kind: FilterSectionKind.rows,
+            showCount: true,
+            rich: true,
+            hideEmpty: true,
+            truncateAt: 5,
+            moreLabel: (n) => l.ldgMoreAccounts('$n'),
+            itemsFor: accItems,
+          ),
+        ),
+        if (tags.isNotEmpty)
+          SectionFilterBlock(
+            FilterSection(
+              key: 'tags',
+              label: l.ldgTags.toUpperCase(),
+              kind: FilterSectionKind.chips,
+              showCount: true,
+              rich: true,
+              hideEmpty: true,
+              truncateAt: 6,
+              moreLabel: (n) => l.ldgMoreTags('$n'),
+              itemsFor: tagItems,
+            ),
+          ),
         AmountFilterBlock(
           rangeMin: rangeMin,
           rangeMax: rangeMax,
@@ -1060,7 +1093,6 @@ class _LedgerScreenState extends State<LedgerScreen> {
       ],
     );
   }
-
 }
 
 /// Builds the first-run hint's inline spans from [rawWithSentinel] — the hint
@@ -1084,8 +1116,11 @@ Widget buildFirstRunHint(String rawWithSentinel, String sentinel) {
         TextSpan(text: parts[0]),
         const WidgetSpan(
           alignment: PlaceholderAlignment.middle,
-          child:
-              Icon(Icons.add_rounded, size: 13, color: AppColors.accentLight),
+          child: Icon(
+            Icons.add_rounded,
+            size: 13,
+            color: AppColors.accentLight,
+          ),
         ),
         TextSpan(text: parts[1]),
       ],
@@ -1138,130 +1173,141 @@ class _HeaderZone extends StatelessWidget {
         curve: Curves.easeOut,
         alignment: Alignment.topCenter,
         child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Title row — the month is the title. On first run (§1) the leading
-          // slot renders nothing: the period is a scope value, and with nothing
-          // recorded there is no scope to name. The row's height is set by the
-          // 36pt + circle, so it stays stable whether or not the title is drawn.
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: everRecorded
-                      ? _PeriodTitle(
-                          store: store,
-                          onTap: onPickMonth,
-                          enabled: true,
-                        )
-                      : const SizedBox.shrink(),
-                ),
-                // The way out of the range lens sits beside the state it undoes
-                // (§1): a third circle, purple like the title it clears, present
-                // only while a lens is active — so in month mode this row is
-                // byte-identical to before. Its clear button is hidden on first
-                // run alongside the eye, so a lens (were one somehow active) is
-                // not clearable here.
-                if (everRecorded && store.isRangeLensActive) ...[
-                  const SizedBox(width: Insets.sm),
-                  Semantics(
-                    button: true,
-                    label: AppLocalizations.of(context).ldgClearCustomRange,
-                    hint: 'Back to ${monthYearLong(store.period, AppLocalizations.of(context))}',
-                    child: _CircleButton(
-                      icon: Icons.close_rounded,
-                      tint: AppColors.accentLight,
-                      onTap: store.clearRangeLens,
-                    ),
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Title row — the month is the title. On first run (§1) the leading
+            // slot renders nothing: the period is a scope value, and with nothing
+            // recorded there is no scope to name. The row's height is set by the
+            // 36pt + circle, so it stays stable whether or not the title is drawn.
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: everRecorded
+                        ? _PeriodTitle(
+                            store: store,
+                            onTap: onPickMonth,
+                            enabled: true,
+                          )
+                        : const SizedBox.shrink(),
                   ),
-                ],
-                // Eye — hidden on first run (nothing money-shaped is drawn, so
-                // masking has nothing to hide). The `+` always stays: it is the
-                // one control that still does something, and the button a user
-                // must not have to re-find the moment their first entry lands.
-                if (everRecorded) ...[
+                  // The way out of the range lens sits beside the state it undoes
+                  // (§1): a third circle, purple like the title it clears, present
+                  // only while a lens is active — so in month mode this row is
+                  // byte-identical to before. Its clear button is hidden on first
+                  // run alongside the eye, so a lens (were one somehow active) is
+                  // not clearable here.
+                  if (everRecorded && store.isRangeLensActive) ...[
+                    const SizedBox(width: Insets.sm),
+                    Semantics(
+                      button: true,
+                      label: AppLocalizations.of(context).ldgClearCustomRange,
+                      hint:
+                          'Back to ${monthYearLong(store.period, AppLocalizations.of(context))}',
+                      child: _CircleButton(
+                        icon: Icons.close_rounded,
+                        tint: AppColors.accentLight,
+                        onTap: store.clearRangeLens,
+                      ),
+                    ),
+                  ],
+                  // Eye — hidden on first run (nothing money-shaped is drawn, so
+                  // masking has nothing to hide). The `+` always stays: it is the
+                  // one control that still does something, and the button a user
+                  // must not have to re-find the moment their first entry lands.
+                  if (everRecorded) ...[
+                    const SizedBox(width: Insets.sm),
+                    _CircleButton(
+                      icon: store.masked
+                          ? Icons.visibility_off_rounded
+                          : Icons.visibility_rounded,
+                      onTap: store.toggleMasked,
+                    ),
+                  ],
                   const SizedBox(width: Insets.sm),
                   _CircleButton(
-                    icon: store.masked
-                        ? Icons.visibility_off_rounded
-                        : Icons.visibility_rounded,
-                    onTap: store.toggleMasked,
+                    icon: Icons.add_rounded,
+                    accent: true,
+                    onTap: onAdd,
                   ),
                 ],
-                const SizedBox(width: Insets.sm),
-                _CircleButton(
-                  icon: Icons.add_rounded,
-                  accent: true,
-                  onTap: onAdd,
+              ),
+            ),
+            // Ratio bar + metrics strip — the figures the screen answers with.
+            // Both are absent from the tree until something is recorded (§2):
+            // nothing replaces them, because the Ledger's numbers live in a strip
+            // that simply should not be drawn (unlike Balance's hero figure).
+            if (everRecorded) ...[
+              // Ratio bar — passive, 3pt, full width (§1).
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                child: Semantics(
+                  label: income > 0 || expense > 0
+                      ? AppLocalizations.of(context).ldgSpentOf(
+                          money(expense, masked: store.masked),
+                          money(income, masked: store.masked),
+                        )
+                      : null,
+                  child: ProgressBar(
+                    value: ratio,
+                    color: AppColors.negative,
+                    height: 3,
+                    background: AppColors.surfaceHigh,
+                  ),
                 ),
-              ],
-            ),
-          ),
-          // Ratio bar + metrics strip — the figures the screen answers with.
-          // Both are absent from the tree until something is recorded (§2):
-          // nothing replaces them, because the Ledger's numbers live in a strip
-          // that simply should not be drawn (unlike Balance's hero figure).
-          if (everRecorded) ...[
-          // Ratio bar — passive, 3pt, full width (§1).
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-            child: Semantics(
-              label: income > 0 || expense > 0
-                  ? AppLocalizations.of(context).ldgSpentOf(
-                      money(expense, masked: store.masked),
-                      money(income, masked: store.masked))
-                  : null,
-              child: ProgressBar(
-                value: ratio,
-                color: AppColors.negative,
-                height: 3,
-                background: AppColors.surfaceHigh,
               ),
-            ),
-          ),
-          // Metrics strip.
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(11),
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.baseline,
-                textBaseline: TextBaseline.alphabetic,
-                children: [
-                  _Metric(
-                      label: AppLocalizations.of(context).ldgIn.toUpperCase(),
-                      value: income,
-                      color: AppColors.positive),
-                  const SizedBox(width: 13),
-                  _Metric(
-                      label: AppLocalizations.of(context).ldgOut.toUpperCase(),
-                      value: expense,
-                      color: AppColors.negative),
-                  const Spacer(),
-                  // LEFT — one step larger; it is the figure the screen answers.
-                  // Balance-like: it keeps its minus sign and turns red when the
-                  // month is overspent (§1.2).
-                  _Metric(
-                    label: AppLocalizations.of(context).ldgLeft.toUpperCase(),
-                    value: left,
-                    color: left < 0
-                        ? AppColors.negative
-                        : AppColors.textPrimary,
-                    valueSize: 15,
-                    keepSign: true,
+              // Metrics strip.
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 13,
+                    vertical: 9,
                   ),
-                ],
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(11),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.baseline,
+                    textBaseline: TextBaseline.alphabetic,
+                    children: [
+                      _Metric(
+                        label: AppLocalizations.of(context).ldgIn.toUpperCase(),
+                        value: income,
+                        color: AppColors.positive,
+                      ),
+                      const SizedBox(width: 13),
+                      _Metric(
+                        label: AppLocalizations.of(
+                          context,
+                        ).ldgOut.toUpperCase(),
+                        value: expense,
+                        color: AppColors.negative,
+                      ),
+                      const Spacer(),
+                      // LEFT — one step larger; it is the figure the screen answers.
+                      // Balance-like: it keeps its minus sign and turns red when the
+                      // month is overspent (§1.2).
+                      _Metric(
+                        label: AppLocalizations.of(
+                          context,
+                        ).ldgLeft.toUpperCase(),
+                        value: left,
+                        color: left < 0
+                            ? AppColors.negative
+                            : AppColors.textPrimary,
+                        valueSize: 15,
+                        keepSign: true,
+                      ),
+                    ],
+                  ),
+                ),
               ),
-            ),
-          ),
+            ],
+            const SizedBox(height: Insets.md),
           ],
-          const SizedBox(height: Insets.md),
-        ],
         ),
       ),
     );
@@ -1274,8 +1320,11 @@ class _HeaderZone extends StatelessWidget {
 /// unchanged in both states; the range form shrinks/ellipsizes before it can
 /// reach the eye/`+` buttons.
 class _PeriodTitle extends StatelessWidget {
-  const _PeriodTitle(
-      {required this.store, required this.onTap, this.enabled = true});
+  const _PeriodTitle({
+    required this.store,
+    required this.onTap,
+    this.enabled = true,
+  });
 
   final AppStore store;
   final VoidCallback onTap;
@@ -1414,8 +1463,12 @@ class _Metric extends StatelessWidget {
 /// The eye / `+` circle button, cloned from `ScreenHeader`'s private one so the
 /// Ledger keeps its exact previous size, colour, icon and behaviour (§1).
 class _CircleButton extends StatelessWidget {
-  const _CircleButton(
-      {required this.icon, this.onTap, this.accent = false, this.tint});
+  const _CircleButton({
+    required this.icon,
+    this.onTap,
+    this.accent = false,
+    this.tint,
+  });
 
   final IconData icon;
   final VoidCallback? onTap;
