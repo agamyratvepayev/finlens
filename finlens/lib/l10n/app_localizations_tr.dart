@@ -3334,11 +3334,6 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
-  String goalPerMonth(Object amount) {
-    return 'aylık $amount';
-  }
-
-  @override
   String get goalNewTitle => 'Yeni hedef';
 
   @override
@@ -3351,13 +3346,27 @@ class AppLocalizationsTr extends AppLocalizations {
   String get goalSourceLocked => 'Hesabı değiştirmek yeni bir hedef demektir.';
 
   @override
-  String get goalSetDateHint => 'Bir tarih ya da aylık tutar girin';
-
-  @override
   String get goalMonthly => 'Aylık';
 
   @override
-  String get goalEnterRate => 'Aylık tutar girin';
+  String get goalPairHintEither => 'Birini gir — diğeri kendiliğinden gelir.';
+
+  @override
+  String get goalPairHintFromDate =>
+      'Aylık tutar hedef tarihe göre hesaplanır.';
+
+  @override
+  String get goalPairHintFromMonthly => 'Tarih aylık tutara göre hesaplanır.';
+
+  @override
+  String get goalCurrencyLockedHint => 'Tutarlar kaynağın para birimini izler.';
+
+  @override
+  String get goalSourceEmptyTitle => 'İzlenecek bir şey yok';
+
+  @override
+  String get goalSourceEmptyMsg =>
+      'Hedef tek bir hesabı ya da tek bir gelir kategorisini izler.';
 
   @override
   String get goalNoteLabel => 'Not';
@@ -3387,14 +3396,8 @@ class AppLocalizationsTr extends AppLocalizations {
   String get goalUntitled => 'Yeni hedef';
 
   @override
-  String get goalChooseSource => 'Neyi izleyeceğini seç';
-
-  @override
   String get goalTwoOnAccount =>
       'Bu hesabı izleyen başka bir hedef var. Sorun değil — ikisi de aynı bakiyeyi okur.';
-
-  @override
-  String get goalMonthlyPromptTitle => 'Aylık tutar';
 
   @override
   String get goalNewAccountOption => 'Yeni hesap';

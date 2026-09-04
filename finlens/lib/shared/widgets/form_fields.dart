@@ -200,6 +200,7 @@ class TextFieldRow extends StatelessWidget {
     this.hint,
     this.autofocus = false,
     this.trailing,
+    this.focusNode,
   });
 
   final IconData? icon;
@@ -208,6 +209,10 @@ class TextFieldRow extends StatelessWidget {
   final String? hint;
   final bool autofocus;
   final Widget? trailing;
+
+  /// Optional external focus node. Null (every existing caller) keeps the
+  /// TextField's own internal node — so those screens are byte-identical.
+  final FocusNode? focusNode;
 
   @override
   Widget build(BuildContext context) {
@@ -232,6 +237,7 @@ class TextFieldRow extends StatelessWidget {
                 Text(label, style: AppText.caption.copyWith(fontSize: 11.5)),
                 TextField(
                   controller: controller,
+                  focusNode: focusNode,
                   autofocus: autofocus,
                   style: AppText.body.copyWith(fontSize: 15),
                   cursorColor: AppColors.accentSoft,

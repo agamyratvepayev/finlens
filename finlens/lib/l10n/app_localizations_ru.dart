@@ -3417,11 +3417,6 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String goalPerMonth(Object amount) {
-    return '$amount в месяц';
-  }
-
-  @override
   String get goalNewTitle => 'Новая цель';
 
   @override
@@ -3434,13 +3429,26 @@ class AppLocalizationsRu extends AppLocalizations {
   String get goalSourceLocked => 'Смена счёта — это новая цель.';
 
   @override
-  String get goalSetDateHint => 'Укажите дату или сумму в месяц';
-
-  @override
   String get goalMonthly => 'В месяц';
 
   @override
-  String get goalEnterRate => 'Укажите сумму в месяц';
+  String get goalPairHintEither => 'Укажите одно — второе подставится.';
+
+  @override
+  String get goalPairHintFromDate => 'Сумма в месяц следует за целевой датой.';
+
+  @override
+  String get goalPairHintFromMonthly => 'Дата следует за суммой в месяц.';
+
+  @override
+  String get goalCurrencyLockedHint => 'Суммы указаны в валюте источника.';
+
+  @override
+  String get goalSourceEmptyTitle => 'Пока нечего отслеживать';
+
+  @override
+  String get goalSourceEmptyMsg =>
+      'Цель следит за одним счётом или одной категорией доходов.';
 
   @override
   String get goalNoteLabel => 'Заметка';
@@ -3469,14 +3477,8 @@ class AppLocalizationsRu extends AppLocalizations {
   String get goalUntitled => 'Новая цель';
 
   @override
-  String get goalChooseSource => 'Выберите, что отслеживать';
-
-  @override
   String get goalTwoOnAccount =>
       'Этот счёт уже отслеживает другая цель. Это допустимо — обе читают один баланс.';
-
-  @override
-  String get goalMonthlyPromptTitle => 'Сумма в месяц';
 
   @override
   String get goalNewAccountOption => 'Новый счёт';

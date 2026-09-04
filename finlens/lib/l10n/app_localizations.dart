@@ -381,19 +381,19 @@ abstract class AppLocalizations {
   /// No description provided for @quickAddNewBudget.
   ///
   /// In en, this message translates to:
-  /// **'New Budget'**
+  /// **'New budget'**
   String get quickAddNewBudget;
 
   /// No description provided for @quickAddNewGoal.
   ///
   /// In en, this message translates to:
-  /// **'New Goal'**
+  /// **'New goal'**
   String get quickAddNewGoal;
 
   /// No description provided for @quickAddNewTask.
   ///
   /// In en, this message translates to:
-  /// **'New Task'**
+  /// **'New task'**
   String get quickAddNewTask;
 
   /// No description provided for @txnTypeExpense.
@@ -5206,12 +5206,6 @@ abstract class AppLocalizations {
   /// **'{option}, {count, plural, one{{count} goal} other{{count} goals}}'**
   String plGoalRowA11y(Object option, int count);
 
-  /// No description provided for @goalPerMonth.
-  ///
-  /// In en, this message translates to:
-  /// **'{amount} a month'**
-  String goalPerMonth(Object amount);
-
   /// No description provided for @goalNewTitle.
   ///
   /// In en, this message translates to:
@@ -5236,23 +5230,47 @@ abstract class AppLocalizations {
   /// **'Changing the account means a new goal.'**
   String get goalSourceLocked;
 
-  /// No description provided for @goalSetDateHint.
-  ///
-  /// In en, this message translates to:
-  /// **'Set a date, or a monthly amount'**
-  String get goalSetDateHint;
-
   /// No description provided for @goalMonthly.
   ///
   /// In en, this message translates to:
   /// **'Monthly'**
   String get goalMonthly;
 
-  /// No description provided for @goalEnterRate.
+  /// No description provided for @goalPairHintEither.
   ///
   /// In en, this message translates to:
-  /// **'Set a monthly amount'**
-  String get goalEnterRate;
+  /// **'Set either one — the other follows.'**
+  String get goalPairHintEither;
+
+  /// No description provided for @goalPairHintFromDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Monthly follows the target date.'**
+  String get goalPairHintFromDate;
+
+  /// No description provided for @goalPairHintFromMonthly.
+  ///
+  /// In en, this message translates to:
+  /// **'The date follows the monthly amount.'**
+  String get goalPairHintFromMonthly;
+
+  /// No description provided for @goalCurrencyLockedHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Amounts follow the source\'s currency.'**
+  String get goalCurrencyLockedHint;
+
+  /// No description provided for @goalSourceEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing to watch yet'**
+  String get goalSourceEmptyTitle;
+
+  /// No description provided for @goalSourceEmptyMsg.
+  ///
+  /// In en, this message translates to:
+  /// **'A goal follows one account or one income category.'**
+  String get goalSourceEmptyMsg;
 
   /// No description provided for @goalNoteLabel.
   ///
@@ -5302,23 +5320,11 @@ abstract class AppLocalizations {
   /// **'New goal'**
   String get goalUntitled;
 
-  /// No description provided for @goalChooseSource.
-  ///
-  /// In en, this message translates to:
-  /// **'Choose what to watch'**
-  String get goalChooseSource;
-
   /// No description provided for @goalTwoOnAccount.
   ///
   /// In en, this message translates to:
   /// **'Another goal already watches this account. That\'s allowed — both read the same balance.'**
   String get goalTwoOnAccount;
-
-  /// No description provided for @goalMonthlyPromptTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Monthly amount'**
-  String get goalMonthlyPromptTitle;
 
   /// No description provided for @goalNewAccountOption.
   ///

@@ -3336,11 +3336,6 @@ class AppLocalizationsTk extends AppLocalizations {
   }
 
   @override
-  String goalPerMonth(Object amount) {
-    return 'aýda $amount';
-  }
-
-  @override
   String get goalNewTitle => 'Täze maksat';
 
   @override
@@ -3353,13 +3348,28 @@ class AppLocalizationsTk extends AppLocalizations {
   String get goalSourceLocked => 'Hasaby üýtgetmek täze maksat diýmekdir.';
 
   @override
-  String get goalSetDateHint => 'Sene ýa-da aýlyk mukdar giriziň';
-
-  @override
   String get goalMonthly => 'Aýlyk';
 
   @override
-  String get goalEnterRate => 'Aýlyk mukdar giriziň';
+  String get goalPairHintEither => 'Birini giriz — beýlekisi özi çykar.';
+
+  @override
+  String get goalPairHintFromDate =>
+      'Aýlyk mukdar maksat senesine görä hasaplanýar.';
+
+  @override
+  String get goalPairHintFromMonthly => 'Sene aýlyk mukdara görä hasaplanýar.';
+
+  @override
+  String get goalCurrencyLockedHint =>
+      'Mukdarlar çeşmäniň pul birligine görä görkezilýär.';
+
+  @override
+  String get goalSourceEmptyTitle => 'Yzarlamaga zat ýok';
+
+  @override
+  String get goalSourceEmptyMsg =>
+      'Maksat bir hasaby ýa-da bir girdeji kategoriýasyny yzarlaýar.';
 
   @override
   String get goalNoteLabel => 'Bellik';
@@ -3388,14 +3398,8 @@ class AppLocalizationsTk extends AppLocalizations {
   String get goalUntitled => 'Täze maksat';
 
   @override
-  String get goalChooseSource => 'Nämäni yzarlajagyňyzy saýlaň';
-
-  @override
   String get goalTwoOnAccount =>
       'Bu hasaby yzarlaýan başga maksat bar. Rugsat berilýär — ikisi hem bir balansy okaýar.';
-
-  @override
-  String get goalMonthlyPromptTitle => 'Aýlyk mukdar';
 
   @override
   String get goalNewAccountOption => 'Täze hasap';

@@ -158,13 +158,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get quickAddRebalance => 'Rebalance';
 
   @override
-  String get quickAddNewBudget => 'New Budget';
+  String get quickAddNewBudget => 'New budget';
 
   @override
-  String get quickAddNewGoal => 'New Goal';
+  String get quickAddNewGoal => 'New goal';
 
   @override
-  String get quickAddNewTask => 'New Task';
+  String get quickAddNewTask => 'New task';
 
   @override
   String get txnTypeExpense => 'Expense';
@@ -3345,11 +3345,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String goalPerMonth(Object amount) {
-    return '$amount a month';
-  }
-
-  @override
   String get goalNewTitle => 'New goal';
 
   @override
@@ -3362,13 +3357,26 @@ class AppLocalizationsEn extends AppLocalizations {
   String get goalSourceLocked => 'Changing the account means a new goal.';
 
   @override
-  String get goalSetDateHint => 'Set a date, or a monthly amount';
-
-  @override
   String get goalMonthly => 'Monthly';
 
   @override
-  String get goalEnterRate => 'Set a monthly amount';
+  String get goalPairHintEither => 'Set either one — the other follows.';
+
+  @override
+  String get goalPairHintFromDate => 'Monthly follows the target date.';
+
+  @override
+  String get goalPairHintFromMonthly => 'The date follows the monthly amount.';
+
+  @override
+  String get goalCurrencyLockedHint => 'Amounts follow the source\'s currency.';
+
+  @override
+  String get goalSourceEmptyTitle => 'Nothing to watch yet';
+
+  @override
+  String get goalSourceEmptyMsg =>
+      'A goal follows one account or one income category.';
 
   @override
   String get goalNoteLabel => 'Note';
@@ -3397,14 +3405,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get goalUntitled => 'New goal';
 
   @override
-  String get goalChooseSource => 'Choose what to watch';
-
-  @override
   String get goalTwoOnAccount =>
       'Another goal already watches this account. That\'s allowed — both read the same balance.';
-
-  @override
-  String get goalMonthlyPromptTitle => 'Monthly amount';
 
   @override
   String get goalNewAccountOption => 'New account';
