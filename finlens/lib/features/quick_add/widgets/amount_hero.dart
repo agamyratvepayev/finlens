@@ -97,21 +97,60 @@ class NumericHeroCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final s = formScale(context);
     final t = formTextScale(context);
-    // Past the text-scale cap the chip would collide with the number, so it
-    // wraps onto its own line instead of the number being truncated.
-    final wrapChip = t >= 1.3;
-
-    final amount = _AmountText(
-      raw: raw,
-      currency: currency,
-      accent: accent,
-      accentDim: accentDim,
-      focused: focused,
-    );
+    // Widths are measured under the same scaler a `Text` paints with, so what
+    // fits is what renders — no double counting, no guessing from `t`.
+    final scaler = MediaQuery.textScalerOf(context);
 
     final chip = onCurrencyTap == null
         ? null
         : _CurrencyChip(currency: currency, onTap: onCurrencyTap!);
+
+    // The whole amount string, caret aside — the caret is a fixed-width column
+    // between the typed part and the dimmed remainder, so add it as a constant.
+    final parts = AmountEntry.split(raw, currency);
+    final amountText = '${parts.typed}${parts.rest}';
+    final caretW = focused ? 2 + 2 * s : 0.0;
+    double amountWidth(double size) =>
+        _measureWidth(amountText, _amountStyle(size), scaler) + caretW;
+
+    final baseSize = 17 * s * t;
+    final floorSize = 15 * s * t;
+
+    // The chip never yields: it keeps its intrinsic width on one line, always,
+    // and nothing upstream may compress it (§2). So its width is a fixed cost.
+    double chipWidth = 0;
+    if (chip != null) {
+      final chipTextW = _measureWidth(
+        currency,
+        TextStyle(
+          fontSize: 12.5 * s * t,
+          fontWeight: FontWeight.w600,
+          height: 1.2,
+        ),
+        scaler,
+      );
+      // padL(10) + text + gap(2) + chevron(8) + padR(10), all ·s.
+      chipWidth = 10 * s + chipTextW + 2 * s + 8 * s + 10 * s;
+    }
+
+    // The label yields last (§2): capped at 150·s as before, and below the
+    // floor it ellipsises, then disappears.
+    final labelNaturalW = _measureWidth(
+      label,
+      TextStyle(
+        fontSize: 15 * s * t,
+        fontWeight: FontWeight.w400,
+        height: 1.2,
+      ),
+      scaler,
+    ).clamp(0.0, 150 * s);
+
+    final iconW = kIconColumn * s;
+    final gap = kIconGap * s;
+    const chipGapBase = 10.0;
+    final chipGap = chipGapBase * s;
+    // A half-pixel of slack so a rounding error never clips the number.
+    const eps = 0.5;
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: kFormMargin),
@@ -133,69 +172,145 @@ class NumericHeroCard extends StatelessWidget {
           child: Padding(
             padding: EdgeInsets.symmetric(horizontal: kRowPadding * s),
             child: ConstrainedBox(
-              constraints: BoxConstraints(minHeight: 58 * s),
-              child: Row(
-                children: [
-                  SizedBox(
-                    width: kIconColumn * s,
-                    child: Icon(
-                      Icons.attach_money_rounded,
-                      size: 18 * s,
-                      color: focused ? accent : AppColors.formDim2,
-                    ),
-                  ),
-                  SizedBox(width: kIconGap * s),
-                  // Capped rather than Flexible: a second flex child would split the
-                  // free space with the value, and the value's right edge would then
-                  // move with the label's length — which is exactly the misalignment
-                  // this row is meant to avoid. The cap still stops a long label
-                  // ("Starting amount") overflowing a 320pt row.
-                  ConstrainedBox(
-                    constraints: BoxConstraints(maxWidth: 150 * s),
-                    child: Text(
-                      label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 15 * s * t,
-                        fontWeight: FontWeight.w400,
-                        height: 1.2,
-                        color: AppColors.textPrimary,
+              // A minHeight, never a fixed height: at large text scales the
+              // number alone is taller than this, and the row must grow (§1).
+              constraints: BoxConstraints(minHeight: 52 * s),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final rowWidth = constraints.maxWidth;
+
+                  // Everything on the amount's line except the label and the
+                  // amount: the icon column, the two gaps, and the chip when it
+                  // shares the line.
+                  double fixed(bool chipOnLine) =>
+                      iconW +
+                      gap +
+                      gap +
+                      (chip != null && chipOnLine ? chipGap + chipWidth : 0);
+
+                  final amountFloorW = amountWidth(floorSize);
+
+                  // The one decision, taken from measurement, not from `t`: if
+                  // the amount cannot fit on the line even at its floor with the
+                  // label gone, the chip moves to its own line (§4).
+                  final wrapChip = chip != null &&
+                      amountFloorW > rowWidth - fixed(true) + eps;
+
+                  // Budget the label and amount share on their line.
+                  final budgetLA = rowWidth - fixed(!wrapChip);
+                  final amountBudgetFull = budgetLA - labelNaturalW;
+
+                  double chosenSize;
+                  double labelMax;
+                  if (amountWidth(baseSize) <= amountBudgetFull - eps) {
+                    // Fits at full size with the whole label.
+                    chosenSize = baseSize;
+                    labelMax = 150 * s;
+                  } else if (amountFloorW <= amountBudgetFull - eps) {
+                    // Shrink the amount — but no further than the floor — keeping
+                    // the whole label. Largest fitting size wins.
+                    var size = floorSize;
+                    const n = 16;
+                    for (var i = 0; i <= n; i++) {
+                      final cand = baseSize - (baseSize - floorSize) * i / n;
+                      if (amountWidth(cand) <= amountBudgetFull - eps) {
+                        size = cand;
+                        break;
+                      }
+                    }
+                    chosenSize = size;
+                    labelMax = 150 * s;
+                  } else {
+                    // Amount pinned at the floor; the label yields the rest.
+                    chosenSize = floorSize;
+                    labelMax =
+                        (budgetLA - amountFloorW - eps).clamp(0.0, 150 * s);
+                  }
+
+                  final amount = _AmountText(
+                    raw: raw,
+                    currency: currency,
+                    accent: accent,
+                    accentDim: accentDim,
+                    focused: focused,
+                    fontSize: chosenSize,
+                  );
+
+                  final labelWidget = labelMax < 1
+                      // Below a legible width the label disappears entirely —
+                      // the $ icon and the sheet's title already name the number.
+                      ? const SizedBox.shrink()
+                      : ConstrainedBox(
+                          constraints: BoxConstraints(maxWidth: labelMax),
+                          child: Text(
+                            label,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 15 * s * t,
+                              fontWeight: FontWeight.w400,
+                              height: 1.2,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                        );
+
+                  final leading = [
+                    SizedBox(
+                      width: iconW,
+                      child: Icon(
+                        Icons.attach_money_rounded,
+                        size: 18 * s,
+                        color: focused ? accent : AppColors.formDim2,
                       ),
                     ),
-                  ),
-                  SizedBox(width: kIconGap * s),
-                  if (wrapChip)
-                    Expanded(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          SizedBox(height: 8 * s),
-                          amount,
-                          if (chip != null) ...[
-                            SizedBox(height: 6 * s),
-                            chip,
-                          ],
-                          SizedBox(height: 8 * s),
-                        ],
+                    SizedBox(width: gap),
+                    labelWidget,
+                    SizedBox(width: gap),
+                  ];
+
+                  if (wrapChip) {
+                    // §4 — the chip drops to its own line; §2's order still holds
+                    // on the line that remains (amount shrank first, label last).
+                    return Row(
+                      children: [
+                        ...leading,
+                        Expanded(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              SizedBox(height: 8 * s),
+                              amount,
+                              // wrapChip is only ever true when a chip exists.
+                              SizedBox(height: 6 * s),
+                              chip,
+                              SizedBox(height: 8 * s),
+                            ],
+                          ),
+                        ),
+                      ],
+                    );
+                  }
+
+                  return Row(
+                    children: [
+                      ...leading,
+                      // Fills the slack and right-aligns, so the amount and the
+                      // chip read as one trailing group flush to the edge.
+                      Expanded(
+                        child: Align(
+                          alignment: Alignment.centerRight,
+                          child: amount,
+                        ),
                       ),
-                    )
-                  else ...[
-                    // Fills the slack and right-aligns, so the amount and the
-                    // chip read as one trailing group flush to the edge.
-                    Expanded(
-                      child: Align(
-                        alignment: Alignment.centerRight,
-                        child: amount,
-                      ),
-                    ),
-                    if (chip != null) ...[
-                      SizedBox(width: 10 * s),
-                      chip,
+                      if (chip != null) ...[
+                        SizedBox(width: chipGap),
+                        chip,
+                      ],
                     ],
-                  ],
-                ],
+                  );
+                },
               ),
             ),
           ),
@@ -205,6 +320,33 @@ class NumericHeroCard extends StatelessWidget {
   }
 }
 
+/// The amount's glyph style at a given [size]. Shared by [_AmountText] and the
+/// measurement pass in [NumericHeroCard] so the width the card fits the number
+/// into is the exact width the number paints at — letterSpacing rides on the
+/// size, so it follows on its own.
+TextStyle _amountStyle(double size) => TextStyle(
+      fontSize: size,
+      fontWeight: FontWeight.w600,
+      height: 1.2,
+      letterSpacing: -0.024 * size,
+      fontFeatures: const [FontFeature.tabularFigures()],
+    );
+
+/// One-line intrinsic width of [text] in [style], scaled exactly as a `Text`
+/// under [scaler] would paint it. The card sizes the amount from real widths,
+/// not a text-scale heuristic.
+double _measureWidth(String text, TextStyle style, TextScaler scaler) {
+  final tp = TextPainter(
+    text: TextSpan(text: text, style: style),
+    textDirection: TextDirection.ltr,
+    textScaler: scaler,
+    maxLines: 1,
+  )..layout();
+  final w = tp.width;
+  tp.dispose();
+  return w;
+}
+
 class _AmountText extends StatefulWidget {
   const _AmountText({
     required this.raw,
@@ -212,6 +354,7 @@ class _AmountText extends StatefulWidget {
     required this.accent,
     required this.accentDim,
     required this.focused,
+    required this.fontSize,
   });
 
   final String raw;
@@ -219,6 +362,10 @@ class _AmountText extends StatefulWidget {
   final Color accent;
   final Color accentDim;
   final bool focused;
+
+  /// Resolved by the card from the space actually available (§2/§3): 17·s·t
+  /// when the number fits, shrinking to a 15·s·t floor when it does not.
+  final double fontSize;
 
   @override
   State<_AmountText> createState() => _AmountTextState();
@@ -240,17 +387,10 @@ class _AmountTextState extends State<_AmountText>
   @override
   Widget build(BuildContext context) {
     final s = formScale(context);
-    final t = formTextScale(context);
     final parts = AmountEntry.split(widget.raw, widget.currency);
-    final size = 19 * s * t;
+    final size = widget.fontSize;
 
-    final style = TextStyle(
-      fontSize: size,
-      fontWeight: FontWeight.w600,
-      height: 1.2,
-      letterSpacing: -0.024 * size,
-      fontFeatures: const [FontFeature.tabularFigures()],
-    );
+    final style = _amountStyle(size);
 
     return Text.rich(
       TextSpan(
@@ -284,7 +424,10 @@ class _AmountTextState extends State<_AmountText>
         ],
       ),
       maxLines: 1,
-      overflow: TextOverflow.ellipsis,
+      // Never ellipsised: the card has already sized the number to fit (§2), so
+      // the reader always sees every digit they typed. Clip (not ellipsis) so a
+      // sub-pixel rounding error trims a hair rather than swapping in a "…".
+      overflow: TextOverflow.clip,
       textAlign: TextAlign.right,
     );
   }
