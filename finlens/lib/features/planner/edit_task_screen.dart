@@ -56,10 +56,6 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
   late Set<int> _daysOfMonth = {..._task.daysOfMonth};
   late final Priority _priority = _task.priority;
   late bool _payOut = _task.isPayOut;
-  late bool _remind = _task.reminderDaysBefore != null;
-  late final int _remindDays = _task.reminderDaysBefore ?? 2;
-  late final TimeOfDay _remindTime =
-      _task.reminderTime ?? const TimeOfDay(hour: 9, minute: 0);
 
   @override
   void dispose() {
@@ -182,15 +178,11 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
               showChevron: true,
               onTap: _pickRepeat,
             ),
-            ToggleRow(
-              icon: Icons.alarm_rounded,
-              label: l.etRemindMe,
-              subtitle: _remind
-                  ? l.etRemindBefore('$_remindDays', _remindTime.format(context))
-                  : null,
-              value: _remind,
-              onChanged: (v) => setState(() => _remind = v),
-            ),
+            // Remind is removed (§4): no notification package ships, so nothing
+            // schedules a reminder and the switch only wrote fixed values the
+            // user never chose. Task.reminderDaysBefore/reminderTime stay on the
+            // model and are preserved through _save (updateTask keeps them when
+            // no reminder args are passed), so existing data survives untouched.
           ],
         ),
         // The note lives on the task (§7.4) and is written here — Mark as paid,
@@ -299,9 +291,9 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
       weekdays: _weekdays,
       daysOfMonth: _daysOfMonth,
       priority: _priority,
-      reminderDaysBefore: _remind ? _remindDays : null,
-      reminderTime: _remind ? _remindTime : null,
-      clearReminder: !_remind,
+      // No reminder args (§4): updateTask leaves reminderDaysBefore/reminderTime
+      // as they are when none are passed and clearReminder is false, so a task
+      // that carried reminder fields keeps them across an edit.
     );
     Navigator.of(context).pop();
   }

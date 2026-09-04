@@ -6,7 +6,6 @@ import '../../core/models/models.dart';
 import '../../core/store/app_store.dart';
 import '../../core/utils/formatters.dart';
 import '../../core/utils/fx.dart';
-import '../../core/utils/repeat_labels.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/app_card.dart';
 import '../../shared/widgets/txn_row.dart';
@@ -17,7 +16,6 @@ import '../planner/edit_budget_screen.dart';
 import '../planner/edit_goal_screen.dart';
 import 'date_time_sheet.dart';
 import 'pickers.dart';
-import 'repeat_sheet.dart';
 import 'tag_picker_sheet.dart';
 import 'split_sheet.dart';
 import 'transaction_repeat_sheet.dart';
@@ -171,7 +169,6 @@ class _QuickAddScreenState extends State<QuickAddScreen>
   String? _recurrenceTaskId; // the Planner Task backing an existing repeat
   List<SplitLine>? _splitLines; // non-null once a split is applied
   bool _hasFee = false;
-  bool _remind = false;
 
   /// The field flagged as missing after an incomplete Save (§3), and the pulse
   /// that flashes it. Cleared as soon as the field is filled.
@@ -433,18 +430,6 @@ class _QuickAddScreenState extends State<QuickAddScreen>
     );
   }
 
-  FormToggle _repeatToggle() {
-    final label = repeatButtonLabel(_repeatFreq, _repeatWeekdays,
-        _repeatDaysOfMonth, _date, AppLocalizations.of(context));
-    return FormToggle(
-      icon: Icons.repeat_rounded,
-      label: label,
-      value: _hasRepeat,
-      semanticValue: _hasRepeat ? label.toLowerCase() : 'off',
-      onTap: _openRepeat,
-    );
-  }
-
   /// Repeat as a row in the OPTIONAL card (spec §3): the frequency word on the
   /// right, and the leading icon in the accent when a repeat is set so the form
   /// shows at a glance that the transaction recurs.
@@ -505,29 +490,6 @@ class _QuickAddScreenState extends State<QuickAddScreen>
       _repeatUnit = sel.unit ?? RepeatUnit.month;
       _repeatEndDate = sel.endDate;
       _repeatEndCount = sel.endCount;
-    });
-  }
-
-  Future<void> _openRepeat() async {
-    // Planner's Task can't represent a multi-transaction (split) occurrence, so
-    // the combination is blocked with a clear message (spec §5).
-    if (_hasSplit) {
-      _toast("Can't repeat a split transaction");
-      return;
-    }
-    setState(() => _keypadOpen = false);
-    final sel = await showRepeatSheet(
-      context,
-      current: _repeatFreq,
-      date: _date,
-      weekdays: _repeatWeekdays,
-      daysOfMonth: _repeatDaysOfMonth,
-    );
-    if (sel == null || !mounted) return;
-    setState(() {
-      _repeatFreq = sel.freq;
-      _repeatWeekdays = sel.weekdays;
-      _repeatDaysOfMonth = sel.daysOfMonth;
     });
   }
 
@@ -870,10 +832,12 @@ class _QuickAddScreenState extends State<QuickAddScreen>
           // Demoted from Required: most tasks have no amount. When set, the
           // task can later be turned into a transaction in one tap.
           FieldSpec(
-            icon: Icons.attach_money_rounded,
+            // Currency-neutral (§3): the value already carries the symbol
+            // through money(), so the icon must not hard-code a dollar.
+            icon: Icons.numbers_rounded,
             label: AppLocalizations.of(context).qaAmount,
             value: _raw.isEmpty ? null : money(_amount, currency: _currency),
-            emptyText: AppLocalizations.of(context).qaNone,
+            emptyText: AppLocalizations.of(context).eaNotSet,
             onTap: () async {
               final v = await _promptText(
                 title: AppLocalizations.of(context).qaAmount,
@@ -889,7 +853,7 @@ class _QuickAddScreenState extends State<QuickAddScreen>
             icon: Icons.account_balance_wallet_rounded,
             label: AppLocalizations.of(context).qaAccount,
             value: account?.name,
-            emptyText: AppLocalizations.of(context).qaNone,
+            emptyText: AppLocalizations.of(context).eaNotSet,
             onTap: () =>
                 _pickAccountInto(store, isFrom: false, title: AppLocalizations.of(context).etLinkedAccount),
           ),
@@ -897,25 +861,25 @@ class _QuickAddScreenState extends State<QuickAddScreen>
             icon: Icons.category_rounded,
             label: AppLocalizations.of(context).fieldCategory,
             value: store.categoryById(_fromRef)?.name,
-            emptyText: AppLocalizations.of(context).qaNone,
+            emptyText: AppLocalizations.of(context).eaNotSet,
             onTap: () => _pickCategoryInto(CategoryType.expense, isFrom: true),
           ),
+          // Repeat moves onto the transaction form's richer chooser (§5): a row
+          // in OPTIONAL, not a button in a bar. A recurring bill is the clearest
+          // case for "the 1st and the 15th of every month".
+          _repeatField(),
           _noteField(),
         ]),
       ],
-      toggles: [
-        _repeatToggle(),
-        FormToggle(
-          icon: Icons.alarm_rounded,
-          label: AppLocalizations.of(context).qaRemind,
-          value: _remind,
-          onTap: () => setState(() => _remind = !_remind),
-        ),
-      ],
+      // Remind is removed (§4) and Repeat moved into the card (§5), so the
+      // toggle bar has nothing left — an empty bar renders nothing.
+      toggles: const [],
       saveLabel: AppLocalizations.of(context).qaCreateTask,
+      // The due date is a non-null DateTime seeded to today and can never be
+      // cleared, so the old `unmet: false` due-date blocker could never fire
+      // (§6); only the title can be missing.
       blockers: [
         Blocker(unmet: _title.text.trim().isEmpty, label: AppLocalizations.of(context).qaBlockNameTask),
-        Blocker(unmet: false, label: AppLocalizations.of(context).qaBlockDueDate),
       ],
     );
   }
@@ -1481,8 +1445,20 @@ class _QuickAddScreenState extends State<QuickAddScreen>
           repeats: _repeatFreq,
           weekdays: _repeatWeekdays,
           daysOfMonth: _repeatDaysOfMonth,
-          reminderDaysBefore: _remind ? 2 : null,
-          reminderTime: _remind ? const TimeOfDay(hour: 9, minute: 0) : null,
+          // The task now uses the transaction Repeat chooser (§5), which can set
+          // a custom `Every N unit` step and an end condition — persist them so
+          // a Custom (e.g. every 3 months) rule round-trips instead of silently
+          // collapsing to the every-1-month default.
+          repeatInterval: _repeatInterval,
+          repeatUnit:
+              _repeatFreq == RepeatFrequency.custom ? _repeatUnit : null,
+          repeatEndDate: _repeatEndDate,
+          repeatEndCount: _repeatEndCount,
+          // Remind is removed (§4): nothing schedules a notification, so Quick
+          // Add writes no reminder. The model fields stay for a future real
+          // implementation; existing data is untouched.
+          reminderDaysBefore: null,
+          reminderTime: null,
         );
     }
 

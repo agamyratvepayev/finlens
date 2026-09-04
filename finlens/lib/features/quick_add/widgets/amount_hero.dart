@@ -477,8 +477,10 @@ class _CurrencyChip extends StatelessWidget {
 
 /// New Task's hero: same card, same position, but the title is text.
 ///
-/// The layout differs on purpose — a task has no figure to right-align, so
-/// the title reads as a heading with its field name captioned underneath.
+/// The layout differs on purpose — a task has no figure to right-align. The
+/// caption sits *above* the field (§1), matching TextFieldRow, the goal editor
+/// and the amount hero's own label, so the field name reads as a heading and
+/// the hint as the thing being filled in rather than the reverse.
 class TextHeroCard extends StatelessWidget {
   const TextHeroCard({
     super.key,
@@ -525,6 +527,19 @@ class TextHeroCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  // Caption above the field (§1): the label names the field, the
+                  // field below it holds the answer — the same order as every
+                  // other labelled input in the app.
+                  Text(
+                    caption,
+                    style: TextStyle(
+                      fontSize: 12.5 * s * t,
+                      fontWeight: FontWeight.w400,
+                      height: 1.2,
+                      color: AppColors.formDim2,
+                    ),
+                  ),
+                  SizedBox(height: 3 * s),
                   TextField(
                     controller: controller,
                     focusNode: focusNode,
@@ -546,16 +561,6 @@ class TextHeroCard extends StatelessWidget {
                         height: 1.25,
                         color: AppColors.formDim2,
                       ),
-                    ),
-                  ),
-                  SizedBox(height: 3 * s),
-                  Text(
-                    caption,
-                    style: TextStyle(
-                      fontSize: 12.5 * s * t,
-                      fontWeight: FontWeight.w400,
-                      height: 1.2,
-                      color: AppColors.formDim2,
                     ),
                   ),
                 ],
