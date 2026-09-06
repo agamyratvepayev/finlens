@@ -13,6 +13,7 @@ import '../../l10n/app_localizations.dart';
 import '../../shared/restore_flow.dart';
 import '../../shared/widgets/amount_text.dart';
 import '../../shared/widgets/app_card.dart';
+import '../../shared/widgets/screen_header.dart';
 import '../../shared/widgets/section_header.dart';
 import '../../shared/widgets/txn_row.dart';
 import '../../theme/app_colors.dart';
@@ -1180,7 +1181,12 @@ class _HeaderZone extends StatelessWidget {
             // recorded there is no scope to name. The row's height is set by the
             // 36pt + circle, so it stays stable whether or not the title is drawn.
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+              padding: const EdgeInsets.fromLTRB(
+                Insets.gutter,
+                Insets.sm,
+                Insets.gutter,
+                0,
+              ),
               child: Row(
                 children: [
                   Expanded(
@@ -1205,7 +1211,7 @@ class _HeaderZone extends StatelessWidget {
                       label: AppLocalizations.of(context).ldgClearCustomRange,
                       hint:
                           'Back to ${monthYearLong(store.period, AppLocalizations.of(context))}',
-                      child: _CircleButton(
+                      child: HeaderCircleButton(
                         icon: Icons.close_rounded,
                         tint: AppColors.accentLight,
                         onTap: store.clearRangeLens,
@@ -1218,7 +1224,7 @@ class _HeaderZone extends StatelessWidget {
                   // must not have to re-find the moment their first entry lands.
                   if (everRecorded) ...[
                     const SizedBox(width: Insets.sm),
-                    _CircleButton(
+                    HeaderCircleButton(
                       icon: store.masked
                           ? Icons.visibility_off_rounded
                           : Icons.visibility_rounded,
@@ -1226,7 +1232,7 @@ class _HeaderZone extends StatelessWidget {
                     ),
                   ],
                   const SizedBox(width: Insets.sm),
-                  _CircleButton(
+                  HeaderCircleButton(
                     icon: Icons.add_rounded,
                     accent: true,
                     onTap: onAdd,
@@ -1241,7 +1247,12 @@ class _HeaderZone extends StatelessWidget {
             if (everRecorded) ...[
               // Ratio bar — passive, 3pt, full width (§1).
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                padding: const EdgeInsets.fromLTRB(
+                  Insets.gutter,
+                  Insets.sm,
+                  Insets.gutter,
+                  0,
+                ),
                 child: Semantics(
                   label: income > 0 || expense > 0
                       ? AppLocalizations.of(context).ldgSpentOf(
@@ -1259,7 +1270,12 @@ class _HeaderZone extends StatelessWidget {
               ),
               // Metrics strip.
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+                padding: const EdgeInsets.fromLTRB(
+                  Insets.gutter,
+                  10,
+                  Insets.gutter,
+                  0,
+                ),
                 child: Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 13,
@@ -1456,47 +1472,6 @@ class _Metric extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-/// The eye / `+` circle button, cloned from `ScreenHeader`'s private one so the
-/// Ledger keeps its exact previous size, colour, icon and behaviour (§1).
-class _CircleButton extends StatelessWidget {
-  const _CircleButton({
-    required this.icon,
-    this.onTap,
-    this.accent = false,
-    this.tint,
-  });
-
-  final IconData icon;
-  final VoidCallback? onTap;
-  final bool accent;
-
-  /// Overrides the glyph colour (size/background/behaviour are unchanged). The
-  /// lens's × uses it to echo the accent title it clears (§1); eye and `+`
-  /// leave it null and keep the default textPrimary glyph.
-  final Color? tint;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: accent ? AppColors.accent : AppColors.surfaceAlt,
-      shape: const CircleBorder(),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: SizedBox(
-          width: 36,
-          height: 36,
-          child: Icon(
-            icon,
-            size: accent ? 22 : 19,
-            color: tint ?? AppColors.textPrimary,
-          ),
-        ),
-      ),
     );
   }
 }
