@@ -108,11 +108,15 @@ void main() {
       // search field must be gone, replaced by the empty state.
       expect(find.textContaining('No account matches'), findsNothing);
       expect(find.byType(TextField), findsNothing);
-      // Header create action (its '+') is absent; the empty-state button is the
-      // sole create affordance.
-      expect(find.text('+'), findsNothing);
+      // The header create action is present in this state too now: one
+      // affordance, one place, in every state. It used to be absent here, with
+      // a filled button in the body instead — so the action jumped from the
+      // middle of the sheet to the top-right the moment an account existed.
+      expect(find.text('+'), findsOneWidget);
       expect(find.text('No accounts yet'), findsOneWidget);
-      expect(find.text('New account'), findsOneWidget);
+      // Its visible text is the short label; the body button is gone entirely.
+      expect(find.text('New'), findsOneWidget);
+      expect(find.byType(FilledButton), findsNothing);
     });
 
     testWidgets('renders no empty pair of quotation marks anywhere',
@@ -141,7 +145,7 @@ void main() {
       expect(find.textContaining('No account matches'), findsNothing);
       // Create action present exactly once, in the header.
       expect(find.text('+'), findsOneWidget);
-      expect(find.text('New account'), findsOneWidget);
+      expect(find.text('New'), findsOneWidget);
     });
 
     testWidgets('the search field is not autofocused', (tester) async {
@@ -218,28 +222,28 @@ void main() {
       (tester) async {
     _setSize(tester, 390, 844);
     await _open(tester, _populatedStore());
-    final emptyQueryPos = tester.getTopLeft(find.text('New account'));
+    final emptyQueryPos = tester.getTopLeft(find.text('New'));
     await tester.enterText(find.byType(TextField), 'Revolut'); // no match → state 4
     await tester.pumpAndSettle();
-    final noMatchPos = tester.getTopLeft(find.text('New account'));
+    final noMatchPos = tester.getTopLeft(find.text('New'));
     expect(noMatchPos, emptyQueryPos);
   });
 
   testWidgets('the create action appears exactly once in every state',
       (tester) async {
-    // State 1
+    // State 1 — the header action, not a body button.
     await _open(tester, _emptyStore());
-    expect(find.text('New account'), findsOneWidget);
+    expect(find.text('New'), findsOneWidget);
 
     // States 2 → 3 → 4 on a populated store.
     await _open(tester, _populatedStore());
-    expect(find.text('New account'), findsOneWidget); // 2
+    expect(find.text('New'), findsOneWidget); // 2
     await tester.enterText(find.byType(TextField), 'Savings');
     await tester.pumpAndSettle();
-    expect(find.text('New account'), findsOneWidget); // 3
+    expect(find.text('New'), findsOneWidget); // 3
     await tester.enterText(find.byType(TextField), 'Revolut');
     await tester.pumpAndSettle();
-    expect(find.text('New account'), findsOneWidget); // 4
+    expect(find.text('New'), findsOneWidget); // 4
   });
 
   // ── No overflow across widths, scale and locales ─────────────────────────

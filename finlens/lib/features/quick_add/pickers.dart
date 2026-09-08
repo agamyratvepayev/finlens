@@ -337,24 +337,21 @@ class _SheetCancelButton extends StatelessWidget {
   }
 }
 
-/// Spec 4.2 — account picker. The "＋ New account" affordance lives in the
-/// header (right of the title), reachable the instant the sheet opens and while
-/// a search is active — no longer buried at the end of the list.
+/// Spec 4.2 — account picker. The `+ New` affordance lives in the header (right
+/// of the title) and **stays there in every state**, exactly as [pickCategory]
+/// does — reachable the instant the sheet opens, while a search is active, and
+/// when there is nothing to list.
+///
+/// It used to move: with no accounts the header action disappeared and a filled
+/// button took its place in the body, so the one action in the sheet jumped from
+/// the middle to the top-right corner the moment the first account existed, and
+/// changed shape and label on the way. One affordance, one place.
 Future<Account?> pickAccount(
   BuildContext context, {
   String? title,
   bool Function(Account)? filter,
   String? excludeId,
 }) {
-  // The account set cannot change while this modal is up (the only path that
-  // creates one pops the sheet), so the state 1 / 2-4 split is fixed at open.
-  // With no accounts to offer, the "+ New account" header action disappears and
-  // the create affordance moves into the empty state's body instead (spec §2).
-  final store = StoreScope.read(context);
-  final hasAccounts = store.visibleAccounts
-      .where((a) => a.id != excludeId)
-      .where((a) => filter?.call(a) ?? true)
-      .isNotEmpty;
   final l = AppLocalizations.of(context);
   return showAppSheet<Account>(
     context,
@@ -364,15 +361,18 @@ Future<Account?> pickAccount(
     // with nothing to discard it simply pops.
     cancelLabel: l.actionCancel,
     contentSized: true,
-    actions: hasAccounts
-        ? [
-            _HeaderCreateAction<Account>(
-              label: l.qaNewAccount,
-              // Do not prefill the name from the picker's search query (§3).
-              onCreate: (ctx) => showNewAccountSheet(ctx),
-            ),
-          ]
-        : const [],
+    actions: [
+      _HeaderCreateAction<Account>(
+        // "+ New", as the category picker shows. The sheet lists accounts and
+        // its empty state says "No accounts yet", so the context is carried —
+        // and the long label is where a locale overflows first, beside Cancel.
+        label: l.qaNewShort,
+        // …but a reader still hears the full name.
+        semanticsLabel: l.qaNewAccount,
+        // Do not prefill the name from the picker's search query (§3).
+        onCreate: (ctx) => showNewAccountSheet(ctx),
+      ),
+    ],
     builder: (context, controller) => _AccountPickerBody(
       controller: controller,
       filter: filter,
@@ -500,8 +500,13 @@ class _AccountPickerBodyState extends State<_AccountPickerBody> {
     );
   }
 
-  /// State 1 body (§2, §5): a heading, a direction-neutral line, and a
-  /// full-weight filled primary button — the only control in the sheet.
+  /// State 1 body: a heading and a direction-neutral line. Nothing else.
+  ///
+  /// The filled primary button that used to close this Column is gone: the
+  /// header's `+ New` is present in this state too now, so a second create
+  /// control here would be the same action twice. No pointer sentence replaces
+  /// it either — in a content-sized sheet the header sits ~40pt above this text
+  /// and is in view at a glance, so describing it would be noise.
   Widget _emptyState(BuildContext context, AppLocalizations l) {
     final bottom = MediaQuery.of(context).padding.bottom;
     return Padding(
@@ -527,11 +532,6 @@ class _AccountPickerBodyState extends State<_AccountPickerBody> {
             l.qaNoAccountsYetBody,
             style: AppText.caption,
             textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: Insets.xl),
-          _EmptyStateCreateButton(
-            label: l.qaNewAccount,
-            onCreate: () => showNewAccountSheet(context),
           ),
         ],
       ),
@@ -573,43 +573,6 @@ class _AccountPickerBodyState extends State<_AccountPickerBody> {
           overflow: TextOverflow.ellipsis,
         ),
       ),
-    );
-  }
-}
-
-/// State 1's create action: a full-weight filled primary (spec §5), distinct
-/// from the Balance zero-data screen's unfilled action on purpose — here it is
-/// the sheet's only control, so nothing competes with it. On success it pops
-/// the picker with the created account selected, exactly as the header action
-/// does.
-class _EmptyStateCreateButton extends StatelessWidget {
-  const _EmptyStateCreateButton({required this.label, required this.onCreate});
-
-  final String label;
-  final Future<Account?> Function() onCreate;
-
-  @override
-  Widget build(BuildContext context) {
-    return FilledButton(
-      onPressed: () async {
-        final created = await onCreate();
-        if (created != null && context.mounted) {
-          Navigator.of(context).pop(created);
-        }
-      },
-      style: FilledButton.styleFrom(
-        backgroundColor: AppColors.accent,
-        foregroundColor: Colors.white,
-        // ≥44pt tap target (§8); horizontal padding keeps it content-width, not
-        // stretched edge to edge.
-        minimumSize: const Size(0, 48),
-        padding: const EdgeInsets.symmetric(horizontal: Insets.xxl),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(Radii.md),
-        ),
-        textStyle: AppText.button,
-      ),
-      child: Text(label),
     );
   }
 }
@@ -1062,20 +1025,40 @@ Widget _pickRow(
 }
 
 /// The create affordance, moved into the picker's header row (spec §1/§4).
-/// A text button — `+ New …` in accent — with a ≥44 pt hit area that extends
-/// above and below the visible text. It opens the create sheet *over* the
-/// picker and, on success, pops the picker with the created item selected.
+/// A text button — `+ New …` — with a ≥44 pt hit area that extends above and
+/// below the visible text. It opens the create sheet *over* the picker and, on
+/// success, pops the picker with the created item selected.
+///
+/// The ink is [AppColors.accentLight], not [AppColors.accent]. On the sheet's
+/// `surfaceAlt` #1C1C1E ground the accent measures 3.36:1 — below WCAG AA's
+/// 4.5:1 for 14.5pt text — while accentLight measures 7.52:1. All four pickers
+/// draw this control on that same ground, so all four take the fix.
 class _HeaderCreateAction<T> extends StatelessWidget {
-  const _HeaderCreateAction({required this.label, required this.onCreate});
+  const _HeaderCreateAction({
+    required this.label,
+    required this.onCreate,
+    this.semanticsLabel,
+  });
 
+  /// The visible text.
   final String label;
+
+  /// What a screen reader announces, when it should differ from [label] — the
+  /// account picker shortens the visible text to "New" but must still say
+  /// "New account". Null keeps the two identical, as the other three pickers do.
+  final String? semanticsLabel;
+
   final Future<T?> Function(BuildContext) onCreate;
 
   @override
   Widget build(BuildContext context) {
     return Semantics(
       button: true,
-      label: label,
+      label: semanticsLabel ?? label,
+      // Without this the wrapper *merges* its children, so the node reads
+      // "New account / + / New" — the glyph and the short text spoken after the
+      // name. One button, one label.
+      excludeSemantics: true,
       child: InkWell(
         onTap: () async {
           final created = await onCreate(context);
@@ -1095,14 +1078,14 @@ class _HeaderCreateAction<T> extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
-                      color: AppColors.accent,
+                      color: AppColors.accentLight,
                     )),
                 const SizedBox(width: 4),
                 Text(label,
                     style: const TextStyle(
                       fontSize: 14.5,
                       fontWeight: FontWeight.w500,
-                      color: AppColors.accent,
+                      color: AppColors.accentLight,
                     )),
               ],
             ),
