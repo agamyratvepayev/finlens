@@ -2598,19 +2598,19 @@ class AppLocalizationsRu extends AppLocalizations {
   String get qaChooseCategory => 'Выберите категорию';
 
   @override
-  String get qaChooseSource => 'Выберите источник';
+  String get qaPaymentAccount => 'Счёт оплаты';
 
   @override
-  String get qaPayFrom => 'Оплатить с';
+  String get qaIncomeAccount => 'Счёт дохода';
 
   @override
-  String get qaDepositInto => 'Зачислить на';
+  String get qaSourceAccount => 'Счёт списания';
 
   @override
-  String get qaTransferFrom => 'Перевод с';
+  String get qaDestinationAccount => 'Счёт зачисления';
 
   @override
-  String get qaTransferTo => 'Перевод на';
+  String get qaRevaluedAccount => 'Переоценённый счёт';
 
   @override
   String get qaRate => 'Курс';
@@ -2623,9 +2623,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get qaAccount => 'Счёт';
-
-  @override
-  String get qaRevalueAccount => 'Переоценить счёт';
 
   @override
   String get qaCurrent => 'Текущий';
@@ -2739,9 +2736,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get qaBlockCategory => 'Выберите категорию';
-
-  @override
-  String get qaBlockSource => 'Выберите источник';
 
   @override
   String get qaBlockSplit => 'Сведите разбивку';

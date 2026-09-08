@@ -1256,7 +1256,10 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
     final store = StoreScope.read(context);
     final target = await pickAccount(
       context,
-      title: AppLocalizations.of(context).obCopyTitle,
+      // Names the list, not the verb: the Copy action the user just tapped
+      // carries the verb, and this is the same destination-account list the
+      // transfer form picks from. `obCopyTitle` is left in the ARBs, unused.
+      title: AppLocalizations.of(context).qaDestinationAccount,
       excludeId: account.id,
       // Only accounts that have no opening balance yet (spec §7).
       filter: (a) => !a.hasOpeningReceipt,

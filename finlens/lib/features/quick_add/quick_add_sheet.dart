@@ -547,7 +547,7 @@ class _QuickAddScreenState extends State<QuickAddScreen>
             flashId: 'from',
             onTap: widget.fixedFromAccountId != null
                 ? null
-                : () => _pickAccountInto(store, isFrom: true, title: AppLocalizations.of(context).qaPayFrom),
+                : () => _pickAccountInto(store, isFrom: true, title: AppLocalizations.of(context).qaPaymentAccount),
           ),
           FieldSpec(
             icon: Icons.category_rounded,
@@ -600,7 +600,7 @@ class _QuickAddScreenState extends State<QuickAddScreen>
             label: AppLocalizations.of(context).qaFrom,
             // Income splits the source category, so From carries the count.
             value: _hasSplit ? '${_splitLines!.length} categories' : from?.name,
-            emptyText: AppLocalizations.of(context).qaChooseSource,
+            emptyText: AppLocalizations.of(context).qaChooseCategory,
             flashId: 'from',
             onTap: _hasSplit
                 ? () => _openSplit(store)
@@ -613,7 +613,7 @@ class _QuickAddScreenState extends State<QuickAddScreen>
             emptyText: AppLocalizations.of(context).qaChooseAccount,
             flashId: 'to',
             onTap: () =>
-                _pickAccountInto(store, isFrom: false, title: AppLocalizations.of(context).qaDepositInto),
+                _pickAccountInto(store, isFrom: false, title: AppLocalizations.of(context).qaIncomeAccount),
           ),
         ]),
         FieldGroup(AppLocalizations.of(context).qaGroupOptional.toUpperCase(),
@@ -626,7 +626,7 @@ class _QuickAddScreenState extends State<QuickAddScreen>
         Blocker(unmet: _amount <= 0, label: AppLocalizations.of(context).qaBlockAmount, flashId: 'amount'),
         Blocker(
             unmet: _fromRef == null && !_hasSplit,
-            label: AppLocalizations.of(context).qaBlockSource,
+            label: AppLocalizations.of(context).qaBlockCategory,
             flashId: 'from'),
         Blocker(unmet: _toRef == null, label: AppLocalizations.of(context).qaBlockAccount, flashId: 'to'),
         Blocker(
@@ -663,7 +663,7 @@ class _QuickAddScreenState extends State<QuickAddScreen>
                 : () => _pickAccountInto(
                       store,
                       isFrom: true,
-                      title: AppLocalizations.of(context).qaTransferFrom,
+                      title: AppLocalizations.of(context).qaSourceAccount,
                       excludeId: _toRef,
                     ),
           ),
@@ -678,7 +678,7 @@ class _QuickAddScreenState extends State<QuickAddScreen>
                 : () => _pickAccountInto(
                       store,
                       isFrom: false,
-                      title: AppLocalizations.of(context).qaTransferTo,
+                      title: AppLocalizations.of(context).qaDestinationAccount,
                       excludeId: _fromRef,
                     ),
           ),
@@ -753,7 +753,7 @@ class _QuickAddScreenState extends State<QuickAddScreen>
             onTap: () => _pickAccountInto(
               store,
               isFrom: false,
-              title: AppLocalizations.of(context).qaRevalueAccount,
+              title: AppLocalizations.of(context).qaRevaluedAccount,
               alsoSetFrom: true,
             ),
           ),

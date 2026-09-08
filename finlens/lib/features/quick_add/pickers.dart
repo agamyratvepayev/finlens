@@ -601,9 +601,9 @@ Future<Category?> pickCategory(
     // The header `+ New` is present in ALL four states, never moving and never
     // hiding (spec §1) — including the empty state, whose body carries no button.
     // The category set cannot change while the modal is up (creating one pops the
-    // sheet), so a single unconditional action is correct. This is the one place
-    // the category picker diverges from the account picker, which drops its
-    // header action when empty and shows a body button instead.
+    // sheet), so a single unconditional action is correct. [pickAccount] now does
+    // the same; it used to drop this action when empty and show a body button
+    // instead, and that divergence is gone.
     actions: [
       _HeaderCreateAction<Category>(
         label: l.qaNewShort,

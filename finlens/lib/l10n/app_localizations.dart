@@ -3946,35 +3946,35 @@ abstract class AppLocalizations {
   /// **'Choose category'**
   String get qaChooseCategory;
 
-  /// No description provided for @qaChooseSource.
+  /// No description provided for @qaPaymentAccount.
   ///
   /// In en, this message translates to:
-  /// **'Choose source'**
-  String get qaChooseSource;
+  /// **'Payment account'**
+  String get qaPaymentAccount;
 
-  /// No description provided for @qaPayFrom.
+  /// No description provided for @qaIncomeAccount.
   ///
   /// In en, this message translates to:
-  /// **'Pay from'**
-  String get qaPayFrom;
+  /// **'Income account'**
+  String get qaIncomeAccount;
 
-  /// No description provided for @qaDepositInto.
+  /// No description provided for @qaSourceAccount.
   ///
   /// In en, this message translates to:
-  /// **'Deposit into'**
-  String get qaDepositInto;
+  /// **'Source account'**
+  String get qaSourceAccount;
 
-  /// No description provided for @qaTransferFrom.
+  /// No description provided for @qaDestinationAccount.
   ///
   /// In en, this message translates to:
-  /// **'Transfer from'**
-  String get qaTransferFrom;
+  /// **'Destination account'**
+  String get qaDestinationAccount;
 
-  /// No description provided for @qaTransferTo.
+  /// No description provided for @qaRevaluedAccount.
   ///
   /// In en, this message translates to:
-  /// **'Transfer to'**
-  String get qaTransferTo;
+  /// **'Revalued account'**
+  String get qaRevaluedAccount;
 
   /// No description provided for @qaRate.
   ///
@@ -3999,12 +3999,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Account'**
   String get qaAccount;
-
-  /// No description provided for @qaRevalueAccount.
-  ///
-  /// In en, this message translates to:
-  /// **'Revalue account'**
-  String get qaRevalueAccount;
 
   /// No description provided for @qaCurrent.
   ///
@@ -4215,12 +4209,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Choose a category'**
   String get qaBlockCategory;
-
-  /// No description provided for @qaBlockSource.
-  ///
-  /// In en, this message translates to:
-  /// **'Choose a source'**
-  String get qaBlockSource;
 
   /// No description provided for @qaBlockSplit.
   ///

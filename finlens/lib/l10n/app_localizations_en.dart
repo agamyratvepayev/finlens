@@ -2549,19 +2549,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get qaChooseCategory => 'Choose category';
 
   @override
-  String get qaChooseSource => 'Choose source';
+  String get qaPaymentAccount => 'Payment account';
 
   @override
-  String get qaPayFrom => 'Pay from';
+  String get qaIncomeAccount => 'Income account';
 
   @override
-  String get qaDepositInto => 'Deposit into';
+  String get qaSourceAccount => 'Source account';
 
   @override
-  String get qaTransferFrom => 'Transfer from';
+  String get qaDestinationAccount => 'Destination account';
 
   @override
-  String get qaTransferTo => 'Transfer to';
+  String get qaRevaluedAccount => 'Revalued account';
 
   @override
   String get qaRate => 'Rate';
@@ -2574,9 +2574,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get qaAccount => 'Account';
-
-  @override
-  String get qaRevalueAccount => 'Revalue account';
 
   @override
   String get qaCurrent => 'Current';
@@ -2690,9 +2687,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get qaBlockCategory => 'Choose a category';
-
-  @override
-  String get qaBlockSource => 'Choose a source';
 
   @override
   String get qaBlockSplit => 'Balance the split';

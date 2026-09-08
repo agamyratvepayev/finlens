@@ -304,8 +304,11 @@ class _MarkPaidSheetState extends State<_MarkPaidSheet> {
   }
 
   Future<void> _pickFromAccount() async {
+    // The row above still reads From / Into (mpFrom / mpInto, line 190); the
+    // *sheet* names what the list holds, and reuses Quick Add's keys rather
+    // than inventing a third pair for the same two concepts.
     final a = await pickAccount(context,
-        title: _payOut ? _l.mpFrom : _l.mpInto);
+        title: _payOut ? _l.qaPaymentAccount : _l.qaIncomeAccount);
     if (a != null) setState(() => _fromAccountId = a.id);
   }
 

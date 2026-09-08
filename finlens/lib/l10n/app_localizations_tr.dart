@@ -2538,19 +2538,19 @@ class AppLocalizationsTr extends AppLocalizations {
   String get qaChooseCategory => 'Kategori seç';
 
   @override
-  String get qaChooseSource => 'Kaynak seç';
+  String get qaPaymentAccount => 'Ödeme hesabı';
 
   @override
-  String get qaPayFrom => 'Şuradan öde';
+  String get qaIncomeAccount => 'Gelir hesabı';
 
   @override
-  String get qaDepositInto => 'Şuraya yatır';
+  String get qaSourceAccount => 'Kaynak hesap';
 
   @override
-  String get qaTransferFrom => 'Şuradan transfer';
+  String get qaDestinationAccount => 'Hedef hesap';
 
   @override
-  String get qaTransferTo => 'Şuraya transfer';
+  String get qaRevaluedAccount => 'Yeniden değerlenen hesap';
 
   @override
   String get qaRate => 'Kur';
@@ -2563,9 +2563,6 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get qaAccount => 'Hesap';
-
-  @override
-  String get qaRevalueAccount => 'Hesabı yeniden değerle';
 
   @override
   String get qaCurrent => 'Mevcut';
@@ -2679,9 +2676,6 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get qaBlockCategory => 'Bir kategori seçin';
-
-  @override
-  String get qaBlockSource => 'Bir kaynak seçin';
 
   @override
   String get qaBlockSplit => 'Bölmeyi dengeleyin';

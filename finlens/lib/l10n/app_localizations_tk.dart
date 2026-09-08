@@ -2538,19 +2538,19 @@ class AppLocalizationsTk extends AppLocalizations {
   String get qaChooseCategory => 'Kategoriýa saýla';
 
   @override
-  String get qaChooseSource => 'Çeşme saýla';
+  String get qaPaymentAccount => 'Töleg hasaby';
 
   @override
-  String get qaPayFrom => 'Şundan töle';
+  String get qaIncomeAccount => 'Girdeji hasaby';
 
   @override
-  String get qaDepositInto => 'Şuňa geçir';
+  String get qaSourceAccount => 'Ugradyjy hasap';
 
   @override
-  String get qaTransferFrom => 'Şundan geçirim';
+  String get qaDestinationAccount => 'Kabul ediji hasap';
 
   @override
-  String get qaTransferTo => 'Şuňa geçirim';
+  String get qaRevaluedAccount => 'Gaýtadan bahalanan hasap';
 
   @override
   String get qaRate => 'Kurs';
@@ -2563,9 +2563,6 @@ class AppLocalizationsTk extends AppLocalizations {
 
   @override
   String get qaAccount => 'Hasap';
-
-  @override
-  String get qaRevalueAccount => 'Hasaby gaýtadan bahala';
 
   @override
   String get qaCurrent => 'Häzirki';
@@ -2679,9 +2676,6 @@ class AppLocalizationsTk extends AppLocalizations {
 
   @override
   String get qaBlockCategory => 'Kategoriýa saýlaň';
-
-  @override
-  String get qaBlockSource => 'Çeşme saýlaň';
 
   @override
   String get qaBlockSplit => 'Bölünmäni deňleşdiriň';
