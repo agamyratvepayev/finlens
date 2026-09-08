@@ -8,6 +8,7 @@ import '../../core/store/app_store.dart';
 import '../../core/utils/formatters.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/amount_text.dart';
+import '../../shared/widgets/screen_header.dart';
 import '../../shared/widgets/section_header.dart';
 import '../../shared/widgets/undo_bar.dart';
 import '../../shared/widgets/swipe_back_route.dart';
@@ -210,7 +211,12 @@ class _BalanceScreenState extends State<BalanceScreen> {
       curve: Curves.easeOut,
       alignment: Alignment.topCenter,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(Insets.gutter, 0, Insets.gutter, 4),
+        padding: const EdgeInsets.fromLTRB(
+          Insets.gutter,
+          Insets.sm,
+          Insets.gutter,
+          4,
+        ),
         child: Stack(
           children: [
             AnimatedSwitcher(
@@ -228,7 +234,10 @@ class _BalanceScreenState extends State<BalanceScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        SizedBox(height: 34, child: _headerRow1(store)),
+                        SizedBox(
+                          height: HeaderCircleButton.diameter,
+                          child: _headerRow1(store),
+                        ),
                         const SizedBox(height: 4),
                         _headerRow2(store),
                         if (showRatio) ...[
@@ -256,7 +265,7 @@ class _BalanceScreenState extends State<BalanceScreen> {
                   // layout and still reaches the screen reader.
                   : const SizedBox(
                       key: ValueKey('balance-header-empty'),
-                      height: 34,
+                      height: HeaderCircleButton.diameter,
                       width: double.infinity,
                     ),
             ),
@@ -266,7 +275,7 @@ class _BalanceScreenState extends State<BalanceScreen> {
             Positioned(
               top: 0,
               right: 0,
-              child: _CircleButton(
+              child: HeaderCircleButton(
                 icon: Icons.add_rounded,
                 accent: true,
                 onTap: () => showQuickAdd(context),
@@ -295,16 +304,16 @@ class _BalanceScreenState extends State<BalanceScreen> {
           onTap: () => _pickDate(store),
         ),
         const SizedBox(width: Insets.sm),
-        _CircleButton(
+        HeaderCircleButton(
           icon: store.masked
               ? Icons.visibility_off_rounded
               : Icons.visibility_rounded,
           onTap: store.toggleMasked,
         ),
         // The + is drawn as a persistent overlay (see _header); reserve its
-        // footprint — the sm gap plus its 34pt width — so the eye keeps the
+        // footprint — the sm gap plus its 36pt width — so the eye keeps the
         // exact x-position it had when the + was an inline sibling here.
-        const SizedBox(width: Insets.sm + 34),
+        const SizedBox(width: Insets.sm + HeaderCircleButton.diameter),
       ],
     );
   }
@@ -1338,35 +1347,6 @@ class _DatePill extends StatelessWidget {
               color: AppColors.textSecondary,
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _CircleButton extends StatelessWidget {
-  const _CircleButton({
-    required this.icon,
-    required this.onTap,
-    this.accent = false,
-  });
-
-  final IconData icon;
-  final VoidCallback onTap;
-  final bool accent;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: accent ? AppColors.accent : AppColors.surfaceAlt,
-      shape: const CircleBorder(),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: SizedBox(
-          width: 34,
-          height: 34,
-          child: Icon(icon, size: accent ? 19 : 16, color: Colors.white),
         ),
       ),
     );

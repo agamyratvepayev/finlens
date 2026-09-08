@@ -52,7 +52,7 @@ class ScreenHeader extends StatelessWidget {
           if (showBack)
             Padding(
               padding: const EdgeInsets.only(right: Insets.sm),
-              child: _CircleButton(
+              child: HeaderCircleButton(
                 icon: Icons.arrow_back_rounded,
                 plain: true,
                 onTap: () => Navigator.of(context).maybePop(),
@@ -71,7 +71,7 @@ class ScreenHeader extends StatelessWidget {
           ),
           if (trailing != null) ...[trailing!, const SizedBox(width: Insets.sm)],
           if (showEye)
-            _CircleButton(
+            HeaderCircleButton(
               icon: store.masked
                   ? Icons.visibility_off_rounded
                   : Icons.visibility_rounded,
@@ -79,7 +79,7 @@ class ScreenHeader extends StatelessWidget {
             ),
           if (showAdd) ...[
             const SizedBox(width: Insets.sm),
-            _CircleButton(
+            HeaderCircleButton(
               icon: Icons.add_rounded,
               accent: true,
               onTap: onAdd,
@@ -91,18 +91,42 @@ class ScreenHeader extends StatelessWidget {
   }
 }
 
-class _CircleButton extends StatelessWidget {
-  const _CircleButton({
+/// The circular header control: the `+`, the eye, the back arrow, the Ledger's
+/// range-lens `×`. One declaration, because a user who switches tabs must find
+/// the same button under the same thumb — three private copies drifted to 34pt
+/// / 36pt and to two different gutters, and the `+` visibly jumped between
+/// Balance, the Ledger and the Planner. 36pt is the reference: [ScreenHeader]
+/// already carries it on the Planner, Archive, Categories, Tags, See-all and
+/// Category-detail screens.
+///
+/// `plus_button_alignment_test.dart` pins the resulting rect across all five
+/// screens; keep the geometry here and nowhere else.
+class HeaderCircleButton extends StatelessWidget {
+  const HeaderCircleButton({
+    super.key,
     required this.icon,
     this.onTap,
     this.accent = false,
     this.plain = false,
+    this.tint,
   });
+
+  /// The one diameter. Call sites that reserve the button's footprint measure
+  /// it from here rather than repeating the literal.
+  static const double diameter = 36;
 
   final IconData icon;
   final VoidCallback? onTap;
   final bool accent;
+
+  /// Drops the filled pill, leaving the glyph on a transparent ground — the
+  /// back arrow's rendering.
   final bool plain;
+
+  /// Overrides the glyph colour (size/background/behaviour are unchanged). The
+  /// Ledger lens's × uses it to echo the accent title it clears; eye and `+`
+  /// leave it null and keep the default textPrimary glyph.
+  final Color? tint;
 
   @override
   Widget build(BuildContext context) {
@@ -115,12 +139,12 @@ class _CircleButton extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         child: SizedBox(
-          width: 36,
-          height: 36,
+          width: diameter,
+          height: diameter,
           child: Icon(
             icon,
             size: accent ? 22 : 19,
-            color: AppColors.textPrimary,
+            color: tint ?? AppColors.textPrimary,
           ),
         ),
       ),

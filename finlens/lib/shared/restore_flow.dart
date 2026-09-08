@@ -21,29 +21,22 @@ Future<void> runRestoreFlow(BuildContext context, AppStore store) async {
   final l = AppLocalizations.of(context);
   final messenger = ScaffoldMessenger.of(context);
 
-  final FilePickerResult? picked;
+  final PlatformFile? picked;
   try {
-    picked = await FilePicker.pickFiles(
+    picked = await FilePicker.pickFile(
       dialogTitle: l.moreRestore,
       type: FileType.custom,
       allowedExtensions: const ['json'],
-      withData: true,
     );
   } catch (_) {
     messenger.showSnackBar(SnackBar(content: Text(l.restoreInvalidMsg)));
     return;
   }
-  if (picked == null || picked.files.isEmpty) return; // cancelled
-
-  final bytes = picked.files.single.bytes;
-  if (bytes == null) {
-    messenger.showSnackBar(SnackBar(content: Text(l.restoreInvalidMsg)));
-    return;
-  }
+  if (picked == null) return; // cancelled
 
   final BackupDocument doc;
   try {
-    doc = decodeBackup(utf8.decode(bytes));
+    doc = decodeBackup(utf8.decode(await picked.readAsBytes()));
   } catch (_) {
     messenger.showSnackBar(SnackBar(content: Text(l.restoreInvalidMsg)));
     return;

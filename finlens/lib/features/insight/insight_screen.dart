@@ -576,6 +576,9 @@ class _InsightHeader extends StatelessWidget {
 /// A 26pt circular tool button — Insight's header clone (spec §2/§13). Smaller
 /// than the shared [ScreenHeader]'s 36pt so four of them fit beside a long month
 /// at 320pt.
+///
+/// Intentionally *not* [HeaderCircleButton]: Insight's header is the small clone
+/// (26pt, no `+`). Do not merge the two.
 class _CircleButton extends StatelessWidget {
   const _CircleButton({
     required this.icon,
