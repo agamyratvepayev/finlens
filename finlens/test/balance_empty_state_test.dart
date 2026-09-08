@@ -68,7 +68,14 @@ void main() {
     expect(find.text('Today'), findsNothing);
 
     // The + is the only header control that survives, so it stays.
-    expect(find.byIcon(Icons.add_rounded), findsOneWidget);
+    // Two add glyphs now: the header's 22pt control, and the hint's inline 13pt
+    // mark in the fourth row — the same pair the Ledger and the Planner have
+    // always shown. The header one is what "keeps the +" is about.
+    final addGlyphs = tester
+        .widgetList<Icon>(find.byIcon(Icons.add_rounded))
+        .map((i) => i.size)
+        .toList();
+    expect(addGlyphs, containsAll(<double>[22, 13]));
   });
 
   testWidgets(
@@ -97,43 +104,41 @@ void main() {
       find.text('You never have to work out how much you actually have.'),
       findsOneWidget,
     );
-    expect(find.text('Add an account'), findsOneWidget);
+    // The fourth row names what fills the screen, and Balance is filled by the
+    // header + above it — the same sentence the Ledger and the Planner show.
+    // It used to be an "Add an account" text button, a second create control
+    // two rows under the + it duplicated.
+    expect(find.textContaining('above'), findsOneWidget);
+    expect(find.text('Add an account'), findsNothing);
   });
 
-  testWidgets('empty store: the action is a low-emphasis text button, not a '
-      'filled pill', (tester) async {
-    await tester.pumpWidget(FinLensApp(store: emptyStore()));
-    await tester.pumpAndSettle();
-
-    // A TextButton (no fill), never a FilledButton.
-    expect(find.widgetWithText(TextButton, 'Add an account'), findsOneWidget);
-    expect(find.byType(FilledButton), findsNothing);
-  });
-
-  testWidgets('empty store: the action has a tap target of at least 44×44',
+  testWidgets('empty store: the fourth row carries no create control at all',
       (tester) async {
     await tester.pumpWidget(FinLensApp(store: emptyStore()));
     await tester.pumpAndSettle();
 
-    final size =
-        tester.getSize(find.widgetWithText(TextButton, 'Add an account'));
-    expect(size.width, greaterThanOrEqualTo(44));
-    expect(size.height, greaterThanOrEqualTo(44));
+    // Neither a filled pill nor the low-emphasis text button it replaced: the
+    // hint is a sentence, and the only create affordance is the header +.
+    expect(find.byType(FilledButton), findsNothing);
+    expect(find.byType(TextButton), findsNothing);
   });
 
   testWidgets('empty store: the + sits at the same coordinates as when '
       'populated', (tester) async {
+    // The empty state also draws the hint's inline 13pt add mark, and `.first`
+    // reaches that one — so address the header control by its 22pt glyph.
+    Offset headerPlus(WidgetTester t) => t.getTopLeft(find.byWidgetPredicate(
+        (w) => w is Icon && w.icon == Icons.add_rounded && w.size == 22));
+
     // Empty.
     await tester.pumpWidget(FinLensApp(store: emptyStore()));
     await tester.pumpAndSettle();
-    final emptyPlus =
-        tester.getTopLeft(find.byIcon(Icons.add_rounded).first);
+    final emptyPlus = headerPlus(tester);
 
     // Populated (same viewport).
     await tester.pumpWidget(FinLensApp(store: oneAccountStore()));
     await tester.pumpAndSettle();
-    final populatedPlus =
-        tester.getTopLeft(find.byIcon(Icons.add_rounded).first);
+    final populatedPlus = headerPlus(tester);
 
     expect(emptyPlus, populatedPlus,
         reason: 'the + must not move between the two states');
@@ -317,6 +322,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Elinizdekiyle başlayın'), findsOneWidget);
-    expect(find.text('Hesap ekleyin'), findsOneWidget);
+    // The link this asserted is retired; the fourth row is the shared hint.
+    expect(find.textContaining('ile başla'), findsOneWidget);
   });
 }

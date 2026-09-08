@@ -947,13 +947,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get insEmptyNoAccountsBody =>
-      'See what\'s building you up, and what\'s wearing you down.';
-
-  @override
-  String get insStartInBalance => 'Start in Balance';
-
-  @override
-  String get insStartInLedger => 'Start in Ledger';
+      'See what\'s building you up, and what\'s wearing you down — as soon as you record it.';
 
   @override
   String get insEmptyAllHiddenTitle => 'Every account is hidden';
@@ -1000,7 +994,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get insA11yEmptyNoAccounts =>
-      'What actually happened. See what\'s building you up, and what\'s wearing you down.';
+      'What actually happened. See what\'s building you up, and what\'s wearing you down — as soon as you record it.';
 
   @override
   String get insA11yEmptyAllHidden =>
@@ -1279,9 +1273,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get balEmptyBenefit =>
       'You never have to work out how much you actually have.';
-
-  @override
-  String get balAddAccount => 'Add an account';
 
   @override
   String get balAdjustFilter => 'Adjust filter';
@@ -2259,6 +2250,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String ldgFirstRunHint(String plus) {
     return 'Start with $plus above';
   }
+
+  @override
+  String get ldgFirstRunHintA11y => 'Start with the add button above';
 
   @override
   String get ldgRestoreFromBackup => 'Restore from a backup';

@@ -11,7 +11,6 @@ import '../../core/utils/formatters.dart';
 import '../../core/utils/fx.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/amount_text.dart';
-import '../../shared/widgets/app_bottom_nav.dart';
 import '../../shared/widgets/app_card.dart';
 import '../../shared/widgets/range_picker_sheet.dart';
 import '../../shared/widgets/screen_header.dart';
@@ -22,7 +21,6 @@ import '../../theme/app_typography.dart';
 import '../balance/balance_filter.dart';
 import '../ledger/ledger_scope.dart';
 import '../ledger/scoped_ledger_screen.dart';
-import '../shell/app_shell.dart';
 import 'category_detail_screen.dart';
 import 'insight_filter.dart';
 import 'see_all_screen.dart';
@@ -686,15 +684,16 @@ class _EmptyButton extends StatelessWidget {
 }
 
 /// A text link for state 4 / §6 (spec §9): 13pt accentLight, moves the window —
-/// it does not create anything, so it is never a filled button. The intro block
-/// (states 1–2) reuses it as its signpost and passes [minHeight] to grow the
-/// tap target to 44pt without changing the visual register; every other caller
-/// leaves it null, so their rendered tree is unchanged.
+/// it does not create anything, so it is never a filled button.
+///
+/// The intro block used to reuse this as its cross-tab signpost and pass a
+/// `minHeight` to grow the tap target to 44pt. That signpost is gone (Insight
+/// creates nothing, so it has no fourth row), and the parameter went with it —
+/// every remaining caller had left it null, so their rendered tree is unchanged.
 class _EmptyLink extends StatelessWidget {
-  const _EmptyLink({required this.label, required this.onTap, this.minHeight});
+  const _EmptyLink({required this.label, required this.onTap});
   final String label;
   final VoidCallback onTap;
-  final double? minHeight;
 
   @override
   Widget build(BuildContext context) {
@@ -707,14 +706,7 @@ class _EmptyLink extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(Radii.sm),
-      // Null (states 3–4) keeps the original tree exactly; the intro block asks
-      // for a 44pt-tall tappable box around the same 13pt text.
-      child: minHeight == null
-          ? text
-          : ConstrainedBox(
-              constraints: BoxConstraints(minHeight: minHeight!),
-              child: Center(heightFactor: 1, child: text),
-            ),
+      child: text,
     );
   }
 }
@@ -743,11 +735,6 @@ class _IntroBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    // The signpost fixes *this* state: with no accounts the reader belongs in
-    // Balance; with accounts but no entries, in Ledger (spec §4). `noAccounts`
-    // is already computed on the report.
-    final toBalance = report.noAccounts;
-
     return _EmptyScaffold(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -783,18 +770,18 @@ class _IntroBody extends StatelessWidget {
               ),
             ),
           ),
-          // The signpost is part of the block, not pinned to the foot (spec §2):
-          // 20pt below the body, its own button node (spec §4.2), a 44pt target.
+          // The fourth row names what fills the screen. Insight creates
+          // nothing — it reads what the other three tabs record — so it has no
+          // fourth row: the signpost that stood here sent the reader to another
+          // tab, where adding an account still left Insight empty and only
+          // changed the label from "Start in Balance" to "Start in Ledger".
+          // Where the figures come from is now said in the message instead.
+          //
+          // The *box* stays. These two heights are what put this icon where it
+          // is; dropping them would raise the block by half their sum and move
+          // the icon off the line the other five are calibrated against.
           const SizedBox(height: 20),
-          Semantics(
-            button: true,
-            child: _EmptyLink(
-              label: toBalance ? l.insStartInBalance : l.insStartInLedger,
-              minHeight: 44,
-              onTap: () => AppShellScope.maybeOf(context)
-                  ?.goToTab(toBalance ? NavTab.balance : NavTab.ledger),
-            ),
-          ),
+          const SizedBox(height: 44),
         ],
       ),
     );

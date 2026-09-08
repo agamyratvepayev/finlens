@@ -62,7 +62,8 @@ class PlannerEmptyState extends StatelessWidget {
       // shared-height guarantee — so it scales down instead.
       action: FittedBox(
         fit: BoxFit.scaleDown,
-        child: buildFirstRunHint(l.ldgFirstRunHint(sentinel), sentinel),
+        child: buildFirstRunHint(l.ldgFirstRunHint(sentinel), sentinel,
+            semanticsLabel: l.ldgFirstRunHintA11y),
       ),
     );
   }

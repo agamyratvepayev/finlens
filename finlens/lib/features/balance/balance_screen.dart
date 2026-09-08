@@ -18,6 +18,7 @@ import '../../theme/app_typography.dart';
 import 'balance_order.dart';
 import 'widgets/reorderable_group.dart';
 import '../ledger/ledger_scope.dart';
+import '../ledger/ledger_screen.dart' show buildFirstRunHint;
 import '../ledger/scoped_ledger_screen.dart';
 import '../quick_add/quick_add_sheet.dart';
 import 'widgets/account_rows.dart';
@@ -859,35 +860,33 @@ class _BalanceScreenState extends State<BalanceScreen> {
   );
 
   /// The one place an "add account" call to action belongs: what is redundant
-  /// noise in a populated list is the only way forward in an empty one. The
-  /// action is a low-emphasis text button — a one-time account creation should
-  /// not compete with the persistent + — and it stays beside the sentence that
-  /// motivates it rather than migrating to the corner glyph (§4).
+  /// noise in a populated list is the only way forward in an empty one.
+  ///
+  /// The fourth row names what fills the screen. Balance is filled by the header
+  /// `+` above it, exactly as the Ledger and the Planner are, so it points at
+  /// that control with the same sentence rather than carrying a second, rival
+  /// create button of its own — "Add an account" duplicated the `+` two rows
+  /// below it.
   ///
   /// The block is centred against the whole body by [FirstRunBlock]; see the
-  /// Stack in [build]. The link keeps a ≥44 tap target (a widget test pins it)
-  /// but uses a shrink-wrapped tap target and a scale-down label so its height
-  /// is the deterministic figure the shared action box reserves, not Material's
-  /// padded default — which the reserved height could not have predicted (§4).
+  /// Stack in [build].
   Widget _firstRunPane() {
     final l = AppLocalizations.of(context);
+    // A NUL the localized string can never contain, swapped in for `{plus}` so a
+    // translation is free to move the glyph; a string that lost the placeholder
+    // degrades to plain text with the glyph omitted.
+    final sentinel = String.fromCharCode(0);
     return FirstRunBlock(
       icon: Icons.account_balance_wallet_rounded,
       title: l.balNoAccountsYet,
       message: l.balEmptyBenefit,
-      action: TextButton(
-        onPressed: () => showNewAccountSheet(context),
-        style: TextButton.styleFrom(
-          foregroundColor: AppColors.accent,
-          minimumSize: const Size(44, 44),
-          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          padding: const EdgeInsets.symmetric(
-            horizontal: Insets.lg,
-            vertical: _firstRunLinkVPad,
-          ),
-          textStyle: _firstRunLinkTextStyle,
-        ),
-        child: FittedBox(fit: BoxFit.scaleDown, child: Text(l.balAddAccount)),
+      // The hint sits in the reserved fourth-row box, below the text. It never
+      // wraps — a second line would change the block height and undo the
+      // shared-height guarantee — so it scales down instead.
+      action: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: buildFirstRunHint(l.ldgFirstRunHint(sentinel), sentinel,
+            semanticsLabel: l.ldgFirstRunHintA11y),
       ),
     );
   }
@@ -1518,22 +1517,21 @@ class EmptyState extends StatelessWidget {
 // derived heights, computed once here across all five string pairs, keep the
 // blocks the same size whatever the locale or text scale (§2/§4).
 
-/// The link the Balance screen shows as its fourth row, and the style it renders
-/// at. Measured here so the reserved action height (below) mirrors the button's
-/// real height rather than guessing at Material's tap-target math.
-const _firstRunLinkTextStyle = TextStyle(
-  fontSize: 14,
-  fontWeight: FontWeight.w500,
-);
-
 /// The hint's base style, kept in step with `buildFirstRunHint`.
 const _firstRunHintTextStyle = TextStyle(fontSize: 12);
 
-/// Balance's link carries this vertical padding, and floors its height at 44 —
-/// the tap target a widget test pins. Mirrored in [firstRunActionHeight] so the
-/// reserved box never sits under the button.
-const _firstRunLinkVPad = 10.0;
-const _firstRunLinkMinHeight = 44.0;
+/// The fourth row's reserved height.
+///
+/// Historically this was Balance's "Add an account" link — a 14pt/w500 label
+/// plus 10pt of vertical padding, floored at the 44pt tap target. No screen
+/// renders a link any more (Balance took the hint, Insight has no fourth row),
+/// but the figure is kept as an explicit constant rather than rebased onto the
+/// hint: the blocks' icon-centre lines are calibrated to it, and deriving the
+/// box from the hint instead would raise every icon by ~13.5pt — including the
+/// Ledger's and the Planner's, which are the reference. Still a floor, not a
+/// fixed height: a large text scale grows the hint past it and the box grows
+/// with it.
+const double _firstRunActionBox = 44.0;
 
 double _measureFirstRun(
   String text,
@@ -1579,34 +1577,23 @@ double firstRunTextBlockHeight(
   return maxTitle + Insets.xs + maxMessage;
 }
 
-/// The reserved height of the fourth row, shared by all five screens (§4). The
-/// taller of Balance's link (its measured label plus its vertical padding, never
-/// below its 44pt tap target) and the hint's single measured line. The link term
-/// dominates at normal scales, so all five reserve one box regardless of which
-/// fourth row they hold.
+/// The reserved height of the fourth row, shared by all five screens (§4): the
+/// calibration constant, or the hint's measured line when a large text scale
+/// grows it past that. See [_firstRunActionBox] for why the constant is not
+/// rebased onto the hint.
 double firstRunActionHeight(
   AppLocalizations l,
   double textWidth,
   TextScaler scaler,
 ) {
   final sentinel = String.fromCharCode(0);
-  final linkH = _measureFirstRun(
-    l.balAddAccount,
-    _firstRunLinkTextStyle,
-    textWidth,
-    scaler,
-  );
-  final linkBox = math.max(
-    linkH + 2 * _firstRunLinkVPad,
-    _firstRunLinkMinHeight,
-  );
   final hintH = _measureFirstRun(
     l.ldgFirstRunHint(sentinel),
     _firstRunHintTextStyle,
     textWidth,
     scaler,
   );
-  return math.max(linkBox, hintH);
+  return math.max(_firstRunActionBox, hintH);
 }
 
 /// One first-run block, centred against the full height it is given (§1). Place

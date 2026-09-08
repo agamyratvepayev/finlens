@@ -278,7 +278,10 @@ void main() {
       expect(shared, greaterThanOrEqualTo(p - 0.01));
     }
 
-    // The reserved fourth-row height clears the link's 44pt tap-target floor.
+    // The reserved fourth-row height clears 44. That figure was Balance's
+    // "Add an account" tap target; no screen renders a link any more, and the
+    // 44 is now an explicit calibration constant with no live control behind it
+    // — the blocks' icon-centre lines are set by it. See _firstRunActionBox.
     expect(
       firstRunActionHeight(l, width, scaler),
       greaterThanOrEqualTo(44 - 0.01),

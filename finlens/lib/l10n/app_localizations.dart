@@ -1466,20 +1466,8 @@ abstract class AppLocalizations {
   /// No description provided for @insEmptyNoAccountsBody.
   ///
   /// In en, this message translates to:
-  /// **'See what\'s building you up, and what\'s wearing you down.'**
+  /// **'See what\'s building you up, and what\'s wearing you down — as soon as you record it.'**
   String get insEmptyNoAccountsBody;
-
-  /// No description provided for @insStartInBalance.
-  ///
-  /// In en, this message translates to:
-  /// **'Start in Balance'**
-  String get insStartInBalance;
-
-  /// No description provided for @insStartInLedger.
-  ///
-  /// In en, this message translates to:
-  /// **'Start in Ledger'**
-  String get insStartInLedger;
 
   /// No description provided for @insEmptyAllHiddenTitle.
   ///
@@ -1526,7 +1514,7 @@ abstract class AppLocalizations {
   /// No description provided for @insA11yEmptyNoAccounts.
   ///
   /// In en, this message translates to:
-  /// **'What actually happened. See what\'s building you up, and what\'s wearing you down.'**
+  /// **'What actually happened. See what\'s building you up, and what\'s wearing you down — as soon as you record it.'**
   String get insA11yEmptyNoAccounts;
 
   /// No description provided for @insA11yEmptyAllHidden.
@@ -1947,12 +1935,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'You never have to work out how much you actually have.'**
   String get balEmptyBenefit;
-
-  /// No description provided for @balAddAccount.
-  ///
-  /// In en, this message translates to:
-  /// **'Add an account'**
-  String get balAddAccount;
 
   /// No description provided for @balAdjustFilter.
   ///
@@ -3441,6 +3423,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Start with {plus} above'**
   String ldgFirstRunHint(String plus);
+
+  /// No description provided for @ldgFirstRunHintA11y.
+  ///
+  /// In en, this message translates to:
+  /// **'Start with the add button above'**
+  String get ldgFirstRunHintA11y;
 
   /// No description provided for @ldgRestoreFromBackup.
   ///

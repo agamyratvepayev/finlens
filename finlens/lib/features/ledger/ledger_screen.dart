@@ -627,7 +627,8 @@ class _LedgerScreenState extends State<LedgerScreen> {
       message: l.ldgNothingHereMsg,
       action: FittedBox(
         fit: BoxFit.scaleDown,
-        child: buildFirstRunHint(l.ldgFirstRunHint(sentinel), sentinel),
+        child: buildFirstRunHint(l.ldgFirstRunHint(sentinel), sentinel,
+            semanticsLabel: l.ldgFirstRunHintA11y),
       ),
     );
   }
@@ -1104,13 +1105,20 @@ class _LedgerScreenState extends State<LedgerScreen> {
 /// Top-level and public so the Planner's first-run tabs share the one hint
 /// implementation (§4.4), and so the fallback path can be exercised in a test
 /// without a broken localization.
-Widget buildFirstRunHint(String rawWithSentinel, String sentinel) {
+/// [semanticsLabel] replaces the spans' own nodes for the screen reader.
+/// `Text.rich` announces the text spans and skips the `WidgetSpan`, so the line
+/// otherwise reads as "Start with above" — a broken sentence, on the screens a
+/// first-time user is most likely to be lost on. The label names the control in
+/// words instead. Null keeps the raw spans, for the degraded single-part path
+/// below where there is no glyph to name.
+Widget buildFirstRunHint(String rawWithSentinel, String sentinel,
+    {String? semanticsLabel}) {
   const baseStyle = TextStyle(fontSize: 12, color: AppColors.textTertiary);
   final parts = rawWithSentinel.split(sentinel);
   if (parts.length != 2) {
     return Text(parts.join(), textAlign: TextAlign.center, style: baseStyle);
   }
-  return Text.rich(
+  final rich = Text.rich(
     TextSpan(
       style: baseStyle,
       children: [
@@ -1127,6 +1135,12 @@ Widget buildFirstRunHint(String rawWithSentinel, String sentinel) {
       ],
     ),
     textAlign: TextAlign.center,
+  );
+  if (semanticsLabel == null) return rich;
+  return Semantics(
+    label: semanticsLabel,
+    excludeSemantics: true,
+    child: rich,
   );
 }
 

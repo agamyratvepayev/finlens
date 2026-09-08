@@ -970,13 +970,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get insEmptyNoAccountsBody =>
-      'Посмотрите, что вас укрепляет, а что истощает.';
-
-  @override
-  String get insStartInBalance => 'Начать в «Баланс»';
-
-  @override
-  String get insStartInLedger => 'Начать в «Операции»';
+      'Посмотрите, что вас укрепляет, а что истощает, — как только вы что-то запишете.';
 
   @override
   String get insEmptyAllHiddenTitle => 'Все счета скрыты';
@@ -1027,7 +1021,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get insA11yEmptyNoAccounts =>
-      'Что на самом деле произошло. Посмотрите, что вас укрепляет, а что истощает.';
+      'Что на самом деле произошло. Посмотрите, что вас укрепляет, а что истощает, — как только вы что-то запишете.';
 
   @override
   String get insA11yEmptyAllHidden =>
@@ -1309,9 +1303,6 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get balEmptyBenefit =>
       'Вам больше не нужно самим считать, сколько у вас на самом деле денег.';
-
-  @override
-  String get balAddAccount => 'Добавить счёт';
 
   @override
   String get balAdjustFilter => 'Настроить фильтр';
@@ -2308,6 +2299,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String ldgFirstRunHint(String plus) {
     return 'Начните с $plus наверху';
   }
+
+  @override
+  String get ldgFirstRunHintA11y => 'Начните с кнопки добавления наверху';
 
   @override
   String get ldgRestoreFromBackup => 'Восстановить из резервной копии';

@@ -941,13 +941,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get insEmptyNoAccountsBody =>
-      'Seni neyin büyüttüğünü, neyin erittiğini gör.';
-
-  @override
-  String get insStartInBalance => 'Bakiye\'de başla';
-
-  @override
-  String get insStartInLedger => 'Defter\'de başla';
+      'Seni neyin büyüttüğünü, neyin erittiğini gör — bir şey kaydeder kaydetmez.';
 
   @override
   String get insEmptyAllHiddenTitle => 'Her hesap gizli';
@@ -994,7 +988,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get insA11yEmptyNoAccounts =>
-      'Gerçekte ne oldu. Seni neyin büyüttüğünü, neyin erittiğini gör.';
+      'Gerçekte ne oldu. Seni neyin büyüttüğünü, neyin erittiğini gör — bir şey kaydeder kaydetmez.';
 
   @override
   String get insA11yEmptyAllHidden =>
@@ -1271,9 +1265,6 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get balEmptyBenefit =>
       'Ne kadar paranız olduğunu bir daha hesaplamanıza gerek kalmaz.';
-
-  @override
-  String get balAddAccount => 'Hesap ekleyin';
 
   @override
   String get balAdjustFilter => 'Filtreyi ayarla';
@@ -2248,6 +2239,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String ldgFirstRunHint(String plus) {
     return '$plus ile başla';
   }
+
+  @override
+  String get ldgFirstRunHintA11y => 'Yukarıdaki ekle düğmesiyle başla';
 
   @override
   String get ldgRestoreFromBackup => 'Yedekten geri yükle';

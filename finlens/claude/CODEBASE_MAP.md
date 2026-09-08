@@ -17,6 +17,30 @@ Survey date: 2026-08-16. Read-only pass; nothing in the app was modified.
 
 ---
 
+### First-run fourth row — the 44 is a calibration constant
+
+`_firstRunActionBox = 44.0` in `balance_screen.dart` reserves the first-run
+block's fourth row. It was originally Balance's "Add an account" link — a
+14pt/w500 label plus 10pt of padding, floored at the 44pt tap target.
+
+**No screen renders a link there any more.** Balance shows the shared
+`Start with + above` hint; Insight has no fourth row at all (it creates nothing,
+so it points nowhere) and merely reserves the box. The constant is deliberately
+**not** rebased onto the hint: the hint measures 17pt at 1.0 and 22pt at 1.3, so
+deriving the box from it would shrink every block by ~27pt and raise every icon
+by ~13.5pt — including the Ledger's and the Planner's, which are the reference
+lines the six blocks are calibrated against.
+
+Rebasing it is an open decision, not an oversight. `first_run_fourth_row_test.dart`
+pins the Ledger's and Planner's icon-centre y at three widths and two text scales;
+any change to this constant will fail there first.
+
+Also note: `firstRunTextBlockHeight` measures **five** string pairs (Balance,
+Ledger, Planner ×3). Insight is **not** among them and does not use
+`FirstRunBlock`/`EmptyState` at all — it builds its block inline, so its icon has
+never sat on the shared line.
+
+
 ## 0 · Executive summary
 
 - **The project does not currently compile.** `flutter analyze` reports 3

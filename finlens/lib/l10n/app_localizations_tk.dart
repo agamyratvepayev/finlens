@@ -938,13 +938,7 @@ class AppLocalizationsTk extends AppLocalizations {
 
   @override
   String get insEmptyNoAccountsBody =>
-      'Seni nämäniň ösdürýändigini, nämäniň egsildýändigini gör.';
-
-  @override
-  String get insStartInBalance => 'Balansda başla';
-
-  @override
-  String get insStartInLedger => 'Hasapda başla';
+      'Seni nämäniň ösdürýändigini, nämäniň egsildýändigini gör — bir zat ýazan badyňa.';
 
   @override
   String get insEmptyAllHiddenTitle => 'Ähli hasap gizlendi';
@@ -991,7 +985,7 @@ class AppLocalizationsTk extends AppLocalizations {
 
   @override
   String get insA11yEmptyNoAccounts =>
-      'Aslynda näme boldy. Seni nämäniň ösdürýändigini, nämäniň egsildýändigini gör.';
+      'Aslynda näme boldy. Seni nämäniň ösdürýändigini, nämäniň egsildýändigini gör — bir zat ýazan badyňa.';
 
   @override
   String get insA11yEmptyAllHidden =>
@@ -1271,9 +1265,6 @@ class AppLocalizationsTk extends AppLocalizations {
   @override
   String get balEmptyBenefit =>
       'Näçe puluňyzyň bardygyny indi hiç haçan özüňiz hasaplap oturmaly bolmarsyňyz.';
-
-  @override
-  String get balAddAccount => 'Hasap goşuň';
 
   @override
   String get balAdjustFilter => 'Süzgüji sazla';
@@ -2248,6 +2239,9 @@ class AppLocalizationsTk extends AppLocalizations {
   String ldgFirstRunHint(String plus) {
     return 'Ýokardaky $plus bilen başlaň';
   }
+
+  @override
+  String get ldgFirstRunHintA11y => 'Ýokardaky goşmak düwmesi bilen başlaň';
 
   @override
   String get ldgRestoreFromBackup => 'Ätiýaçlyk nusgadan dikeltmek';

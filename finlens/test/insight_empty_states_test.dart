@@ -6,7 +6,6 @@ import 'package:finlens/core/models/models.dart';
 import 'package:finlens/core/store/app_store.dart';
 import 'package:finlens/core/utils/date_range.dart';
 import 'package:finlens/features/balance/balance_filter.dart';
-import 'package:finlens/features/balance/balance_screen.dart';
 import 'package:finlens/features/insight/insight_screen.dart';
 import 'package:finlens/features/shell/app_shell.dart';
 import 'package:finlens/l10n/app_localizations.dart';
@@ -321,9 +320,11 @@ void main() {
       expect(hasEye(), isFalse);
       expect(hasAdd(), isFalse);
       expect(find.byIcon(Icons.keyboard_arrow_down_rounded), findsNothing);
-      // No creation action; the signpost points to Balance.
+      // No creation action, and no fourth row either: Insight creates nothing,
+      // so it does not point anywhere. Where its figures come from is said in
+      // the message instead.
       expect(find.text(l.moreAddAccount), findsNothing);
-      expect(find.text(l.insStartInBalance), findsOneWidget);
+      expect(find.textContaining('Start in'), findsNothing);
     });
 
     testWidgets('state 2 — no records: same body, no header, Ledger signpost',
@@ -338,8 +339,11 @@ void main() {
       expect(hasEye(), isFalse);
       expect(hasAdd(), isFalse);
       expect(find.byIcon(Icons.keyboard_arrow_down_rounded), findsNothing);
-      // Accounts exist, so the signpost points to Ledger.
-      expect(find.text(l.insStartInLedger), findsOneWidget);
+      // The signpost is gone in this state too — it was the only thing that
+      // differed between states 1 and 2, and it changed silently under a reader
+      // who had just followed it. One body, no branch.
+      expect(find.textContaining('Start in'), findsNothing);
+      expect(find.text(l.insEmptyNoAccountsBody), findsOneWidget);
     });
 
     testWidgets('state 3 — everything hidden: filter filled, no add',
@@ -486,61 +490,38 @@ void main() {
           ),
         );
 
-    testWidgets('no accounts → Balance; accounts but no records → Ledger',
-        (tester) async {
-      tester.view.physicalSize = const Size(390, 844);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.reset);
-      final l = await AppLocalizations.delegate.load(const Locale('en'));
-
-      NavTab? got;
-      await tester.pumpWidget(scoped(emptyStore(), (t) => got = t));
-      await tester.pump(const Duration(milliseconds: 300));
-      await tester.tap(find.text(l.insStartInBalance));
-      expect(got, NavTab.balance);
-
-      got = null;
-      await tester.pumpWidget(scoped(accountsNoTxns(), (t) => got = t));
-      await tester.pump(const Duration(milliseconds: 300));
-      await tester.tap(find.text(l.insStartInLedger));
-      expect(got, NavTab.ledger);
-    });
-
-    testWidgets('through the real shell it switches tab without scroll-to-top',
-        (tester) async {
+    // These two cases used to drive the signpost: no accounts → Balance,
+    // accounts but no records → Ledger, and then the same through the real
+    // shell to prove `goToTab` did not bump Balance's scroll-to-top signal.
+    //
+    // The signpost is gone — Insight creates nothing, so it sends the reader
+    // nowhere — and with it the only path from this screen into `goToTab`. What
+    // is left to guard is the new contract: the empty block calls nothing.
+    //
+    // `AppShellScope.goToTab` itself survives in app_shell.dart with no
+    // consumer; its no-scroll-to-top behaviour is no longer exercised from
+    // here, which is reported rather than quietly dropped.
+    testWidgets('the empty block never navigates: goToTab is not called in '
+        'either state', (tester) async {
       tester.view.physicalSize = const Size(390, 844);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.reset);
 
-      // Accounts but no records → state 2, so the signpost is present and every
-      // shell screen still has data to build.
-      await tester.pumpWidget(StoreScope(
-        store: accountsNoTxns(),
-        child: MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          theme: AppTheme.dark,
-          home: const AppShell(),
-        ),
-      ));
-      await tester.pump(const Duration(milliseconds: 300));
+      for (final store in [emptyStore(), accountsNoTxns()]) {
+        NavTab? got;
+        await tester.pumpWidget(scoped(store, (t) => got = t));
+        await tester.pump(const Duration(milliseconds: 300));
 
-      final l = await AppLocalizations.delegate.load(const Locale('en'));
-      // Move to Insight via the bottom nav (a genuine tab change).
-      await tester.tap(find.text(l.navInsight));
-      await tester.pump(const Duration(milliseconds: 300));
+        // Nothing in the block is tappable, so nothing can reach goToTab.
+        expect(find.byType(InkWell), findsNothing);
+        expect(find.textContaining('Start in'), findsNothing);
 
-      int signal() =>
-          tester.widget<BalanceScreen>(find.byType(BalanceScreen)).scrollToTopSignal;
-      final before = signal();
-
-      await tester.tap(find.text(l.insStartInLedger));
-      await tester.pump(const Duration(milliseconds: 300));
-
-      // The scroll-to-top signal Balance carries is untouched — goToTab is a
-      // plain tab change, not a re-tap.
-      expect(signal(), before,
-          reason: 'goToTab must not bump the scroll-to-top signal');
+        // Tapping the body itself is inert.
+        final l = await AppLocalizations.delegate.load(const Locale('en'));
+        await tester.tap(find.text(l.insEmptyNoAccountsBody), warnIfMissed: false);
+        await tester.pump(const Duration(milliseconds: 300));
+        expect(got, isNull, reason: 'the empty block must not change tab');
+      }
     });
 
     testWidgets('the empty block exposes exactly one button node',
@@ -554,13 +535,15 @@ void main() {
       await tester.pump(const Duration(milliseconds: 300));
       final l = await AppLocalizations.delegate.load(const Locale('en'));
 
-      // Exactly one node in the block declares button semantics — the signpost.
+      // No node in the block declares button semantics any more: the signpost
+      // was the only one, and Insight owns no control at all.
       final buttons = find.byWidgetPredicate(
           (w) => w is Semantics && (w.properties.button ?? false));
-      expect(buttons, findsOneWidget);
-      // And that one wraps the link itself.
-      expect(find.descendant(of: buttons, matching: find.text(l.insStartInBalance)),
-          findsOneWidget);
+      expect(buttons, findsNothing);
+      // Nothing in the fourth row is tappable.
+      expect(find.byType(InkWell), findsNothing);
+      expect(find.byType(TextButton), findsNothing);
+      expect(l.insEmptyNoAccountsBody, isNotEmpty);
       handle.dispose();
     });
 
@@ -575,11 +558,12 @@ void main() {
       await tester.pump(const Duration(milliseconds: 300));
       expect(tester.takeException(), isNull);
 
+      // The block still scrolls rather than clipping; there is no longer a link
+      // in it to reach.
       final l = await AppLocalizations.delegate.load(const Locale('en'));
-      final link = find.text(l.insStartInBalance);
-      expect(link, findsOneWidget);
-      await tester.ensureVisible(link);
-      await tester.tap(link); // no AppShellScope here → a safe no-op
+      final body = find.text(l.insEmptyNoAccountsBody);
+      expect(body, findsOneWidget);
+      await tester.ensureVisible(body);
     });
 
     testWidgets('no header → the body starts at the top (no reserved gap)',
