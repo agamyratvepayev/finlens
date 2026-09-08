@@ -96,7 +96,81 @@ class AppLocalizationsTk extends AppLocalizations {
   String get curSymbolOptional => 'Nyşan · islege bagly';
 
   @override
-  String get curBeforeAmount => 'Möçberden öň';
+  String get curPosition => 'Ýerleşiş';
+
+  @override
+  String get curPosBefore => 'Öň';
+
+  @override
+  String get curPosAfter => 'Soň';
+
+  @override
+  String get curEditTitle => 'Pul birligini üýtget';
+
+  @override
+  String get curSaveButton => 'Üýtgeşmeleri ýatda sakla';
+
+  @override
+  String get curDeleteButton => 'Pul birligini poz';
+
+  @override
+  String get curResetButton => 'Başlangyç ýagdaýa getir';
+
+  @override
+  String curDeleteTitle(String name) {
+    return '\"$name\" pozulsynmy?';
+  }
+
+  @override
+  String get curDeleteMsg => 'Onuň görnüşi bu programmadan aýrylar.';
+
+  @override
+  String get curDeleteImpact => 'Hiç bir hasap ýa-da amal üýtgemeýär';
+
+  @override
+  String curResetTitle(String name) {
+    return '\"$name\" başlangyç ýagdaýa getirilsinmi?';
+  }
+
+  @override
+  String get curResetMsg => 'Gurnalan görnüş ýene güýje girer.';
+
+  @override
+  String get curResetImpact => 'Hiç bir hasap ýa-da amal üýtgemeýär';
+
+  @override
+  String curBlockedTitle(String name) {
+    return '\"$name\" heniz pozup bolmaýar';
+  }
+
+  @override
+  String curBlockedAccount(String account) {
+    return '\"$account\" hasaby heniz şonda saklanýar. Ilki şol hasaby başga pul birligine geçiriň.';
+  }
+
+  @override
+  String curBlockedTxns(int count) {
+    return 'Şonda $count amal ýazylan. Ilki şol ýazgylary üýtgediň.';
+  }
+
+  @override
+  String get curListTitle => 'Pul birlikleri';
+
+  @override
+  String get moreCurrencies => 'Pul birlikleri';
+
+  @override
+  String get curSectionInUse => 'ULANYLÝAR';
+
+  @override
+  String get curSectionAdded => 'SIZIŇ GOŞANLARYŇYZ';
+
+  @override
+  String get curEdited => 'Üýtgedildi';
+
+  @override
+  String get curCodeLocked =>
+      'Kody üýtgedip bolmaýar — hasaplar we amallar oňa salgylanýar.';
 
   @override
   String get curDecimals => 'Ondalyk orun';

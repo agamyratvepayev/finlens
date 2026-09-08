@@ -100,7 +100,81 @@ class AppLocalizationsEn extends AppLocalizations {
   String get curSymbolOptional => 'Symbol · optional';
 
   @override
-  String get curBeforeAmount => 'Before amount';
+  String get curPosition => 'Position';
+
+  @override
+  String get curPosBefore => 'Before';
+
+  @override
+  String get curPosAfter => 'After';
+
+  @override
+  String get curEditTitle => 'Edit currency';
+
+  @override
+  String get curSaveButton => 'Save changes';
+
+  @override
+  String get curDeleteButton => 'Delete currency';
+
+  @override
+  String get curResetButton => 'Reset to default';
+
+  @override
+  String curDeleteTitle(String name) {
+    return 'Delete \"$name\"?';
+  }
+
+  @override
+  String get curDeleteMsg => 'Its formatting is removed from this app.';
+
+  @override
+  String get curDeleteImpact => 'No account or transaction is changed';
+
+  @override
+  String curResetTitle(String name) {
+    return 'Reset \"$name\" to default?';
+  }
+
+  @override
+  String get curResetMsg => 'The built-in formatting takes over again.';
+
+  @override
+  String get curResetImpact => 'No account or transaction is changed';
+
+  @override
+  String curBlockedTitle(String name) {
+    return 'Can’t delete \"$name\" yet';
+  }
+
+  @override
+  String curBlockedAccount(String account) {
+    return 'The account \"$account\" is still held in it. Move that account to another currency first.';
+  }
+
+  @override
+  String curBlockedTxns(int count) {
+    return '$count transactions are still recorded in it. Change those entries first.';
+  }
+
+  @override
+  String get curListTitle => 'Currencies';
+
+  @override
+  String get moreCurrencies => 'Currencies';
+
+  @override
+  String get curSectionInUse => 'IN USE';
+
+  @override
+  String get curSectionAdded => 'ADDED BY YOU';
+
+  @override
+  String get curEdited => 'Edited';
+
+  @override
+  String get curCodeLocked =>
+      'The code can’t change — accounts and transactions name it.';
 
   @override
   String get curDecimals => 'Decimal places';

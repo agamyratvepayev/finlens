@@ -14,6 +14,7 @@ import '../../shared/widgets/app_card.dart';
 import '../../shared/widgets/category_cell.dart';
 import '../../shared/widgets/destructive_sheet.dart';
 import '../../shared/widgets/form_fields.dart';
+import '../../shared/widgets/screen_header.dart' show SegmentedPicker;
 import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/app_typography.dart';
@@ -2543,9 +2544,36 @@ Future<String?> showAddCurrencySheet(BuildContext context) {
   );
 }
 
+/// The same sheet in **edit** mode (spec §2), seeded from an existing
+/// definition. Four differences and no fifth: the title, a locked code, a Save
+/// primary, and a destructive action — Delete for a custom currency, Reset to
+/// default for a built-in you have overridden.
+///
+/// Editing a built-in writes a *custom* def under the built-in's own code.
+/// Nothing in the formatter changes: [currencyDef] already prefers a custom
+/// entry over a built-in of the same code, and [customCurrencyDef] already
+/// routes [money] down the metadata branch.
+///
+/// Returns true when something was written (saved, deleted or reset), so the
+/// caller can react; null on cancel.
+Future<bool?> showEditCurrencySheet(BuildContext context, CurrencyDef def) {
+  final l = AppLocalizations.of(context);
+  return showAppSheet<bool>(
+    context,
+    title: l.curEditTitle,
+    initialSize: 0.8,
+    cancelLabel: l.actionCancel,
+    builder: (context, controller) =>
+        _AddCurrencyForm(controller: controller, initial: def),
+  );
+}
+
 class _AddCurrencyForm extends StatefulWidget {
-  const _AddCurrencyForm({required this.controller});
+  const _AddCurrencyForm({required this.controller, this.initial});
   final ScrollController controller;
+
+  /// Non-null puts the form in edit mode (spec §2).
+  final CurrencyDef? initial;
 
   @override
   State<_AddCurrencyForm> createState() => _AddCurrencyFormState();
@@ -2558,9 +2586,19 @@ class _AddCurrencyFormState extends State<_AddCurrencyForm> {
   bool _before = true;
   int _decimals = 2;
 
+  bool get _editing => widget.initial != null;
+
   @override
   void initState() {
     super.initState();
+    final seed = widget.initial;
+    if (seed != null) {
+      _code.text = seed.code;
+      _name.text = seed.name;
+      _symbol.text = seed.symbol ?? '';
+      _before = seed.symbolBefore;
+      _decimals = seed.decimals;
+    }
     for (final c in [_code, _name, _symbol]) {
       c.addListener(() => setState(() {}));
     }
@@ -2575,12 +2613,19 @@ class _AddCurrencyFormState extends State<_AddCurrencyForm> {
   }
 
   String get _codeUp => _code.text.trim().toUpperCase();
-  bool get _duplicate => _codeUp.isNotEmpty && currencyCodeExists(_codeUp);
+
+  /// Create keeps the full duplicate guard. Edit exempts the row's own code —
+  /// an override for `TMT` *must* reuse the built-in's code (spec §2), and the
+  /// code cannot change anyway, so no other code can collide.
+  bool get _duplicate =>
+      !_editing &&
+      _codeUp.isNotEmpty &&
+      currencyCodeExists(_codeUp, excluding: widget.initial?.code);
   bool get _valid =>
       _codeUp.isNotEmpty && _name.text.trim().isNotEmpty && !_duplicate;
 
   CurrencyDef _def() => CurrencyDef(
-        code: _codeUp,
+        code: _editing ? widget.initial!.code : _codeUp,
         name: _name.text.trim(),
         symbol: _symbol.text.trim().isEmpty ? null : _symbol.text.trim(),
         decimals: _decimals,
@@ -2661,23 +2706,40 @@ class _AddCurrencyFormState extends State<_AddCurrencyForm> {
               ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(Insets.xs, Insets.sm, 0, 0),
-                child: Text(l.curInert,
+                child: Text(_editing ? l.curCodeLocked : l.curInert,
                     style: const TextStyle(
                         fontSize: 11,
                         height: 1.45,
                         color: AppColors.textTertiary)),
               ),
+              if (_editing) ...[
+                const SizedBox(height: Insets.lg),
+                _CurrencyDestructiveAction(
+                  def: widget.initial!,
+                  // A custom currency is deleted; an overridden built-in is
+                  // reset, which is not a delete — it drops the override and
+                  // lets the shipped definition take over (§2).
+                  isReset: isOverriddenBuiltIn(widget.initial!.code),
+                ),
+              ],
             ],
           ),
         ),
         _SheetFooter(
-          label: l.curAddButton,
+          label: _editing ? l.curSaveButton : l.curAddButton,
           enabled: _valid,
           onPressed: () {
             final store = StoreScope.read(context);
             final def = _def();
-            store.addCustomCurrency(def);
-            Navigator.of(context).pop(def.code);
+            if (_editing) {
+              // Upsert under the same code — for a built-in this *creates* the
+              // override, for a custom currency it replaces it. One per code.
+              store.updateCustomCurrency(def);
+              Navigator.of(context).pop(true);
+            } else {
+              store.addCustomCurrency(def);
+              Navigator.of(context).pop(def.code);
+            }
           },
         ),
       ],
@@ -2686,6 +2748,14 @@ class _AddCurrencyFormState extends State<_AddCurrencyForm> {
 
   Widget _hair() =>
       Container(height: 1, color: Colors.white.withValues(alpha: 0.07));
+
+  /// The same rule turned on its side. `_hair()` is `height: 1` with no width —
+  /// correct between stacked rows, but inside a `Row` it is a zero-width box and
+  /// paints nothing, which is why the divider the layout comment describes has
+  /// never appeared. A vertical divider needs the width; `CrossAxisAlignment
+  /// .stretch` on the parent Row gives it the height.
+  Widget _vhair() =>
+      Container(width: 1, color: Colors.white.withValues(alpha: 0.07));
 
   /// Row 1 — Code (fixed ~78pt column) │ hairline │ Name (fills). Splits into
   /// two stacked rows at a large text scale (§7a).
@@ -2700,6 +2770,10 @@ class _AddCurrencyFormState extends State<_AddCurrencyForm> {
             n.copyWith(text: n.text.toUpperCase())),
       ],
       textCapitalization: TextCapitalization.characters,
+      // Account.currency and Txn.currency carry the code as a bare string, so a
+      // rename would orphan every row that names it (spec §2). To use a
+      // different code, delete and re-add.
+      locked: _editing,
     );
     final name = _miniField(label: l.curName, controller: _name);
     if (split) {
@@ -2710,14 +2784,22 @@ class _AddCurrencyFormState extends State<_AddCurrencyForm> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           SizedBox(width: 92, child: code),
-          _hair(),
+          _vhair(),
           Expanded(child: name),
         ],
       ),
     );
   }
 
-  /// Row 2 — Symbol (fills) │ hairline │ Before amount switch. Splits at scale.
+  /// Row 2 — Symbol (fills) │ hairline │ Position segmented control. Splits at
+  /// scale.
+  ///
+  /// The switch this replaces was labelled "Before amount" in a 168pt box and
+  /// truncated to "Before a…" at *normal* text scale — the split breakpoint only
+  /// fires above 1.29×, so nothing rescued it — and worse in ru ("Перед суммой")
+  /// and tr ("Tutardan önce"). A two-option segmented control is the honest
+  /// control for a two-way choice, and its option words are short in every
+  /// locale we ship: Before/After, Önce/Sonra, До/После, Öň/Soň.
   Widget _symbolBeforeRow(AppLocalizations l, bool split) {
     final symbol = _miniField(
       label: l.curSymbolOptional,
@@ -2726,32 +2808,48 @@ class _AddCurrencyFormState extends State<_AddCurrencyForm> {
       // without a sentence explaining it (§7a).
       hint: _codeUp.isEmpty ? null : _codeUp,
     );
-    final toggle = ToggleRow(
-      label: l.curBeforeAmount,
-      value: _before,
-      onChanged: (v) => setState(() => _before = v),
+    final position = Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(l.curPosition, style: AppText.caption.copyWith(fontSize: 11.5)),
+          const SizedBox(height: 5),
+          SegmentedPicker<bool>(
+            values: const [true, false],
+            labelOf: (v) => v ? l.curPosBefore : l.curPosAfter,
+            selected: _before,
+            onChanged: (v) => setState(() => _before = v),
+          ),
+        ],
+      ),
     );
     if (split) {
-      return Column(children: [symbol, _hair(), toggle]);
+      return Column(children: [symbol, _hair(), position]);
     }
     return IntrinsicHeight(
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Expanded(child: symbol),
-          _hair(),
-          SizedBox(width: 168, child: toggle),
+          _vhair(),
+          SizedBox(width: 168, child: position),
         ],
       ),
     );
   }
 
+  /// [locked] mirrors [FormRow]'s read-only treatment — padlock beside the
+  /// label, dimmed value, no cursor — so a field the user cannot edit says so in
+  /// the same language everywhere in the app (§3d).
   Widget _miniField({
     required String label,
     required TextEditingController controller,
     String? hint,
     List<TextInputFormatter>? formatters,
     TextCapitalization textCapitalization = TextCapitalization.none,
+    bool locked = false,
   }) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
@@ -2759,12 +2857,32 @@ class _AddCurrencyFormState extends State<_AddCurrencyForm> {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(label, style: AppText.caption.copyWith(fontSize: 11.5)),
+          Row(
+            children: [
+              Flexible(
+                child: Text(label,
+                    style: AppText.caption.copyWith(fontSize: 11.5),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis),
+              ),
+              if (locked)
+                const Padding(
+                  padding: EdgeInsets.only(left: 5),
+                  child: Icon(Icons.lock_rounded,
+                      size: 12, color: AppColors.textTertiary),
+                ),
+            ],
+          ),
           TextField(
             controller: controller,
             inputFormatters: formatters,
             textCapitalization: textCapitalization,
-            style: AppText.body.copyWith(fontSize: 15),
+            readOnly: locked,
+            enableInteractiveSelection: !locked,
+            style: AppText.body.copyWith(
+              fontSize: 15,
+              color: locked ? AppColors.textSecondary : null,
+            ),
             cursorColor: AppColors.accentSoft,
             decoration: InputDecoration(
               isDense: true,
@@ -2836,6 +2954,90 @@ class SectionLabelSmall extends StatelessWidget {
 }
 
 /// Sticky primary action at the bottom of a sheet.
+/// Delete (custom) or Reset to default (an overridden built-in), at the foot of
+/// the edit sheet (spec §2).
+///
+/// Delete is refused while anything still names the code. The message follows
+/// the shape the category guard already uses (`ctBlockedTitle`/`ctBlockedMsg`):
+/// name what is holding it, then name the one thing to do first. It does not
+/// offer to reassign the accounts — that is a bulk data migration and out of
+/// scope. Reset needs no such guard: it changes formatting only, never data.
+class _CurrencyDestructiveAction extends StatelessWidget {
+  const _CurrencyDestructiveAction({required this.def, required this.isReset});
+
+  final CurrencyDef def;
+  final bool isReset;
+
+  Future<void> _run(BuildContext context) async {
+    final l = AppLocalizations.of(context);
+    final store = StoreScope.read(context);
+
+    if (!isReset) {
+      // Blocked delete — an account naming it is the clearest thing to report,
+      // so it wins; otherwise say how many entries hold it.
+      final accounts = store.accountsUsingCurrency(def.code);
+      final txns = store.txnCountForCurrency(def.code);
+      if (accounts.isNotEmpty || txns > 0) {
+        if (!context.mounted) return;
+        await showDialog<void>(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            backgroundColor: AppColors.surfaceAlt,
+            title: Text(l.curBlockedTitle(def.name), style: AppText.rowTitle),
+            content: Text(
+              accounts.isNotEmpty
+                  ? l.curBlockedAccount(accounts.first.name)
+                  : l.curBlockedTxns(txns),
+              style: AppText.body.copyWith(fontSize: 13.5),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                style: TextButton.styleFrom(
+                    foregroundColor: AppColors.accentLight),
+                child: Text(l.actionClose),
+              ),
+            ],
+          ),
+        );
+        return;
+      }
+    }
+
+    if (!context.mounted) return;
+    final ok = await showDestructiveConfirm(
+      context,
+      title: isReset ? l.curResetTitle(def.name) : l.curDeleteTitle(def.name),
+      message: isReset ? l.curResetMsg : l.curDeleteMsg,
+      impact: [
+        ImpactLine.kept(isReset ? l.curResetImpact : l.curDeleteImpact),
+      ],
+      confirmLabel: isReset ? l.curResetButton : l.curDeleteButton,
+    );
+    if (!ok || !context.mounted) return;
+
+    // Both are the same store call: drop the override. For a custom currency
+    // that is the delete; for a built-in it hands display back to the catalog.
+    store.removeCustomCurrency(def.code);
+    if (context.mounted) Navigator.of(context).pop(true);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return Center(
+      child: TextButton(
+        onPressed: () => _run(context),
+        style: TextButton.styleFrom(
+          foregroundColor:
+              isReset ? AppColors.accentLight : AppColors.negative,
+        ),
+        child: Text(isReset ? l.curResetButton : l.curDeleteButton),
+      ),
+    );
+  }
+}
+
 class _SheetFooter extends StatelessWidget {
   const _SheetFooter({
     required this.label,

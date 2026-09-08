@@ -127,7 +127,15 @@ class FormRow extends StatelessWidget {
             if (trailing != null)
               trailing!
             else if (value != null)
-              Flexible(
+              // Expanded, not Flexible. Both slots carry flex 1, so a *loose*
+              // fit let the value shrink-wrap and land immediately after the
+              // label's half of the row — at the card's midpoint — with
+              // `textAlign: right` aligning inside a box already the width of
+              // its own text, i.e. doing nothing. A tight fit gives the value
+              // the rest of the row to align against, so it reaches the right
+              // edge like every other value on the card. The ellipsis budget is
+              // unchanged: loose and tight cap the value at the same half-width.
+              Expanded(
                 child: Text(
                   value!,
                   textAlign: TextAlign.right,

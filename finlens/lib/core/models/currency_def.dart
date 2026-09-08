@@ -195,7 +195,26 @@ CurrencyDef? customCurrencyDef(String code) => _customByCode[code];
 
 /// Whether [code] already names a currency (built-in or custom) — the
 /// duplicate-code guard behind the Add-currency sheet (spec §7a).
-bool currencyCodeExists(String code) {
+///
+/// [excluding] lets the **edit** path exempt the row being edited: saving an
+/// override for `TMT` writes a custom def under a code a built-in already
+/// claims, which is the whole point of editing a built-in, and must not read as
+/// a duplicate. Create passes nothing and stays guarded exactly as before.
+bool currencyCodeExists(String code, {String? excluding}) {
   final c = code.trim().toUpperCase();
+  if (excluding != null && excluding.trim().toUpperCase() == c) return false;
   return _builtInByCode.containsKey(c) || _customByCode.containsKey(c);
+}
+
+/// The shipped definition for [code], ignoring any custom override — what
+/// "Reset to default" restores, and the yardstick for deciding whether an
+/// override actually shadows a built-in.
+CurrencyDef? builtInCurrencyDef(String code) =>
+    _builtInByCode[code.trim().toUpperCase()];
+
+/// Whether a custom override for [code] shadows a built-in of the same code —
+/// the currency list's `· Edited` subtitle (spec §1).
+bool isOverriddenBuiltIn(String code) {
+  final c = code.trim().toUpperCase();
+  return _builtInByCode.containsKey(c) && _customByCode.containsKey(c);
 }

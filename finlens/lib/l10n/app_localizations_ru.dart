@@ -98,7 +98,81 @@ class AppLocalizationsRu extends AppLocalizations {
   String get curSymbolOptional => 'Символ · необязательно';
 
   @override
-  String get curBeforeAmount => 'Перед суммой';
+  String get curPosition => 'Позиция';
+
+  @override
+  String get curPosBefore => 'До';
+
+  @override
+  String get curPosAfter => 'После';
+
+  @override
+  String get curEditTitle => 'Изменить валюту';
+
+  @override
+  String get curSaveButton => 'Сохранить';
+
+  @override
+  String get curDeleteButton => 'Удалить валюту';
+
+  @override
+  String get curResetButton => 'Сбросить настройки';
+
+  @override
+  String curDeleteTitle(String name) {
+    return 'Удалить «$name»?';
+  }
+
+  @override
+  String get curDeleteMsg => 'Её формат будет удалён из приложения.';
+
+  @override
+  String get curDeleteImpact => 'Счета и операции не изменятся';
+
+  @override
+  String curResetTitle(String name) {
+    return 'Сбросить «$name»?';
+  }
+
+  @override
+  String get curResetMsg => 'Снова вступит в силу встроенный формат.';
+
+  @override
+  String get curResetImpact => 'Счета и операции не изменятся';
+
+  @override
+  String curBlockedTitle(String name) {
+    return 'Пока нельзя удалить «$name»';
+  }
+
+  @override
+  String curBlockedAccount(String account) {
+    return 'Счёт «$account» всё ещё ведётся в ней. Сначала переведите этот счёт в другую валюту.';
+  }
+
+  @override
+  String curBlockedTxns(int count) {
+    return 'В ней записано операций: $count. Сначала измените эти записи.';
+  }
+
+  @override
+  String get curListTitle => 'Валюты';
+
+  @override
+  String get moreCurrencies => 'Валюты';
+
+  @override
+  String get curSectionInUse => 'ИСПОЛЬЗУЮТСЯ';
+
+  @override
+  String get curSectionAdded => 'ДОБАВЛЕНЫ ВАМИ';
+
+  @override
+  String get curEdited => 'Изменена';
+
+  @override
+  String get curCodeLocked =>
+      'Код изменить нельзя — на него ссылаются счета и операции.';
 
   @override
   String get curDecimals => 'Знаков после запятой';

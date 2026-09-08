@@ -97,7 +97,81 @@ class AppLocalizationsTr extends AppLocalizations {
   String get curSymbolOptional => 'Simge · isteğe bağlı';
 
   @override
-  String get curBeforeAmount => 'Tutardan önce';
+  String get curPosition => 'Konum';
+
+  @override
+  String get curPosBefore => 'Önce';
+
+  @override
+  String get curPosAfter => 'Sonra';
+
+  @override
+  String get curEditTitle => 'Para birimini düzenle';
+
+  @override
+  String get curSaveButton => 'Değişiklikleri kaydet';
+
+  @override
+  String get curDeleteButton => 'Para birimini sil';
+
+  @override
+  String get curResetButton => 'Varsayılana sıfırla';
+
+  @override
+  String curDeleteTitle(String name) {
+    return '\"$name\" silinsin mi?';
+  }
+
+  @override
+  String get curDeleteMsg => 'Biçimi bu uygulamadan kaldırılır.';
+
+  @override
+  String get curDeleteImpact => 'Hiçbir hesap veya işlem değişmez';
+
+  @override
+  String curResetTitle(String name) {
+    return '\"$name\" varsayılana sıfırlansın mı?';
+  }
+
+  @override
+  String get curResetMsg => 'Yerleşik biçim yeniden geçerli olur.';
+
+  @override
+  String get curResetImpact => 'Hiçbir hesap veya işlem değişmez';
+
+  @override
+  String curBlockedTitle(String name) {
+    return '\"$name\" henüz silinemez';
+  }
+
+  @override
+  String curBlockedAccount(String account) {
+    return '\"$account\" hesabı hâlâ bu birimde tutuluyor. Önce o hesabı başka bir para birimine taşıyın.';
+  }
+
+  @override
+  String curBlockedTxns(int count) {
+    return 'Bu birimde $count işlem kayıtlı. Önce o kayıtları değiştirin.';
+  }
+
+  @override
+  String get curListTitle => 'Para birimleri';
+
+  @override
+  String get moreCurrencies => 'Para birimleri';
+
+  @override
+  String get curSectionInUse => 'KULLANIMDA';
+
+  @override
+  String get curSectionAdded => 'SİZİN EKLEDİKLERİNİZ';
+
+  @override
+  String get curEdited => 'Düzenlendi';
+
+  @override
+  String get curCodeLocked =>
+      'Kod değiştirilemez — hesaplar ve işlemler onu kullanıyor.';
 
   @override
   String get curDecimals => 'Ondalık basamak';

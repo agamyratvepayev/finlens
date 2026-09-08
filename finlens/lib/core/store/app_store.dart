@@ -2714,6 +2714,79 @@ class AppStore extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Writes the display metadata for [def]'s code, replacing any override that
+  /// already exists for it (spec §2). Editing a **built-in** lands here too: the
+  /// result is a custom def under the built-in's own code, which
+  /// [currencyDef] already prefers and [customCurrencyDef] already routes
+  /// through the metadata formatter — so no formatter changes hands.
+  ///
+  /// Upsert, never append: one override per code, so editing the same built-in
+  /// twice cannot leave two rows fighting over it (§6).
+  void updateCustomCurrency(CurrencyDef def) {
+    final normalised = def.copyWith(custom: true);
+    final i = _customCurrencies.indexWhere((c) => c.code == normalised.code);
+    if (i >= 0) {
+      _customCurrencies[i] = normalised;
+    } else {
+      _customCurrencies.add(normalised);
+    }
+    // Re-register before notifying so the rows already on screen behind the
+    // sheet reformat on this same frame (spec §5).
+    setCustomCurrencies(_customCurrencies);
+    notifyListeners();
+  }
+
+  /// Drops the override for [code]. For a custom currency this deletes it; for
+  /// an overridden built-in it is "Reset to default" — the shipped definition
+  /// takes over again. Either way it touches **no** account and no transaction
+  /// (spec §2): deleting a currency in use is blocked upstream, never cascaded.
+  void removeCustomCurrency(String code) {
+    final c = code.trim().toUpperCase();
+    if (!_customCurrencies.any((x) => x.code == c)) return;
+    _customCurrencies.removeWhere((x) => x.code == c);
+    setCustomCurrencies(_customCurrencies);
+    notifyListeners();
+  }
+
+  /// Accounts denominated in [code] — the first thing that blocks a delete, and
+  /// what the block message names (spec §2).
+  List<Account> accountsUsingCurrency(String code) =>
+      [for (final a in _accounts) if (a.currency == code) a];
+
+  /// Transactions carrying [code]. Counted, not listed: the message names an
+  /// account when there is one, and otherwise says how many entries hold it.
+  int txnCountForCurrency(String code) =>
+      _txns.where((t) => t.currency == code).length;
+
+  /// Whether anything at all still names [code].
+  bool currencyInUse(String code) =>
+      accountsUsingCurrency(code).isNotEmpty || txnCountForCurrency(code) > 0;
+
+  /// How many rows the currency screen lists — the More ▸ Data count (spec §1).
+  /// Custom currencies are counted once, under ADDED BY YOU, even when they are
+  /// also in use, so this matches what the screen shows rather than exceeding it.
+  int get currencyRowCount {
+    final customCodes = {for (final c in _customCurrencies) c.code};
+    final inUse =
+        currencyCodesInUse().where((c) => !customCodes.contains(c)).length;
+    return inUse + customCodes.length;
+  }
+
+  /// Codes actually referenced by an account or a transaction, plus the base
+  /// currency — the IN USE section of the currency screen (spec §1). Not all 180
+  /// ISO codes: this screen lists what this store actually touches.
+  List<String> currencyCodesInUse() {
+    final seen = <String>{Fx.baseCurrency};
+    for (final a in _accounts) {
+      seen.add(a.currency);
+    }
+    for (final t in _txns) {
+      seen.add(t.currency);
+    }
+    final out = seen.toList()..sort();
+    return out;
+  }
+
   // ── Mutations: accounts ───────────────────────────────────────────────────
 
   Account addAccount({

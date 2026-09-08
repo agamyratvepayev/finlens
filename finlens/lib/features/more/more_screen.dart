@@ -16,6 +16,7 @@ import '../../theme/app_theme.dart';
 import '../../theme/app_typography.dart';
 import '../planner/archive_screen.dart';
 import 'category_management_screen.dart';
+import 'currency_management_screen.dart';
 import 'tag_management_screen.dart';
 import 'widgets/split_action_row.dart';
 import 'widgets/split_count_row.dart';
@@ -225,6 +226,18 @@ class MoreScreen extends StatelessWidget {
                   // Full-width hairline: the row above has no icon column to
                   // align an indent to.
                   const RowDivider(),
+                  // Currencies is the same kind of thing as Categories and Tags
+                  // — data you set up once and later correct (spec §1). Its
+                  // count is what the currency screen lists: the codes actually
+                  // in use plus the ones you added.
+                  _CurrenciesRow(
+                    count: store.currencyRowCount,
+                    onTap: () => Navigator.of(context, rootNavigator: true)
+                        .push(MaterialPageRoute(
+                      builder: (_) => const CurrencyManagementScreen(),
+                    )),
+                  ),
+                  const RowDivider(indent: 48),
                   _ArchiveRow(
                     count: store.archivedCount,
                     onTap: () => Navigator.of(context, rootNavigator: true)
@@ -294,6 +307,51 @@ Widget _card(List<Widget> children) => AppCard(
 /// Renders at zero and prints `0` rather than disappearing: Archive has its own
 /// empty state, so a tap at zero lands somewhere coherent, and a row that
 /// vanishes and returns is a worse surprise than a bare `0`.
+/// More ▸ Data ▸ Currencies (spec §1) — modelled on [_ArchiveRow] so the two
+/// read as one card.
+class _CurrenciesRow extends StatelessWidget {
+  const _CurrenciesRow({required this.count, required this.onTap});
+
+  final int count;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return InkWell(
+      onTap: onTap,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 38),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: Insets.md),
+          child: Row(
+            children: [
+              const SizedBox(
+                width: 24,
+                child: Icon(Icons.payments_rounded,
+                    size: 18, color: AppColors.textSecondary),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  l.moreCurrencies,
+                  style: AppText.body.copyWith(
+                      fontSize: 14.5, color: AppColors.textPrimary),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: Insets.sm),
+              Text('$count', style: AppText.amount),
+              const _RowTrailingChevron(),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _ArchiveRow extends StatelessWidget {
   const _ArchiveRow({required this.count, required this.onTap});
 

@@ -270,11 +270,137 @@ abstract class AppLocalizations {
   /// **'Symbol · optional'**
   String get curSymbolOptional;
 
-  /// No description provided for @curBeforeAmount.
+  /// No description provided for @curPosition.
   ///
   /// In en, this message translates to:
-  /// **'Before amount'**
-  String get curBeforeAmount;
+  /// **'Position'**
+  String get curPosition;
+
+  /// No description provided for @curPosBefore.
+  ///
+  /// In en, this message translates to:
+  /// **'Before'**
+  String get curPosBefore;
+
+  /// No description provided for @curPosAfter.
+  ///
+  /// In en, this message translates to:
+  /// **'After'**
+  String get curPosAfter;
+
+  /// No description provided for @curEditTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit currency'**
+  String get curEditTitle;
+
+  /// No description provided for @curSaveButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Save changes'**
+  String get curSaveButton;
+
+  /// No description provided for @curDeleteButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete currency'**
+  String get curDeleteButton;
+
+  /// No description provided for @curResetButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset to default'**
+  String get curResetButton;
+
+  /// No description provided for @curDeleteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete \"{name}\"?'**
+  String curDeleteTitle(String name);
+
+  /// No description provided for @curDeleteMsg.
+  ///
+  /// In en, this message translates to:
+  /// **'Its formatting is removed from this app.'**
+  String get curDeleteMsg;
+
+  /// No description provided for @curDeleteImpact.
+  ///
+  /// In en, this message translates to:
+  /// **'No account or transaction is changed'**
+  String get curDeleteImpact;
+
+  /// No description provided for @curResetTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset \"{name}\" to default?'**
+  String curResetTitle(String name);
+
+  /// No description provided for @curResetMsg.
+  ///
+  /// In en, this message translates to:
+  /// **'The built-in formatting takes over again.'**
+  String get curResetMsg;
+
+  /// No description provided for @curResetImpact.
+  ///
+  /// In en, this message translates to:
+  /// **'No account or transaction is changed'**
+  String get curResetImpact;
+
+  /// No description provided for @curBlockedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Can’t delete \"{name}\" yet'**
+  String curBlockedTitle(String name);
+
+  /// No description provided for @curBlockedAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'The account \"{account}\" is still held in it. Move that account to another currency first.'**
+  String curBlockedAccount(String account);
+
+  /// No description provided for @curBlockedTxns.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} transactions are still recorded in it. Change those entries first.'**
+  String curBlockedTxns(int count);
+
+  /// No description provided for @curListTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Currencies'**
+  String get curListTitle;
+
+  /// No description provided for @moreCurrencies.
+  ///
+  /// In en, this message translates to:
+  /// **'Currencies'**
+  String get moreCurrencies;
+
+  /// No description provided for @curSectionInUse.
+  ///
+  /// In en, this message translates to:
+  /// **'IN USE'**
+  String get curSectionInUse;
+
+  /// No description provided for @curSectionAdded.
+  ///
+  /// In en, this message translates to:
+  /// **'ADDED BY YOU'**
+  String get curSectionAdded;
+
+  /// No description provided for @curEdited.
+  ///
+  /// In en, this message translates to:
+  /// **'Edited'**
+  String get curEdited;
+
+  /// No description provided for @curCodeLocked.
+  ///
+  /// In en, this message translates to:
+  /// **'The code can’t change — accounts and transactions name it.'**
+  String get curCodeLocked;
 
   /// No description provided for @curDecimals.
   ///
