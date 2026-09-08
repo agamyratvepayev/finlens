@@ -17,8 +17,8 @@ import 'package:finlens/core/store/app_store.dart';
 /// flutter test hangs on the author's machine — run these yourself:
 ///   flutter test test/budget_object_migration_test.dart
 void main() {
-  test('schemaVersion is 5 (budgets table added)', () {
-    expect(LocalDatabase.schemaVersion, 5);
+  test('schemaVersion is 6 (group-sync tables added)', () {
+    expect(LocalDatabase.schemaVersion, 6);
   });
 
   // ── the migration helper, in isolation ──────────────────────────────────────

@@ -1,6 +1,6 @@
 import 'dart:io' show Platform;
 
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, visibleForTesting;
 import 'package:path/path.dart' show join;
 // `sqflite_ffi.dart` re-exports the full sqflite API (Database, databaseFactory,
 // OpenDatabaseOptions, …) plus the desktop FFI factory used in [open].
@@ -32,10 +32,15 @@ class LocalDatabase {
   // no longer three fields on a category; the legacy category budget columns are
   // left in place (dormant, written as defaults) so the migration can still read
   // an older file on the way in — see [_onUpgrade] and `legacyBudgetsFromRows`.
+  // v6 (group sync) adds the three sync tables — [syncShadowTable],
+  // [syncConflictsTable], [syncMetaTable]. They are deliberately NOT part of
+  // [entityTables]: the persister's clear+rewrite must never touch them, and
+  // sync state must not live in [metaTable] for the same reason (it is wiped on
+  // every snapshot write).
   // The bump is one-way and additive: a newer build reads an older file (the new
   // columns simply come back empty/null), while an older build rejects a newer
   // backup. See [_onUpgrade].
-  static const int schemaVersion = 5;
+  static const int schemaVersion = 6;
 
   static const String accountsTable = 'accounts';
   static const String categoriesTable = 'categories';
@@ -46,6 +51,9 @@ class LocalDatabase {
   static const String tasksTable = 'tasks';
   static const String currenciesTable = 'currencies';
   static const String metaTable = 'meta';
+  static const String syncShadowTable = 'sync_shadow';
+  static const String syncConflictsTable = 'sync_conflicts';
+  static const String syncMetaTable = 'sync_meta';
 
   /// Entity tables in a dependency-neutral order (there are no FK constraints,
   /// so insertion order is free). Used by the persister to clear + rewrite.
@@ -71,6 +79,22 @@ class LocalDatabase {
     final path = join(await databaseFactory.getDatabasesPath(), dbFileName);
     final db = await databaseFactory.openDatabase(
       path,
+      options: OpenDatabaseOptions(
+        version: schemaVersion,
+        onCreate: _onCreate,
+        onUpgrade: _onUpgrade,
+      ),
+    );
+    return LocalDatabase._(db);
+  }
+
+  /// An in-memory database at the current schema — for tests only, so they
+  /// never touch (or clobber) a real on-disk `finlens.db`.
+  @visibleForTesting
+  static Future<LocalDatabase> openInMemory() async {
+    sqfliteFfiInit();
+    final db = await databaseFactoryFfi.openDatabase(
+      inMemoryDatabasePath,
       options: OpenDatabaseOptions(
         version: schemaVersion,
         onCreate: _onCreate,
@@ -208,8 +232,45 @@ class LocalDatabase {
         key TEXT PRIMARY KEY,
         value TEXT
       )''');
+    for (final sql in _createSyncTables) {
+      batch.execute(sql);
+    }
     await batch.commit(noResult: true);
   }
+
+  /// Sync bookkeeping (group sharing). `sync_shadow` mirrors the last
+  /// server-acknowledged state of every record so a push can diff against it;
+  /// `sync_conflicts` queues records awaiting the user's mine/theirs choice;
+  /// `sync_meta` holds the auth token, group info and pull cursor. None of
+  /// these belong to [entityTables] — see [schemaVersion] note.
+  static const List<String> _createSyncTables = [
+    '''
+      CREATE TABLE $syncShadowTable(
+        entity_type TEXT NOT NULL,
+        record_id TEXT NOT NULL,
+        version INTEGER NOT NULL,
+        payload TEXT NOT NULL,
+        PRIMARY KEY (entity_type, record_id)
+      )''',
+    '''
+      CREATE TABLE $syncConflictsTable(
+        entity_type TEXT NOT NULL,
+        record_id TEXT NOT NULL,
+        local_payload TEXT,
+        local_deleted INTEGER NOT NULL,
+        remote_payload TEXT,
+        remote_deleted INTEGER NOT NULL,
+        remote_version INTEGER NOT NULL,
+        remote_updated_by TEXT,
+        remote_updated_at INTEGER,
+        PRIMARY KEY (entity_type, record_id)
+      )''',
+    '''
+      CREATE TABLE $syncMetaTable(
+        key TEXT PRIMARY KEY,
+        value TEXT
+      )''',
+  ];
 
   /// The user-defined currencies table (spec §7a). Custom currencies are pure
   /// display metadata — no rate is stored, because none is applied (§10).
@@ -275,6 +336,11 @@ class LocalDatabase {
       // budgets from the categories table's legacy budget columns (which the
       // upgrade deliberately leaves in place) on the next read.
       await db.execute(_createBudgetsTable);
+    }
+    if (oldVersion < 6) {
+      for (final sql in _createSyncTables) {
+        await db.execute(sql);
+      }
     }
   }
 }

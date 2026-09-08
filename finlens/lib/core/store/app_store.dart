@@ -12,6 +12,7 @@ import '../utils/date_range.dart';
 import '../models/models.dart';
 import '../utils/formatters.dart';
 import '../utils/fx.dart';
+import '../utils/uuid.dart';
 
 /// Single source of truth for the whole app (spec 6.1/6.2).
 ///
@@ -193,8 +194,11 @@ class AppStore extends ChangeNotifier {
   /// other piece of view/undo state, it does not survive a relaunch.
   final Map<String, TaskStatus> _taskPriorStatus = {};
 
+  // The counter survives only to round-trip old backups' `id_seq` meta; new ids
+  // are UUID-suffixed so records minted on different devices can never collide
+  // once group sync merges them.
   int _idSeq = 1000;
-  String _nextId(String prefix) => '$prefix${_idSeq++}';
+  String _nextId(String prefix) => '${prefix}_${uuidV4()}';
 
   // ── Persistence seam ──────────────────────────────────────────────────────
   // Raw, unfiltered views of the canonical collections for the snapshot writer.
@@ -2672,6 +2676,71 @@ class AppStore extends ChangeNotifier {
     _accountIndex = null;
     // A moved balance can newly meet a goal's target; latch any that reached
     // (§4). Progress itself is never stored — only the reached *date* is.
+    _syncGoalLatches();
+    notifyListeners();
+  }
+
+  /// Applies a batch of remote (group-sync) records in place: upserts replace
+  /// by id or append, deletions remove by id. Typed lists keep the mappers in
+  /// the persistence layer where they live. One [notifyListeners] at the end —
+  /// the attached persister then snapshots the merged state locally, and the
+  /// sync engine's own listener sees an empty diff because it updated its
+  /// shadow before calling this.
+  void applySyncedRecords({
+    List<Account> accounts = const [],
+    List<Category> categories = const [],
+    List<Budget> budgets = const [],
+    List<Txn> txns = const [],
+    List<Tag> tags = const [],
+    List<Goal> goals = const [],
+    List<Task> tasks = const [],
+    List<CurrencyDef> currencies = const [],
+    Set<String> deletedAccountIds = const {},
+    Set<String> deletedCategoryIds = const {},
+    Set<String> deletedBudgetIds = const {},
+    Set<String> deletedTxnIds = const {},
+    Set<String> deletedTagIds = const {},
+    Set<String> deletedGoalIds = const {},
+    Set<String> deletedTaskIds = const {},
+    Set<String> deletedCurrencyCodes = const {},
+    int? tagSchema,
+    DateTime? budgetHistorySince,
+  }) {
+    void merge<T>(List<T> target, List<T> incoming, Set<String> deleted,
+        String Function(T) idOf) {
+      for (final item in incoming) {
+        final id = idOf(item);
+        final index = target.indexWhere((e) => idOf(e) == id);
+        if (index >= 0) {
+          target[index] = item;
+        } else {
+          target.add(item);
+        }
+      }
+      if (deleted.isNotEmpty) {
+        target.removeWhere((e) => deleted.contains(idOf(e)));
+      }
+    }
+
+    merge(_accounts, accounts, deletedAccountIds, (Account a) => a.id);
+    merge(_categories, categories, deletedCategoryIds, (Category c) => c.id);
+    merge(_budgets, budgets, deletedBudgetIds, (Budget b) => b.id);
+    merge(_txns, txns, deletedTxnIds, (Txn t) => t.id);
+    merge(_tags, tags, deletedTagIds, (Tag t) => t.id);
+    merge(_goals, goals, deletedGoalIds, (Goal g) => g.id);
+    merge(_tasks, tasks, deletedTaskIds, (Task t) => t.id);
+    merge(_customCurrencies, currencies, deletedCurrencyCodes,
+        (CurrencyDef c) => c.code);
+
+    if (currencies.isNotEmpty || deletedCurrencyCodes.isNotEmpty) {
+      setCustomCurrencies(_customCurrencies);
+    }
+    if (tagSchema != null) _tagSchema = tagSchema;
+    // (budgetHistorySince has no live setter — the epoch only matters at
+    // construction; the persister writes the store's current value back.)
+
+    _sameIndex = null;
+    _accountIndex = null;
     _syncGoalLatches();
     notifyListeners();
   }

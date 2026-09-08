@@ -4236,4 +4236,172 @@ class AppLocalizationsTr extends AppLocalizations {
   String arDeletedLineTask(Object date, int payments, Object total) {
     return '$date silindi · $payments ödeme · $total';
   }
+
+  @override
+  String get moreAccount => 'Hesap';
+
+  @override
+  String get syncSignInGoogle => 'Google ile devam et';
+
+  @override
+  String get syncSignedInAs => 'Giriş yapıldı';
+
+  @override
+  String get syncAccountTitle => 'Hesap ve senkronizasyon';
+
+  @override
+  String get syncSignOut => 'Çıkış yap';
+
+  @override
+  String get syncSignOutConfirmTitle => 'Çıkış yapılsın mı?';
+
+  @override
+  String get syncSignOutConfirmMsg =>
+      'Senkronizasyon durur. Verileriniz bu cihazda kalır.';
+
+  @override
+  String get syncErrorNetwork => 'Bağlantı yok';
+
+  @override
+  String get syncErrorAuth => 'Giriş başarısız';
+
+  @override
+  String get syncErrorGeneric => 'Bir şeyler ters gitti';
+
+  @override
+  String get syncNow => 'Şimdi senkronize et';
+
+  @override
+  String get syncStatusIdle => 'Senkronize';
+
+  @override
+  String get syncStatusSyncing => 'Senkronize ediliyor…';
+
+  @override
+  String get syncStatusOffline => 'Çevrimdışı — değişiklikler sonra gönderilir';
+
+  @override
+  String get syncStatusError => 'Senkronizasyon hatası';
+
+  @override
+  String syncLastSynced(Object time) {
+    return 'Son senkronizasyon $time';
+  }
+
+  @override
+  String get syncConflictsTitle => 'Çakışmalar';
+
+  @override
+  String syncConflictsBanner(int count) {
+    return 'İki kişi tarafından değiştirilen kayıt: $count — incelemek için dokunun';
+  }
+
+  @override
+  String get syncConflictKeepMine => 'Benimkini tut';
+
+  @override
+  String get syncConflictKeepTheirs => 'Onlarınkini tut';
+
+  @override
+  String get syncConflictKeepAllMine => 'Hepsi benimki';
+
+  @override
+  String get syncConflictKeepAllTheirs => 'Hepsi onlarınki';
+
+  @override
+  String syncConflictEditedBy(Object email) {
+    return '$email düzenledi';
+  }
+
+  @override
+  String syncConflictDeletedRemote(Object email) {
+    return '$email sildi';
+  }
+
+  @override
+  String get syncConflictDeletedLocal => 'bu cihazda silindi';
+
+  @override
+  String get syncConflictEmpty => 'Çakışma yok';
+
+  @override
+  String get syncGroupTitle => 'Aile grubu';
+
+  @override
+  String get syncActivateGroup => 'Grup paylaşımını aç';
+
+  @override
+  String get syncActivateGroupDesc =>
+      'Kayıtlarınız ortak olur; davet ettikleriniz görebilir ve düzenleyebilir';
+
+  @override
+  String get syncGroupMembers => 'Üyeler';
+
+  @override
+  String get syncAddMemberHint => 'email@example.com';
+
+  @override
+  String get syncAddMember => 'Davet et';
+
+  @override
+  String get syncMemberActive => 'etkin';
+
+  @override
+  String get syncMemberInvited => 'davet edildi';
+
+  @override
+  String get syncMemberAdded => 'Davet gönderildi';
+
+  @override
+  String syncRemoveMemberTitle(Object email) {
+    return '$email çıkarılsın mı?';
+  }
+
+  @override
+  String get syncRemoveMemberMsg =>
+      'Ortak kayıtları artık göremez. Cihazındaki yerel kopya kalır.';
+
+  @override
+  String get syncRemove => 'Çıkar';
+
+  @override
+  String get syncLeaveGroup => 'Gruptan ayrıl';
+
+  @override
+  String get syncLeaveGroupMsg =>
+      'Ortak kayıtları artık göremezsiniz. Bu cihazda yerel kopya kalır.';
+
+  @override
+  String get syncDeleteGroup => 'Grubu sil';
+
+  @override
+  String get syncDeleteGroupMsg =>
+      'Paylaşım herkes için sona erer. Yerel kopyalar cihazlarda kalır.';
+
+  @override
+  String get syncInviteTitle => 'Grup daveti';
+
+  @override
+  String syncInviteBody(Object owner) {
+    return '$owner sizi ortak kayıtlara davet ediyor';
+  }
+
+  @override
+  String get syncAcceptInvite => 'Kabul et';
+
+  @override
+  String get syncDeclineInvite => 'Reddet';
+
+  @override
+  String get syncJoinWarnTitle => 'Verileriniz değiştirilsin mi?';
+
+  @override
+  String get syncJoinWarnMsg =>
+      'Mevcut kayıtlarınız önce bir yedek dosyasına kaydedilir, ardından grubun ortak kayıtlarıyla değiştirilir.';
+
+  @override
+  String get syncJoinAction => 'Katıl';
+
+  @override
+  String get syncEmailInvalid => 'Geçerli bir e-posta girin';
 }

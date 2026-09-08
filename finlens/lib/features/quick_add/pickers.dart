@@ -1510,6 +1510,10 @@ Future<Account?> showNewAccountSheet(
   );
 }
 
+/// The two numeric rows the docked keypad can write to. A credit card shows
+/// both; every other type shows only the balance.
+enum _NumField { balance, limit }
+
 class _NewAccountForm extends StatefulWidget {
   const _NewAccountForm({super.key, required this.controller, this.initialGroup});
 
@@ -1540,15 +1544,19 @@ class _NewAccountFormState extends State<_NewAccountForm> {
   bool _iconExplicit = false;
 
   // Starting balance and (type-specific) credit limit are held as the raw typed
-  // strings the amount sheet drives; payment day is a 1..31 day-of-month.
+  // strings the docked keypad drives; payment day is a 1..31 day-of-month.
   String _amountRaw = '';
   String _limitRaw = '';
   int? _paymentDay;
+
+  /// Which numeric row the docked keypad writes to; null = keypad closed.
+  _NumField? _numFocus;
 
   @override
   void initState() {
     super.initState();
     _name.addListener(_onChanged);
+    _nameFocus.addListener(_onNameFocus);
     final g = widget.initialGroup;
     if (g != null) {
       _group = g;
@@ -1558,9 +1566,18 @@ class _NewAccountFormState extends State<_NewAccountForm> {
 
   void _onChanged() => setState(() {});
 
+  /// The system keyboard and the keypad are never open together: the name
+  /// field taking focus — however focus arrived — closes the keypad.
+  void _onNameFocus() {
+    if (_nameFocus.hasFocus && _numFocus != null) {
+      setState(() => _numFocus = null);
+    }
+  }
+
   @override
   void dispose() {
     _name.removeListener(_onChanged);
+    _nameFocus.removeListener(_onNameFocus);
     _name.dispose();
     _nameFocus.dispose();
     super.dispose();
@@ -1619,6 +1636,11 @@ class _NewAccountFormState extends State<_NewAccountForm> {
         _icon = defaultIconFor(g);
         _emoji = null;
       }
+      // A type switch can remove the credit-limit row from under the keypad;
+      // focus falls back to the balance row and the keypad keeps working.
+      if (g != AccountGroup.creditCards && _numFocus == _NumField.limit) {
+        _numFocus = _NumField.balance;
+      }
     });
   }
 
@@ -1659,36 +1681,58 @@ class _NewAccountFormState extends State<_NewAccountForm> {
     SystemChannels.textInput.invokeMethod<void>('TextInput.show');
   }
 
-  Future<void> _editBalance() async {
-    final l = AppLocalizations.of(context);
-    final result = await showAmountEntrySheet(
-      context,
-      title: _isLiability ? l.qaAmountOwed : l.eaStartingBalance,
-      raw: _amountRaw,
-      currency: _currency,
+  /// Focuses a numeric row: the accent outline and caret move to it, the
+  /// docked keypad opens (or retargets) and keys land here. The system
+  /// keyboard goes first — keypad and keyboard are never up together.
+  void _focusNum(_NumField field) {
+    _nameFocus.unfocus();
+    if (_numFocus == field) return;
+    setState(() => _numFocus = field);
+    // A sighted user gets the outline; a screen reader is told which field
+    // the keypad now feeds.
+    SemanticsService.sendAnnouncement(
+      View.of(context),
+      _numLabel(field, AppLocalizations.of(context)),
+      Directionality.of(context),
     );
-    if (result != null) {
-      setState(() {
-        _amountRaw = result.raw;
-        _currency = result.currency;
-      });
-    }
   }
 
-  Future<void> _editLimit() async {
-    final l = AppLocalizations.of(context);
-    final result = await showAmountEntrySheet(
-      context,
-      title: l.eaCreditLimit,
-      raw: _limitRaw,
-      currency: _currency,
-    );
-    if (result != null) {
-      setState(() {
-        _limitRaw = result.raw;
-        _currency = result.currency;
-      });
-    }
+  String _numLabel(_NumField field, AppLocalizations l) => switch (field) {
+        _NumField.balance => _isLiability ? l.qaAmountOwed : l.eaStartingBalance,
+        _NumField.limit => l.eaCreditLimit,
+      };
+
+  void _pressKey(String key) {
+    setState(() {
+      switch (_numFocus) {
+        case _NumField.balance:
+          _amountRaw = AmountEntry.press(_amountRaw, key);
+        case _NumField.limit:
+          _limitRaw = AmountEntry.press(_limitRaw, key);
+        case null:
+          break;
+      }
+    });
+  }
+
+  void _backspace() {
+    setState(() {
+      switch (_numFocus) {
+        case _NumField.balance:
+          _amountRaw = AmountEntry.backspace(_amountRaw);
+        case _NumField.limit:
+          _limitRaw = AmountEntry.backspace(_limitRaw);
+        case null:
+          break;
+      }
+    });
+  }
+
+  Future<void> _changeCurrency() async {
+    final picked = await pickCurrency(context, _currency);
+    // The typed digits are kept and re-render in the new currency; the focused
+    // row stays focused.
+    if (picked != null && mounted) setState(() => _currency = picked);
   }
 
   Future<void> _openTypeSheet() async {
@@ -1734,23 +1778,26 @@ class _NewAccountFormState extends State<_NewAccountForm> {
               _card([_typeRow(l)]),
               const SizedBox(height: Insets.lg),
               // Row 3 — starting balance + currency (and any type-specific rows).
+              // The numeric rows are typed in place: a tap focuses the row and
+              // the keypad docked at the sheet's foot writes to it (task 8).
               _card([
                 _StartingBalanceRow(
                   label: _isLiability ? l.qaAmountOwed : l.eaStartingBalance,
                   raw: _amountRaw,
                   currency: _currency,
-                  onTap: _editBalance,
+                  focused: _numFocus == _NumField.balance,
+                  onTap: () => _focusNum(_NumField.balance),
+                  onCurrencyTap: _changeCurrency,
                 ),
                 if (group == AccountGroup.creditCards) ...[
                   _hair(),
-                  FormRow(
+                  _StartingBalanceRow(
                     label: l.eaCreditLimit,
-                    value: _limitRaw.isEmpty
-                        ? '—'
-                        : money(AmountEntry.value(_limitRaw),
-                            currency: _currency, forceDecimals: true),
-                    showChevron: true,
-                    onTap: _editLimit,
+                    raw: _limitRaw,
+                    currency: _currency,
+                    focused: _numFocus == _NumField.limit,
+                    onTap: () => _focusNum(_NumField.limit),
+                    onCurrencyTap: _changeCurrency,
                   ),
                 ],
                 if (group == AccountGroup.bankLoans) ...[
@@ -1790,6 +1837,9 @@ class _NewAccountFormState extends State<_NewAccountForm> {
         _SheetFooter(
           label: l.qaCreateSelect,
           enabled: _valid(store),
+          // With the keypad docked below, the home-indicator inset moves under
+          // the keys so Create & select sits directly above them.
+          padBottomInset: _numFocus == null,
           onPressed: () {
             final created = store.addAccount(
               name: _name.text.trim(),
@@ -1810,6 +1860,10 @@ class _NewAccountFormState extends State<_NewAccountForm> {
             Navigator.of(context).pop(created);
           },
         ),
+        if (_numFocus != null) ...[
+          NumericKeypad(onKey: _pressKey, onBackspace: _backspace),
+          SizedBox(height: MediaQuery.paddingOf(context).bottom + Insets.sm),
+        ],
       ],
     );
   }
@@ -2098,32 +2152,79 @@ class _AccountTypeRow extends StatelessWidget {
   }
 }
 
-/// The starting-balance row (spec §3): the amount and currency read as one unit
-/// — integer bright, decimals one step dimmer and contiguous, ~6 pt before the
-/// currency code, the chevron against it. When the amount does not fit on one
-/// line the row falls back to two lines (label above, amount below) rather than
-/// ever truncating or shrinking the amount.
-class _StartingBalanceRow extends StatelessWidget {
+/// A focusable numeric row (task 8; layout from the starting-balance spec §3):
+/// the amount and currency read as one unit — the typed digits grouped and
+/// bright, the untyped decimal remainder one step dimmer and contiguous, ~6 pt
+/// before the currency code. A tap opens nothing: it focuses the row, and the
+/// keypad docked at the sheet's foot writes here. Focus is marked three ways
+/// at once so it never rests on colour alone: the accent outline the old
+/// amount sheet drew around its own input, a caret after the last typed digit,
+/// and the brighter value. The currency code stays tappable and opens the
+/// currency picker. When the amount does not fit on one line the row falls
+/// back to two lines (label above, amount below) rather than ever truncating
+/// or shrinking the amount.
+class _StartingBalanceRow extends StatefulWidget {
   const _StartingBalanceRow({
     required this.label,
     required this.raw,
     required this.currency,
+    required this.focused,
     required this.onTap,
+    required this.onCurrencyTap,
   });
 
   final String label;
   final String raw;
   final String currency;
+  final bool focused;
   final VoidCallback onTap;
+  final VoidCallback onCurrencyTap;
+
+  @override
+  State<_StartingBalanceRow> createState() => _StartingBalanceRowState();
+}
+
+class _StartingBalanceRowState extends State<_StartingBalanceRow>
+    with SingleTickerProviderStateMixin {
+  /// Caret blink, same 1050 ms period as the Quick Add hero's. Runs only while
+  /// the row holds focus so unfocused rows cost nothing.
+  late final AnimationController _blink = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1050),
+  );
 
   static const _labelStyle =
       TextStyle(fontSize: 14.5, color: AppColors.textPrimary);
-  static const _intStyle = TextStyle(
-      fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textPrimary);
-  static const _decStyle = TextStyle(
+  static const _restStyle = TextStyle(
       fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textTertiary);
   static const _codeStyle = TextStyle(
       fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.textSecondary);
+
+  /// The typed part: bright while the keypad writes here, secondary otherwise
+  /// — the value's brightness is one of the three focus marks.
+  static TextStyle _typedStyle(bool focused) => TextStyle(
+      fontSize: 16,
+      fontWeight: FontWeight.w600,
+      color: focused ? AppColors.textPrimary : AppColors.textSecondary);
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.focused) _blink.repeat();
+  }
+
+  @override
+  void didUpdateWidget(_StartingBalanceRow old) {
+    super.didUpdateWidget(old);
+    if (widget.focused && !old.focused) _blink.repeat();
+    if (!widget.focused && old.focused) _blink.stop();
+  }
+
+  @override
+  void dispose() {
+    _blink.dispose();
+    super.dispose();
+  }
 
   static String _groupDigits(String digits) {
     final buf = StringBuffer();
@@ -2143,73 +2244,119 @@ class _StartingBalanceRow extends StatelessWidget {
     return tp.width;
   }
 
+  /// Splits the display into what the user actually typed (grouped) and the
+  /// decimal remainder only there to hold the column — the same split the
+  /// Quick Add hero paints, so the caret lands after the last typed digit.
+  ({String typed, String rest}) _parts() {
+    final def = currencyDef(widget.currency);
+    final raw = widget.raw;
+    final zeros = def.decimals > 0 ? '.${'0' * def.decimals}' : '';
+    if (raw.isEmpty) return (typed: '', rest: '0$zeros');
+    final dot = raw.indexOf('.');
+    final whole = _groupDigits(
+        (dot < 0 ? raw : raw.substring(0, dot)).isEmpty
+            ? '0'
+            : (dot < 0 ? raw : raw.substring(0, dot)));
+    if (dot < 0) return (typed: whole, rest: zeros);
+    final decs = raw.substring(dot + 1);
+    final pad = def.decimals - decs.length;
+    return (typed: '$whole.$decs', rest: pad > 0 ? '0' * pad : '');
+  }
+
   @override
   Widget build(BuildContext context) {
-    final def = currencyDef(currency);
-    final v = AmountEntry.value(raw).abs();
-    final wholeStr = _groupDigits(v.truncate().toString());
-    String decStr = '';
-    if (def.decimals > 0) {
-      var factor = 1;
-      for (var i = 0; i < def.decimals; i++) {
-        factor *= 10;
-      }
-      final cents = (v * factor).round() % factor;
-      decStr = '.${cents.toString().padLeft(def.decimals, '0')}';
-    }
+    final def = currencyDef(widget.currency);
+    final focused = widget.focused;
+    final parts = _parts();
 
     final amount = Text.rich(
       TextSpan(children: [
-        TextSpan(text: wholeStr, style: _intStyle),
-        if (decStr.isNotEmpty) TextSpan(text: decStr, style: _decStyle),
+        if (parts.typed.isNotEmpty)
+          TextSpan(text: parts.typed, style: _typedStyle(focused)),
+        if (focused)
+          WidgetSpan(
+            alignment: PlaceholderAlignment.middle,
+            child: AnimatedBuilder(
+              animation: _blink,
+              builder: (context, _) => Opacity(
+                opacity: _blink.value < 0.5 ? 1 : 0,
+                child: Container(
+                  width: 2,
+                  height: 17,
+                  margin: const EdgeInsets.symmetric(horizontal: 1),
+                  color: AppColors.accent,
+                ),
+              ),
+            ),
+          ),
+        if (parts.rest.isNotEmpty)
+          TextSpan(text: parts.rest, style: _restStyle),
       ]),
       textAlign: TextAlign.right,
       maxLines: 1,
       softWrap: false,
     );
-    final code = Padding(
-      padding: const EdgeInsets.only(left: 6),
-      child: Text(def.code, style: _codeStyle),
-    );
-    const chevron = Padding(
-      padding: EdgeInsets.only(left: 2),
-      child: Icon(Icons.chevron_right_rounded,
-          size: 18, color: AppColors.textTertiary),
+    // The currency code doubles as the currency control now that the amount
+    // sheet (whose chip used to open the picker) is gone.
+    final code = Semantics(
+      button: true,
+      label: def.code,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: widget.onCurrencyTap,
+        child: Padding(
+          padding: const EdgeInsets.only(left: 6),
+          child: Text(def.code, style: _codeStyle),
+        ),
+      ),
     );
 
     return Semantics(
       button: true,
-      label: '$label ${money(AmountEntry.value(raw), currency: currency)}',
+      focused: focused,
+      label:
+          '${widget.label} ${money(AmountEntry.value(widget.raw), currency: widget.currency)}',
       child: InkWell(
-        onTap: onTap,
+        onTap: widget.onTap,
         child: Container(
-          constraints: const BoxConstraints(minHeight: 44),
-          padding: const EdgeInsets.symmetric(
-              horizontal: Insets.md, vertical: 9),
+          // Focused: the accent outline the old amount sheet's input carried,
+          // inset inside the card. The margin/padding swap keeps the content
+          // in place and the whole tap target at ≥44 pt.
+          margin: focused ? const EdgeInsets.all(3) : EdgeInsets.zero,
+          decoration: focused
+              ? BoxDecoration(
+                  border: Border.all(
+                      color: AppColors.accent.withValues(alpha: 0.55),
+                      width: 1.5),
+                  borderRadius: BorderRadius.circular(8),
+                )
+              : null,
+          constraints: BoxConstraints(minHeight: focused ? 38 : 44),
+          padding: EdgeInsets.symmetric(
+              horizontal: focused ? Insets.md - 3 : Insets.md,
+              vertical: focused ? 6 : 9),
           child: LayoutBuilder(
             builder: (context, c) {
               final scaler = MediaQuery.textScalerOf(context);
-              final labelW = _measure(label, _labelStyle, scaler);
+              final labelW = _measure(widget.label, _labelStyle, scaler);
               final amountW =
-                  _measure(wholeStr + decStr, _intStyle, scaler);
+                  _measure(parts.typed + parts.rest, _restStyle, scaler) +
+                      (focused ? 4 : 0); // caret column
               final codeW = _measure(def.code, _codeStyle, scaler) + 6;
-              const chevronW = 20.0;
               // One line only if the label and the amount unit both fit with a
               // little breathing room between them (§3).
-              final oneLine =
-                  labelW + 16 + amountW + codeW + chevronW <= c.maxWidth;
+              final oneLine = labelW + 16 + amountW + codeW <= c.maxWidth;
 
               if (oneLine) {
                 return Row(
                   children: [
                     Expanded(
-                        child: Text(label,
+                        child: Text(widget.label,
                             style: _labelStyle,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis)),
                     amount,
                     code,
-                    chevron,
                   ],
                 );
               }
@@ -2219,11 +2366,11 @@ class _StartingBalanceRow extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(label, style: _labelStyle),
+                  Text(widget.label, style: _labelStyle),
                   const SizedBox(height: 4),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.end,
-                    children: [Flexible(child: amount), code, chevron],
+                    children: [Flexible(child: amount), code],
                   ),
                 ],
               );
@@ -2231,90 +2378,6 @@ class _StartingBalanceRow extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-/// The starting-balance / amount sheet (spec §5). Reuses the app's own numeric
-/// hero + keypad (the Quick Add amount field), adds a currency control that
-/// opens the currency picker, and caps the integer part at 12 digits (enforced
-/// by [AmountEntry]). Returns the raw amount string and the (possibly changed)
-/// currency code.
-Future<({String raw, String currency})?> showAmountEntrySheet(
-  BuildContext context, {
-  required String title,
-  required String raw,
-  required String currency,
-  String? helper,
-}) {
-  final l = AppLocalizations.of(context);
-  return showAppSheet<({String raw, String currency})>(
-    context,
-    title: title,
-    contentSized: true,
-    cancelLabel: l.actionCancel,
-    builder: (context, controller) =>
-        _AmountEntrySheet(initialRaw: raw, initialCurrency: currency, helper: helper),
-  );
-}
-
-class _AmountEntrySheet extends StatefulWidget {
-  const _AmountEntrySheet(
-      {required this.initialRaw, required this.initialCurrency, this.helper});
-
-  final String initialRaw;
-  final String initialCurrency;
-  final String? helper;
-
-  @override
-  State<_AmountEntrySheet> createState() => _AmountEntrySheetState();
-}
-
-class _AmountEntrySheetState extends State<_AmountEntrySheet> {
-  late String _raw = widget.initialRaw;
-  late String _currency = widget.initialCurrency;
-
-  void _press(String key) => setState(() => _raw = AmountEntry.press(_raw, key));
-  void _back() => setState(() => _raw = AmountEntry.backspace(_raw));
-
-  Future<void> _changeCurrency() async {
-    final picked = await pickCurrency(context, _currency);
-    if (picked != null) setState(() => _currency = picked);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        const SizedBox(height: Insets.sm),
-        NumericHeroCard(
-          label: '',
-          raw: _raw,
-          currency: _currency,
-          accent: AppColors.accent,
-          accentDim: AppColors.accent.withValues(alpha: 0.35),
-          focused: true,
-          onTap: () {},
-          onCurrencyTap: _changeCurrency,
-        ),
-        if (widget.helper != null)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-                Insets.gutter + Insets.xs, Insets.sm, Insets.gutter, 0),
-            child: Text(widget.helper!,
-                style: const TextStyle(
-                    fontSize: 12, height: 1.4, color: AppColors.textSecondary)),
-          ),
-        const SizedBox(height: Insets.sm),
-        NumericKeypad(onKey: _press, onBackspace: _back),
-        _SheetFooter(
-          label: l.actionDone,
-          onPressed: () =>
-              Navigator.of(context).pop((raw: _raw, currency: _currency)),
-        ),
-      ],
     );
   }
 }
@@ -2841,11 +2904,16 @@ class _SheetFooter extends StatelessWidget {
     required this.label,
     required this.onPressed,
     this.enabled = true,
+    this.padBottomInset = true,
   });
 
   final String label;
   final VoidCallback onPressed;
   final bool enabled;
+
+  /// Off while a keypad docks below the footer: the home-indicator inset then
+  /// belongs under the keys, keeping the button directly above them.
+  final bool padBottomInset;
 
   @override
   Widget build(BuildContext context) {
@@ -2854,7 +2922,8 @@ class _SheetFooter extends StatelessWidget {
         Insets.gutter,
         Insets.md,
         Insets.gutter,
-        Insets.md + MediaQuery.of(context).padding.bottom,
+        Insets.md +
+            (padBottomInset ? MediaQuery.of(context).padding.bottom : 0),
       ),
       decoration: const BoxDecoration(
         color: AppColors.surfaceAlt,

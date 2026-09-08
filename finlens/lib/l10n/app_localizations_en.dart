@@ -4277,4 +4277,172 @@ class AppLocalizationsEn extends AppLocalizations {
   String arDeletedLineTask(Object date, int payments, Object total) {
     return 'deleted $date · $payments payments · $total';
   }
+
+  @override
+  String get moreAccount => 'Account';
+
+  @override
+  String get syncSignInGoogle => 'Continue with Google';
+
+  @override
+  String get syncSignedInAs => 'Signed in';
+
+  @override
+  String get syncAccountTitle => 'Account & sync';
+
+  @override
+  String get syncSignOut => 'Sign out';
+
+  @override
+  String get syncSignOutConfirmTitle => 'Sign out?';
+
+  @override
+  String get syncSignOutConfirmMsg =>
+      'Syncing stops. Your data stays on this device.';
+
+  @override
+  String get syncErrorNetwork => 'No connection';
+
+  @override
+  String get syncErrorAuth => 'Sign-in failed';
+
+  @override
+  String get syncErrorGeneric => 'Something went wrong';
+
+  @override
+  String get syncNow => 'Sync now';
+
+  @override
+  String get syncStatusIdle => 'Synced';
+
+  @override
+  String get syncStatusSyncing => 'Syncing…';
+
+  @override
+  String get syncStatusOffline => 'Offline — changes will sync later';
+
+  @override
+  String get syncStatusError => 'Sync error';
+
+  @override
+  String syncLastSynced(Object time) {
+    return 'Last synced $time';
+  }
+
+  @override
+  String get syncConflictsTitle => 'Conflicts';
+
+  @override
+  String syncConflictsBanner(int count) {
+    return '$count records were changed by two people — tap to review';
+  }
+
+  @override
+  String get syncConflictKeepMine => 'Keep mine';
+
+  @override
+  String get syncConflictKeepTheirs => 'Keep theirs';
+
+  @override
+  String get syncConflictKeepAllMine => 'Keep all mine';
+
+  @override
+  String get syncConflictKeepAllTheirs => 'Keep all theirs';
+
+  @override
+  String syncConflictEditedBy(Object email) {
+    return 'edited by $email';
+  }
+
+  @override
+  String syncConflictDeletedRemote(Object email) {
+    return 'deleted by $email';
+  }
+
+  @override
+  String get syncConflictDeletedLocal => 'deleted on this device';
+
+  @override
+  String get syncConflictEmpty => 'No conflicts';
+
+  @override
+  String get syncGroupTitle => 'Family group';
+
+  @override
+  String get syncActivateGroup => 'Activate group sharing';
+
+  @override
+  String get syncActivateGroupDesc =>
+      'Your records become shared; people you invite see and edit them';
+
+  @override
+  String get syncGroupMembers => 'Members';
+
+  @override
+  String get syncAddMemberHint => 'email@example.com';
+
+  @override
+  String get syncAddMember => 'Invite';
+
+  @override
+  String get syncMemberActive => 'active';
+
+  @override
+  String get syncMemberInvited => 'invited';
+
+  @override
+  String get syncMemberAdded => 'Invitation sent';
+
+  @override
+  String syncRemoveMemberTitle(Object email) {
+    return 'Remove $email?';
+  }
+
+  @override
+  String get syncRemoveMemberMsg =>
+      'They will stop seeing shared records. Their device keeps a local copy.';
+
+  @override
+  String get syncRemove => 'Remove';
+
+  @override
+  String get syncLeaveGroup => 'Leave group';
+
+  @override
+  String get syncLeaveGroupMsg =>
+      'You\'ll stop seeing shared records. This device keeps a local copy.';
+
+  @override
+  String get syncDeleteGroup => 'Delete group';
+
+  @override
+  String get syncDeleteGroupMsg =>
+      'Sharing ends for everyone. Every device keeps its local copy.';
+
+  @override
+  String get syncInviteTitle => 'Group invitation';
+
+  @override
+  String syncInviteBody(Object owner) {
+    return '$owner invited you to share records';
+  }
+
+  @override
+  String get syncAcceptInvite => 'Accept';
+
+  @override
+  String get syncDeclineInvite => 'Decline';
+
+  @override
+  String get syncJoinWarnTitle => 'Replace your data?';
+
+  @override
+  String get syncJoinWarnMsg =>
+      'Your current records will be saved to a backup file first, then replaced by the group\'s shared records.';
+
+  @override
+  String get syncJoinAction => 'Join';
+
+  @override
+  String get syncEmailInvalid => 'Enter a valid email';
 }

@@ -6561,6 +6561,306 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'deleted {date} · {payments} payments · {total}'**
   String arDeletedLineTask(Object date, int payments, Object total);
+
+  /// No description provided for @moreAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Account'**
+  String get moreAccount;
+
+  /// No description provided for @syncSignInGoogle.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue with Google'**
+  String get syncSignInGoogle;
+
+  /// No description provided for @syncSignedInAs.
+  ///
+  /// In en, this message translates to:
+  /// **'Signed in'**
+  String get syncSignedInAs;
+
+  /// No description provided for @syncAccountTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Account & sync'**
+  String get syncAccountTitle;
+
+  /// No description provided for @syncSignOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign out'**
+  String get syncSignOut;
+
+  /// No description provided for @syncSignOutConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign out?'**
+  String get syncSignOutConfirmTitle;
+
+  /// No description provided for @syncSignOutConfirmMsg.
+  ///
+  /// In en, this message translates to:
+  /// **'Syncing stops. Your data stays on this device.'**
+  String get syncSignOutConfirmMsg;
+
+  /// No description provided for @syncErrorNetwork.
+  ///
+  /// In en, this message translates to:
+  /// **'No connection'**
+  String get syncErrorNetwork;
+
+  /// No description provided for @syncErrorAuth.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign-in failed'**
+  String get syncErrorAuth;
+
+  /// No description provided for @syncErrorGeneric.
+  ///
+  /// In en, this message translates to:
+  /// **'Something went wrong'**
+  String get syncErrorGeneric;
+
+  /// No description provided for @syncNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Sync now'**
+  String get syncNow;
+
+  /// No description provided for @syncStatusIdle.
+  ///
+  /// In en, this message translates to:
+  /// **'Synced'**
+  String get syncStatusIdle;
+
+  /// No description provided for @syncStatusSyncing.
+  ///
+  /// In en, this message translates to:
+  /// **'Syncing…'**
+  String get syncStatusSyncing;
+
+  /// No description provided for @syncStatusOffline.
+  ///
+  /// In en, this message translates to:
+  /// **'Offline — changes will sync later'**
+  String get syncStatusOffline;
+
+  /// No description provided for @syncStatusError.
+  ///
+  /// In en, this message translates to:
+  /// **'Sync error'**
+  String get syncStatusError;
+
+  /// No description provided for @syncLastSynced.
+  ///
+  /// In en, this message translates to:
+  /// **'Last synced {time}'**
+  String syncLastSynced(Object time);
+
+  /// No description provided for @syncConflictsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Conflicts'**
+  String get syncConflictsTitle;
+
+  /// No description provided for @syncConflictsBanner.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} records were changed by two people — tap to review'**
+  String syncConflictsBanner(int count);
+
+  /// No description provided for @syncConflictKeepMine.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep mine'**
+  String get syncConflictKeepMine;
+
+  /// No description provided for @syncConflictKeepTheirs.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep theirs'**
+  String get syncConflictKeepTheirs;
+
+  /// No description provided for @syncConflictKeepAllMine.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep all mine'**
+  String get syncConflictKeepAllMine;
+
+  /// No description provided for @syncConflictKeepAllTheirs.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep all theirs'**
+  String get syncConflictKeepAllTheirs;
+
+  /// No description provided for @syncConflictEditedBy.
+  ///
+  /// In en, this message translates to:
+  /// **'edited by {email}'**
+  String syncConflictEditedBy(Object email);
+
+  /// No description provided for @syncConflictDeletedRemote.
+  ///
+  /// In en, this message translates to:
+  /// **'deleted by {email}'**
+  String syncConflictDeletedRemote(Object email);
+
+  /// No description provided for @syncConflictDeletedLocal.
+  ///
+  /// In en, this message translates to:
+  /// **'deleted on this device'**
+  String get syncConflictDeletedLocal;
+
+  /// No description provided for @syncConflictEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No conflicts'**
+  String get syncConflictEmpty;
+
+  /// No description provided for @syncGroupTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Family group'**
+  String get syncGroupTitle;
+
+  /// No description provided for @syncActivateGroup.
+  ///
+  /// In en, this message translates to:
+  /// **'Activate group sharing'**
+  String get syncActivateGroup;
+
+  /// No description provided for @syncActivateGroupDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Your records become shared; people you invite see and edit them'**
+  String get syncActivateGroupDesc;
+
+  /// No description provided for @syncGroupMembers.
+  ///
+  /// In en, this message translates to:
+  /// **'Members'**
+  String get syncGroupMembers;
+
+  /// No description provided for @syncAddMemberHint.
+  ///
+  /// In en, this message translates to:
+  /// **'email@example.com'**
+  String get syncAddMemberHint;
+
+  /// No description provided for @syncAddMember.
+  ///
+  /// In en, this message translates to:
+  /// **'Invite'**
+  String get syncAddMember;
+
+  /// No description provided for @syncMemberActive.
+  ///
+  /// In en, this message translates to:
+  /// **'active'**
+  String get syncMemberActive;
+
+  /// No description provided for @syncMemberInvited.
+  ///
+  /// In en, this message translates to:
+  /// **'invited'**
+  String get syncMemberInvited;
+
+  /// No description provided for @syncMemberAdded.
+  ///
+  /// In en, this message translates to:
+  /// **'Invitation sent'**
+  String get syncMemberAdded;
+
+  /// No description provided for @syncRemoveMemberTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove {email}?'**
+  String syncRemoveMemberTitle(Object email);
+
+  /// No description provided for @syncRemoveMemberMsg.
+  ///
+  /// In en, this message translates to:
+  /// **'They will stop seeing shared records. Their device keeps a local copy.'**
+  String get syncRemoveMemberMsg;
+
+  /// No description provided for @syncRemove.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove'**
+  String get syncRemove;
+
+  /// No description provided for @syncLeaveGroup.
+  ///
+  /// In en, this message translates to:
+  /// **'Leave group'**
+  String get syncLeaveGroup;
+
+  /// No description provided for @syncLeaveGroupMsg.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'ll stop seeing shared records. This device keeps a local copy.'**
+  String get syncLeaveGroupMsg;
+
+  /// No description provided for @syncDeleteGroup.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete group'**
+  String get syncDeleteGroup;
+
+  /// No description provided for @syncDeleteGroupMsg.
+  ///
+  /// In en, this message translates to:
+  /// **'Sharing ends for everyone. Every device keeps its local copy.'**
+  String get syncDeleteGroupMsg;
+
+  /// No description provided for @syncInviteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Group invitation'**
+  String get syncInviteTitle;
+
+  /// No description provided for @syncInviteBody.
+  ///
+  /// In en, this message translates to:
+  /// **'{owner} invited you to share records'**
+  String syncInviteBody(Object owner);
+
+  /// No description provided for @syncAcceptInvite.
+  ///
+  /// In en, this message translates to:
+  /// **'Accept'**
+  String get syncAcceptInvite;
+
+  /// No description provided for @syncDeclineInvite.
+  ///
+  /// In en, this message translates to:
+  /// **'Decline'**
+  String get syncDeclineInvite;
+
+  /// No description provided for @syncJoinWarnTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Replace your data?'**
+  String get syncJoinWarnTitle;
+
+  /// No description provided for @syncJoinWarnMsg.
+  ///
+  /// In en, this message translates to:
+  /// **'Your current records will be saved to a backup file first, then replaced by the group\'s shared records.'**
+  String get syncJoinWarnMsg;
+
+  /// No description provided for @syncJoinAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Join'**
+  String get syncJoinAction;
+
+  /// No description provided for @syncEmailInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a valid email'**
+  String get syncEmailInvalid;
 }
 
 class _AppLocalizationsDelegate

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -6,7 +8,12 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'core/data/dev_seed_data.dart';
 import 'core/persistence/local_database.dart';
 import 'core/persistence/store_persister.dart';
+import 'core/persistence/sync_store.dart';
 import 'core/store/app_store.dart';
+import 'core/sync/api_client.dart';
+import 'core/sync/sync_config.dart';
+import 'core/sync/sync_controller.dart';
+import 'core/sync/sync_engine.dart';
 import 'features/shell/app_shell.dart';
 import 'l10n/app_localizations.dart';
 import 'l10n/fallback_localizations.dart';
@@ -52,17 +59,51 @@ Future<void> main() async {
   await store.loadTransPrefs();
   await store.loadLedgerPrefs();
   await store.loadLocale();
-  runApp(FinLensApp(store: store, persister: persister));
+
+  // Group sync rides on real persistence only — the dev-seed fixture has no
+  // persister and must never push its data into a group.
+  SyncController? syncController;
+  if (kSyncEnabled && persister != null) {
+    final syncStore = SyncStore(db);
+    final api = SyncApiClient();
+    syncController = SyncController(syncStore, api);
+    await syncController.hydrate();
+    syncController.engine =
+        SyncEngine(store, syncStore, api, syncController)..attach();
+    // Launch pull-and-push (fire and forget — offline is a status, not an
+    // error) plus a membership refresh so invites surface without opening More.
+    if (syncController.isSignedIn) {
+      unawaited(syncController.refresh());
+      if (syncController.isInGroup) {
+        unawaited(syncController.engine!.syncNow());
+      }
+    }
+  }
+
+  runApp(FinLensApp(
+    store: store,
+    persister: persister,
+    syncController: syncController,
+  ));
 }
 
 class FinLensApp extends StatefulWidget {
-  const FinLensApp({super.key, required this.store, this.persister});
+  const FinLensApp({
+    super.key,
+    required this.store,
+    this.persister,
+    this.syncController,
+  });
 
   final AppStore store;
 
   /// Null in the debug dev-seed mode (that fixture is not persisted); otherwise
   /// the live persister, flushed on app suspend so the last edit is never lost.
   final StorePersister? persister;
+
+  /// Null when the sync feature is compiled out ([kSyncEnabled] false) or in
+  /// dev-seed mode; otherwise the auth/group state distributed via [SyncScope].
+  final SyncController? syncController;
 
   @override
   State<FinLensApp> createState() => _FinLensAppState();
@@ -92,11 +133,20 @@ class _FinLensAppState extends State<FinLensApp> with WidgetsBindingObserver {
         state == AppLifecycleState.detached) {
       await widget.persister?.flush();
     }
+    // Coming back to the foreground: pick up other members' changes (and push
+    // anything made while a sync was impossible).
+    if (state == AppLifecycleState.resumed) {
+      final sync = widget.syncController;
+      if (sync != null && sync.isSignedIn && sync.isInGroup) {
+        unawaited(sync.engine?.syncNow());
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return StoreScope(
+    final syncController = widget.syncController;
+    Widget app = StoreScope(
       store: widget.store,
       // FinLensApp's own context sits above StoreScope, so the MaterialApp is
       // built one level down via Builder — that inner context can subscribe to
@@ -141,5 +191,9 @@ class _FinLensAppState extends State<FinLensApp> with WidgetsBindingObserver {
         },
       ),
     );
+    if (syncController != null) {
+      app = SyncScope(controller: syncController, child: app);
+    }
+    return app;
   }
 }

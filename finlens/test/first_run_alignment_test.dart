@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -10,18 +11,28 @@ import 'package:finlens/features/balance/balance_screen.dart'
         EmptyState,
         firstRunTextBlockHeight,
         firstRunActionHeight;
+import 'package:finlens/features/insight/insight_screen.dart'
+    show InsightScreen;
 import 'package:finlens/features/ledger/ledger_screen.dart' show LedgerScreen;
 import 'package:finlens/features/planner/planner_screen.dart'
     show PlannerScreen;
+import 'package:finlens/features/quick_add/quick_add_sheet.dart'
+    show QuickAddScreen;
+import 'package:finlens/features/shell/app_shell.dart'
+    show AppShell, AppShellScope;
 import 'package:finlens/l10n/app_localizations.dart';
+import 'package:finlens/l10n/fallback_localizations.dart';
+import 'package:finlens/shared/widgets/app_bottom_nav.dart' show NavTab;
 import 'package:finlens/theme/app_theme.dart';
 import 'package:finlens/theme/app_typography.dart';
 
 /// The one placement guarantee (spec §1/§7): the first-run block's icon lands on
-/// the same y on Balance, the Ledger, and all three Planner tabs, in every
-/// locale and text scale, and none of the five overflows. The block is laid
-/// against the whole tab body behind each screen's own chrome, so five screens
-/// with different headers still centre the icon on one line.
+/// the same y on Balance, the Ledger, all three Planner tabs, and Insight, in
+/// every locale and text scale, and none of the six overflows. The block is laid
+/// against the whole tab body behind each screen's own chrome, so six screens
+/// with different headers still centre the icon on one line — both in a bare
+/// Scaffold and inside the real [AppShell], bottom nav and safe-area insets
+/// included.
 void main() {
   // Balance fires off preference writes; give them a mock backing store.
   setUp(() => SharedPreferences.setMockInitialValues(<String, Object>{}));
@@ -33,6 +44,18 @@ void main() {
     goals: const [],
     tasks: const [],
   );
+
+  // The delegate list the real app installs (main.dart): the tk shims must
+  // precede the Global* delegates, or a tk pump warns that the locale is
+  // unsupported and the warning surfaces as a test exception.
+  const appDelegates = <LocalizationsDelegate<dynamic>>[
+    AppLocalizations.delegate,
+    TkMaterialLocalizationsDelegate(),
+    TkCupertinoLocalizationsDelegate(),
+    GlobalMaterialLocalizations.delegate,
+    GlobalCupertinoLocalizations.delegate,
+    GlobalWidgetsLocalizations.delegate,
+  ];
 
   // Every screen pumped in the *same* bare harness: identical Scaffold body, so
   // the only variable is each screen's own chrome. Equal icon dy ⇒ the chrome no
@@ -47,7 +70,7 @@ void main() {
     child: MaterialApp(
       theme: AppTheme.dark,
       locale: locale,
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      localizationsDelegates: appDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       builder: (context, child) => MediaQuery(
         data: MediaQuery.of(
@@ -64,11 +87,12 @@ void main() {
   const budgetsIcon = Icons.pie_chart_outline_rounded;
   const goalsIcon = Icons.outlined_flag_rounded;
   const scheduleIcon = Icons.event_available_rounded;
+  const insightIcon = Icons.bar_chart_rounded;
 
   AppLocalizations l10nOf(WidgetTester tester, Type screen) =>
       AppLocalizations.of(tester.element(find.byType(screen)));
 
-  /// The icon-centre y of each of the five first-run screens, pumped one after
+  /// The icon-centre y of each of the six first-run screens, pumped one after
   /// another in the same viewport. The Planner's three tabs are reached by
   /// tapping the segmented control — which also proves the tabs stay tappable
   /// through the Stack.
@@ -121,6 +145,17 @@ void main() {
     await tester.pumpAndSettle();
     out['schedule'] = tester.getCenter(find.byIcon(scheduleIcon)).dy;
 
+    await tester.pumpWidget(
+      host(
+        emptyStore(),
+        const InsightScreen(),
+        locale: locale,
+        textScale: scale,
+      ),
+    );
+    await tester.pumpAndSettle();
+    out['insight'] = tester.getCenter(find.byIcon(insightIcon)).dy;
+
     return out;
   }
 
@@ -135,7 +170,7 @@ void main() {
     }
   }
 
-  testWidgets('the icon lands on the same y on all five screens (390×844)', (
+  testWidgets('the icon lands on the same y on all six screens (390×844)', (
     tester,
   ) async {
     tester.view.physicalSize = const Size(390, 844);
@@ -145,7 +180,7 @@ void main() {
     expectAllEqual(await iconDys(tester));
   });
 
-  testWidgets('the icon lands on the same y on all five at 130% text', (
+  testWidgets('the icon lands on the same y on all six at 130% text', (
     tester,
   ) async {
     tester.view.physicalSize = const Size(390, 844);
@@ -155,7 +190,7 @@ void main() {
     expectAllEqual(await iconDys(tester, scale: 1.3));
   });
 
-  testWidgets('the icon lands on the same y on all five at 200% text', (
+  testWidgets('the icon lands on the same y on all six at 200% text', (
     tester,
   ) async {
     tester.view.physicalSize = const Size(390, 844);
@@ -166,8 +201,8 @@ void main() {
   });
 
   // The tallest locale's message sets the box for every screen; the icons still
-  // agree. This is also the "a longer message grows the box on all five, not
-  // one" guarantee: whichever locale runs a message long, all five move together.
+  // agree. This is also the "a longer message grows the box on all six, not
+  // one" guarantee: whichever locale runs a message long, all six move together.
   for (final locale in const [Locale('tr'), Locale('ru'), Locale('tk')]) {
     testWidgets('icons stay aligned in ${locale.languageCode} at 320×568', (
       tester,
@@ -180,7 +215,7 @@ void main() {
     });
   }
 
-  // ── Overflow sweep: five screens × four locales × three text scales ──────────
+  // ── Overflow sweep: six screens × four locales × three text scales ───────────
   for (final locale in const [
     Locale('en'),
     Locale('tr'),
@@ -188,7 +223,7 @@ void main() {
     Locale('tk'),
   ]) {
     for (final scale in const [1.0, 1.3, 2.0]) {
-      testWidgets('no overflow on any of the five in ${locale.languageCode} at '
+      testWidgets('no overflow on any of the six in ${locale.languageCode} at '
           '320×568 / ${(scale * 100).toInt()}%', (tester) async {
         tester.view.physicalSize = const Size(320, 568);
         tester.view.devicePixelRatio = 1.0;
@@ -235,6 +270,17 @@ void main() {
         await tester.tap(find.text(l.plTabSchedule));
         await tester.pumpAndSettle();
         expect(tester.takeException(), isNull, reason: 'planner/schedule');
+
+        await tester.pumpWidget(
+          host(
+            emptyStore(),
+            const InsightScreen(),
+            locale: locale,
+            textScale: scale,
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull, reason: 'insight');
       });
     }
   }
@@ -250,10 +296,15 @@ void main() {
     const width =
         390.0 - 28 * 2; // block width less EmptyState's Insets.xxl gutter
 
-    final shared = firstRunTextBlockHeight(l, width, scaler);
+    // The ambient DefaultTextStyle the block's Texts resolve against — the
+    // derivation must measure with it merged in, or the floor under-reserves
+    // whatever the theme's line height adds over the font's own (§7).
+    final ambient =
+        DefaultTextStyle.of(tester.element(find.byType(EmptyState))).style;
+    final shared = firstRunTextBlockHeight(l, width, scaler, ambient: ambient);
 
-    final titleStyle = AppText.rowTitle.copyWith(fontSize: 16);
-    const messageStyle = AppText.caption;
+    final titleStyle = ambient.merge(AppText.rowTitle.copyWith(fontSize: 16));
+    final messageStyle = ambient.merge(AppText.caption);
     double pair(String title, String message) {
       double h(String t, TextStyle s) => (TextPainter(
         text: TextSpan(text: t, style: s),
@@ -274,13 +325,14 @@ void main() {
       pair(l.plNoBudgetsYet, l.plNoBudgetsMsg),
       pair(l.plNoGoalsYet, l.plNoGoalsMsg),
       pair(l.plNothingScheduled, l.plNothingSchedMsg),
+      pair(l.insEmptyNoAccountsTitle, l.insEmptyNoAccountsBody),
     ]) {
       expect(shared, greaterThanOrEqualTo(p - 0.01));
     }
 
     // The reserved fourth-row height clears the link's 44pt tap-target floor.
     expect(
-      firstRunActionHeight(l, width, scaler),
+      firstRunActionHeight(l, width, scaler, ambient: ambient),
       greaterThanOrEqualTo(44 - 0.01),
     );
   });
@@ -297,9 +349,13 @@ void main() {
     await tester.pumpAndSettle();
 
     // The header + sits over the block; a tap must reach it and open Quick Add
-    // rather than falling into the block behind.
+    // rather than falling into the block behind. Bounded pumps, not
+    // pumpAndSettle: the opened sheet focuses a field whose cursor blinks
+    // forever, so settling never completes.
     await tester.tap(find.byIcon(Icons.add_rounded).first);
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.byType(QuickAddScreen), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -336,6 +392,114 @@ void main() {
         isTrue,
         reason: 'the restore line, pinned over the block, must take the tap',
       );
+    },
+  );
+
+  testWidgets(
+    'the Insight signpost is tappable through the first-run Stack and switches '
+    'tab',
+    (tester) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      NavTab? got;
+      await tester.pumpWidget(
+        host(
+          emptyStore(),
+          AppShellScope(goToTab: (t) => got = t, child: const InsightScreen()),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final l = l10nOf(tester, InsightScreen);
+      await tester.tap(find.text(l.insStartInBalance));
+      expect(
+        got,
+        NavTab.balance,
+        reason: 'the signpost, centred in the block behind the Stack, must '
+            'take the tap and ask the shell for the Balance tab',
+      );
+    },
+  );
+
+  // ── The real shell (§8B): bottom nav + non-zero safe-area insets ─────────────
+  // The bare harness proves the six screens agree in isolation; this one proves
+  // they agree inside [AppShell] — IndexedStack, bottom navigation bar, and a
+  // phone-like MediaQuery.padding. This is the tree a device renders, and the
+  // harness the bare Scaffold could not stand in for.
+  Widget shellHost(AppStore store, {double textScale = 1.0}) => StoreScope(
+    store: store,
+    child: MaterialApp(
+      theme: AppTheme.dark,
+      localizationsDelegates: appDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      builder: (context, child) => MediaQuery(
+        data: MediaQuery.of(context).copyWith(
+          textScaler: TextScaler.linear(textScale),
+          // Phone-like insets: a status bar above, a home indicator below.
+          padding: const EdgeInsets.only(top: 47, bottom: 34),
+        ),
+        child: child!,
+      ),
+      home: const AppShell(),
+    ),
+  );
+
+  /// The six icon dys inside the real shell, reached through the bottom nav —
+  /// which also proves the nav stays tappable with every tab on its first run.
+  Future<Map<String, double>> shellIconDys(
+    WidgetTester tester, {
+    double scale = 1.0,
+  }) async {
+    final out = <String, double>{};
+    await tester.pumpWidget(shellHost(emptyStore(), textScale: scale));
+    await tester.pumpAndSettle();
+    out['balance'] = tester.getCenter(find.byIcon(balanceIcon)).dy;
+
+    final l = l10nOf(tester, AppShell);
+    await tester.tap(find.text(l.navLedger));
+    await tester.pumpAndSettle();
+    out['ledger'] = tester.getCenter(find.byIcon(ledgerIcon)).dy;
+
+    await tester.tap(find.text(l.navPlanner));
+    await tester.pumpAndSettle();
+    out['budgets'] = tester.getCenter(find.byIcon(budgetsIcon)).dy;
+
+    await tester.tap(find.text(l.plTabGoals));
+    await tester.pumpAndSettle();
+    out['goals'] = tester.getCenter(find.byIcon(goalsIcon)).dy;
+
+    await tester.tap(find.text(l.plTabSchedule));
+    await tester.pumpAndSettle();
+    out['schedule'] = tester.getCenter(find.byIcon(scheduleIcon)).dy;
+
+    await tester.tap(find.text(l.navInsight));
+    await tester.pumpAndSettle();
+    out['insight'] = tester.getCenter(find.byIcon(insightIcon)).dy;
+
+    return out;
+  }
+
+  testWidgets(
+    'inside the real AppShell the icon lands on the same y on all six tabs',
+    (tester) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      expectAllEqual(await shellIconDys(tester));
+    },
+  );
+
+  testWidgets(
+    'inside the real AppShell the icons still agree at 130% text',
+    (tester) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.reset);
+
+      expectAllEqual(await shellIconDys(tester, scale: 1.3));
     },
   );
 
