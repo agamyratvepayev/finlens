@@ -17,5 +17,9 @@ const String kSyncBaseUrl = String.fromEnvironment(
 /// what the server (`GOOGLE_CLIENT_IDS`) verifies.
 const String kGoogleServerClientId = String.fromEnvironment(
   'GOOGLE_SERVER_CLIENT_ID',
-  defaultValue: '',
+  // The FinLens **web** OAuth client (not the Android one) — its id is the
+  // audience the server's GOOGLE_CLIENT_IDS verifies. A client id is public,
+  // not a secret.
+  defaultValue:
+      '627866692730-m1ne0qupfjl66384midpasdlb788gv73.apps.googleusercontent.com',
 );
