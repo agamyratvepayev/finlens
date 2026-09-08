@@ -2861,16 +2861,26 @@ class AppLocalizationsTr extends AppLocalizations {
   String get ssSplitEvenly => 'Eşit böl';
 
   @override
-  String get ssAssignRest => 'Kalanı ata';
+  String get ssFullyAssigned => 'Tamamı dağıtıldı';
+
+  @override
+  String get ssOverAssignedBy => 'Fazla dağıtıldı:';
+
+  @override
+  String ssAssignRestA11y(String amount, String category) {
+    return 'Kalan $amount tutarını $category kategorisine ata';
+  }
+
+  @override
+  String get ssUnassignedA11y => 'Atanmadı';
+
+  @override
+  String ssActiveLineA11y(String category) {
+    return '$category, tutar giriliyor';
+  }
 
   @override
   String get ssLeftToAssign => 'Atanmayı bekleyen';
-
-  @override
-  String get ssOverTotalBy => 'Toplamı şu kadar aşıyor';
-
-  @override
-  String get ssAddAnotherLine => 'Bölmek için bir satır daha ekle.';
 
   @override
   String get rsRepeat => 'Tekrar';

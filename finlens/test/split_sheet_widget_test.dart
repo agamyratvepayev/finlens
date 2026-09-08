@@ -4,6 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:finlens/core/models/models.dart';
 import 'package:finlens/core/store/app_store.dart';
 import 'package:finlens/features/quick_add/split_sheet.dart';
+import 'package:finlens/features/quick_add/widgets/amount_hero.dart'
+    show NumericKeypad;
 import 'package:finlens/l10n/app_localizations.dart';
 import 'package:finlens/theme/app_colors.dart';
 import 'package:finlens/theme/app_theme.dart';
@@ -97,6 +99,19 @@ Future<void> _openSheet(
 SplitLine _line(String cat, double amt) =>
     SplitLine(categoryId: cat, amount: amt);
 
+/// Taps a key on the app's numeric keypad by its face. `back` is the ⌫ key,
+/// which carries an icon rather than a label.
+Future<void> _tapKey(WidgetTester tester, String k) async {
+  final target = k == 'back'
+      ? find.descendant(
+          of: find.byType(NumericKeypad),
+          matching: find.byIcon(Icons.backspace_outlined))
+      : find.descendant(
+          of: find.byType(NumericKeypad), matching: find.text(k));
+  await tester.tap(target);
+  await tester.pump();
+}
+
 Color? _textColor(WidgetTester tester, String text) =>
     tester.widget<Text>(find.text(text)).style?.color;
 
@@ -112,8 +127,12 @@ void main() {
       await _openSheet(tester, total: 1200, initial: [SplitLine(categoryId: 'c1')]);
 
       expect(find.text('Groceries'), findsOneWidget);
-      expect(find.text(r'$0.00'), findsOneWidget); // blank, placeholder colour
-      expect(_textColor(tester, r'$0.00'), AppColors.textTertiary);
+      // Re-baselined (§9): a line the user has not filled reads `—`. `$0.00`
+      // is a claim that the category was assigned zero, which is a different
+      // thing, and the sheet used to print the first when it meant the second.
+      expect(find.text('\u2014'), findsOneWidget);
+      expect(_textColor(tester, '\u2014'), AppColors.textSecondary);
+      expect(find.text(r'$0.00'), findsNothing);
       // Regression: the old bottom commit is gone.
       expect(find.text('Apply split'), findsNothing);
     });
@@ -129,11 +148,15 @@ void main() {
       expect(find.widgetWithText(FilledButton, 'Done'), findsOneWidget);
     });
 
-    testWidgets('one line, amount assigned → "Add another line"; Done disabled',
-        (tester) async {
+    testWidgets('one line, amount assigned → the card offers Add a line; '
+        'Done disabled', (tester) async {
       _portrait(tester);
       await _openSheet(tester, total: 200, initial: [_line('c1', 200)]);
-      expect(find.text('Add another line to split.'), findsOneWidget);
+      // Re-baselined (§2): the helper sentence "Add another line to split."
+      // is gone and `+ Add a line` is the card's last row, so it scrolls with
+      // the lines and survives entry mode.
+      expect(find.text('Add another line to split.'), findsNothing);
+      expect(find.text('Add a line'), findsOneWidget);
       expect(_doneButton(tester).onPressed, isNull);
     });
   });
@@ -164,9 +187,11 @@ void main() {
       _portrait(tester);
       await _openSheet(tester,
           total: 200, initial: [_line('c1', 150), _line('c2', 100)]);
-      expect(find.text('Over the total by'), findsOneWidget);
+      // Re-baselined (§5): the state is named "Over-assigned by".
+      expect(find.text('Over-assigned by'), findsOneWidget);
+      expect(find.text('Over the total by'), findsNothing);
       expect(find.text('Left to assign'), findsNothing);
-      expect(_textColor(tester, 'Over the total by'), AppColors.negative);
+      expect(_textColor(tester, 'Over-assigned by'), AppColors.negative);
       // The overage-carrying line amounts render red.
       expect(_textColor(tester, r'$150.00'), AppColors.negative);
       expect(_textColor(tester, r'$100.00'), AppColors.negative);
@@ -190,43 +215,19 @@ void main() {
   });
 
   group('the helpers (§6/§7)', () {
-    testWidgets('Assign the rest fills the first blank line, not a new one',
-        (tester) async {
-      _portrait(tester);
-      await _openSheet(tester,
-          total: 200,
-          initial: [_line('c1', 120), SplitLine(categoryId: 'c2')]);
-      await tester.tap(find.text('Assign the rest'));
-      await tester.pumpAndSettle();
-      // The blank line took the $80 remainder; no third line was added.
-      expect(find.text(r'$80.00'), findsOneWidget);
-      expect(find.text('Household'), findsOneWidget);
-      expect(find.byIcon(Icons.close_rounded), findsNWidgets(2));
-    });
-
-    testWidgets('Assign the rest with no blank line adds an uncategorised line',
-        (tester) async {
-      _portrait(tester);
-      await _openSheet(tester,
-          total: 200, initial: [_line('c1', 120), _line('c2', 30)]);
-      await tester.tap(find.text('Assign the rest'));
-      await tester.pumpAndSettle();
-      // A third line appeared, holding the $50 remainder, with no category.
-      expect(find.byIcon(Icons.close_rounded), findsNWidgets(3));
-      expect(find.text('Choose a category'), findsOneWidget);
-      expect(find.text(r'$50.00'), findsOneWidget);
-    });
-
-    testWidgets('Assign the rest is inert at a zero remainder', (tester) async {
-      _portrait(tester);
-      await _openSheet(tester,
-          total: 200, initial: [_line('c1', 120), _line('c2', 80)]);
-      await tester.tap(find.text('Assign the rest')); // disabled → no-op
-      await tester.pumpAndSettle();
-      expect(find.byIcon(Icons.close_rounded), findsNWidgets(2)); // unchanged
-      expect(find.text(r'$120.00'), findsOneWidget);
-      expect(find.text(r'$80.00'), findsOneWidget);
-    });
+    // The three `Assign the rest` button tests are gone with the button (§6).
+    //
+    // They asserted a semantics that no longer exists: the button filled "the
+    // first blank line", and invented an uncategorised line when there was
+    // none. Without an active line "the rest" had no answer to "onto what?",
+    // which is exactly why it stopped being a button and became a tap on the
+    // remainder figure itself — assigning to the line you are typing into.
+    //
+    // The replacement behaviour is covered in split_amount_entry_test.dart:
+    // "Assign the rest adds to the active line and keeps the keypad",
+    // "the remainder is tappable only when under, and only in entry mode", and
+    // "the remainder is not tappable while over-assigned" (the old
+    // inert-at-zero case).
 
     testWidgets('Split evenly overwrites hand-typed amounts', (tester) async {
       _portrait(tester);
@@ -255,27 +256,48 @@ void main() {
       expect(_doneButton(tester).onPressed, isNull);
     });
 
-    testWidgets('Done disabled when a line has a zero amount', (tester) async {
+    // Re-baselined (§8). The old rule demanded every line be `> 0`, so an
+    // intentional "this category gets nothing" share could never be committed.
+    // The rule is now: remainder zero and no line *unassigned*. An explicit 0
+    // is assigned; only a blank line is not.
+    testWidgets('Done ENABLED when a line is explicitly zero', (tester) async {
       _portrait(tester);
       await _openSheet(tester,
           total: 120, initial: [_line('c1', 120), _line('c2', 0)]);
+      expect(_doneButton(tester).onPressed, isNotNull);
+    });
+
+    testWidgets('Done disabled when a line is left unassigned', (tester) async {
+      _portrait(tester);
+      await _openSheet(tester,
+          total: 120,
+          initial: [_line('c1', 120), SplitLine(categoryId: 'c2')]);
       expect(_doneButton(tester).onPressed, isNull);
     });
 
+    // Re-baselined onto the keypad (§4). This was already failing before the
+    // change, and it drove the deleted TextField, so it could never have gone
+    // green again; the intent — an amount above the total is accepted, not
+    // clamped — is worth keeping, so it is restated in the new entry model.
     testWidgets('typing an amount above the total is accepted, not swallowed',
         (tester) async {
       _portrait(tester);
       await _openSheet(tester,
           total: 1200, initial: [_line('c1', 100), _line('c2', 50)]);
+
       await tester.tap(find.text(r'$100.00'));
       await tester.pumpAndSettle();
-      await tester.enterText(find.byType(TextField), '15000');
-      await tester.tap(find.widgetWithText(FilledButton, 'Done'));
-      await tester.pumpAndSettle();
+      // Clear the seeded 100, then type 15000 on the app's own keypad.
+      for (var i = 0; i < 3; i++) {
+        await _tapKey(tester, 'back');
+      }
+      for (final d in '15000'.split('')) {
+        await _tapKey(tester, d);
+      }
 
       expect(tester.takeException(), isNull);
       expect(find.text(r'$15,000.00'), findsOneWidget);
-      expect(find.text('Over the total by'), findsOneWidget);
+      expect(find.text('Over-assigned by'), findsOneWidget);
       expect(_textColor(tester, r'$15,000.00'), AppColors.negative);
     });
   });
@@ -299,33 +321,48 @@ void main() {
     });
   });
 
-  group('the amount editor still survives dismissal (§2)', () {
-    testWidgets('enter a value, tap Done — no crash, value applied',
+  // The amount editor is deleted (§1), and with it the modal-on-a-modal these
+  // two tests guarded. They existed for a real crash — a TextEditingController
+  // disposed while the route was still animating out, with the TextField still
+  // listening. There is no controller and no third route any more, so that
+  // crash class is gone rather than untested.
+  //
+  // What survives is the dismissal guarantee itself, restated for the design
+  // that replaced it: leaving the sheet while the keypad is open must not throw
+  // and must not commit.
+  group('dismissal is safe with the keypad open (§3)', () {
+    testWidgets('Cancel with the keypad open pops cleanly, applying nothing',
         (tester) async {
       _portrait(tester);
       await _openSheet(tester,
           total: 3000, initial: [_line('c1', 100), _line('c2', 50)]);
+
       await tester.tap(find.text(r'$100.00'));
       await tester.pumpAndSettle();
-      await tester.enterText(find.byType(TextField), '2000');
-      await tester.tap(find.widgetWithText(FilledButton, 'Done'));
+      expect(find.byType(NumericKeypad), findsOneWidget);
+      // No system keyboard is involved at any point.
+      expect(find.byType(EditableText), findsNothing);
+
+      await tester.tap(find.text('Cancel'));
       await tester.pumpAndSettle();
+
       expect(tester.takeException(), isNull);
-      expect(find.text(r'$2,000.00'), findsOneWidget);
+      expect(find.byType(NumericKeypad), findsNothing);
+      expect(find.text('Split'), findsNothing, reason: 'the sheet is gone');
     });
 
-    testWidgets('dismiss by scrim — no crash, no change', (tester) async {
+    testWidgets('scrim dismissal with the keypad open does not throw',
+        (tester) async {
       _portrait(tester);
       await _openSheet(tester,
           total: 3000, initial: [_line('c1', 100), _line('c2', 50)]);
+
       await tester.tap(find.text(r'$100.00'));
       await tester.pumpAndSettle();
-      expect(find.byType(TextField), findsOneWidget);
       await tester.tapAt(const Offset(200, 20)); // scrim above the sheet
       await tester.pumpAndSettle();
+
       expect(tester.takeException(), isNull);
-      expect(find.byType(TextField), findsNothing);
-      expect(find.text(r'$100.00'), findsOneWidget); // untouched
     });
   });
 

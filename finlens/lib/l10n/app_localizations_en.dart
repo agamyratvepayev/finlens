@@ -2872,16 +2872,26 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ssSplitEvenly => 'Split evenly';
 
   @override
-  String get ssAssignRest => 'Assign the rest';
+  String get ssFullyAssigned => 'Fully assigned';
+
+  @override
+  String get ssOverAssignedBy => 'Over-assigned by';
+
+  @override
+  String ssAssignRestA11y(String amount, String category) {
+    return 'Assign the remaining $amount to $category';
+  }
+
+  @override
+  String get ssUnassignedA11y => 'Not assigned';
+
+  @override
+  String ssActiveLineA11y(String category) {
+    return '$category, editing amount';
+  }
 
   @override
   String get ssLeftToAssign => 'Left to assign';
-
-  @override
-  String get ssOverTotalBy => 'Over the total by';
-
-  @override
-  String get ssAddAnotherLine => 'Add another line to split.';
 
   @override
   String get rsRepeat => 'Repeat';

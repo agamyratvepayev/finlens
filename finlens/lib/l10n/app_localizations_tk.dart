@@ -2861,16 +2861,26 @@ class AppLocalizationsTk extends AppLocalizations {
   String get ssSplitEvenly => 'Deň böl';
 
   @override
-  String get ssAssignRest => 'Galany belle';
+  String get ssFullyAssigned => 'Doly paýlanan';
+
+  @override
+  String get ssOverAssignedBy => 'Artyk paýlanan:';
+
+  @override
+  String ssAssignRestA11y(String amount, String category) {
+    return 'Galan $amount $category kategoriýasyna beriň';
+  }
+
+  @override
+  String get ssUnassignedA11y => 'Berilmedik';
+
+  @override
+  String ssActiveLineA11y(String category) {
+    return '$category, möçber girizilýär';
+  }
 
   @override
   String get ssLeftToAssign => 'Bellenmeli galan';
-
-  @override
-  String get ssOverTotalBy => 'Jemden şonça artýar';
-
-  @override
-  String get ssAddAnotherLine => 'Bölmek üçin ýene bir setir goş.';
 
   @override
   String get rsRepeat => 'Gaýtala';

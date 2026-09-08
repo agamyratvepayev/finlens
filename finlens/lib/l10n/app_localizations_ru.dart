@@ -2922,16 +2922,26 @@ class AppLocalizationsRu extends AppLocalizations {
   String get ssSplitEvenly => 'Поровну';
 
   @override
-  String get ssAssignRest => 'Назначить остаток';
+  String get ssFullyAssigned => 'Распределено полностью';
+
+  @override
+  String get ssOverAssignedBy => 'Распределено сверх на';
+
+  @override
+  String ssAssignRestA11y(String amount, String category) {
+    return 'Назначить остаток $amount категории «$category»';
+  }
+
+  @override
+  String get ssUnassignedA11y => 'Не назначено';
+
+  @override
+  String ssActiveLineA11y(String category) {
+    return '$category, ввод суммы';
+  }
 
   @override
   String get ssLeftToAssign => 'Осталось распределить';
-
-  @override
-  String get ssOverTotalBy => 'Превышение суммы на';
-
-  @override
-  String get ssAddAnotherLine => 'Добавьте ещё строку для разбивки.';
 
   @override
   String get rsRepeat => 'Повтор';

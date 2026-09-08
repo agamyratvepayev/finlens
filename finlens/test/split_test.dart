@@ -15,6 +15,7 @@ SplitLine _line(String cat, double amt) =>
     SplitLine(categoryId: cat, amount: amt);
 
 void main() {
+  _splitEntryTests();
   group('splitEvenly distributes the remainder so the sum is exact (§2/§5)', () {
     test(r'$100 across 3 lines → 33.34 / 33.33 / 33.33', () {
       final s = splitEvenly(100, 3);
@@ -65,9 +66,30 @@ void main() {
       expect(splitBalanced(200, [_line('c1', 150), _line('c2', 40)]), isFalse);
     });
 
-    test('a zero (or negative) line is not balanced', () {
-      expect(splitBalanced(150, [_line('c1', 150), _line('c2', 0)]), isFalse);
-      expect(splitBalanced(100, [_line('c1', 120), _line('c2', -20)]), isFalse);
+    // Re-baselined. The old rule demanded every line be `> 0`, so an
+    // intentional "this category gets nothing" share could never be committed.
+    // §8 replaces it with: the remainder is zero and no line is *unassigned*.
+    // An explicit 0 is assigned; only null is not.
+    test('an explicitly-zero line IS balanced (§8)', () {
+      expect(splitBalanced(150, [_line('c1', 150), _line('c2', 0)]), isTrue);
+    });
+
+    test('an unassigned line is not balanced even at a zero remainder (§8)', () {
+      expect(
+        splitBalanced(150, [_line('c1', 150), SplitLine(categoryId: 'c2')]),
+        isFalse,
+      );
+    });
+
+    // Collateral, and flagged rather than hidden: dropping the `> 0` test also
+    // dropped the sign check, so a negative share that happens to reconcile now
+    // passes. It is unreachable from the sheet — the keypad has no minus key and
+    // no code path writes a negative amount — and §8 defines the rule as
+    // remainder-plus-assigned with no mention of sign, so no guard was invented
+    // here. Pinned so the widening is visible if it ever becomes reachable.
+    test('a negative line that reconciles is now accepted (unreachable in UI)',
+        () {
+      expect(splitBalanced(100, [_line('c1', 120), _line('c2', -20)]), isTrue);
     });
 
     test('a line without a category is not balanced', () {
@@ -214,5 +236,88 @@ void main() {
     expect(group.length, 2);
     expect(group.map((t) => t.amount).toSet(), {800.0, 400.0});
     expect(group.map((t) => t.toRef).toSet(), {'g', 'h'});
+  });
+}
+
+// ── Added with the keypad change ─────────────────────────────────────────────
+
+void _splitEntryTests() {
+  group('splitEvenly distributes the leftover one each (§7)', () {
+    test(r'$100.00 over three lines sums to exactly $100.00', () {
+      final s = splitEvenly(100, 3);
+      expect(s, [33.34, 33.33, 33.33]);
+      expect((s.fold<double>(0, (a, b) => a + b) * 100).round(), 10000);
+    });
+
+    test(r'$100.00 over seven lines spreads the leftover, not dumps it', () {
+      final s = splitEvenly(100, 7);
+      // Was 14.32 + 14.28×6 — exact, but the whole rounding error on line 1.
+      expect(s, [14.29, 14.29, 14.29, 14.29, 14.28, 14.28, 14.28]);
+      expect((s.fold<double>(0, (a, b) => a + b) * 100).round(), 10000);
+    });
+
+    test(r'$0.01 over three lines', () {
+      final s = splitEvenly(0.01, 3);
+      expect(s, [0.01, 0.0, 0.0]);
+      expect((s.fold<double>(0, (a, b) => a + b) * 100).round(), 1);
+    });
+
+    test(r'$208,957.00 over seven lines', () {
+      final s = splitEvenly(208957, 7);
+      expect((s.fold<double>(0, (a, b) => a + b) * 100).round(), 20895700);
+    });
+
+    test('a single line takes the whole total', () {
+      expect(splitEvenly(100, 1), [100.0]);
+    });
+
+    test('zero lines yields nothing', () => expect(splitEvenly(100, 0), isEmpty));
+  });
+
+  group('the remainder boundaries (§5)', () {
+    SplitLine l(double? a) => SplitLine(categoryId: 'c', amount: a);
+
+    test('one minor unit short is under', () {
+      expect(splitRemaining(100, [l(50), l(49.99)]), closeTo(0.01, 1e-9));
+    });
+
+    test('exact is zero within the cent epsilon', () {
+      expect(splitRemaining(100, [l(50), l(50)]).abs(), lessThan(kMoneyEpsilon));
+    });
+
+    test('one minor unit over is negative', () {
+      expect(splitRemaining(100, [l(50), l(50.01)]), closeTo(-0.01, 1e-9));
+    });
+
+    test('a blank line contributes nothing', () {
+      expect(splitRemaining(100, [l(40), l(null)]), 60);
+    });
+  });
+
+  group('Done enablement (§8)', () {
+    SplitLine l(double? a) => SplitLine(categoryId: 'c', amount: a);
+
+    test('remainder zero with an unassigned line is disabled', () {
+      expect(splitBalanced(100, [l(100), l(null)]), isFalse);
+    });
+
+    test('remainder zero with an explicit zero line is enabled', () {
+      expect(splitBalanced(100, [l(100), l(0)]), isTrue);
+    });
+
+    test('a non-zero remainder is disabled', () {
+      expect(splitBalanced(100, [l(50), l(40)]), isFalse);
+    });
+
+    test('a line with no category is disabled', () {
+      expect(
+        splitBalanced(100, [SplitLine(amount: 50), l(50)]),
+        isFalse,
+      );
+    });
+
+    test('a single line is not a split', () {
+      expect(splitBalanced(100, [l(100)]), isFalse);
+    });
   });
 }

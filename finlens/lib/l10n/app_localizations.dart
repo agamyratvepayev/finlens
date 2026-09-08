@@ -4552,29 +4552,41 @@ abstract class AppLocalizations {
   /// **'Split evenly'**
   String get ssSplitEvenly;
 
-  /// No description provided for @ssAssignRest.
+  /// No description provided for @ssFullyAssigned.
   ///
   /// In en, this message translates to:
-  /// **'Assign the rest'**
-  String get ssAssignRest;
+  /// **'Fully assigned'**
+  String get ssFullyAssigned;
+
+  /// No description provided for @ssOverAssignedBy.
+  ///
+  /// In en, this message translates to:
+  /// **'Over-assigned by'**
+  String get ssOverAssignedBy;
+
+  /// No description provided for @ssAssignRestA11y.
+  ///
+  /// In en, this message translates to:
+  /// **'Assign the remaining {amount} to {category}'**
+  String ssAssignRestA11y(String amount, String category);
+
+  /// No description provided for @ssUnassignedA11y.
+  ///
+  /// In en, this message translates to:
+  /// **'Not assigned'**
+  String get ssUnassignedA11y;
+
+  /// No description provided for @ssActiveLineA11y.
+  ///
+  /// In en, this message translates to:
+  /// **'{category}, editing amount'**
+  String ssActiveLineA11y(String category);
 
   /// No description provided for @ssLeftToAssign.
   ///
   /// In en, this message translates to:
   /// **'Left to assign'**
   String get ssLeftToAssign;
-
-  /// No description provided for @ssOverTotalBy.
-  ///
-  /// In en, this message translates to:
-  /// **'Over the total by'**
-  String get ssOverTotalBy;
-
-  /// No description provided for @ssAddAnotherLine.
-  ///
-  /// In en, this message translates to:
-  /// **'Add another line to split.'**
-  String get ssAddAnotherLine;
 
   /// No description provided for @rsRepeat.
   ///
