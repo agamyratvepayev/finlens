@@ -18,6 +18,7 @@ import 'date_time_sheet.dart';
 import 'pickers.dart';
 import 'tag_picker_sheet.dart';
 import 'split_sheet.dart';
+import 'widgets/split_summary_rows.dart';
 import 'transaction_repeat_sheet.dart';
 import 'widgets/amount_hero.dart';
 import 'widgets/form_kit.dart';
@@ -515,6 +516,11 @@ class _QuickAddScreenState extends State<QuickAddScreen>
       initial: _splitLines ?? [SplitLine(categoryId: currentCategory)],
     );
     if (result == null || !mounted) return;
+    // A list shorter than two lines means "no split". That branch used to be
+    // unreachable — the sheet could only pop a balanced list of two or more —
+    // and the header's Remove now reaches it by popping an empty list. `_toRef`
+    // / `_fromRef` still hold the category the row carried before the split, so
+    // the row returns to it with nothing to recompute.
     setState(() => _splitLines = result.length >= 2 ? result : null);
   }
 
@@ -522,6 +528,20 @@ class _QuickAddScreenState extends State<QuickAddScreen>
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  /// The split's lines, listed beneath whichever row carries the count. Null
+  /// without a split, so [FieldSpec] renders exactly as it always has.
+  List<Widget>? _splitChildRows(AppStore store) {
+    if (!_hasSplit) return null;
+    return buildSplitChildRows(
+      context: context,
+      store: store,
+      lines: _splitLines!,
+      currency: _currency,
+      // One destination: the summary row and every line open the same editor.
+      onTap: () => _openSplit(store),
+    );
   }
 
   bool _splitBalanced() =>
@@ -561,6 +581,9 @@ class _QuickAddScreenState extends State<QuickAddScreen>
             onTap: _hasSplit
                 ? () => _openSplit(store)
                 : () => _pickCategoryInto(CategoryType.expense, isFrom: false),
+            // The count says how many; these say which (§1). Absent without a
+            // split, so an unsplit row is byte-identical to before.
+            childRows: _splitChildRows(store),
           ),
         ]),
         FieldGroup(AppLocalizations.of(context).qaGroupOptional.toUpperCase(),
@@ -599,12 +622,15 @@ class _QuickAddScreenState extends State<QuickAddScreen>
             icon: Icons.category_rounded,
             label: AppLocalizations.of(context).qaFrom,
             // Income splits the source category, so From carries the count.
-            value: _hasSplit ? '${_splitLines!.length} categories' : from?.name,
+            value: _hasSplit
+                ? AppLocalizations.of(context).qaSplitCategories(_splitLines!.length)
+                : from?.name,
             emptyText: AppLocalizations.of(context).qaChooseCategory,
             flashId: 'from',
             onTap: _hasSplit
                 ? () => _openSplit(store)
                 : () => _pickCategoryInto(CategoryType.income, isFrom: true),
+            childRows: _splitChildRows(store),
           ),
           FieldSpec(
             icon: Icons.account_balance_wallet_rounded,

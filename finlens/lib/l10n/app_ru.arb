@@ -794,6 +794,8 @@
   "ssSplit": "Разбить",
   "ssTotal": "Всего",
   "ssRemoveLine": "Убрать строку",
+  "ssRemove": "Убрать",
+  "ssRemoveSplitA11y": "Убрать разбивку",
   "ssAddLine": "Добавить строку",
   "ssChooseCategory": "Выберите категорию",
   "ssSplitEvenly": "Поровну",

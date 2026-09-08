@@ -2913,6 +2913,12 @@ class AppLocalizationsRu extends AppLocalizations {
   String get ssRemoveLine => 'Убрать строку';
 
   @override
+  String get ssRemove => 'Убрать';
+
+  @override
+  String get ssRemoveSplitA11y => 'Убрать разбивку';
+
+  @override
   String get ssAddLine => 'Добавить строку';
 
   @override

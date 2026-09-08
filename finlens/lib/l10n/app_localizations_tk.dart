@@ -2852,6 +2852,12 @@ class AppLocalizationsTk extends AppLocalizations {
   String get ssRemoveLine => 'Setiri aýyr';
 
   @override
+  String get ssRemove => 'Aýyr';
+
+  @override
+  String get ssRemoveSplitA11y => 'Bölünişi aýyr';
+
+  @override
   String get ssAddLine => 'Setir goş';
 
   @override

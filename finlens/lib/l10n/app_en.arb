@@ -981,6 +981,8 @@
   "ssSplit": "Split",
   "ssTotal": "Total",
   "ssRemoveLine": "Remove line",
+  "ssRemove": "Remove",
+  "ssRemoveSplitA11y": "Remove split",
   "ssAddLine": "Add a line",
   "ssChooseCategory": "Choose a category",
   "ssSplitEvenly": "Split evenly",

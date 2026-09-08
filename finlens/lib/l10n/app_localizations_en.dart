@@ -2863,6 +2863,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ssRemoveLine => 'Remove line';
 
   @override
+  String get ssRemove => 'Remove';
+
+  @override
+  String get ssRemoveSplitA11y => 'Remove split';
+
+  @override
   String get ssAddLine => 'Add a line';
 
   @override

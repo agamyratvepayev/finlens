@@ -2852,6 +2852,12 @@ class AppLocalizationsTr extends AppLocalizations {
   String get ssRemoveLine => 'Satırı kaldır';
 
   @override
+  String get ssRemove => 'Kaldır';
+
+  @override
+  String get ssRemoveSplitA11y => 'Bölmeyi kaldır';
+
+  @override
   String get ssAddLine => 'Satır ekle';
 
   @override

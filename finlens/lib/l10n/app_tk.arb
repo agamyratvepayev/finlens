@@ -794,6 +794,8 @@
   "ssSplit": "Böl",
   "ssTotal": "Jemi",
   "ssRemoveLine": "Setiri aýyr",
+  "ssRemove": "Aýyr",
+  "ssRemoveSplitA11y": "Bölünişi aýyr",
   "ssAddLine": "Setir goş",
   "ssChooseCategory": "Kategoriýa saýla",
   "ssSplitEvenly": "Deň böl",

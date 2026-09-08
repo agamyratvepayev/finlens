@@ -4534,6 +4534,18 @@ abstract class AppLocalizations {
   /// **'Remove line'**
   String get ssRemoveLine;
 
+  /// No description provided for @ssRemove.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove'**
+  String get ssRemove;
+
+  /// No description provided for @ssRemoveSplitA11y.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove split'**
+  String get ssRemoveSplitA11y;
+
   /// No description provided for @ssAddLine.
   ///
   /// In en, this message translates to:

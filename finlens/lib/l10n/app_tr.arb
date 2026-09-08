@@ -794,6 +794,8 @@
   "ssSplit": "Böl",
   "ssTotal": "Toplam",
   "ssRemoveLine": "Satırı kaldır",
+  "ssRemove": "Kaldır",
+  "ssRemoveSplitA11y": "Bölmeyi kaldır",
   "ssAddLine": "Satır ekle",
   "ssChooseCategory": "Kategori seç",
   "ssSplitEvenly": "Eşit böl",

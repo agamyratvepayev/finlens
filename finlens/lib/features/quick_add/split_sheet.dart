@@ -192,6 +192,20 @@ class _SplitSheetState extends State<_SplitSheet> {
     });
   }
 
+  /// Leaves the split behind: pops an empty list, which the form already reads
+  /// as "no split" (`result.length >= 2 ? result : null`). Not `Reset` — that
+  /// word is taken by two other sheets where it clears selections *in place and
+  /// leaves the sheet open*; this closes the sheet and changes the form.
+  ///
+  /// No confirmation and no undo bar, deliberately: nothing has been committed
+  /// to the store — this is a modal over an unsaved form — and the split is
+  /// reconstructible from the form in two taps. The category the row held
+  /// before the split is untouched, so the row returns to it on its own.
+  void _removeSplit() {
+    FocusScope.of(context).unfocus();
+    Navigator.of(context).pop(const <SplitLine>[]);
+  }
+
   void _removeLine(int index) {
     setState(() {
       _lines.removeAt(index);
@@ -277,6 +291,26 @@ class _SplitSheetState extends State<_SplitSheet> {
                     color: Colors.white,
                   )),
             ),
+            // Only when the sheet opened on an existing split. While one is
+            // being created, Cancel already means "never mind", and two
+            // controls doing one job is the redundancy this removes.
+            if (widget.initial.length >= 2) ...[
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: _removeSplit,
+                child: Semantics(
+                  button: true,
+                  // "Remove" alone is ambiguous in a sheet whose every line
+                  // carries a "Remove line" control, so the reader hears the
+                  // full phrase — the shape the filter sheet's Reset uses.
+                  label: AppLocalizations.of(context).ssRemoveSplitA11y,
+                  child: Text(AppLocalizations.of(context).ssRemove,
+                      style: const TextStyle(
+                          fontSize: 14.5, color: AppColors.textSecondary)),
+                ),
+              ),
+              const SizedBox(width: 16),
+            ],
             GestureDetector(
               behavior: HitTestBehavior.opaque,
               onTap: () {

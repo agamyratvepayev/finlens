@@ -23,6 +23,7 @@ class FieldSpec {
     this.valueMaxLines = 1,
     this.semanticValue,
     this.iconColor,
+    this.childRows,
   });
 
   final IconData icon;
@@ -44,6 +45,16 @@ class FieldSpec {
   final bool hideLabel;
   final int valueMaxLines;
   final String? semanticValue;
+
+  /// Read-only rows rendered *inside this field's own slot*, directly beneath
+  /// the row and with no hairline between them. Only the split's category row
+  /// sets it — expense's `To` and income's `From` — to name the lines the
+  /// `N categories` summary counts.
+  ///
+  /// They are part of this field, not siblings: [TxnCard] draws a divider
+  /// before every child after the first, so passing them as further children
+  /// would rule between every split line.
+  final List<Widget>? childRows;
 }
 
 /// The hero card's content: a number the keypad drives, or free text.
@@ -306,26 +317,31 @@ class TransactionFormShell extends StatelessWidget {
         TxnCard(
           children: [
             for (final f in group.fields)
-              _FieldFlash(
-                active: f.flashId != null && f.flashId == flashTarget,
-                pulse: flashPulse,
-                radius: 0,
-                child: TxnFieldRow(
-                  icon: f.icon,
-                  label: f.label,
-                  value: f.value,
-                  emptyText: f.emptyText,
-                  // A flagged field's value goes red until it is filled (§3).
-                  valueColor: (f.flashId != null && f.flashId == flashTarget)
-                      ? AppColors.negative
-                      : f.valueColor,
-                  onTap: f.onTap,
-                  hideLabel: f.hideLabel,
-                  valueMaxLines: f.valueMaxLines,
-                  semanticValue: f.semanticValue,
-                  iconColor: f.iconColor,
+              // Row and its child rows are ONE child of the card: TxnCard rules
+              // between children, and this block has no internal rules.
+              // The flash wraps the summary row only — an unbalanced Save
+              // pulses the row that is the validation target, not the lines
+              // beneath it.
+              if (f.childRows == null || f.childRows!.isEmpty)
+                _FieldFlash(
+                  active: f.flashId != null && f.flashId == flashTarget,
+                  pulse: flashPulse,
+                  radius: 0,
+                  child: _fieldRow(f, flashTarget),
+                )
+              else
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _FieldFlash(
+                      active: f.flashId != null && f.flashId == flashTarget,
+                      pulse: flashPulse,
+                      radius: 0,
+                      child: _fieldRow(f, flashTarget),
+                    ),
+                    ...f.childRows!,
+                  ],
                 ),
-              ),
           ],
         ),
         if (config.hint != null && group.title == AppLocalizations.of(context).qaGroupRequired.toUpperCase())
@@ -336,6 +352,25 @@ class TransactionFormShell extends StatelessWidget {
       ...config.trailing,
     ];
   }
+}
+
+/// The card row for [f]. Extracted so a field with child rows and one without
+/// build the identical row.
+Widget _fieldRow(FieldSpec f, String? flashTarget) {
+  final flagged = f.flashId != null && f.flashId == flashTarget;
+  return TxnFieldRow(
+    icon: f.icon,
+    label: f.label,
+    value: f.value,
+    emptyText: f.emptyText,
+    // A flagged field's value goes red until it is filled (§3).
+    valueColor: flagged ? AppColors.negative : f.valueColor,
+    onTap: f.onTap,
+    hideLabel: f.hideLabel,
+    valueMaxLines: f.valueMaxLines,
+    semanticValue: f.semanticValue,
+    iconColor: f.iconColor,
+  );
 }
 
 /// Wraps a hero or a field row and, while [active], pulses a red background
