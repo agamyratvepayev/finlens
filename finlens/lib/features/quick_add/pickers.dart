@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
@@ -127,6 +129,18 @@ class _AppSheetBodyState extends State<_AppSheetBody> {
 
   bool get _guarded => widget.onDismiss != null;
 
+  /// The room the system navigation bar needs at the sheet's foot.
+  ///
+  /// The keyboard is `viewInsets`; the system navigation bar is `padding`. The
+  /// sheet used to reserve only the first, so on an edge-to-edge device the
+  /// last row of every picker was drawn under the nav bar — the account row
+  /// was cut in half. The two are not additive: on Android `padding.bottom`
+  /// usually collapses to 0 while the keyboard is up, and where it does not
+  /// the keyboard already covers the bar — so only the part of the nav inset
+  /// the keyboard leaves exposed is reserved, never both in full.
+  double _navBarInset(MediaQueryData media) =>
+      math.max(0.0, media.padding.bottom - media.viewInsets.bottom);
+
   @override
   void initState() {
     super.initState();
@@ -217,17 +231,21 @@ class _AppSheetBodyState extends State<_AppSheetBody> {
   /// The body is [Flexible] so short states stay short and long lists scroll.
   Widget _buildContentSized(BuildContext context) {
     final media = MediaQuery.of(context);
-    // Sit above the keyboard, and never taller than the space that leaves ≥44pt
-    // of barrier tappable below the status bar. Subtracting the keyboard inset
-    // here (and padding for it below) keeps the search field and a row visible
-    // when the keyboard is open on a small device (§7).
+    final navBarInset = _navBarInset(media);
+    // Sit above the keyboard and the navigation bar, and never taller than the
+    // space that leaves ≥44pt of barrier tappable below the status bar.
+    // Subtracting both insets here (and padding for them below) keeps the
+    // search field and a row visible when the keyboard is open on a small
+    // device (§7), and keeps the last row clear of the nav bar.
     final maxHeight = (media.size.height -
             media.viewInsets.bottom -
+            navBarInset -
             media.padding.top -
             44)
         .clamp(0.0, media.size.height);
     return Padding(
-      padding: EdgeInsets.only(bottom: media.viewInsets.bottom),
+      padding:
+          EdgeInsets.only(bottom: media.viewInsets.bottom + navBarInset),
       child: ConstrainedBox(
         constraints: BoxConstraints(maxHeight: maxHeight),
         child: Container(
@@ -252,7 +270,11 @@ class _AppSheetBodyState extends State<_AppSheetBody> {
   @override
   Widget build(BuildContext context) {
     if (widget.contentSized) return _buildContentSized(context);
-    return DraggableScrollableSheet(
+    // A plain Padding rather than folding the inset into maxChildSize: the
+    // child sizes are fractions of whatever height the sheet is given, so
+    // shrinking that height reserves the bar's room without touching the
+    // fraction defaults or the 44pt barrier rule.
+    final sheetBody = DraggableScrollableSheet(
       controller: _dragController,
       initialChildSize: widget.initialSize,
       minChildSize: 0.4,
@@ -298,6 +320,11 @@ class _AppSheetBodyState extends State<_AppSheetBody> {
         }
         return sheet;
       },
+    );
+    return Padding(
+      padding:
+          EdgeInsets.only(bottom: _navBarInset(MediaQuery.of(context))),
+      child: sheetBody,
     );
   }
 }
@@ -502,13 +529,14 @@ class _AccountPickerBodyState extends State<_AccountPickerBody> {
   /// State 1 body (§2, §5): a heading, a direction-neutral line, and a
   /// full-weight filled primary button — the only control in the sheet.
   Widget _emptyState(BuildContext context, AppLocalizations l) {
-    final bottom = MediaQuery.of(context).padding.bottom;
+    // The navigation-bar inset is reserved by the sheet shell now; padding it
+    // here as well would double the gap.
     return Padding(
-      padding: EdgeInsets.fromLTRB(
+      padding: const EdgeInsets.fromLTRB(
         Insets.xxl,
         Insets.lg,
         Insets.xxl,
-        Insets.xl + bottom,
+        Insets.xl,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -771,13 +799,14 @@ class _CategoryPickerBodyState extends State<_CategoryPickerBody> {
   /// ~60 pt above this message, so a second control here would be the same
   /// action twice.
   Widget _emptyState(BuildContext context, AppLocalizations l) {
-    final bottom = MediaQuery.of(context).padding.bottom;
+    // The navigation-bar inset is reserved by the sheet shell now; padding it
+    // here as well would double the gap.
     return Padding(
-      padding: EdgeInsets.fromLTRB(
+      padding: const EdgeInsets.fromLTRB(
         Insets.xxl,
         Insets.lg,
         Insets.xxl,
-        Insets.xl + bottom,
+        Insets.xl,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -1837,9 +1866,6 @@ class _NewAccountFormState extends State<_NewAccountForm> {
         _SheetFooter(
           label: l.qaCreateSelect,
           enabled: _valid(store),
-          // With the keypad docked below, the home-indicator inset moves under
-          // the keys so Create & select sits directly above them.
-          padBottomInset: _numFocus == null,
           onPressed: () {
             final created = store.addAccount(
               name: _name.text.trim(),
@@ -1862,7 +1888,8 @@ class _NewAccountFormState extends State<_NewAccountForm> {
         ),
         if (_numFocus != null) ...[
           NumericKeypad(onKey: _pressKey, onBackspace: _backspace),
-          SizedBox(height: MediaQuery.paddingOf(context).bottom + Insets.sm),
+          // The home-indicator inset below the keys is the sheet shell's now.
+          const SizedBox(height: Insets.sm),
         ],
       ],
     );
@@ -2904,26 +2931,22 @@ class _SheetFooter extends StatelessWidget {
     required this.label,
     required this.onPressed,
     this.enabled = true,
-    this.padBottomInset = true,
   });
 
   final String label;
   final VoidCallback onPressed;
   final bool enabled;
 
-  /// Off while a keypad docks below the footer: the home-indicator inset then
-  /// belongs under the keys, keeping the button directly above them.
-  final bool padBottomInset;
-
   @override
   Widget build(BuildContext context) {
+    // The navigation-bar inset is reserved by the sheet shell now, whether or
+    // not a keypad docks below the footer — no per-widget compensation.
     return Container(
-      padding: EdgeInsets.fromLTRB(
+      padding: const EdgeInsets.fromLTRB(
         Insets.gutter,
         Insets.md,
         Insets.gutter,
-        Insets.md +
-            (padBottomInset ? MediaQuery.of(context).padding.bottom : 0),
+        Insets.md,
       ),
       decoration: const BoxDecoration(
         color: AppColors.surfaceAlt,
