@@ -143,6 +143,7 @@ class _QuickAddScreenState extends State<QuickAddScreen>
   String _raw = '';
 
   final _note = TextEditingController();
+  final _noteFocus = FocusNode();
   final _title = TextEditingController();
   final _titleFocus = FocusNode();
 
@@ -210,6 +211,16 @@ class _QuickAddScreenState extends State<QuickAddScreen>
     }
     // A text hero takes the system keyboard; a numeric one takes the keypad.
     _keypadOpen = !_isEditing && _type != QuickAddType.newTask;
+    // One at a time (inline-note spec §2): however the note gains focus, the
+    // keypad closes. The row's own tap path closes it too; this is the
+    // backstop for focus arriving any other way.
+    _noteFocus.addListener(_onNoteFocus);
+  }
+
+  void _onNoteFocus() {
+    if (_noteFocus.hasFocus && _keypadOpen) {
+      setState(() => _keypadOpen = false);
+    }
   }
 
   @override
@@ -254,6 +265,7 @@ class _QuickAddScreenState extends State<QuickAddScreen>
   void dispose() {
     _pulse.dispose();
     _note.dispose();
+    _noteFocus.dispose();
     _title.dispose();
     _titleFocus.dispose();
     super.dispose();
@@ -302,6 +314,10 @@ class _QuickAddScreenState extends State<QuickAddScreen>
 
   void _switchType(QuickAddType next) {
     final store = StoreScope.read(context);
+    // The note unfocuses cleanly on a type change (inline-note spec §6): its
+    // row may move or vanish with the new config, and the keypad is coming
+    // back — the keyboard must not linger under it.
+    _noteFocus.unfocus();
     setState(() {
       _fromRef = _keepRef(store, _fromRef, _fromSlot(next));
       _toRef = _keepRef(store, _toRef, _toSlot(next));
@@ -331,12 +347,18 @@ class _QuickAddScreenState extends State<QuickAddScreen>
       typeLocked: _isEditing,
       flashTarget: _flag,
       flashPulse: _pulse,
-      onCancel: () => Navigator.of(context).pop(),
+      // Unfocus before the pop (inline-note spec §2): otherwise the keyboard
+      // stays up and the sheet animates out from behind it.
+      onCancel: () {
+        FocusManager.instance.primaryFocus?.unfocus();
+        Navigator.of(context).pop();
+      },
       onTypeTap: _showTypeMenu,
       onSave: () => _save(store),
       keypadOpen: _keypadOpen,
       onHeroTap: () {
         _titleFocus.unfocus();
+        _noteFocus.unfocus();
         setState(() => _keypadOpen = true);
       },
       onKey: (k) => setState(() => _raw = AmountEntry.press(_raw, k)),
@@ -405,28 +427,23 @@ class _QuickAddScreenState extends State<QuickAddScreen>
     );
   }
 
+  /// The note is typed in the row (inline-note spec §1): no modal, no
+  /// commit-or-discard round trip — the TextField binds straight to [_note],
+  /// so it commits as every other field does, on touch. The row itself derives
+  /// the unfocused preview (label hidden, newlines collapsed, two lines) from
+  /// the controller; [FieldSpec.onTap] fires as editing starts, which is where
+  /// the keypad closes so it and the system keyboard are never open together.
   FieldSpec _noteField() {
-    final text = _note.text.trim();
     final l = AppLocalizations.of(context);
     return FieldSpec(
       icon: Icons.notes_rounded,
-      // The label is dropped here (spec §3): the note takes the full width so it
-      // is not clipped to ~25 characters. Date/Tags keep their labels on
-      // purpose — they hold short scalar values, prose does not.
       label: l.qaNote,
-      hideLabel: true,
-      valueMaxLines: 2,
-      // Newlines collapse to spaces so the preview stays clean across its two
-      // lines (spec §7). Never truncated here — the row's Text ellipsises what
-      // the two lines cannot hold, and the screen reader gets the full note.
-      value: text.isEmpty ? null : text.replaceAll('\n', ' '),
       emptyText: l.qaAddNote,
-      semanticValue: text.isEmpty ? l.qaAddNote : text,
-      onTap: () async {
-        final v = await _promptNote(initial: _note.text);
-        if (v == null || !mounted) return;
-        setState(() => _note.text = v);
-      },
+      controller: _note,
+      focusNode: _noteFocus,
+      maxLength: _kNoteLimit,
+      counterThreshold: _kNoteCounterThreshold,
+      onTap: () => setState(() => _keypadOpen = false),
     );
   }
 
@@ -975,24 +992,6 @@ class _QuickAddScreenState extends State<QuickAddScreen>
     );
   }
 
-  /// The Note sheet (spec §4): a multi-line field with a prompt, a Cancel, a
-  /// Done and a counter that only appears near the limit. Kept separate from
-  /// [_promptText] (which the exchange-rate prompt still uses) because none of
-  /// those affordances belong on a single-line scalar entry.
-  ///
-  /// Returns null when the user cancels or drags the sheet away (both discard);
-  /// returns the text on Done — including '' when an existing note was cleared,
-  /// which is a legitimate edit the caller commits.
-  Future<String?> _promptNote({required String initial}) {
-    setState(() => _keypadOpen = false);
-    return showModalBottomSheet<String>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: AppColors.surfaceAlt,
-      builder: (_) => _NoteSheet(initial: initial),
-    );
-  }
-
   void _showTypeMenu() {
     setState(() => _keypadOpen = false);
     showAppSheet<void>(
@@ -1471,179 +1470,18 @@ class _QuickAddScreenState extends State<QuickAddScreen>
   }
 }
 
-/// Free-text entry sheet for Note and Tag, which keep the system keyboard
-/// while the amount keeps the in-app keypad.
-///
-/// The controller lives here rather than in the caller on purpose: awaiting
-/// Cap on the transaction note (spec §4). No limit exists at the model
-/// (`Txn.note` is a plain `String`) or the database (`note TEXT NOT NULL`), so
-/// 280 is chosen here: long enough for the few sentences a note ever needs,
-/// short enough that the row's two-line preview stays a preview. Input stops at
-/// the cap; nothing already typed is discarded.
+/// Cap on the transaction note. No limit exists at the model (`Txn.note` is a
+/// plain `String`) or the database (`note TEXT NOT NULL`), so 280 is chosen
+/// here: long enough for the few sentences a note ever needs, short enough
+/// that the row's two-line preview stays a preview. The inline row enforces it
+/// ([MaxLengthEnforcement.enforced]): input stops at the cap; nothing already
+/// typed is discarded.
 const int _kNoteLimit = 280;
 
 /// The counter stays hidden until this many characters remain, then appears as
-/// `used / limit`. A permanent counter reads as a restriction on a free field.
+/// `used / limit` under the row. A permanent counter reads as a restriction on
+/// a free field.
 const int _kNoteCounterThreshold = 50;
-
-/// The Note sheet (spec §4): a prompt, a multi-line field that grows, a Cancel,
-/// a Done, and a counter that only surfaces near the limit. Mirrors the
-/// date/time sheet's arrangement — drag handle, title left, Cancel right, Done
-/// at the bottom — so it reads as one of the app's sheets. The controller lives
-/// in the State for the same lifecycle reason documented on [_TextPromptSheet].
-class _NoteSheet extends StatefulWidget {
-  const _NoteSheet({required this.initial});
-
-  final String initial;
-
-  @override
-  State<_NoteSheet> createState() => _NoteSheetState();
-}
-
-class _NoteSheetState extends State<_NoteSheet> {
-  late final _controller = TextEditingController(text: widget.initial);
-
-  @override
-  void initState() {
-    super.initState();
-    // Rebuild as the length changes so the counter can appear/update.
-    _controller.addListener(_onChanged);
-  }
-
-  void _onChanged() => setState(() {});
-
-  @override
-  void dispose() {
-    _controller.removeListener(_onChanged);
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    final used = _controller.text.characters.length;
-    final showCounter = _kNoteLimit - used <= _kNoteCounterThreshold;
-    return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
-      child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(
-            Insets.gutter,
-            Insets.md,
-            Insets.gutter,
-            Insets.lg,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 36,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: AppColors.surfaceHigh,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              const SizedBox(height: Insets.lg),
-              // Title "Note" left, Cancel right — Cancel discards (pops null).
-              Row(
-                children: [
-                  Expanded(child: Text(l.qaNote, style: AppText.rowTitle)),
-                  Semantics(
-                    button: true,
-                    child: GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onTap: () => Navigator.of(context).pop(),
-                      child: Text(
-                        l.actionCancel,
-                        style: AppText.body.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: Insets.lg),
-              TextField(
-                controller: _controller,
-                autofocus: true,
-                minLines: 3,
-                // Grows from three lines to six, then scrolls internally.
-                maxLines: 6,
-                maxLength: _kNoteLimit,
-                // Stop input at the cap without discarding earlier text; a paste
-                // over the cap is accepted up to it and the overflow is dropped.
-                maxLengthEnforcement: MaxLengthEnforcement.enforced,
-                // The default counter is suppressed; §4 wants one only near the
-                // limit, rendered below.
-                buildCounter: (_,
-                        {required currentLength,
-                        required isFocused,
-                        maxLength}) =>
-                    null,
-                keyboardType: TextInputType.multiline,
-                textCapitalization: TextCapitalization.sentences,
-                textInputAction: TextInputAction.newline,
-                style: AppText.body.copyWith(fontSize: 16),
-                cursorColor: AppColors.accent,
-                decoration: InputDecoration(
-                  // A question invites content; "Optional" only restated the
-                  // section heading (spec §4).
-                  hintText: l.qaNotePlaceholder,
-                  hintStyle: const TextStyle(color: AppColors.formDim2),
-                  filled: true,
-                  fillColor: AppColors.fieldCard,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(Radii.md),
-                    borderSide: BorderSide.none,
-                  ),
-                ),
-              ),
-              if (showCounter) ...[
-                const SizedBox(height: Insets.xs),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: Semantics(
-                    liveRegion: true,
-                    child: Text(
-                      '$used / $_kNoteLimit',
-                      style: AppText.caption.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-              const SizedBox(height: Insets.md),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  // Commits the text — including '' when the note was cleared.
-                  onPressed: () =>
-                      Navigator.of(context).pop(_controller.text),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.accent,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(Radii.md),
-                    ),
-                  ),
-                  child: Text(l.actionDone),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
 
 /// `showModalBottomSheet` returns the moment `pop()` is called, but the sheet
 /// keeps rebuilding through its exit animation for several frames after that.

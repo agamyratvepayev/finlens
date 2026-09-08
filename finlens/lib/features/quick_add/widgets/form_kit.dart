@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_colors.dart';
@@ -53,6 +54,7 @@ class TxnFieldRow extends StatelessWidget {
     this.valueMaxLines = 1,
     this.semanticValue,
     this.iconColor,
+    this.showChevron = true,
   });
 
   final IconData icon;
@@ -85,6 +87,11 @@ class TxnFieldRow extends StatelessWidget {
   /// row's preview is clipped, but assistive tech must read the whole note
   /// (spec §5). Null falls back to the visible value.
   final String? semanticValue;
+
+  /// The Note row is tappable but no longer opens anything — it focuses an
+  /// inline field in place — so its chevron goes while the ripple stays
+  /// (inline-note spec §1). Every other tappable row keeps the chevron.
+  final bool showChevron;
 
   @override
   Widget build(BuildContext context) {
@@ -129,7 +136,7 @@ class TxnFieldRow extends StatelessWidget {
                   ),
                 ),
               ),
-              if (!readOnly) ...[
+              if (!readOnly && showChevron) ...[
                 SizedBox(width: 5 * s),
                 Icon(
                   Icons.chevron_right_rounded,
@@ -211,7 +218,7 @@ class TxnFieldRow extends StatelessWidget {
                 ),
               ),
             ),
-            if (!readOnly) ...[
+            if (!readOnly && showChevron) ...[
               SizedBox(width: 5 * s),
               Icon(
                 Icons.chevron_right_rounded,
@@ -229,6 +236,231 @@ class TxnFieldRow extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(14 * s),
       child: row,
+    );
+  }
+}
+
+/// The Note row's inline editor (inline-note spec §1–§2).
+///
+/// Unfocused it is exactly the old preview: [TxnFieldRow] with the label
+/// hidden, newlines collapsed to spaces, at most two lines — minus the chevron,
+/// because tapping no longer opens anything. Tapped, it swaps in a multi-line
+/// [TextField] bound to the caller's controller, so what is typed is committed
+/// as it is typed, like every other field on the form.
+class TxnNoteFieldRow extends StatefulWidget {
+  const TxnNoteFieldRow({
+    super.key,
+    required this.icon,
+    required this.label,
+    required this.controller,
+    required this.focusNode,
+    required this.emptyText,
+    required this.maxLength,
+    required this.counterThreshold,
+    this.onEditingStarted,
+  });
+
+  final IconData icon;
+
+  /// Names the field to assistive tech only; visually the row has no label —
+  /// the note takes the full width, as before.
+  final String label;
+
+  final TextEditingController controller;
+  final FocusNode focusNode;
+
+  /// The unfocused row's dim text while the note is empty. Deliberately not
+  /// carried into the TextField as a hint: tapping the row clears it, leaving
+  /// the caret alone (inline-note spec §6).
+  final String emptyText;
+
+  /// Input stops at this cap ([MaxLengthEnforcement.enforced]); nothing
+  /// already typed is discarded.
+  final int maxLength;
+
+  /// The `used / max` counter under the field stays hidden until this many
+  /// characters remain — a permanent counter reads as a restriction.
+  final int counterThreshold;
+
+  /// Fires before focus is requested. The form closes its numeric keypad here
+  /// so the keypad and the system keyboard are never open together (§2).
+  final VoidCallback? onEditingStarted;
+
+  @override
+  State<TxnNoteFieldRow> createState() => _TxnNoteFieldRowState();
+}
+
+class _TxnNoteFieldRowState extends State<TxnNoteFieldRow> {
+  /// True from the tap that starts editing until focus is lost. Kept apart from
+  /// `focusNode.hasFocus` because the TextField only enters the tree on the
+  /// tap's rebuild — focus cannot be requested until the frame after.
+  bool _editing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.focusNode.addListener(_onFocusChange);
+    // The counter and the unfocused preview both read the text live.
+    widget.controller.addListener(_onTextChange);
+  }
+
+  @override
+  void didUpdateWidget(TxnNoteFieldRow old) {
+    super.didUpdateWidget(old);
+    if (old.focusNode != widget.focusNode) {
+      old.focusNode.removeListener(_onFocusChange);
+      widget.focusNode.addListener(_onFocusChange);
+    }
+    if (old.controller != widget.controller) {
+      old.controller.removeListener(_onTextChange);
+      widget.controller.addListener(_onTextChange);
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.focusNode.removeListener(_onFocusChange);
+    widget.controller.removeListener(_onTextChange);
+    super.dispose();
+  }
+
+  void _onFocusChange() {
+    // Losing focus — Cancel, the amount hero, a type switch — drops straight
+    // back to the preview. What was typed is already in the controller.
+    if (!widget.focusNode.hasFocus && _editing) {
+      setState(() => _editing = false);
+    }
+  }
+
+  void _onTextChange() {
+    if (mounted) setState(() {});
+  }
+
+  void _startEditing() {
+    widget.onEditingStarted?.call();
+    setState(() => _editing = true);
+    // The TextField enters the tree on this rebuild; focus must wait for it.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) widget.focusNode.requestFocus();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_editing) {
+      final text = widget.controller.text.trim();
+      return TxnFieldRow(
+        icon: widget.icon,
+        label: widget.label,
+        hideLabel: true,
+        valueMaxLines: 2,
+        // A display rule only (§1): newlines collapse to spaces so the preview
+        // stays clean; the controller keeps the real line breaks.
+        value: text.isEmpty ? null : text.replaceAll('\n', ' '),
+        emptyText: widget.emptyText,
+        semanticValue: text.isEmpty ? widget.emptyText : text,
+        showChevron: false,
+        onTap: _startEditing,
+      );
+    }
+
+    final s = formScale(context);
+    final t = formTextScale(context);
+    final used = widget.controller.text.characters.length;
+    final showCounter = widget.maxLength - used <= widget.counterThreshold;
+    return Container(
+      // Focused: the accent outline, inset inside the card — the same
+      // margin/padding swap the new-account form's numeric rows use, so the
+      // text barely moves when the outline appears.
+      margin: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        border: Border.all(
+          color: AppColors.accent.withValues(alpha: 0.55),
+          width: 1.5,
+        ),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      constraints: BoxConstraints(minHeight: 48 * s - 6),
+      padding: EdgeInsets.symmetric(
+        horizontal: kRowPadding * s - 3,
+        vertical: 12 * s,
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: kIconColumn * s,
+            child: Padding(
+              padding: EdgeInsets.only(top: 1 * s),
+              child: Icon(widget.icon, size: 18 * s, color: AppColors.accent),
+            ),
+          ),
+          SizedBox(width: kIconGap * s),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: widget.controller,
+                  focusNode: widget.focusNode,
+                  minLines: 1,
+                  // Grows with the text to four lines, then scrolls inside
+                  // itself, so the row can never push the footer off screen
+                  // (§1).
+                  maxLines: 4,
+                  maxLength: widget.maxLength,
+                  // Stop input at the cap without discarding earlier text; a
+                  // paste over the cap is accepted up to it, overflow dropped.
+                  maxLengthEnforcement: MaxLengthEnforcement.enforced,
+                  // The default counter is suppressed; one only appears near
+                  // the limit, rendered beneath.
+                  buildCounter: (_,
+                          {required currentLength,
+                          required isFocused,
+                          maxLength}) =>
+                      null,
+                  keyboardType: TextInputType.multiline,
+                  textCapitalization: TextCapitalization.sentences,
+                  textInputAction: TextInputAction.newline,
+                  // Extra bottom room so the auto-scroll that keeps the caret
+                  // above the keyboard also keeps the counter visible.
+                  scrollPadding: const EdgeInsets.fromLTRB(20, 20, 20, 56),
+                  style: TextStyle(
+                    fontSize: 15 * s * t,
+                    fontWeight: FontWeight.w400,
+                    height: 1.2,
+                    color: AppColors.textPrimary,
+                  ),
+                  cursorColor: AppColors.accent,
+                  decoration: const InputDecoration(
+                    isDense: true,
+                    isCollapsed: true,
+                    border: InputBorder.none,
+                  ),
+                ),
+                if (showCounter) ...[
+                  SizedBox(height: 4 * s),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: Semantics(
+                      liveRegion: true,
+                      child: Text(
+                        '$used / ${widget.maxLength}',
+                        style: TextStyle(
+                          fontSize: 11 * s * t,
+                          height: 1.2,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

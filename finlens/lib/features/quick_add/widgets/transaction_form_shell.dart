@@ -23,6 +23,10 @@ class FieldSpec {
     this.valueMaxLines = 1,
     this.semanticValue,
     this.iconColor,
+    this.controller,
+    this.focusNode,
+    this.maxLength,
+    this.counterThreshold,
   });
 
   final IconData icon;
@@ -44,6 +48,17 @@ class FieldSpec {
   final bool hideLabel;
   final int valueMaxLines;
   final String? semanticValue;
+
+  /// Inline free-text editing (the Note row, inline-note spec §1). When
+  /// [controller] is set the shell renders a [TxnNoteFieldRow] bound to it —
+  /// edits commit as they are typed — instead of a value/chevron row, and
+  /// [onTap] fires as editing starts (the form closes its keypad there) rather
+  /// than opening anything. [focusNode], [maxLength] and [counterThreshold]
+  /// must be set alongside it.
+  final TextEditingController? controller;
+  final FocusNode? focusNode;
+  final int? maxLength;
+  final int? counterThreshold;
 }
 
 /// The hero card's content: a number the keypad drives, or free text.
@@ -310,21 +325,36 @@ class TransactionFormShell extends StatelessWidget {
                 active: f.flashId != null && f.flashId == flashTarget,
                 pulse: flashPulse,
                 radius: 0,
-                child: TxnFieldRow(
-                  icon: f.icon,
-                  label: f.label,
-                  value: f.value,
-                  emptyText: f.emptyText,
-                  // A flagged field's value goes red until it is filled (§3).
-                  valueColor: (f.flashId != null && f.flashId == flashTarget)
-                      ? AppColors.negative
-                      : f.valueColor,
-                  onTap: f.onTap,
-                  hideLabel: f.hideLabel,
-                  valueMaxLines: f.valueMaxLines,
-                  semanticValue: f.semanticValue,
-                  iconColor: f.iconColor,
-                ),
+                child: f.controller != null
+                    // The Note row edits in place (inline-note spec §1): no
+                    // route, no sheet — a TextField bound to the caller's
+                    // controller, committing as the user types.
+                    ? TxnNoteFieldRow(
+                        icon: f.icon,
+                        label: f.label,
+                        controller: f.controller!,
+                        focusNode: f.focusNode!,
+                        emptyText: f.emptyText ?? '',
+                        maxLength: f.maxLength!,
+                        counterThreshold: f.counterThreshold!,
+                        onEditingStarted: f.onTap,
+                      )
+                    : TxnFieldRow(
+                        icon: f.icon,
+                        label: f.label,
+                        value: f.value,
+                        emptyText: f.emptyText,
+                        // A flagged field's value goes red until filled (§3).
+                        valueColor:
+                            (f.flashId != null && f.flashId == flashTarget)
+                                ? AppColors.negative
+                                : f.valueColor,
+                        onTap: f.onTap,
+                        hideLabel: f.hideLabel,
+                        valueMaxLines: f.valueMaxLines,
+                        semanticValue: f.semanticValue,
+                        iconColor: f.iconColor,
+                      ),
               ),
           ],
         ),
