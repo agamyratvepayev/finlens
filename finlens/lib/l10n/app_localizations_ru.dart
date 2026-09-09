@@ -4433,4 +4433,172 @@ class AppLocalizationsRu extends AppLocalizations {
   String arDeletedLineTask(Object date, int payments, Object total) {
     return 'удалено $date · $payments платежей · $total';
   }
+
+  @override
+  String get moreAccount => 'Аккаунт';
+
+  @override
+  String get syncSignInGoogle => 'Продолжить с Google';
+
+  @override
+  String get syncSignedInAs => 'Вы вошли';
+
+  @override
+  String get syncAccountTitle => 'Аккаунт и синхронизация';
+
+  @override
+  String get syncSignOut => 'Выйти';
+
+  @override
+  String get syncSignOutConfirmTitle => 'Выйти из аккаунта?';
+
+  @override
+  String get syncSignOutConfirmMsg =>
+      'Синхронизация остановится. Данные останутся на этом устройстве.';
+
+  @override
+  String get syncErrorNetwork => 'Нет соединения';
+
+  @override
+  String get syncErrorAuth => 'Не удалось войти';
+
+  @override
+  String get syncErrorGeneric => 'Что-то пошло не так';
+
+  @override
+  String get syncNow => 'Синхронизировать';
+
+  @override
+  String get syncStatusIdle => 'Синхронизировано';
+
+  @override
+  String get syncStatusSyncing => 'Синхронизация…';
+
+  @override
+  String get syncStatusOffline => 'Офлайн — изменения отправятся позже';
+
+  @override
+  String get syncStatusError => 'Ошибка синхронизации';
+
+  @override
+  String syncLastSynced(Object time) {
+    return 'Последняя синхронизация $time';
+  }
+
+  @override
+  String get syncConflictsTitle => 'Конфликты';
+
+  @override
+  String syncConflictsBanner(int count) {
+    return 'Записей, изменённых двумя людьми: $count — нажмите для проверки';
+  }
+
+  @override
+  String get syncConflictKeepMine => 'Оставить мою';
+
+  @override
+  String get syncConflictKeepTheirs => 'Оставить их';
+
+  @override
+  String get syncConflictKeepAllMine => 'Все мои';
+
+  @override
+  String get syncConflictKeepAllTheirs => 'Все их';
+
+  @override
+  String syncConflictEditedBy(Object email) {
+    return 'изменил(а) $email';
+  }
+
+  @override
+  String syncConflictDeletedRemote(Object email) {
+    return 'удалил(а) $email';
+  }
+
+  @override
+  String get syncConflictDeletedLocal => 'удалено на этом устройстве';
+
+  @override
+  String get syncConflictEmpty => 'Конфликтов нет';
+
+  @override
+  String get syncGroupTitle => 'Семейная группа';
+
+  @override
+  String get syncActivateGroup => 'Включить общий доступ';
+
+  @override
+  String get syncActivateGroupDesc =>
+      'Ваши записи станут общими; приглашённые видят и меняют их';
+
+  @override
+  String get syncGroupMembers => 'Участники';
+
+  @override
+  String get syncAddMemberHint => 'email@example.com';
+
+  @override
+  String get syncAddMember => 'Пригласить';
+
+  @override
+  String get syncMemberActive => 'активен';
+
+  @override
+  String get syncMemberInvited => 'приглашён';
+
+  @override
+  String get syncMemberAdded => 'Приглашение отправлено';
+
+  @override
+  String syncRemoveMemberTitle(Object email) {
+    return 'Убрать $email?';
+  }
+
+  @override
+  String get syncRemoveMemberMsg =>
+      'Общие записи станут недоступны. Локальная копия на устройстве останется.';
+
+  @override
+  String get syncRemove => 'Убрать';
+
+  @override
+  String get syncLeaveGroup => 'Покинуть группу';
+
+  @override
+  String get syncLeaveGroupMsg =>
+      'Общие записи станут недоступны. На этом устройстве останется локальная копия.';
+
+  @override
+  String get syncDeleteGroup => 'Удалить группу';
+
+  @override
+  String get syncDeleteGroupMsg =>
+      'Общий доступ прекратится для всех. Локальные копии останутся на устройствах.';
+
+  @override
+  String get syncInviteTitle => 'Приглашение в группу';
+
+  @override
+  String syncInviteBody(Object owner) {
+    return '$owner приглашает вас к общим записям';
+  }
+
+  @override
+  String get syncAcceptInvite => 'Принять';
+
+  @override
+  String get syncDeclineInvite => 'Отклонить';
+
+  @override
+  String get syncJoinWarnTitle => 'Заменить ваши данные?';
+
+  @override
+  String get syncJoinWarnMsg =>
+      'Текущие записи сначала сохранятся в файл резервной копии, затем будут заменены общими записями группы.';
+
+  @override
+  String get syncJoinAction => 'Присоединиться';
+
+  @override
+  String get syncEmailInvalid => 'Введите корректный email';
 }

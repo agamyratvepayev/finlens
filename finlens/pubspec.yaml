@@ -53,6 +53,8 @@ dependencies:
   # source of the pubspec version/build number; read once via FutureBuilder.
   package_info_plus: ^10.2.1
   file_picker: ^12.2.0
+  google_sign_in: ^7.2.0
+  http: ^1.6.0
 
 dev_dependencies:
   flutter_test:

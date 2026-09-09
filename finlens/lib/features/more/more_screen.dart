@@ -7,7 +7,11 @@ import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../core/persistence/backup_codec.dart';
 import '../../core/store/app_store.dart';
+import '../../core/sync/api_client.dart';
+import '../../core/sync/sync_config.dart';
+import '../../core/sync/sync_controller.dart';
 import '../../l10n/app_localizations.dart';
+import '../sync/sync_settings_screen.dart';
 import '../../shared/restore_flow.dart';
 import '../../shared/widgets/app_card.dart';
 import '../../shared/widgets/screen_header.dart';
@@ -178,6 +182,9 @@ class MoreScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
     final l = AppLocalizations.of(context);
+    // Null when the sync feature is compiled out — the section simply absent.
+    // `maybeOf` subscribes: the section swaps sign-in ↔ account rows live.
+    final sync = kSyncEnabled ? SyncScope.maybeOf(context) : null;
 
     return SafeArea(
       bottom: false,
@@ -191,6 +198,18 @@ class MoreScreen extends StatelessWidget {
             child: ListView(
               padding: EdgeInsets.zero,
               children: [
+                // ACCOUNT (sync builds only) sits first: it is the only section
+                // whose content can change the meaning of everything below it
+                // (records become shared). When present it takes the page-margin
+                // top padding and DATA reverts to the default label gap.
+                if (sync != null) ...[
+                  SectionLabel(
+                    l.moreAccount,
+                    padding: const EdgeInsets.fromLTRB(
+                        Insets.gutter, Insets.xl, Insets.gutter, Insets.sm),
+                  ),
+                  _card([_AccountRow(sync: sync)]),
+                ],
                 // DATA is broader than its contents (Archive lives here too) —
                 // the opposite failure of the old "Planner" label, which was
                 // narrower than the archived accounts and categories it headed.
@@ -200,11 +219,16 @@ class MoreScreen extends StatelessWidget {
                 // page, so the top value is a page margin (Insets.xl) measured
                 // from the safe area, not the default Insets.lg that suits a label
                 // trailing a card. Do not "normalise" it back to the default.
-                SectionLabel(
-                  l.moreData,
-                  padding: const EdgeInsets.fromLTRB(
-                      Insets.gutter, Insets.xl, Insets.gutter, Insets.sm),
-                ),
+                // (With the ACCOUNT section present it is no longer first and
+                // keeps the default gap instead.)
+                if (sync == null)
+                  SectionLabel(
+                    l.moreData,
+                    padding: const EdgeInsets.fromLTRB(
+                        Insets.gutter, Insets.xl, Insets.gutter, Insets.sm),
+                  )
+                else
+                  SectionLabel(l.moreData),
                 _card([
                   SplitCountRow(
                     leftLabel: l.moreCategories,
@@ -389,6 +413,83 @@ class _ArchiveRow extends StatelessWidget {
               const SizedBox(width: Insets.sm),
               Text('$count', style: AppText.amount),
               const _RowTrailingChevron(),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The ACCOUNT card's single row: "Continue with Google" while signed out, the
+/// account email (→ [SyncSettingsScreen]) once signed in. Inline like
+/// [_ArchiveRow] so it inherits More's shared 38 pt metrics.
+class _AccountRow extends StatelessWidget {
+  const _AccountRow({required this.sync});
+
+  final SyncController sync;
+
+  Future<void> _signIn(BuildContext context) async {
+    final l = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await sync.signIn();
+    } on SyncApiException catch (e) {
+      messenger.showSnackBar(SnackBar(
+        content: Text(e.kind == SyncApiErrorKind.network
+            ? l.syncErrorNetwork
+            : l.syncErrorAuth),
+      ));
+    } catch (_) {
+      // Cancelled/failed Google flow — GoogleSignInException and friends.
+      messenger.showSnackBar(SnackBar(content: Text(l.syncErrorAuth)));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final signedIn = sync.isSignedIn;
+    return InkWell(
+      onTap: signedIn
+          ? () => Navigator.of(context, rootNavigator: true)
+              .push(MaterialPageRoute(
+                builder: (_) => const SyncSettingsScreen(),
+              ))
+          : () => _signIn(context),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 38),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: Insets.md),
+          child: Row(
+            children: [
+              SizedBox(
+                width: 24,
+                child: Icon(
+                  signedIn
+                      ? Icons.account_circle_rounded
+                      : Icons.login_rounded,
+                  size: 18,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  signedIn
+                      ? (sync.user?.email ?? l.syncSignedInAs)
+                      : l.syncSignInGoogle,
+                  style: AppText.body.copyWith(
+                      fontSize: 14.5, color: AppColors.textPrimary),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: Insets.sm),
+              if (signedIn && sync.conflictCount > 0)
+                Text('${sync.conflictCount}',
+                    style: AppText.amount.copyWith(color: AppColors.warning)),
+              if (signedIn) const _RowTrailingChevron(),
             ],
           ),
         ),

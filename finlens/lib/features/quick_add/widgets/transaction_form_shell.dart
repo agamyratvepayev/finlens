@@ -24,6 +24,10 @@ class FieldSpec {
     this.semanticValue,
     this.iconColor,
     this.childRows,
+    this.controller,
+    this.focusNode,
+    this.maxLength,
+    this.counterThreshold,
   });
 
   final IconData icon;
@@ -55,6 +59,17 @@ class FieldSpec {
   /// before every child after the first, so passing them as further children
   /// would rule between every split line.
   final List<Widget>? childRows;
+
+  /// Inline free-text editing (the Note row, inline-note spec §1). When
+  /// [controller] is set the shell renders a [TxnNoteFieldRow] bound to it —
+  /// edits commit as they are typed — instead of a value/chevron row, and
+  /// [onTap] fires as editing starts (the form closes its keypad there) rather
+  /// than opening anything. [focusNode], [maxLength] and [counterThreshold]
+  /// must be set alongside it.
+  final TextEditingController? controller;
+  final FocusNode? focusNode;
+  final int? maxLength;
+  final int? counterThreshold;
 }
 
 /// The hero card's content: a number the keypad drives, or free text.
@@ -317,8 +332,8 @@ class TransactionFormShell extends StatelessWidget {
         TxnCard(
           children: [
             for (final f in group.fields)
-              // Row and its child rows are ONE child of the card: TxnCard rules
-              // between children, and this block has no internal rules.
+              // Row and its child rows are ONE child of the card: TxnCard
+              // rules between children, and this block has no internal rules.
               // The flash wraps the summary row only — an unbalanced Save
               // pulses the row that is the validation target, not the lines
               // beneath it.
@@ -358,6 +373,20 @@ class TransactionFormShell extends StatelessWidget {
 /// build the identical row.
 Widget _fieldRow(FieldSpec f, String? flashTarget) {
   final flagged = f.flashId != null && f.flashId == flashTarget;
+  // The Note row edits in place (inline-note spec §1): no route, no sheet — a
+  // TextField bound to the caller's controller, committing as the user types.
+  if (f.controller != null) {
+    return TxnNoteFieldRow(
+      icon: f.icon,
+      label: f.label,
+      controller: f.controller!,
+      focusNode: f.focusNode!,
+      emptyText: f.emptyText ?? '',
+      maxLength: f.maxLength!,
+      counterThreshold: f.counterThreshold!,
+      onEditingStarted: f.onTap,
+    );
+  }
   return TxnFieldRow(
     icon: f.icon,
     label: f.label,

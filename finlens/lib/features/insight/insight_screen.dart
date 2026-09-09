@@ -19,6 +19,7 @@ import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/app_typography.dart';
 import '../balance/balance_filter.dart';
+import '../balance/balance_screen.dart' show FirstRunBlock;
 import '../ledger/ledger_scope.dart';
 import '../ledger/scoped_ledger_screen.dart';
 import 'category_detail_screen.dart';
@@ -143,61 +144,80 @@ class _InsightScreenState extends State<InsightScreen> {
     // record exists, the window title, filter and eye all return together.
     final hasRecords = !report.noRecords;
 
+    // States 1 and 2 are one screen: a reader with accounts but no entries has
+    // no *change* to report, and their standing total is already the Balance
+    // tab's subject (spec §2). They differ only in where the signpost points.
+    final isIntro =
+        state == InsightEmpty.noAccounts || state == InsightEmpty.noRecords;
+
     return SafeArea(
       bottom: false,
-      child: Column(
+      child: Stack(
+        // The chrome Column keeps the same tight, full-body constraints it had
+        // before the Stack, so every populated and non-intro state is laid out
+        // exactly as it was; only the first-run block behind is added.
+        fit: StackFit.expand,
         children: [
-          if (hasRecords)
-            _InsightHeader(
-              label: insightWindowLabel(w, l),
-              isCustom: w.preset == null,
-              filterActive: report.filterActive,
-              hiddenCount: report.hiddenCount,
-              onTapTitle: _pickRange,
-              onNext: () => _step(1),
-              onPrevious: () => _step(-1),
-              onClearCustom: _clearCustom,
-              onFilter: _openFilter,
-            ),
-          Expanded(
-            child: switch (state) {
-              // States 1 and 2 are one screen: a reader with accounts but no
-              // entries has no *change* to report, and their standing total is
-              // already the Balance tab's subject (spec §2). They differ only in
-              // where the signpost points.
-              InsightEmpty.noAccounts ||
-              InsightEmpty.noRecords =>
-                _IntroBody(report: report),
-              InsightEmpty.allHidden => _AllHiddenBody(
-                  report: report,
-                  onShowAll: () => StoreScope.read(context)
-                      .setInsightAccountFilter(const BalanceFilter())),
-              InsightEmpty.emptyWindow => _EmptyWindowBody(
-                  report: report,
-                  window: w,
-                  onGoTo: (target) =>
-                      StoreScope.read(context).setInsightWindow(target),
-                  onShowAll: () => StoreScope.read(context)
-                      .setInsightAccountFilter(const BalanceFilter())),
-              InsightEmpty.none => ListView(
-                  padding: const EdgeInsets.only(bottom: Insets.xxl),
-                  children: [
-                    _Hero(report: report),
-                    _Waterfall(report: report),
-                    _GroupGrid(
-                      report: report,
-                      expanded: _gridExpanded,
-                      onToggle: () =>
-                          setState(() => _gridExpanded = !_gridExpanded),
-                    ),
-                    _FlowBlock(report: report, income: false),
-                    _FlowBlock(report: report, income: true),
-                    _DebtBlock(report: report, window: w),
-                    if (report.revalued != 0)
-                      _RevaluationBlock(report: report, window: w),
-                  ],
+          // First run: the intro block is laid against the whole tab body so its
+          // icon lands on the same y as the other five first-run screens'. It
+          // sits behind the header — reachable when accounts are gone but
+          // records remain — which paints over its top edge rather than pushing
+          // it down. Only the intro states live here; the other empty bodies
+          // belong below the header.
+          if (isIntro) Positioned.fill(child: _IntroBody(report: report)),
+          Column(
+            children: [
+              if (hasRecords)
+                _InsightHeader(
+                  label: insightWindowLabel(w, l),
+                  isCustom: w.preset == null,
+                  filterActive: report.filterActive,
+                  hiddenCount: report.hiddenCount,
+                  onTapTitle: _pickRange,
+                  onNext: () => _step(1),
+                  onPrevious: () => _step(-1),
+                  onClearCustom: _clearCustom,
+                  onFilter: _openFilter,
                 ),
-            },
+              Expanded(
+                child: switch (state) {
+                  // A hit-transparent spacer: the intro block behind takes the
+                  // taps and the scroll, the header above still takes its own.
+                  InsightEmpty.noAccounts ||
+                  InsightEmpty.noRecords =>
+                    const SizedBox.expand(),
+                  InsightEmpty.allHidden => _AllHiddenBody(
+                      report: report,
+                      onShowAll: () => StoreScope.read(context)
+                          .setInsightAccountFilter(const BalanceFilter())),
+                  InsightEmpty.emptyWindow => _EmptyWindowBody(
+                      report: report,
+                      window: w,
+                      onGoTo: (target) =>
+                          StoreScope.read(context).setInsightWindow(target),
+                      onShowAll: () => StoreScope.read(context)
+                          .setInsightAccountFilter(const BalanceFilter())),
+                  InsightEmpty.none => ListView(
+                      padding: const EdgeInsets.only(bottom: Insets.xxl),
+                      children: [
+                        _Hero(report: report),
+                        _Waterfall(report: report),
+                        _GroupGrid(
+                          report: report,
+                          expanded: _gridExpanded,
+                          onToggle: () =>
+                              setState(() => _gridExpanded = !_gridExpanded),
+                        ),
+                        _FlowBlock(report: report, income: false),
+                        _FlowBlock(report: report, income: true),
+                        _DebtBlock(report: report, window: w),
+                        if (report.revalued != 0)
+                          _RevaluationBlock(report: report, window: w),
+                      ],
+                    ),
+                },
+              ),
+            ],
           ),
         ],
       ),
@@ -594,11 +614,13 @@ class _CircleButton extends StatelessWidget {
 
 // ── Empty and first-run states (empty-states spec §1–§6) ─────────────────────
 // Four causes, four answers. An empty screen has to say WHY it is empty and
-// offer the one action that fills it. Selected by [insightEmptyState]; each body
-// is centred vertically between the header and the tab bar, 34pt gutters, text
-// centred, and is one Semantics node for the reader plus its own for the action
-// (spec §3/§8). No opacity on text anywhere — the quaternary token is the fade
-// (spec §4).
+// offer the one action that fills it. Selected by [insightEmptyState]. The two
+// intro states render the shared first-run block ([_IntroBody]), laid against
+// the whole tab body so its icon lands on the shared first-run line; the other
+// two bodies are centred vertically between the header and the tab bar, 34pt
+// gutters, text centred, one Semantics node for the reader plus its own for the
+// action (spec §3/§8). No opacity on text anywhere — the quaternary token is
+// the fade (spec §4).
 
 const double _emptyGutter = 34;
 
@@ -687,8 +709,8 @@ class _EmptyButton extends StatelessWidget {
 /// it does not create anything, so it is never a filled button.
 ///
 /// The intro block used to reuse this as its cross-tab signpost and pass a
-/// `minHeight` to grow the tap target to 44pt. That signpost is gone (Insight
-/// creates nothing, so it has no fourth row), and the parameter went with it —
+/// `minHeight` to grow the tap target to 44pt. That signpost is gone — Insight
+/// creates nothing, so it has no fourth row — and the parameter went with it;
 /// every remaining caller had left it null, so their rendered tree is unchanged.
 class _EmptyLink extends StatelessWidget {
   const _EmptyLink({required this.label, required this.onTap});
@@ -697,16 +719,15 @@ class _EmptyLink extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final text = Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
-      child: Text(label,
-          textAlign: TextAlign.center,
-          style: const TextStyle(fontSize: 13, color: AppColors.accentLight)),
-    );
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(Radii.sm),
-      child: text,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
+        child: Text(label,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 13, color: AppColors.accentLight)),
+      ),
     );
   }
 }
@@ -728,6 +749,14 @@ Widget _emptyBodyLine(String text) => Text(text,
 /// No hero and no holdings line: a confident $0 says nothing this tab is for
 /// (the standing total is the Balance tab's subject), and Insight's subject is
 /// which way net worth moved and what moved it — of which there is none yet.
+///
+/// Insight is the sixth first-run screen, not a fourth Insight empty state: it
+/// has the same four rows as Balance's, the Ledger's and the Planner's three
+/// tabs, and a reader meeting them in one session must see one block with
+/// different words in it — so it renders through the shared [FirstRunBlock].
+/// The empty-states spec's "do not adopt EmptyState" boundary still holds for
+/// the other three bodies — they carry a $0 hero and a button, and are not this
+/// shape.
 class _IntroBody extends StatelessWidget {
   const _IntroBody({required this.report});
   final _Report report;
@@ -735,54 +764,27 @@ class _IntroBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    return _EmptyScaffold(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Icon + title + body are one node for the reader (spec §4.2).
-          Semantics(
-            container: true,
-            label: l.insA11yEmptyNoAccounts,
-            child: ExcludeSemantics(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // A 54pt surface circle with a 24pt glyph, matching the landed
-                  // Ledger/Planner empty-state backdrop (spec §2 / §2.1). Built
-                  // inline rather than via the shared EmptyState — that widget is
-                  // deliberately not adopted here (hard boundary).
-                  Container(
-                    width: 54,
-                    height: 54,
-                    alignment: Alignment.center,
-                    decoration: const BoxDecoration(
-                      color: AppColors.surface,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.bar_chart_rounded,
-                        size: 24, color: AppColors.textTertiary),
-                  ),
-                  const SizedBox(height: Insets.md),
-                  _emptyTitle(l.insEmptyNoAccountsTitle),
-                  const SizedBox(height: 7),
-                  _emptyBodyLine(l.insEmptyNoAccountsBody),
-                ],
-              ),
-            ),
-          ),
-          // The fourth row names what fills the screen. Insight creates
-          // nothing — it reads what the other three tabs record — so it has no
-          // fourth row: the signpost that stood here sent the reader to another
-          // tab, where adding an account still left Insight empty and only
-          // changed the label from "Start in Balance" to "Start in Ledger".
-          // Where the figures come from is now said in the message instead.
-          //
-          // The *box* stays. These two heights are what put this icon where it
-          // is; dropping them would raise the block by half their sum and move
-          // the icon off the line the other five are calibrated against.
-          const SizedBox(height: 20),
-          const SizedBox(height: 44),
-        ],
+    // One summary node for the reader (spec §4.2). The title's header node
+    // comes from [FirstRunBlock] (titleAsHeader).
+    return Semantics(
+      container: true,
+      label: l.insA11yEmptyNoAccounts,
+      child: FirstRunBlock(
+        icon: Icons.bar_chart_rounded,
+        title: l.insEmptyNoAccountsTitle,
+        message: l.insEmptyNoAccountsBody,
+        // The fourth row names what fills the screen. Insight creates nothing —
+        // it reads what the other three tabs record — so it has no fourth row.
+        // The signpost that stood here sent the reader to another tab, where
+        // adding an account still left Insight empty and only changed the label
+        // from "Start in Balance" to "Start in Ledger". Where the figures come
+        // from is said in the message instead.
+        //
+        // An empty widget, not null: EmptyState drops the Insets.xl gap *and*
+        // the reserved box when the action is null, which would raise this
+        // block by half their sum and take the icon off the line the other five
+        // are calibrated against.
+        action: const SizedBox.shrink(),
       ),
     );
   }

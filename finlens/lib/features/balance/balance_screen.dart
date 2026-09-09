@@ -1402,7 +1402,7 @@ class EmptyState extends StatelessWidget {
   final double? iconSize;
 
   /// Floors the title+message region to a shared height, top-aligned. Null lets
-  /// it grow to its content. The five first-run screens pass one height derived
+  /// it grow to its content. The six first-run screens pass one height derived
   /// across all their title/message pairs so the icon lands on the same y on
   /// every screen (§2/§3). It is a *minimum*, not a fixed height: when a
   /// measurement and a render disagree the region grows rather than clipping.
@@ -1505,16 +1505,16 @@ class EmptyState extends StatelessWidget {
   }
 }
 
-// ── First-run empty block, shared by Balance / Ledger / Planner ×3 ────────────
+// ── First-run empty block, shared by Balance / Ledger / Planner ×3 / Insight ──
 //
-// The five first-run screens draw one block — a backed icon, a title, a message
+// The six first-run screens draw one block — a backed icon, a title, a message
 // and a fourth row — meant to read as one screen with different words in it. To
 // land the icon on the same y on every screen they must all lay the block
 // against the same reference: the whole tab body, from the safe area to the top
 // of the bottom nav. Each screen does that by putting [FirstRunBlock] in a
 // Stack behind its own chrome (header · segmented control · restore line), so
 // the chrome paints over the block rather than consuming its height (§1). Two
-// derived heights, computed once here across all five string pairs, keep the
+// derived heights, computed once here across all six string pairs, keep the
 // blocks the same size whatever the locale or text scale (§2/§4).
 
 /// The hint's base style, kept in step with `buildFirstRunHint`.
@@ -1548,23 +1548,39 @@ double _measureFirstRun(
   return painter.height;
 }
 
-/// The tallest title + message stack across all five first-run screens at this
+/// The style a `Text` in the block actually resolves: it merges its own style
+/// over the ambient [DefaultTextStyle], inheriting whatever the style leaves
+/// null — the theme's line height above all. A bare [TextPainter] inherits
+/// nothing, so measuring without the ambient under-reserves the floor whenever
+/// the theme's line height exceeds the font's own; the floor-setting screen
+/// then renders past the floor the other screens sit on, and its icon drifts
+/// off the shared line. The link is the one row measured bare: a [TextButton]
+/// *replaces* the ambient with its own textStyle rather than merging into it.
+TextStyle _resolveFirstRun(TextStyle? ambient, TextStyle style) =>
+    ambient == null ? style : ambient.merge(style);
+
+/// The tallest title + message stack across all six first-run screens at this
 /// width and text scale (§2). Measured with the exact styles [EmptyState]
 /// renders. A locale that runs one message to an extra line grows the box for
-/// all five together, never one alone.
+/// all six together, never one alone.
 double firstRunTextBlockHeight(
   AppLocalizations l,
   double textWidth,
-  TextScaler scaler,
-) {
-  final titleStyle = AppText.rowTitle.copyWith(fontSize: 16);
-  const messageStyle = AppText.caption;
+  TextScaler scaler, {
+  TextStyle? ambient,
+}) {
+  final titleStyle = _resolveFirstRun(
+    ambient,
+    AppText.rowTitle.copyWith(fontSize: 16),
+  );
+  final messageStyle = _resolveFirstRun(ambient, AppText.caption);
   final pairs = <(String, String)>[
     (l.balNoAccountsYet, l.balEmptyBenefit),
     (l.ldgNothingHere, l.ldgNothingHereMsg),
     (l.plNoBudgetsYet, l.plNoBudgetsMsg),
     (l.plNoGoalsYet, l.plNoGoalsMsg),
     (l.plNothingScheduled, l.plNothingSchedMsg),
+    (l.insEmptyNoAccountsTitle, l.insEmptyNoAccountsBody),
   ];
   var maxTitle = 0.0;
   var maxMessage = 0.0;
@@ -1584,12 +1600,13 @@ double firstRunTextBlockHeight(
 double firstRunActionHeight(
   AppLocalizations l,
   double textWidth,
-  TextScaler scaler,
-) {
+  TextScaler scaler, {
+  TextStyle? ambient,
+}) {
   final sentinel = String.fromCharCode(0);
   final hintH = _measureFirstRun(
     l.ldgFirstRunHint(sentinel),
-    _firstRunHintTextStyle,
+    _resolveFirstRun(ambient, _firstRunHintTextStyle),
     textWidth,
     scaler,
   );
@@ -1623,14 +1640,28 @@ class FirstRunBlock extends StatelessWidget {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final scaler = MediaQuery.textScalerOf(context);
+    // The ambient style the block's Texts will resolve against — under the
+    // Scaffold's Material this is the theme's bodyMedium on every screen, so
+    // the measured floors match the render (see [_resolveFirstRun]).
+    final ambient = DefaultTextStyle.of(context).style;
     return LayoutBuilder(
       builder: (context, constraints) {
         final textWidth = (constraints.maxWidth - Insets.xxl * 2).clamp(
           0.0,
           double.infinity,
         );
-        final textBlockHeight = firstRunTextBlockHeight(l, textWidth, scaler);
-        final actionHeight = firstRunActionHeight(l, textWidth, scaler);
+        final textBlockHeight = firstRunTextBlockHeight(
+          l,
+          textWidth,
+          scaler,
+          ambient: ambient,
+        );
+        final actionHeight = firstRunActionHeight(
+          l,
+          textWidth,
+          scaler,
+          ambient: ambient,
+        );
         return SingleChildScrollView(
           child: ConstrainedBox(
             constraints: BoxConstraints(minHeight: constraints.maxHeight),

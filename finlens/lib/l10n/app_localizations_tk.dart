@@ -4281,4 +4281,172 @@ class AppLocalizationsTk extends AppLocalizations {
   String arDeletedLineTask(Object date, int payments, Object total) {
     return '$date pozuldy · $payments töleg · $total';
   }
+
+  @override
+  String get moreAccount => 'Hasap';
+
+  @override
+  String get syncSignInGoogle => 'Google bilen dowam et';
+
+  @override
+  String get syncSignedInAs => 'Girdiňiz';
+
+  @override
+  String get syncAccountTitle => 'Hasap we sinhronlama';
+
+  @override
+  String get syncSignOut => 'Çykmak';
+
+  @override
+  String get syncSignOutConfirmTitle => 'Hasapdan çykmalymy?';
+
+  @override
+  String get syncSignOutConfirmMsg =>
+      'Sinhronlama durar. Maglumatlar şu enjamda galar.';
+
+  @override
+  String get syncErrorNetwork => 'Baglanyşyk ýok';
+
+  @override
+  String get syncErrorAuth => 'Girip bolmady';
+
+  @override
+  String get syncErrorGeneric => 'Bir näsazlyk ýüze çykdy';
+
+  @override
+  String get syncNow => 'Sinhronla';
+
+  @override
+  String get syncStatusIdle => 'Sinhronlandy';
+
+  @override
+  String get syncStatusSyncing => 'Sinhronlanýar…';
+
+  @override
+  String get syncStatusOffline => 'Oflaýn — üýtgeşmeler soň iberiler';
+
+  @override
+  String get syncStatusError => 'Sinhronlama säwligi';
+
+  @override
+  String syncLastSynced(Object time) {
+    return 'Soňky sinhronlama $time';
+  }
+
+  @override
+  String get syncConflictsTitle => 'Gapma-garşylyklar';
+
+  @override
+  String syncConflictsBanner(int count) {
+    return 'Iki adam tarapyndan üýtgedilen ýazgy: $count — barlamak üçin basyň';
+  }
+
+  @override
+  String get syncConflictKeepMine => 'Meniňkini sakla';
+
+  @override
+  String get syncConflictKeepTheirs => 'Olaryňkyny sakla';
+
+  @override
+  String get syncConflictKeepAllMine => 'Hemmesi meniňki';
+
+  @override
+  String get syncConflictKeepAllTheirs => 'Hemmesi olaryňky';
+
+  @override
+  String syncConflictEditedBy(Object email) {
+    return '$email üýtgetdi';
+  }
+
+  @override
+  String syncConflictDeletedRemote(Object email) {
+    return '$email pozdy';
+  }
+
+  @override
+  String get syncConflictDeletedLocal => 'şu enjamda pozuldy';
+
+  @override
+  String get syncConflictEmpty => 'Gapma-garşylyk ýok';
+
+  @override
+  String get syncGroupTitle => 'Maşgala topary';
+
+  @override
+  String get syncActivateGroup => 'Bilelikde ulanmagy aç';
+
+  @override
+  String get syncActivateGroupDesc =>
+      'Ýazgylaryňyz umumy bolar; çagyranlaryňyz olary görüp we üýtgedip biler';
+
+  @override
+  String get syncGroupMembers => 'Agzalar';
+
+  @override
+  String get syncAddMemberHint => 'email@example.com';
+
+  @override
+  String get syncAddMember => 'Çagyr';
+
+  @override
+  String get syncMemberActive => 'işjeň';
+
+  @override
+  String get syncMemberInvited => 'çagyryldy';
+
+  @override
+  String get syncMemberAdded => 'Çagyryş iberildi';
+
+  @override
+  String syncRemoveMemberTitle(Object email) {
+    return '$email aýrylsynmy?';
+  }
+
+  @override
+  String get syncRemoveMemberMsg =>
+      'Umumy ýazgylar oňa görünmez. Enjamyndaky ýerli nusga galar.';
+
+  @override
+  String get syncRemove => 'Aýyr';
+
+  @override
+  String get syncLeaveGroup => 'Topardan çyk';
+
+  @override
+  String get syncLeaveGroupMsg =>
+      'Umumy ýazgylar görünmez. Şu enjamda ýerli nusga galar.';
+
+  @override
+  String get syncDeleteGroup => 'Topary poz';
+
+  @override
+  String get syncDeleteGroupMsg =>
+      'Bilelikde ulanmak hemmeler üçin bes ediler. Ýerli nusgalar enjamlarda galar.';
+
+  @override
+  String get syncInviteTitle => 'Topara çagyryş';
+
+  @override
+  String syncInviteBody(Object owner) {
+    return '$owner sizi umumy ýazgylara çagyrýar';
+  }
+
+  @override
+  String get syncAcceptInvite => 'Kabul et';
+
+  @override
+  String get syncDeclineInvite => 'Ret et';
+
+  @override
+  String get syncJoinWarnTitle => 'Maglumatlaryňyz çalşylsynmy?';
+
+  @override
+  String get syncJoinWarnMsg =>
+      'Häzirki ýazgylaryňyz ilki ätiýaçlyk faýlyna saklanar, soňra toparyň umumy ýazgylary bilen çalşylar.';
+
+  @override
+  String get syncJoinAction => 'Goşul';
+
+  @override
+  String get syncEmailInvalid => 'Dogry email giriziň';
 }

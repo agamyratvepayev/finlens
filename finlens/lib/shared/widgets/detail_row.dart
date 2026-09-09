@@ -4,10 +4,11 @@ import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
 
 /// One `LABEL value` line of a read-only detail block (spec §3). The caps label
-/// is top-aligned so that when [value] wraps (a long note) the label stays
-/// against the first line. [clampValue] ellipsises the value on one line (a long
-/// account name), leaving [trailing] — e.g. a balance-after figure — its
-/// intrinsic width.
+/// is right-aligned in its column and baseline-aligned with [value] and
+/// [trailing]; a Row baseline-aligns each child's *first* line, so when [value]
+/// wraps (a long note) the label still sits against the first line. [clampValue]
+/// ellipsises the value on one line (a long account name), leaving [trailing] —
+/// e.g. a balance-after figure — its intrinsic width.
 ///
 /// Extracted verbatim from `SameTransactionsScreen._detailRow` so the detail
 /// vocabulary (62pt caps column · 13.5pt value · optional trailing) is shared by
@@ -33,26 +34,24 @@ class DetailRow extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 3),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.baseline,
+        textBaseline: TextBaseline.alphabetic,
         children: [
           SizedBox(
             width: 62,
-            child: Padding(
-              // Nudge the small caps down onto the value's first line rather
-              // than floating at the very top of the taller value box.
-              padding: const EdgeInsets.only(top: 2),
-              child: Text(
-                label.toUpperCase(),
-                style: const TextStyle(
-                  fontSize: 9.5,
-                  height: 1.2,
-                  fontWeight: FontWeight.w500,
-                  letterSpacing: 0.57, // 0.06em @ 9.5pt
-                  color: AppColors.detailLabel,
-                ),
+            child: Text(
+              label.toUpperCase(),
+              textAlign: TextAlign.end,
+              style: const TextStyle(
+                fontSize: 9.5,
+                height: 1.2,
+                fontWeight: FontWeight.w500,
+                letterSpacing: 0.57, // 0.06em @ 9.5pt
+                color: AppColors.detailLabel,
               ),
             ),
           ),
+          const SizedBox(width: Insets.md),
           Expanded(
             child: Text(
               value,
