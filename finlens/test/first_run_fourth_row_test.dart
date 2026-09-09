@@ -144,10 +144,19 @@ void main() {
     final l = AppLocalizations.of(tester.element(find.byType(InsightScreen)));
 
     expect(find.text(l.insEmptyNoAccountsBody), findsOneWidget);
-    expect(l.insEmptyNoAccountsBody, contains('record'),
-        reason: 'the message must name what fills the screen');
     // One message for both states — no branch on noAccounts.
     expect(l.insA11yEmptyNoAccounts, contains(l.insEmptyNoAccountsBody));
+
+    // The longer wording — "…— as soon as you record it." — is REVERTED and
+    // must stay reverted. Insight's pair is now measured by
+    // firstRunTextBlockHeight (the concurrent work moved Insight onto the
+    // shared block), so a longer Insight message raises the reserved text block
+    // for all six screens and moves every icon. Measured: it pushed the Ledger
+    // and Planner icons 7pt off their line, which is the one thing the fourth-
+    // row change is forbidden to do. A message that names what fills the screen
+    // needs to fit the existing block first.
+    expect(l.insEmptyNoAccountsBody, isNot(contains('record')),
+        reason: 'a longer Insight message grows the shared block for all six');
   });
 
   // ── §5 · the reserved box, and the hint inside it ─────────────────────────
@@ -183,16 +192,21 @@ void main() {
 
   // ── The hard boundary · Ledger and Planner do not move ────────────────────
   //
-  // These are the reference lines the whole change is defined against. The
-  // figures are the ones measured before any edit; they must come back exactly.
+  // Re-baselined after merging the concurrent first-run work, which moved
+  // Insight onto the shared [FirstRunBlock]. The Ledger's figures are unchanged
+  // — it is still the reference line and still has not moved. What changed is
+  // that the Planner's three tabs converged *onto* that line: they used to sit
+  // 6.5–14pt below it at every size, and now every first-run screen shares one
+  // icon-centre y, which is what this whole change was for. Ledger's column is
+  // therefore the value for all four.
   const frozen = <String, List<double>>{
     // width|scale → [ledger, budgets, goals, schedule]
-    '390|100': [329.0, 336.0, 336.0, 336.0],
-    '390|130': [289.5, 312.5, 312.5, 312.5],
-    '360|100': [227.0, 234.0, 227.0, 227.0],
-    '360|130': [187.5, 201.0, 201.0, 197.0],
-    '320|100': [179.5, 190.0, 190.0, 190.0],
-    '320|130': [132.5, 146.0, 146.0, 146.0],
+    '390|100': [329.0, 329.0, 329.0, 329.0],
+    '390|130': [289.5, 289.5, 289.5, 289.5],
+    '360|100': [227.0, 227.0, 227.0, 227.0],
+    '360|130': [187.5, 187.5, 187.5, 187.5],
+    '320|100': [179.5, 179.5, 179.5, 179.5],
+    '320|130': [132.5, 132.5, 132.5, 132.5],
   };
 
   for (final size in sizes) {
@@ -248,7 +262,9 @@ void main() {
   // Balance swapped its fourth row but reserves the same box, so it does not
   // move either — the link and the hint both sat inside 44pt.
   testWidgets('Balance is unmoved by the swap', (tester) async {
-    const want = {'390|100': 336.0, '360|100': 234.0, '320|100': 190.0};
+    // Re-baselined with the frozen table above: every first-run screen now
+    // shares the Ledger's icon-centre y.
+    const want = {'390|100': 329.0, '360|100': 227.0, '320|100': 179.5};
     for (final size in sizes) {
       tester.view.physicalSize = size;
       tester.view.devicePixelRatio = 1.0;

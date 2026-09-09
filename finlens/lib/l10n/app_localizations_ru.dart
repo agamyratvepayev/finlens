@@ -970,7 +970,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get insEmptyNoAccountsBody =>
-      'Посмотрите, что вас укрепляет, а что истощает, — как только вы что-то запишете.';
+      'Посмотрите, что вас укрепляет, а что истощает.';
 
   @override
   String get insEmptyAllHiddenTitle => 'Все счета скрыты';
@@ -1021,7 +1021,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get insA11yEmptyNoAccounts =>
-      'Что на самом деле произошло. Посмотрите, что вас укрепляет, а что истощает, — как только вы что-то запишете.';
+      'Что на самом деле произошло. Посмотрите, что вас укрепляет, а что истощает.';
 
   @override
   String get insA11yEmptyAllHidden =>

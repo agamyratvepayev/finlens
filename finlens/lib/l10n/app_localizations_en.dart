@@ -947,7 +947,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get insEmptyNoAccountsBody =>
-      'See what\'s building you up, and what\'s wearing you down — as soon as you record it.';
+      'See what\'s building you up, and what\'s wearing you down.';
 
   @override
   String get insEmptyAllHiddenTitle => 'Every account is hidden';
@@ -994,7 +994,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get insA11yEmptyNoAccounts =>
-      'What actually happened. See what\'s building you up, and what\'s wearing you down — as soon as you record it.';
+      'What actually happened. See what\'s building you up, and what\'s wearing you down.';
 
   @override
   String get insA11yEmptyAllHidden =>

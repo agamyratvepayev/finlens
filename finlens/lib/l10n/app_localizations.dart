@@ -1466,7 +1466,7 @@ abstract class AppLocalizations {
   /// No description provided for @insEmptyNoAccountsBody.
   ///
   /// In en, this message translates to:
-  /// **'See what\'s building you up, and what\'s wearing you down — as soon as you record it.'**
+  /// **'See what\'s building you up, and what\'s wearing you down.'**
   String get insEmptyNoAccountsBody;
 
   /// No description provided for @insEmptyAllHiddenTitle.
@@ -1514,7 +1514,7 @@ abstract class AppLocalizations {
   /// No description provided for @insA11yEmptyNoAccounts.
   ///
   /// In en, this message translates to:
-  /// **'What actually happened. See what\'s building you up, and what\'s wearing you down — as soon as you record it.'**
+  /// **'What actually happened. See what\'s building you up, and what\'s wearing you down.'**
   String get insA11yEmptyNoAccounts;
 
   /// No description provided for @insA11yEmptyAllHidden.

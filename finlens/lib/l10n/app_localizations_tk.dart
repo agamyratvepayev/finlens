@@ -938,7 +938,7 @@ class AppLocalizationsTk extends AppLocalizations {
 
   @override
   String get insEmptyNoAccountsBody =>
-      'Seni nämäniň ösdürýändigini, nämäniň egsildýändigini gör — bir zat ýazan badyňa.';
+      'Seni nämäniň ösdürýändigini, nämäniň egsildýändigini gör.';
 
   @override
   String get insEmptyAllHiddenTitle => 'Ähli hasap gizlendi';
@@ -985,7 +985,7 @@ class AppLocalizationsTk extends AppLocalizations {
 
   @override
   String get insA11yEmptyNoAccounts =>
-      'Aslynda näme boldy. Seni nämäniň ösdürýändigini, nämäniň egsildýändigini gör — bir zat ýazan badyňa.';
+      'Aslynda näme boldy. Seni nämäniň ösdürýändigini, nämäniň egsildýändigini gör.';
 
   @override
   String get insA11yEmptyAllHidden =>

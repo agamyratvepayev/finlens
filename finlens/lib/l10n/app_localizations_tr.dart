@@ -941,7 +941,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get insEmptyNoAccountsBody =>
-      'Seni neyin büyüttüğünü, neyin erittiğini gör — bir şey kaydeder kaydetmez.';
+      'Seni neyin büyüttüğünü, neyin erittiğini gör.';
 
   @override
   String get insEmptyAllHiddenTitle => 'Her hesap gizli';
@@ -988,7 +988,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get insA11yEmptyNoAccounts =>
-      'Gerçekte ne oldu. Seni neyin büyüttüğünü, neyin erittiğini gör — bir şey kaydeder kaydetmez.';
+      'Gerçekte ne oldu. Seni neyin büyüttüğünü, neyin erittiğini gör.';
 
   @override
   String get insA11yEmptyAllHidden =>
