@@ -392,6 +392,15 @@ class _AmountTextState extends State<_AmountText>
 
     final style = _amountStyle(size);
 
+    // Pale means "you have not typed this yet". The typed digits are always
+    // bright; the untyped decimal padding (`rest`) is dim only while the keypad
+    // is still writing here — once the amount is done (a non-empty value, no
+    // focus) it joins the number at full accent. An empty field is all
+    // placeholder, so it stays dim whether focused or not.
+    final restColor = (widget.raw.isNotEmpty && !widget.focused)
+        ? widget.accent
+        : widget.accentDim;
+
     return Text.rich(
       TextSpan(
         children: [
@@ -419,7 +428,7 @@ class _AmountTextState extends State<_AmountText>
           if (parts.rest.isNotEmpty)
             TextSpan(
               text: parts.rest,
-              style: style.copyWith(color: widget.accentDim),
+              style: style.copyWith(color: restColor),
             ),
         ],
       ),

@@ -2173,12 +2173,14 @@ class _AccountTypeRow extends StatelessWidget {
 
 /// A focusable numeric row (task 8; layout from the starting-balance spec §3):
 /// the amount and currency read as one unit — the typed digits grouped and
-/// bright, the untyped decimal remainder one step dimmer and contiguous, ~6 pt
-/// before the currency code. A tap opens nothing: it focuses the row, and the
-/// keypad docked at the sheet's foot writes here. Focus is marked three ways
-/// at once so it never rests on colour alone: the accent outline the old
-/// amount sheet drew around its own input, a caret after the last typed digit,
-/// and the brighter value. The currency code stays tappable and opens the
+/// bright, the untyped decimal remainder one step dimmer *while typing* and
+/// contiguous, ~6 pt before the currency code. A tap opens nothing: it focuses
+/// the row, and the keypad docked at the sheet's foot writes here. Focus is
+/// marked three ways at once so it never rests on colour alone: the accent
+/// outline the old amount sheet drew around its own input, a caret after the
+/// last typed digit, and the dimmed decimal padding. Once the row is filled and
+/// unfocused that padding brightens too (task 11: pale means "not typed yet",
+/// so a finished amount has no pale part). The currency code stays tappable and opens the
 /// currency picker. When the amount does not fit on one line the row falls
 /// back to two lines (label above, amount below) rather than ever truncating
 /// or shrinking the amount.
@@ -2214,17 +2216,15 @@ class _StartingBalanceRowState extends State<_StartingBalanceRow>
 
   static const _labelStyle =
       TextStyle(fontSize: 14.5, color: AppColors.textPrimary);
-  static const _restStyle = TextStyle(
-      fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textTertiary);
   static const _codeStyle = TextStyle(
       fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.textSecondary);
 
-  /// The typed part: bright while the keypad writes here, secondary otherwise
-  /// — the value's brightness is one of the three focus marks.
-  static TextStyle _typedStyle(bool focused) => TextStyle(
-      fontSize: 16,
-      fontWeight: FontWeight.w600,
-      color: focused ? AppColors.textPrimary : AppColors.textSecondary);
+  /// The number's glyph style at a given [color]. Both the typed digits and the
+  /// decimal padding share one size and weight — only the colour differs, and
+  /// only by state (task 11): pale is "not typed yet", never "this is a
+  /// decimal".
+  static TextStyle _numStyle(Color color) =>
+      TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: color);
 
   @override
   void initState() {
@@ -2286,12 +2286,21 @@ class _StartingBalanceRowState extends State<_StartingBalanceRow>
   Widget build(BuildContext context) {
     final def = currencyDef(widget.currency);
     final focused = widget.focused;
+    final filled = widget.raw.isNotEmpty;
     final parts = _parts();
+
+    // Task 11: the typed digits are always bright; the untyped decimal padding
+    // is dim only while the keypad is still writing here (or the field is
+    // empty), and joins the number at full brightness once the row is filled
+    // and unfocused. Pale means "not typed yet", not "these are decimals".
+    final restColor = (filled && !focused)
+        ? AppColors.textPrimary
+        : AppColors.textTertiary;
 
     final amount = Text.rich(
       TextSpan(children: [
         if (parts.typed.isNotEmpty)
-          TextSpan(text: parts.typed, style: _typedStyle(focused)),
+          TextSpan(text: parts.typed, style: _numStyle(AppColors.textPrimary)),
         if (focused)
           WidgetSpan(
             alignment: PlaceholderAlignment.middle,
@@ -2309,7 +2318,7 @@ class _StartingBalanceRowState extends State<_StartingBalanceRow>
             ),
           ),
         if (parts.rest.isNotEmpty)
-          TextSpan(text: parts.rest, style: _restStyle),
+          TextSpan(text: parts.rest, style: _numStyle(restColor)),
       ]),
       textAlign: TextAlign.right,
       maxLines: 1,
@@ -2358,9 +2367,9 @@ class _StartingBalanceRowState extends State<_StartingBalanceRow>
             builder: (context, c) {
               final scaler = MediaQuery.textScalerOf(context);
               final labelW = _measure(widget.label, _labelStyle, scaler);
-              final amountW =
-                  _measure(parts.typed + parts.rest, _restStyle, scaler) +
-                      (focused ? 4 : 0); // caret column
+              final amountW = _measure(parts.typed + parts.rest,
+                      _numStyle(AppColors.textPrimary), scaler) +
+                  (focused ? 4 : 0); // caret column
               final codeW = _measure(def.code, _codeStyle, scaler) + 6;
               // One line only if the label and the amount unit both fit with a
               // little breathing room between them (§3).
