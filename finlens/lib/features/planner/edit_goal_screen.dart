@@ -4,7 +4,6 @@ import '../../core/l10n/enum_labels.dart';
 import '../../core/models/models.dart';
 import '../../core/store/app_store.dart';
 import '../../core/utils/formatters.dart';
-import '../../core/utils/fx.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/amount_text.dart';
 import '../../shared/widgets/app_card.dart';
@@ -139,10 +138,10 @@ class _EditGoalScreenState extends State<EditGoalScreen> {
   /// chosen apart from it (§5.3). A new account and an income category both fall
   /// back to the base currency, as does the untouched state.
   String get _sourceCurrency {
-    if (_createNewAccount) return Fx.baseCurrency;
+    if (_createNewAccount) return _store.baseCurrency;
     final s = _isEditing ? _goal!.source : _source;
-    if (s == null || s.isCategory) return Fx.baseCurrency;
-    return _store.accountById(s.id)?.currency ?? Fx.baseCurrency;
+    if (s == null || s.isCategory) return _store.baseCurrency;
+    return _store.accountById(s.id)?.currency ?? _store.baseCurrency;
   }
 
   /// The source's balance at creation — a goal watching an existing account
@@ -665,7 +664,7 @@ class _EditGoalScreenState extends State<EditGoalScreen> {
       final acc = _store.addAccount(
         name: name.isEmpty ? l.goalUntitled : name,
         group: AccountGroup.setAside,
-        currency: Fx.baseCurrency,
+        currency: _store.baseCurrency,
         startingBalance: 0,
       );
       source = GoalSource.account(acc.id);

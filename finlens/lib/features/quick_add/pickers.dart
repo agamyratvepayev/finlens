@@ -8,7 +8,6 @@ import '../../core/l10n/enum_labels.dart';
 import '../../core/models/models.dart';
 import '../../core/store/app_store.dart';
 import '../../core/utils/formatters.dart';
-import '../../core/utils/fx.dart';
 import '../../core/utils/search_fold.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/amount_text.dart';
@@ -1545,7 +1544,11 @@ class _NewAccountFormState extends State<_NewAccountForm> {
   final _nameFocus = FocusNode();
 
   AccountGroup? _group; // nothing selected initially (spec §2)
-  String _currency = Fx.baseCurrency;
+  // Seeded in [initState] from the store's base currency. With no base set yet
+  // (no accounts), that getter falls back to the device locale's currency
+  // (spec §2b), so the very first account on a Turkmen device defaults to TMT
+  // rather than the old hard-coded USD.
+  late String _currency;
 
   // The account glyph: an [_icon] OR an [_emoji], drawn on a tile tinted with
   // the chosen colour ([_colorValue]; null = follow the type). [_iconExplicit]
@@ -1568,6 +1571,7 @@ class _NewAccountFormState extends State<_NewAccountForm> {
   @override
   void initState() {
     super.initState();
+    _currency = StoreScope.read(context).baseCurrency;
     _name.addListener(_onChanged);
     _nameFocus.addListener(_onNameFocus);
     final g = widget.initialGroup;
@@ -2443,11 +2447,15 @@ Future<int?> _showDayPicker(BuildContext context, int? current) {
 /// when there are none), and a header `+ Add` that opens the Add-currency sheet
 /// and — mirroring the account picker's create-and-select — selects the new
 /// currency on success.
-Future<String?> pickCurrency(BuildContext context, String current) {
+Future<String?> pickCurrency(BuildContext context, String current,
+    {String? title}) {
   final l = AppLocalizations.of(context);
   return showAppSheet<String>(
     context,
-    title: l.eaCurrency,
+    // Existing callers (edit account) pass nothing and keep the generic
+    // "Currency" title; the base-currency flow (spec §12) passes its own so the
+    // sheet's rows/behaviour are otherwise unchanged.
+    title: title ?? l.eaCurrency,
     initialSize: 0.85,
     cancelLabel: l.actionCancel,
     actions: [

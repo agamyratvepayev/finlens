@@ -180,6 +180,8 @@
   "moreCategories": "Категории",
   "moreArchive": "Архив",
   "moreMaskAmounts": "Скрывать все суммы",
+  "moreBaseCurrency": "Базовая валюта",
+  "moreBaseCurrencyTitle": "Валюта",
   "moreBackup": "Резервная копия",
   "moreRestore": "Восстановить",
   "moreBackupShort": "Копия",

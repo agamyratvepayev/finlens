@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../features/balance/balance_filter.dart';
@@ -32,6 +33,7 @@ class AppStore extends ChangeNotifier {
     DateTime? budgetHistorySince,
     int? idSeq,
     int? tagSchema,
+    String? baseCurrency,
   })  : _accounts = List.of(accounts),
         _categories = List.of(categories),
         _txns = List.of(txns),
@@ -52,6 +54,10 @@ class AppStore extends ChangeNotifier {
     // are never re-migrated). Both no-op on the seed path where they are null.
     if (idSeq != null) _idSeq = idSeq;
     if (tagSchema != null) _tagSchema = tagSchema;
+    // The display base currency (spec §12). Restored here for a backup that
+    // carries it; a backup written before this change passes null, and the
+    // derive-from-oldest fallback runs in [loadFrom] when this store is adopted.
+    _baseCurrency = baseCurrency;
     // On load: reify tags (turn the fixture's legacy name-lists into Tag
     // entities and rewrite each txn's tagIds — §1 migration), drop goals whose
     // source no longer resolves to anything (§9), seed a `created` history entry
@@ -289,6 +295,125 @@ class AppStore extends ChangeNotifier {
     );
   }
 
+  // ── Base currency (spec §12 — every total is shown in this one currency) ────
+  // The currency every *aggregate* (net worth, group totals, Spendable, ledger
+  // scopes, Insight, goal metrics) is converted to and displayed in. It replaces
+  // the old `baseCurrency = 'USD'` compile-time constant: nobody chose USD,
+  // it was simply what the constant said. Now it is a stored setting, seeded
+  // silently from the first account's currency and changeable only in
+  // More ▸ Preferences.
+  //
+  // Stored via SharedPreferences (alongside [_localeKey]), NOT the SQLite
+  // snapshot — like the locale, it is device-preference state. The backup file
+  // carries its own copy in `meta` (see backup_codec).
+  static const _baseCurrencyKey = 'base_currency';
+
+  /// The persisted base, or null when none has ever been written (no account
+  /// has ever existed). Never re-derived on account deletion/edit once set — a
+  /// silent setting must not silently move the biggest number on the home
+  /// screen.
+  String? _baseCurrency;
+
+  /// The currency ISO code the device locale suggests, resolved once at load.
+  /// Used only as the last-resort seed when there is no stored base and no
+  /// account yet (so the new-account form offers TMT on a Turkmen device).
+  String? _deviceLocaleCurrency;
+
+  /// The base currency every total is displayed in — the resolved value, never
+  /// null. Reads live so a change in Preferences repaints every aggregate
+  /// without an app restart (nothing caches it).
+  String get baseCurrency =>
+      resolveBaseCurrency(_baseCurrency, _accounts, _deviceLocaleCurrency);
+
+  /// The user's explicit choice (More ▸ Preferences). Stores it and notifies so
+  /// every total recomputes and repaints immediately.
+  void setBaseCurrency(String code) {
+    if (code.isEmpty || code == _baseCurrency) return;
+    _baseCurrency = code;
+    notifyListeners();
+    unawaited(_saveBaseCurrency(code));
+  }
+
+  /// Pure, parameterised resolver — the base-currency analogue of
+  /// [resolveInitialLocale], unit-testable without SharedPreferences or a
+  /// platform. Precedence (spec §1/§7): a stored value wins; else the oldest
+  /// account's currency (the upgrade repair); else the device locale's currency;
+  /// else USD.
+  static String resolveBaseCurrency(
+    String? stored,
+    List<Account> accounts,
+    String? deviceLocaleCurrency,
+  ) {
+    if (stored != null && stored.isNotEmpty) return stored;
+    final oldest = oldestAccountCurrency(accounts);
+    if (oldest != null) return oldest;
+    if (deviceLocaleCurrency != null && deviceLocaleCurrency.isNotEmpty) {
+      return deviceLocaleCurrency;
+    }
+    return 'USD';
+  }
+
+  /// The currency of the oldest account (earliest [Account.openedOn]; accounts
+  /// with no recorded open date predate the field and so sort oldest, with list
+  /// insertion order breaking ties). Null when there are no accounts. This is
+  /// what repairs an existing install's `$143` without asking anyone.
+  static String? oldestAccountCurrency(List<Account> accounts) {
+    if (accounts.isEmpty) return null;
+    DateTime key(Account a) =>
+        a.openedOn ?? DateTime.fromMillisecondsSinceEpoch(0);
+    var oldest = accounts.first;
+    for (final a in accounts.skip(1)) {
+      if (key(a).isBefore(key(oldest))) oldest = a;
+    }
+    return oldest.currency;
+  }
+
+  /// The ISO currency code the device [locale] implies, via `intl`'s
+  /// locale→currency mapping, or null when it yields nothing or a code the
+  /// catalog does not know (spec §2b). `intl` carries no data for some locales
+  /// (Turkmen among them), so the lookup is guarded.
+  static String? currencyForLocale(Locale locale) {
+    try {
+      final name =
+          NumberFormat.simpleCurrency(locale: locale.toString()).currencyName;
+      if (name != null && name.isNotEmpty && currencyCodeExists(name)) {
+        return name;
+      }
+    } catch (_) {
+      // Unsupported locale — fall through to null (caller defaults to USD).
+    }
+    return null;
+  }
+
+  /// Restores the base currency before the first frame (called from `main`), so
+  /// no screen paints a `$143` and then corrects itself. Derives-and-pins for an
+  /// existing install that has no stored value yet (the upgrade path).
+  Future<void> loadBaseCurrency() async {
+    final prefs = await SharedPreferences.getInstance();
+    _deviceLocaleCurrency =
+        currencyForLocale(WidgetsBinding.instance.platformDispatcher.locale);
+    final stored = prefs.getString(_baseCurrencyKey);
+    if (stored != null && stored.isNotEmpty) {
+      _baseCurrency = stored;
+    } else if (_accounts.isNotEmpty) {
+      // Upgrade: derive once from the oldest account and pin it, so the figure
+      // is repaired and deleting that account can never move the base.
+      _baseCurrency = oldestAccountCurrency(_accounts);
+      if (_baseCurrency != null) {
+        unawaited(_saveBaseCurrency(_baseCurrency!));
+      }
+    }
+    // No accounts and nothing stored: leave null — there is nothing to total, so
+    // no base is needed. The new-account form seeds from the device locale.
+  }
+
+  /// base-currency conversion for the store's own aggregates: convert [amount]
+  /// from [currency] into the current [baseCurrency]. A thin instance wrapper so
+  /// [Fx] stays a pure function of its inputs and every call site reads the live
+  /// base (nothing caches it).
+  double _toBase(double amount, String currency) =>
+      Fx.convert(amount, currency, baseCurrency);
+
   // ── Ledger view preferences ───────────────────────────────────────────────
   // Whether the Ledger tab reveals each noted row's description line. Unlike the
   // filter/search lens, this is a lasting view preference: it persists and never
@@ -328,6 +453,19 @@ class AppStore extends ChangeNotifier {
   static Future<void> _saveString(String key, String value) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(key, value);
+  }
+
+  /// Best-effort persistence of the base currency. Unlike the language/toggle
+  /// saves, this fires from [addAccount] and [loadFrom] — mutations exercised by
+  /// unit tests that do not register a SharedPreferences mock — so a plugin-less
+  /// environment must not turn the silent seed into an unhandled exception.
+  static Future<void> _saveBaseCurrency(String code) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_baseCurrencyKey, code);
+    } catch (_) {
+      // No platform / no mock: the in-memory value still stands for this run.
+    }
   }
 
   /// Restores the descriptions toggles before the first frame (called from
@@ -1274,9 +1412,9 @@ class AppStore extends ChangeNotifier {
 
   /// Balance converted to the base currency — the only form safe to add up
   /// across accounts (spec 3.4 FX rule).
-  double balanceInBase(String accountId) => Fx.toBase(
+  double balanceInBase(String accountId) => _toBase(
         balanceOf(accountId),
-        accountById(accountId)?.currency ?? Fx.baseCurrency,
+        accountById(accountId)?.currency ?? baseCurrency,
       );
 
   /// Balance as it stood at the end of [date], ignoring the `asOf` cutoff — the
@@ -1296,9 +1434,9 @@ class AppStore extends ChangeNotifier {
 
   /// [balanceOn] converted to base currency — a goal's `startAmount` for an
   /// account source.
-  double balanceOnInBase(String accountId, DateTime date) => Fx.toBase(
+  double balanceOnInBase(String accountId, DateTime date) => _toBase(
         balanceOn(accountId, date),
-        accountById(accountId)?.currency ?? Fx.baseCurrency,
+        accountById(accountId)?.currency ?? baseCurrency,
       );
 
   double groupTotal(AccountGroup group) => accounts
@@ -1354,7 +1492,7 @@ class AppStore extends ChangeNotifier {
       if (t.date.isBefore(since)) continue;
       for (final a in accounts) {
         if (a.group != group) continue;
-        activity += Fx.toBase(_effectOn(t, a.id), a.currency).abs();
+        activity += _toBase(_effectOn(t, a.id), a.currency).abs();
       }
     }
     return activity;
@@ -1371,7 +1509,7 @@ class AppStore extends ChangeNotifier {
     var activity = 0.0;
     for (final t in _txns) {
       if (t.date.isBefore(since)) continue;
-      activity += Fx.toBase(_effectOn(t, accountId), account.currency).abs();
+      activity += _toBase(_effectOn(t, accountId), account.currency).abs();
     }
     return activity;
   }
@@ -1399,7 +1537,7 @@ class AppStore extends ChangeNotifier {
       for (final a in _accounts) {
         // An expense lowers an asset and raises a liability; both shrink net
         // worth, and the sign convention (liabilities negative) handles it.
-        delta += Fx.toBase(_effectOn(t, a.id), a.currency);
+        delta += _toBase(_effectOn(t, a.id), a.currency);
       }
     }
     return delta;
@@ -1451,14 +1589,14 @@ class AppStore extends ChangeNotifier {
           .where((t) =>
               t.type == TxnType.income &&
               (visible == null || visible.contains(t.toRef)))
-          .fold(0.0, (sum, t) => sum + Fx.toBase(t.amount, t.currency));
+          .fold(0.0, (sum, t) => sum + _toBase(t.amount, t.currency));
 
   double expenseInWindow(DateRange window, {Set<String>? visible}) =>
       txnsInWindow(window)
           .where((t) =>
               t.type == TxnType.expense &&
               (visible == null || visible.contains(t.fromRef)))
-          .fold(0.0, (sum, t) => sum + Fx.toBase(t.amount, t.currency));
+          .fold(0.0, (sum, t) => sum + _toBase(t.amount, t.currency));
 
   /// The set of months (1–12) in [year] that hold at least one transaction —
   /// the Period sheet's has-data dots. One grouped pass per displayed year per
@@ -1881,7 +2019,7 @@ class AppStore extends ChangeNotifier {
     for (final t in txnsInWindow(window)) {
       for (final a in _accounts) {
         if (visible != null && !visible.contains(a.id)) continue;
-        delta += Fx.toBase(_effectOn(t, a.id), a.currency);
+        delta += _toBase(_effectOn(t, a.id), a.currency);
       }
     }
     return delta;
@@ -1899,7 +2037,7 @@ class AppStore extends ChangeNotifier {
       for (final a in _accounts) {
         if (a.group != group) continue;
         if (visible != null && !visible.contains(a.id)) continue;
-        delta += Fx.toBase(_effectOn(t, a.id), a.currency);
+        delta += _toBase(_effectOn(t, a.id), a.currency);
       }
     }
     return delta;
@@ -1912,7 +2050,7 @@ class AppStore extends ChangeNotifier {
           .where((t) =>
               t.type == TxnType.rebalance &&
               (visible == null || visible.contains(t.toRef)))
-          .fold(0.0, (sum, t) => sum + Fx.toBase(t.amount, t.currency));
+          .fold(0.0, (sum, t) => sum + _toBase(t.amount, t.currency));
 
   /// What a window's transfers actually cost: the fee, plus any gap between what
   /// left the source and what landed in the destination once both are converted
@@ -1935,8 +2073,8 @@ class AppStore extends ChangeNotifier {
       bool inSet(Account? a) =>
           a != null && (visible == null || visible.contains(a.id));
       if (!inSet(from) || !inSet(to)) continue;
-      leak -= Fx.toBase(_effectOn(t, from!.id), from.currency);
-      leak -= Fx.toBase(_effectOn(t, to!.id), to.currency);
+      leak -= _toBase(_effectOn(t, from!.id), from.currency);
+      leak -= _toBase(_effectOn(t, to!.id), to.currency);
     }
     return leak;
   }
@@ -1959,7 +2097,7 @@ class AppStore extends ChangeNotifier {
       if (fromV == toV) continue; // both in or both out → not crossing
       final acc = fromV ? from : to;
       if (acc == null) continue;
-      moved += Fx.toBase(_effectOn(t, acc.id), acc.currency);
+      moved += _toBase(_effectOn(t, acc.id), acc.currency);
     }
     return moved;
   }
@@ -1977,12 +2115,12 @@ class AppStore extends ChangeNotifier {
           // The account charged is `fromRef`; the row counts when it is visible.
           if (visible != null && !visible.contains(t.fromRef)) break;
           expense[t.toRef] =
-              (expense[t.toRef] ?? 0) + Fx.toBase(t.amount, t.currency);
+              (expense[t.toRef] ?? 0) + _toBase(t.amount, t.currency);
         case TxnType.income:
           // The account credited is `toRef`; the row counts when it is visible.
           if (visible != null && !visible.contains(t.toRef)) break;
           income[t.fromRef] =
-              (income[t.fromRef] ?? 0) + Fx.toBase(t.amount, t.currency);
+              (income[t.fromRef] ?? 0) + _toBase(t.amount, t.currency);
         case TxnType.transfer:
         case TxnType.rebalance:
           break;
@@ -1996,12 +2134,12 @@ class AppStore extends ChangeNotifier {
   double spentInCategoryWindow(String categoryId, DateRange window) =>
       txnsInWindow(window)
           .where((t) => t.type == TxnType.expense && t.toRef == categoryId)
-          .fold(0.0, (sum, t) => sum + Fx.toBase(t.amount, t.currency));
+          .fold(0.0, (sum, t) => sum + _toBase(t.amount, t.currency));
 
   double earnedInCategoryWindow(String categoryId, DateRange window) =>
       txnsInWindow(window)
           .where((t) => t.type == TxnType.income && t.fromRef == categoryId)
-          .fold(0.0, (sum, t) => sum + Fx.toBase(t.amount, t.currency));
+          .fold(0.0, (sum, t) => sum + _toBase(t.amount, t.currency));
 
   /// Spent in [window] on expense categories that carry no budget — the windowed
   /// twin of [unbudgetedSpend], for the see-all screen's `Bütçesiz…` strip.
@@ -2035,7 +2173,7 @@ class AppStore extends ChangeNotifier {
               t.type == TxnType.expense &&
               accountById(t.fromRef)?.group == AccountGroup.creditCards &&
               (visible == null || visible.contains(t.fromRef)))
-          .fold(0.0, (sum, t) => sum + Fx.toBase(t.amount, t.currency));
+          .fold(0.0, (sum, t) => sum + _toBase(t.amount, t.currency));
 
   /// Paid *into* liability accounts in [window] via transfer — the DEBT block's
   /// "paid" figure, a positive magnitude. Uses what actually landed in the
@@ -2048,7 +2186,7 @@ class AppStore extends ChangeNotifier {
       final dest = accountById(t.toRef);
       if (dest == null || !dest.group.isLiability) continue;
       if (visible != null && !visible.contains(dest.id)) continue;
-      paid += Fx.toBase(t.toAmount ?? t.amount, dest.currency);
+      paid += _toBase(t.toAmount ?? t.amount, dest.currency);
     }
     return paid;
   }
@@ -2321,9 +2459,9 @@ class AppStore extends ChangeNotifier {
   /// The task's expected amount in base currency (§2.1). Converts through the
   /// **linked account's** currency exactly as mark-paid does; an absent account
   /// falls back to the base currency and never crashes.
-  double _taskAmountInBase(Task t) => Fx.toBase(
+  double _taskAmountInBase(Task t) => _toBase(
         t.expectedAmount.abs(),
-        accountById(t.linkedAccountId)?.currency ?? Fx.baseCurrency,
+        accountById(t.linkedAccountId)?.currency ?? baseCurrency,
       );
 
   /// Public read of a task's expected amount in base currency — the detail
@@ -2467,7 +2605,7 @@ class AppStore extends ChangeNotifier {
       .toList(growable: false);
 
   double paymentTotalForTask(String taskId) => paymentsForTask(taskId)
-      .fold(0.0, (s, t) => s + Fx.toBase(t.amount, t.currency));
+      .fold(0.0, (s, t) => s + _toBase(t.amount, t.currency));
 
   /// Completed / skipped / cancelled events over [period], newest first (§11.5).
   /// Merged from three sources: paid & received transactions (amount and date
@@ -2496,7 +2634,7 @@ class AppStore extends ChangeNotifier {
         txn: t,
         outcome:
             received ? ScheduleOutcome.received : ScheduleOutcome.paid,
-        amountInBase: Fx.toBase(t.amount, t.currency),
+        amountInBase: _toBase(t.amount, t.currency),
       ));
     }
     // 2 · skipped — every recurring skip, including on paused/archived tasks.
@@ -2678,6 +2816,14 @@ class AppStore extends ChangeNotifier {
     // that started blank (_idSeq == 1000) would mint colliding ids for the next
     // new entity, since the restored rows already carry ids well past 1000.
     _idSeq = source._idSeq;
+    // Adopt the restored base currency, and persist it. A backup written after
+    // this change carries it on the source; one written before does not, so
+    // derive it from the oldest account (spec §4). Persisting pins it, so it
+    // survives the relaunch and cannot move if that account is later deleted.
+    _baseCurrency = source._baseCurrency ?? oldestAccountCurrency(_accounts);
+    if (_baseCurrency != null) {
+      unawaited(_saveString(_baseCurrencyKey, _baseCurrency!));
+    }
     _sameIndex = null;
     _accountIndex = null;
     // A moved balance can newly meet a goal's target; latch any that reached
@@ -2851,7 +2997,7 @@ class AppStore extends ChangeNotifier {
   /// currency — the IN USE section of the currency screen (spec §1). Not all 180
   /// ISO codes: this screen lists what this store actually touches.
   List<String> currencyCodesInUse() {
-    final seen = <String>{Fx.baseCurrency};
+    final seen = <String>{baseCurrency};
     for (final a in _accounts) {
       seen.add(a.currency);
     }
@@ -2898,6 +3044,14 @@ class AppStore extends ChangeNotifier {
       openingDate: DateTime(today.year, today.month, today.day),
     );
     _accounts.add(account);
+    // First account ever: silently seed the base currency from it, once
+    // (spec §1). `_baseCurrency` is null only before any account has existed, so
+    // this fires exactly on the first account and never on later ones — creating
+    // a second account, or deleting/editing this one, leaves the base alone.
+    if (_baseCurrency == null) {
+      _baseCurrency = currency;
+      unawaited(_saveBaseCurrency(currency));
+    }
     notifyListeners();
     return account;
   }
@@ -3475,7 +3629,7 @@ class AppStore extends ChangeNotifier {
       txn = addTxn(
         type: TxnType.transfer,
         amount: amount,
-        currency: from?.currency ?? Fx.baseCurrency,
+        currency: from?.currency ?? baseCurrency,
         fromRef: fromAccountId,
         toRef: toRef,
         date: date,
@@ -3487,7 +3641,7 @@ class AppStore extends ChangeNotifier {
       txn = addTxn(
         type: TxnType.expense,
         amount: amount,
-        currency: from?.currency ?? Fx.baseCurrency,
+        currency: from?.currency ?? baseCurrency,
         fromRef: fromAccountId,
         toRef: toRef,
         date: date,
@@ -3502,7 +3656,7 @@ class AppStore extends ChangeNotifier {
       txn = addTxn(
         type: TxnType.income,
         amount: amount,
-        currency: into?.currency ?? Fx.baseCurrency,
+        currency: into?.currency ?? baseCurrency,
         fromRef: toRef,
         toRef: fromAccountId,
         date: date,

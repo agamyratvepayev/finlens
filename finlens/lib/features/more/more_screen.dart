@@ -19,6 +19,7 @@ import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/app_typography.dart';
 import '../planner/archive_screen.dart';
+import '../quick_add/pickers.dart';
 import 'category_management_screen.dart';
 import 'currency_management_screen.dart';
 import 'tag_management_screen.dart';
@@ -130,6 +131,19 @@ void _pickLanguage(BuildContext context, AppStore store) {
       );
     },
   );
+}
+
+/// Opens the existing currency picker to choose the base currency (spec §12),
+/// then stores the choice. The picker sheet itself is unchanged; only its title
+/// differs (a dedicated key, not the edit-account one). A cancelled pick is a
+/// no-op; a choice repaints every total via [AppStore.setBaseCurrency].
+Future<void> _pickBaseCurrency(BuildContext context, AppStore store) async {
+  final code = await pickCurrency(
+    context,
+    store.baseCurrency,
+    title: AppLocalizations.of(context).moreBaseCurrencyTitle,
+  );
+  if (code != null) store.setBaseCurrency(code);
 }
 
 /// Dump: serialise the whole store and hand the bytes to the system "Save"
@@ -295,6 +309,15 @@ class MoreScreen extends StatelessWidget {
                   ),
                   // Indent 48 (= 12 padding + 24 icon + 12 gap) so the hairline
                   // starts at the text, not the 52 the shared FormSection uses.
+                  const RowDivider(indent: 48),
+                  // Base currency (spec §12): the one currency every total is
+                  // shown in. Its own hairline above and below, matching the
+                  // card. `store.baseCurrency` reads live, so choosing a new one
+                  // repaints every total without a restart.
+                  _BaseCurrencyRow(
+                    value: store.baseCurrency,
+                    onTap: () => _pickBaseCurrency(context, store),
+                  ),
                   const RowDivider(indent: 48),
                   _MaskRow(
                     value: store.masked,
@@ -571,6 +594,55 @@ class _LanguageRow extends StatelessWidget {
               Text(value, style: AppText.amount, maxLines: 1),
               // Language raises the language bottom sheet in place.
               const _RowTrailingChevron(opensSheet: true),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The base-currency row (spec §12) — inline for the same reason as
+/// [_ArchiveRow], cloned from [_LanguageRow]. The value is the base's code
+/// (`TMT`, `USD`). Tapping it opens the existing [pickCurrency] sheet; choosing
+/// a currency stores it and repaints every total.
+class _BaseCurrencyRow extends StatelessWidget {
+  const _BaseCurrencyRow({required this.value, required this.onTap});
+
+  final String value;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return InkWell(
+      onTap: onTap,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 38),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: Insets.md),
+          child: Row(
+            children: [
+              const SizedBox(
+                width: 24,
+                child: Icon(Icons.currency_exchange_rounded,
+                    size: 18, color: AppColors.textSecondary),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  l.moreBaseCurrency,
+                  style: AppText.body.copyWith(
+                      fontSize: 14.5, color: AppColors.textPrimary),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              // Same trailing column as [_LanguageRow]: the code is the value and
+              // never shrinks (the label ellipsises instead).
+              const SizedBox(width: Insets.sm),
+              Text(value, style: AppText.amount, maxLines: 1),
+              const _RowTrailingChevron(),
             ],
           ),
         ),

@@ -624,6 +624,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get moreMaskAmounts => 'Mask all amounts';
 
   @override
+  String get moreBaseCurrency => 'Base currency';
+
+  @override
+  String get moreBaseCurrencyTitle => 'Currency';
+
+  @override
   String get moreBackup => 'Back up data';
 
   @override

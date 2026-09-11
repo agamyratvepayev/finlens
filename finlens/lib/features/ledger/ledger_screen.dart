@@ -126,7 +126,7 @@ class _LedgerScreenState extends State<LedgerScreen> {
 
   // ── Filter / search predicates ─────────────────────────────────────────────
 
-  bool _matchesFilter(Txn t) {
+  bool _matchesFilter(Txn t, String base) {
     if (_direction != null && t.type != _direction) return false;
     if (_categoryIds.isNotEmpty) {
       // A transfer/revaluation carries no category, so it drops out whenever a
@@ -149,7 +149,7 @@ class _LedgerScreenState extends State<LedgerScreen> {
     if (_min != null || _max != null) {
       // Bounds are on absolute base-currency magnitude, matching the sheet's
       // per-item counts and range hint.
-      final amt = Fx.toBase(t.amount, t.currency).abs();
+      final amt = Fx.convert(t.amount, t.currency, base).abs();
       if (_min != null && amt < _min!) return false;
       if (_max != null && amt > _max!) return false;
     }
@@ -236,7 +236,8 @@ class _LedgerScreenState extends State<LedgerScreen> {
     // window → filter → search → grouping.
     final all = store.txnsInWindow(window); // newest first
     final total = all.length;
-    final filtered = all.where(_matchesFilter).toList();
+    final filtered =
+        all.where((t) => _matchesFilter(t, store.baseCurrency)).toList();
 
     final folded = foldSearch(_debouncedQuery.trim());
     final searching = _searching && folded.isNotEmpty;
@@ -836,7 +837,7 @@ class _LedgerScreenState extends State<LedgerScreen> {
         tagCountDir[null]![id] = (tagCountDir[null]![id] ?? 0) + 1;
         tagCountDir[t.type]![id] = (tagCountDir[t.type]![id] ?? 0) + 1;
       }
-      final amt = Fx.toBase(t.amount, t.currency).abs();
+      final amt = Fx.convert(t.amount, t.currency, store.baseCurrency).abs();
       bound(null, amt);
       bound(t.type, amt);
     }
@@ -968,7 +969,7 @@ class _LedgerScreenState extends State<LedgerScreen> {
           continue;
         }
         if (tg.isNotEmpty && !t.tagIds.any(tg.contains)) continue;
-        final amt = Fx.toBase(t.amount, t.currency).abs();
+        final amt = Fx.convert(t.amount, t.currency, store.baseCurrency).abs();
         if (s.min != null && amt < s.min!) continue;
         if (s.max != null && amt > s.max!) continue;
         n++;

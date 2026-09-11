@@ -228,6 +228,8 @@
   "moreCategories": "Categories",
   "moreArchive": "Archive",
   "moreMaskAmounts": "Mask all amounts",
+  "moreBaseCurrency": "Base currency",
+  "moreBaseCurrencyTitle": "Currency",
   "moreBackup": "Back up data",
   "moreRestore": "Restore data",
   "moreBackupShort": "Back up",

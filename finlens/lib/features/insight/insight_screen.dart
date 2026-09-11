@@ -2004,7 +2004,7 @@ class _RevaluationBlock extends StatelessWidget {
     final store = report.store;
     final acc = store.accountById(t.toRef);
 
-    final amountBase = Fx.toBase(t.amount, t.currency);
+    final amountBase = Fx.convert(t.amount, t.currency, store.baseCurrency);
     // The base from the account's balance immediately before the rebalance.
     final base = acc == null
         ? 0.0

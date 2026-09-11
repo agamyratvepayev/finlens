@@ -131,6 +131,7 @@ class SameStats {
     List<Txn> list,
     DateTime today, {
     required DateRange? window,
+    required String base,
   }) {
     if (list.isEmpty) return empty;
     // A widened key can span accounts in different currencies (spec §3), so the
@@ -138,7 +139,7 @@ class SameStats {
     // Rows themselves still print in their own currency; only TOTAL/AVERAGE
     // (which read [total]) are base.
     final total = list.fold<double>(
-        0, (sum, t) => sum + Fx.toBase(t.amount, t.currency).abs());
+        0, (sum, t) => sum + Fx.convert(t.amount, t.currency, base).abs());
     final count = list.length;
     final newest = list.first.date; // list is newest-first
     final oldest = list.last.date;

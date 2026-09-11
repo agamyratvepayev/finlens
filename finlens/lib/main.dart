@@ -59,6 +59,7 @@ Future<void> main() async {
   await store.loadTransPrefs();
   await store.loadLedgerPrefs();
   await store.loadLocale();
+  await store.loadBaseCurrency();
 
   // Group sync rides on real persistence only — the dev-seed fixture has no
   // persister and must never push its data into a group.

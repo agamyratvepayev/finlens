@@ -196,7 +196,7 @@ class LedgerQuery {
     final currency = store.accountById(
           touchesFrom ? t.fromRef : t.toRef,
         )?.currency ??
-        Fx.baseCurrency;
+        store.baseCurrency;
 
     switch (t.type) {
       case TxnType.transfer:
@@ -211,7 +211,7 @@ class LedgerQuery {
           kind: internal
               ? FlowKind.internal
               : (leaving ? FlowKind.outflow : FlowKind.inflow),
-          signedAmount: Fx.toBase(t.amount, currency).abs(),
+          signedAmount: Fx.convert(t.amount, currency, store.baseCurrency).abs(),
           counterpartyLine: _transferLine(t, leaving: leaving),
         );
 
@@ -219,7 +219,7 @@ class LedgerQuery {
         return ScopedTxn(
           txn: t,
           kind: FlowKind.outflow,
-          signedAmount: Fx.toBase(t.amount, currency).abs(),
+          signedAmount: Fx.convert(t.amount, currency, store.baseCurrency).abs(),
           counterpartyLine: null,
         );
 
@@ -227,7 +227,7 @@ class LedgerQuery {
         return ScopedTxn(
           txn: t,
           kind: FlowKind.inflow,
-          signedAmount: Fx.toBase(t.amount, currency).abs(),
+          signedAmount: Fx.convert(t.amount, currency, store.baseCurrency).abs(),
           counterpartyLine: null,
         );
 
@@ -236,7 +236,7 @@ class LedgerQuery {
         return ScopedTxn(
           txn: t,
           kind: t.amount >= 0 ? FlowKind.inflow : FlowKind.outflow,
-          signedAmount: Fx.toBase(t.amount, currency).abs(),
+          signedAmount: Fx.convert(t.amount, currency, store.baseCurrency).abs(),
           counterpartyLine: null,
         );
     }
@@ -276,10 +276,10 @@ class LedgerQuery {
   /// account ledger's balance is native to that account; a group or all-
   /// accounts total sums across currencies and so is base-currency.
   String get currency => switch (scope) {
-        AllAccountsScope() => Fx.baseCurrency,
-        GroupScope() => Fx.baseCurrency,
+        AllAccountsScope() => store.baseCurrency,
+        GroupScope() => store.baseCurrency,
         AccountScope(:final accountId) =>
-          store.accountById(accountId)?.currency ?? Fx.baseCurrency,
+          store.accountById(accountId)?.currency ?? store.baseCurrency,
       };
 }
 

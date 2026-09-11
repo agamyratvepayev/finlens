@@ -159,7 +159,9 @@ void main() {
         final sorted = [...l]..sort((a, b) => b.date.compareTo(a.date));
         // window: null → the denominator is the span, so this still asserts the
         // span-under-14-days case (the All time behaviour).
-        return SameStats.of(sorted, _today, window: null).perMonth == null &&
+        return SameStats.of(sorted, _today, window: null, base: 'USD')
+                    .perMonth ==
+                null &&
             l.length >= 2;
       });
       expect(hidden, isNotEmpty);

@@ -180,6 +180,8 @@
   "moreCategories": "Kategoriler",
   "moreArchive": "Arşiv",
   "moreMaskAmounts": "Tüm tutarları gizle",
+  "moreBaseCurrency": "Ana para birimi",
+  "moreBaseCurrencyTitle": "Para birimi",
   "moreBackup": "Verileri yedekle",
   "moreRestore": "Verileri geri yükle",
   "moreBackupShort": "Yedekle",

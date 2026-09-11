@@ -83,8 +83,8 @@ void main() {
       final store = storeWith([transfer]);
       final list = store.sameTransactions(SameKey.of(transfer));
       expect(list.where((t) => t.id == 't1').length, 1);
-      expect(SameStats.of(list, DateTime(2026, 8, 16), window: null).total, 50);
-      expect(SameStats.of(list, DateTime(2026, 8, 16), window: null).count, 1);
+      expect(SameStats.of(list, DateTime(2026, 8, 16), window: null, base: 'USD').total, 50);
+      expect(SameStats.of(list, DateTime(2026, 8, 16), window: null, base: 'USD').count, 1);
     });
 
     test('an income key never returns expenses', () {
@@ -112,7 +112,7 @@ void main() {
   group('stats()', () {
     test('one transaction: count 1, no frequency', () {
       final s = SameStats.of([tx('1', TxnType.expense, 'a', 'c')],
-          DateTime(2026, 8, 16), window: null);
+          DateTime(2026, 8, 16), window: null, base: 'USD');
       expect(s.count, 1);
       expect(s.perMonth, isNull);
     });
@@ -122,7 +122,7 @@ void main() {
         tx('n', TxnType.expense, 'a', 'c', date: DateTime(2026, 8, 9)),
         tx('o', TxnType.expense, 'a', 'c', date: DateTime(2026, 7, 5)),
       ];
-      final s = SameStats.of(list, DateTime(2026, 8, 16), window: null);
+      final s = SameStats.of(list, DateTime(2026, 8, 16), window: null, base: 'USD');
       expect(s.count, 2);
       expect(s.spanDays, 35);
       expect(s.perMonth, isNotNull);
@@ -133,7 +133,7 @@ void main() {
         tx('n', TxnType.expense, 'a', 'c', date: DateTime(2026, 8, 9)),
         tx('o', TxnType.expense, 'a', 'c', date: DateTime(2026, 8, 2)),
       ];
-      expect(SameStats.of(list, DateTime(2026, 8, 16), window: null).perMonth, isNull);
+      expect(SameStats.of(list, DateTime(2026, 8, 16), window: null, base: 'USD').perMonth, isNull);
     });
 
     test('acceptance fixture: Groceries · Main Checking, 7 entries', () {
@@ -152,7 +152,7 @@ void main() {
           tx('$i', TxnType.expense, 'acc', 'cat',
               date: dates[i], amount: amounts[i]),
       ];
-      final s = SameStats.of(list, DateTime(2026, 8, 16), window: null);
+      final s = SameStats.of(list, DateTime(2026, 8, 16), window: null, base: 'USD');
       expect(s.total, 1032);
       expect(s.count, 7);
       expect(s.average.round(), 147);
@@ -185,7 +185,7 @@ void main() {
           date: DateTime(2026, 8, 1),
         ),
       ];
-      final s = SameStats.of(list, DateTime(2026, 8, 16), window: null);
+      final s = SameStats.of(list, DateTime(2026, 8, 16), window: null, base: 'USD');
       expect(s.total, closeTo(166.2, 0.001));
       expect(s.count, 2);
       expect(s.average, closeTo(83.1, 0.001));
@@ -207,7 +207,7 @@ void main() {
         tx('n', TxnType.expense, 'a', 'c', date: DateTime(2026, 8, 9)),
         tx('o', TxnType.expense, 'a', 'c', date: DateTime(2026, 8, 8)),
       ];
-      final s = SameStats.of(list, DateTime(2026, 8, 9), window: q3());
+      final s = SameStats.of(list, DateTime(2026, 8, 9), window: q3(), base: 'USD');
       expect(s.spanDays, 1);
       expect(s.denominatorDays, 70); // 1 Jun → 9 Aug (clamped), inclusive
       expect(s.perMonth, isNotNull);
@@ -222,7 +222,8 @@ void main() {
       ];
       final s = SameStats.of(list, DateTime(2026, 8, 9),
           window: DateRange(
-              DateTime(2026, 6, 1), DateTime(2026, 8, 20, 23, 59, 59, 999)));
+              DateTime(2026, 6, 1), DateTime(2026, 8, 20, 23, 59, 59, 999)),
+          base: 'USD');
       expect(s.spanDays, 75); // 1 Jun → 15 Aug
       expect(s.denominatorDays, s.spanDays); // window (70) < span (75)
     });
@@ -232,7 +233,7 @@ void main() {
         tx('n', TxnType.expense, 'a', 'c', date: DateTime(2026, 8, 9)),
         tx('o', TxnType.expense, 'a', 'c', date: DateTime(2026, 6, 30)),
       ];
-      final s = SameStats.of(list, DateTime(2026, 8, 9), window: null);
+      final s = SameStats.of(list, DateTime(2026, 8, 9), window: null, base: 'USD');
       expect(s.spanDays, 40);
       expect(s.denominatorDays, 40);
     });
@@ -242,7 +243,7 @@ void main() {
         tx('n', TxnType.expense, 'a', 'c', date: DateTime(2026, 8, 2)),
         tx('o', TxnType.expense, 'a', 'c', date: DateTime(2026, 8, 1)),
       ];
-      final s = SameStats.of(list, DateTime(2026, 8, 3), window: aug());
+      final s = SameStats.of(list, DateTime(2026, 8, 3), window: aug(), base: 'USD');
       expect(s.denominatorDays, 3); // 1 Aug → 3 Aug, inclusive
       expect(s.perMonth, isNull);
     });
@@ -251,7 +252,7 @@ void main() {
       final list = [
         tx('one', TxnType.expense, 'a', 'c', date: DateTime(2026, 8, 5)),
       ];
-      final s = SameStats.of(list, DateTime(2026, 8, 28), window: aug());
+      final s = SameStats.of(list, DateTime(2026, 8, 28), window: aug(), base: 'USD');
       expect(s.denominatorDays, 28);
       expect(s.perMonth, isNotNull);
     });
@@ -260,7 +261,7 @@ void main() {
       final list = [
         tx('one', TxnType.expense, 'a', 'c', date: DateTime(2026, 8, 9)),
       ];
-      final s = SameStats.of(list, DateTime(2026, 8, 9), window: q3());
+      final s = SameStats.of(list, DateTime(2026, 8, 9), window: q3(), base: 'USD');
       // Not the full 92-day preset span — clamped to 1 Jun → 9 Aug = 70.
       expect(s.denominatorDays, 70);
     });
@@ -271,7 +272,7 @@ void main() {
       final list = [
         tx('one', TxnType.expense, 'a', 'c', date: DateTime(2026, 8, 9)),
       ];
-      final s = SameStats.of(list, DateTime(2026, 8, 22), window: q3());
+      final s = SameStats.of(list, DateTime(2026, 8, 22), window: q3(), base: 'USD');
       expect(s.perMonth, isNotNull);
       expect(s.perMonth!.round(), 0);
     });

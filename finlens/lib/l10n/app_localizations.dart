@@ -1008,6 +1008,18 @@ abstract class AppLocalizations {
   /// **'Mask all amounts'**
   String get moreMaskAmounts;
 
+  /// No description provided for @moreBaseCurrency.
+  ///
+  /// In en, this message translates to:
+  /// **'Base currency'**
+  String get moreBaseCurrency;
+
+  /// No description provided for @moreBaseCurrencyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Currency'**
+  String get moreBaseCurrencyTitle;
+
   /// No description provided for @moreBackup.
   ///
   /// In en, this message translates to:

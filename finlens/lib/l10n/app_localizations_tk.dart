@@ -621,6 +621,12 @@ class AppLocalizationsTk extends AppLocalizations {
   String get moreMaskAmounts => 'Ähli mukdarlary gizle';
 
   @override
+  String get moreBaseCurrency => 'Esasy walýuta';
+
+  @override
+  String get moreBaseCurrencyTitle => 'Walýuta';
+
+  @override
   String get moreBackup => 'Ätiýaçlyk nusga';
 
   @override

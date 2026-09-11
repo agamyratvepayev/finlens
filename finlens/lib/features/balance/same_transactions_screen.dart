@@ -4,7 +4,6 @@ import '../../core/models/models.dart';
 import '../../core/store/app_store.dart';
 import '../../core/utils/date_range.dart';
 import '../../core/utils/formatters.dart';
-import '../../core/utils/fx.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/amount_text.dart';
 import '../../shared/widgets/detail_row.dart';
@@ -71,8 +70,8 @@ class _SameTransactionsScreenState extends State<SameTransactionsScreen> {
     // year-2000 start is artificial — there the transaction span stands in.
     final unbounded =
         !choice.isCustom && choice.preset == SameRangePreset.allTime;
-    final stats =
-        SameStats.of(all, AppStore.today, window: unbounded ? null : range);
+    final stats = SameStats.of(all, AppStore.today,
+        window: unbounded ? null : range, base: store.baseCurrency);
     final shown = widget.showAll ? all : all.take(5).toList();
 
     return Scaffold(
@@ -371,6 +370,9 @@ class _SameTransactionsScreenState extends State<SameTransactionsScreen> {
   // ── Summary card ─────────────────────────────────────────────────────────
 
   Widget _summaryCard(SameStats stats) {
+    // TOTAL/AVG are base-currency aggregates (spec §3); read the live base so
+    // they repaint if it changes in Preferences.
+    final base = StoreScope.of(context).baseCurrency;
     return Container(
       margin: const EdgeInsets.fromLTRB(Insets.md, 0, Insets.md, Insets.sm),
       decoration: BoxDecoration(
@@ -388,8 +390,8 @@ class _SameTransactionsScreenState extends State<SameTransactionsScreen> {
               children: [
                 // TOTAL and AVG are base-currency aggregates (spec §3): a list
                 // can span currencies, so their sum is folded through Fx.
-                _metric('TOTAL', money(stats.total, currency: Fx.baseCurrency)),
-                _metric('AVG', money(stats.average, currency: Fx.baseCurrency)),
+                _metric('TOTAL', money(stats.total, currency: base)),
+                _metric('AVG', money(stats.average, currency: base)),
                 _metric('COUNT', '${stats.count}'),
               ],
             ),
@@ -801,8 +803,8 @@ class _SameRow extends StatelessWidget {
 /// amount color. Resolved once per build from the store.
 ///
 /// Currency is deliberately absent — rows print in their own [Txn.currency] and
-/// aggregates in [Fx.baseCurrency], so nothing here fixes one currency for the
-/// whole list (spec §3).
+/// aggregates in the store's base currency, so nothing here fixes one currency
+/// for the whole list (spec §3).
 class _KeyInfo {
   const _KeyInfo({
     required this.title,

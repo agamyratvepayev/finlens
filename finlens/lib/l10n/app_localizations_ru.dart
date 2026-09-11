@@ -639,6 +639,12 @@ class AppLocalizationsRu extends AppLocalizations {
   String get moreMaskAmounts => 'Скрывать все суммы';
 
   @override
+  String get moreBaseCurrency => 'Базовая валюта';
+
+  @override
+  String get moreBaseCurrencyTitle => 'Валюта';
+
+  @override
   String get moreBackup => 'Резервная копия';
 
   @override

@@ -65,6 +65,11 @@ String encodeBackup(AppStore store, {required DateTime exportedAt}) {
       'id_seq': store.idSeq,
       'tag_schema': store.tagSchema,
       'budget_history_since': store.budgetHistorySince.millisecondsSinceEpoch,
+      // The display base currency rides along so a restore reads its totals in
+      // the same currency as the saved store (spec §4). A backup written before
+      // this change carries no key; the decoder derives it from the oldest
+      // account instead.
+      'base_currency': store.baseCurrency,
     },
     'accounts': store.snapshotAccounts.map(accountToMap).toList(),
     'categories': store.snapshotCategories.map(categoryToMap).toList(),
@@ -118,6 +123,12 @@ BackupDocument decodeBackup(String jsonText) {
     return v is num ? v.toInt() : null;
   }
 
+  String? metaString(String key) {
+    if (meta is! Map) return null;
+    final v = meta[key];
+    return v is String && v.isNotEmpty ? v : null;
+  }
+
   final since = metaInt('budget_history_since');
 
   // A pre-v5 backup carries no `budgets` array — budgets still lived on the
@@ -144,6 +155,7 @@ BackupDocument decodeBackup(String jsonText) {
       tagSchema: metaInt('tag_schema'),
       budgetHistorySince:
           since == null ? null : DateTime.fromMillisecondsSinceEpoch(since),
+      baseCurrency: metaString('base_currency'),
     );
   } catch (e) {
     // A structurally-valid file whose rows are missing required fields (e.g. a

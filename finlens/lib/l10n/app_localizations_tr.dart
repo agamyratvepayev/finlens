@@ -622,6 +622,12 @@ class AppLocalizationsTr extends AppLocalizations {
   String get moreMaskAmounts => 'Tüm tutarları gizle';
 
   @override
+  String get moreBaseCurrency => 'Ana para birimi';
+
+  @override
+  String get moreBaseCurrencyTitle => 'Para birimi';
+
+  @override
   String get moreBackup => 'Verileri yedekle';
 
   @override

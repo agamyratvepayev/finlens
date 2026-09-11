@@ -867,7 +867,7 @@ class _TxnMiniRowState extends State<_TxnMiniRow> {
                     ),
                   ),
                   const SizedBox(width: Insets.sm),
-                  AmountText(Fx.toBase(txn.amount, txn.currency)),
+                  AmountText(Fx.convert(txn.amount, txn.currency, store.baseCurrency)),
                 ],
               ),
               // The app's one reveal motion — same 180ms easeOut / topLeft as
