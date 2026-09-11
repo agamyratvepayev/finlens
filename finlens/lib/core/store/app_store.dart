@@ -2592,6 +2592,7 @@ class AppStore extends ChangeNotifier {
     double? exchangeRate,
     String? recurrenceTaskId,
     bool clearRecurrence = false,
+    bool clearExchange = false,
   }) {
     txn
       ..amount = amount ?? txn.amount
@@ -2601,8 +2602,13 @@ class AppStore extends ChangeNotifier {
       ..tagIds = tagIds ?? txn.tagIds
       ..note = note ?? txn.note
       ..fee = fee ?? txn.fee
-      ..toAmount = toAmount ?? txn.toAmount
-      ..exchangeRate = exchangeRate ?? txn.exchangeRate
+      // [clearExchange] wins over the `?? keep` fallback so an edit that turns a
+      // cross-currency transfer into a same-currency one can null both FX fields
+      // (mirroring [clearRecurrence]). Without it there is no way to erase a
+      // stored value — passing null means "keep" — so the destination figure
+      // would keep a rate that no longer applies.
+      ..toAmount = clearExchange ? null : (toAmount ?? txn.toAmount)
+      ..exchangeRate = clearExchange ? null : (exchangeRate ?? txn.exchangeRate)
       ..recurrenceTaskId =
           clearRecurrence ? null : (recurrenceTaskId ?? txn.recurrenceTaskId)
       ..editedCount += 1;

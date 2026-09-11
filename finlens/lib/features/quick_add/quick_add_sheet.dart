@@ -1390,6 +1390,27 @@ class _QuickAddScreenState extends State<QuickAddScreen>
         _deleteGroup(store, editing);
         _writeExpenseIncome(store, income: income);
       } else {
+        // A cross-currency transfer's destination figure is derived from the
+        // amount and the rate, so an edit that changes the amount must
+        // re-derive `toAmount` — the create path does this, the edit path used
+        // not to, and leaving it stale silently corrupted the destination
+        // balance (the most important fix in this change). When the edit makes
+        // the two sides share a currency the FX fields are cleared outright.
+        double? newRate;
+        double? newToAmount;
+        var clearExchange = false;
+        if (_type == QuickAddType.transfer) {
+          final from = store.accountById(_fromRef);
+          final to = store.accountById(_toRef);
+          final cross =
+              from != null && to != null && from.currency != to.currency;
+          if (cross) {
+            newRate = _rateOverride ?? _defaultRate(from, to);
+            newToAmount = _amount * newRate;
+          } else {
+            clearExchange = true;
+          }
+        }
         store.updateTxn(
           editing,
           amount: _type == QuickAddType.rebalance
@@ -1400,6 +1421,9 @@ class _QuickAddScreenState extends State<QuickAddScreen>
           date: _date,
           tagIds: _tagIds,
           note: _note.text.trim(),
+          exchangeRate: newRate,
+          toAmount: newToAmount,
+          clearExchange: clearExchange,
         );
         if (_type == QuickAddType.expense ||
             income ||
