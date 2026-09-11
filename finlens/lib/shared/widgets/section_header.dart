@@ -33,16 +33,20 @@ class SectionIndicator extends StatelessWidget {
         children: [
           Text(label.toUpperCase(), style: AppText.sectionLabel),
           const SizedBox(width: 9),
+          // All bars are the same size now (14×6, radius 3); only the colour
+          // marks the current section. Equal shapes read as one set far better
+          // than one long bar among round dots, and the section's name sits
+          // immediately to the left, so colour need not carry the cue alone.
           for (var i = 0; i < count; i++) ...[
-            if (i > 0) const SizedBox(width: 4),
+            if (i > 0) const SizedBox(width: Insets.xs),
             AnimatedContainer(
               duration: const Duration(milliseconds: 180),
               curve: Curves.easeOut,
-              width: i == index ? 14 : 5,
-              height: 5,
+              width: 14,
+              height: 6,
               decoration: BoxDecoration(
                 color: i == index ? AppColors.accent : AppColors.textTertiary,
-                borderRadius: BorderRadius.circular(2.5),
+                borderRadius: BorderRadius.circular(3),
               ),
             ),
           ],
@@ -152,8 +156,9 @@ class _ToolButton extends StatelessWidget {
 
 /// Detects a deliberate horizontal swipe without stealing vertical scrolls.
 ///
-/// The gesture only fires when horizontal travel clearly dominates, so flicking
-/// down a long list never trips a section change.
+/// It claims the horizontal drag from the gesture arena; any enclosing
+/// scrollable keeps the vertical drag, so flicking down a long list never trips
+/// a section change. A swipe commits on enough distance or a fast enough fling.
 class HorizontalSectionSwipe extends StatefulWidget {
   const HorizontalSectionSwipe({
     super.key,
@@ -166,8 +171,12 @@ class HorizontalSectionSwipe extends StatefulWidget {
   final VoidCallback onNext;
   final VoidCallback onPrevious;
 
-  static const _threshold = 55.0;
-  static const _dominance = 1.6;
+  // A deliberate drag either travels far enough or is flung fast enough. The
+  // distance floor can sit low because velocity now carries the short case: a
+  // quick flick that covers little ground still reads as intentional. The
+  // ±250 fling test mirrors [SwipeActions].
+  static const _threshold = 40.0;
+  static const _flingVelocity = 250.0;
 
   @override
   State<HorizontalSectionSwipe> createState() => _HorizontalSectionSwipeState();
@@ -175,31 +184,29 @@ class HorizontalSectionSwipe extends StatefulWidget {
 
 class _HorizontalSectionSwipeState extends State<HorizontalSectionSwipe> {
   double _dx = 0;
-  double _dy = 0;
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      // Vertical scrolling stays with the list; only horizontal drags are
-      // claimed here.
-      onHorizontalDragStart: (_) {
-        _dx = 0;
-        _dy = 0;
-      },
-      onHorizontalDragUpdate: (d) {
-        _dx += d.delta.dx;
-        _dy += d.delta.dy.abs();
-      },
-      onHorizontalDragEnd: (_) {
+      // Opaque so the whole area is hit-testable: an empty section (a list with
+      // no rows) has nothing under the finger, and deferToChild would leave the
+      // drag unclaimed there — the bug this fixes. The gesture arena still hands
+      // vertical drags to any enclosing scrollable, so only horizontal drags
+      // reach these callbacks; no hand-rolled dominance test is needed.
+      behavior: HitTestBehavior.opaque,
+      onHorizontalDragStart: (_) => _dx = 0,
+      onHorizontalDragUpdate: (d) => _dx += d.delta.dx,
+      onHorizontalDragEnd: (d) {
+        final v = d.primaryVelocity ?? 0;
+        final flung = v.abs() >= HorizontalSectionSwipe._flingVelocity;
         final far = _dx.abs() >= HorizontalSectionSwipe._threshold;
-        final horizontal =
-            _dx.abs() >= _dy * HorizontalSectionSwipe._dominance;
-        if (!far || !horizontal) return;
-        // Negative dx is a leftward drag (a right-to-left swipe): it advances
-        // to the next section (and wraps past the last); a rightward drag goes
-        // back (and wraps past the first). This matches the platform carousel
-        // convention, so right-to-left steps forward through the sections.
-        _dx < 0 ? widget.onNext() : widget.onPrevious();
+        if (!flung && !far) return;
+        // Negative is leftward (a right-to-left swipe): it advances to the next
+        // section (and wraps past the last); rightward goes back (and wraps past
+        // the first), matching the platform carousel convention. A fling's sign
+        // is authoritative; a slow drag uses net travel.
+        final leftward = flung ? v < 0 : _dx < 0;
+        leftward ? widget.onNext() : widget.onPrevious();
       },
       child: widget.child,
     );

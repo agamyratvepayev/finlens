@@ -165,22 +165,31 @@ class _BalanceScreenState extends State<BalanceScreen> {
           // sits behind the header, which paints over its top edge — the two
           // never consume each other's height. Absent once an account exists.
           if (!hasAccounts) Positioned.fill(child: _firstRunPane()),
-          Column(
-            children: [
-              _header(store, hasAccounts),
-              Expanded(
-                child: hasAccounts
-                    ? HorizontalSectionSwipe(
-                        onNext: () => _stepSection(1),
-                        onPrevious: () => _stepSection(-1),
-                        child: _list(store, hasAccounts),
-                      )
-                    // A hit-transparent spacer: the block behind takes the taps
-                    // and the scroll, the header above still takes the +'s taps.
-                    : const SizedBox.expand(),
+          // The swipe wraps the whole tab — header included — so a horizontal
+          // drag over the label, the hero amount or the empty area below all
+          // change section, not just one over the list. Taps on the +, the eye
+          // and the tools still reach them: a horizontal-drag recognizer does
+          // not compete with taps. On a first run the swipe is absent (the
+          // block behind takes the taps and scroll); the header still takes the
+          // +'s taps.
+          if (hasAccounts)
+            HorizontalSectionSwipe(
+              onNext: () => _stepSection(1),
+              onPrevious: () => _stepSection(-1),
+              child: Column(
+                children: [
+                  _header(store, hasAccounts),
+                  Expanded(child: _list(store, hasAccounts)),
+                ],
               ),
-            ],
-          ),
+            )
+          else
+            Column(
+              children: [
+                _header(store, hasAccounts),
+                const Expanded(child: SizedBox.expand()),
+              ],
+            ),
         ],
       ),
     );
