@@ -281,7 +281,7 @@ class _EditGoalScreenState extends State<EditGoalScreen> {
             if (_isEditing)
               FormRow(
                 icon: Icons.visibility_rounded,
-                label: l.goalSource,
+                label: l.goalWatching,
                 value: _store.refName(_goal!.source.id),
                 // Locked after creation — the padlock and its line explain why
                 // (§10, unchanged).
@@ -292,18 +292,8 @@ class _EditGoalScreenState extends State<EditGoalScreen> {
             else
               _LineRow(
                 icon: Icons.visibility_rounded,
-                label: l.goalSource,
-                value: Text(
-                  _sourceLabel(l),
-                  textAlign: TextAlign.right,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppText.amount.copyWith(
-                    color: _sourceChosen
-                        ? AppColors.textPrimary
-                        : AppColors.textSecondary,
-                  ),
-                ),
+                label: l.goalWatching,
+                value: _sourceValue(l),
                 trailing: const Icon(
                   Icons.chevron_right_rounded,
                   size: 18,
@@ -566,16 +556,73 @@ class _EditGoalScreenState extends State<EditGoalScreen> {
 
   bool get _sourceChosen => _createNewAccount || _source != null;
 
-  String _sourceLabel(AppLocalizations l) {
-    if (_isEditing) return _store.refName(_goal!.source.id);
-    if (_createNewAccount) {
-      return l.goalNewAccountNamed(
-        _name.text.trim().isEmpty ? l.goalUntitled : _name.text.trim(),
-      );
+  /// The WATCHING row's value (§1). A picked existing account shows its coloured
+  /// chip and full name; a not-yet-created account shows only "New account" —
+  /// no goal name, no "New ·" prefix, nothing that could truncate; an income
+  /// category shows its name; the untouched state shows "Not set". The goal's
+  /// name lives two rows above, so this row never restates it.
+  Widget _sourceValue(AppLocalizations l) {
+    // Existing account → coloured chip + name. The name is the information, so
+    // it alone ellipsises when an account is long-named; the chip never shrinks.
+    if (!_createNewAccount && _source != null && _source!.isAccount) {
+      final acc = _store.accountById(_source!.id);
+      if (acc != null) {
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            _accountChip(acc),
+            const SizedBox(width: 7),
+            Flexible(
+              child: Text(
+                acc.name,
+                textAlign: TextAlign.right,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppText.amount.copyWith(color: AppColors.textPrimary),
+              ),
+            ),
+          ],
+        );
+      }
     }
-    final s = _source;
-    if (s == null) return l.eaNotSet;
-    return _store.refName(s.id);
+
+    final String text;
+    if (_createNewAccount) {
+      // The whole value — a not-yet-created account has no colour and no name
+      // worth carrying; the picker already said it is "named from the goal".
+      text = l.goalNewAccountOption;
+    } else if (_source != null) {
+      // An income-category source: its name, no chip — a category is not an
+      // account and carries no chip elsewhere on this screen.
+      text = _store.refName(_source!.id);
+    } else {
+      text = l.eaNotSet;
+    }
+    return Text(
+      text,
+      textAlign: TextAlign.right,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: AppText.amount.copyWith(
+        color: _sourceChosen ? AppColors.textPrimary : AppColors.textSecondary,
+      ),
+    );
+  }
+
+  /// The 20pt account chip carried before an existing account's name: a tinted
+  /// square holding the account's own glyph in its own colour, matching how the
+  /// picker and Balance draw an account.
+  Widget _accountChip(Account acc) {
+    return Container(
+      width: 20,
+      height: 20,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: AppColors.tint(acc.color, 0.18),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Icon(acc.displayIcon, size: 11, color: acc.color),
+    );
   }
 
   /// Two goals may watch one account — the user might be tracking two

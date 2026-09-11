@@ -138,7 +138,7 @@ void main() {
     expect(editable.focusNode.hasFocus, isTrue);
   });
 
-  testWidgets('Source and Monthly read "Not set" and no instruction leaks in',
+  testWidgets('Watching and Monthly read "Not set" and no instruction leaks in',
       (tester) async {
     phone(tester);
     await tester.pumpWidget(wrap(AppStore.empty()));
@@ -148,8 +148,8 @@ void main() {
     expect(find.text('Set a monthly amount'), findsNothing);
     expect(find.text('Set a date, or a monthly amount'), findsNothing);
 
-    // Source shows "Not set"…
-    expect(find.descendant(of: rowByLabel('Source'), matching: find.text('Not set')),
+    // Watching shows "Not set"…
+    expect(find.descendant(of: rowByLabel('Watching'), matching: find.text('Not set')),
         findsOneWidget);
     // …and so does Monthly (as its placeholder).
     expect(
@@ -157,16 +157,16 @@ void main() {
         findsOneWidget);
   });
 
-  testWidgets('Target amount, Target date, Monthly and Source are equal height',
+  testWidgets('Target amount, Target date, Monthly and Watching are equal height',
       (tester) async {
     phone(tester);
     await tester.pumpWidget(wrap(AppStore.empty()));
 
     final h = {
-      for (final label in ['Source', 'Target amount', 'Target date', 'Monthly'])
+      for (final label in ['Watching', 'Target amount', 'Target date', 'Monthly'])
         label: tester.getSize(rowByLabel(label)).height,
     };
-    expect(h['Source'], closeTo(48, 0.5));
+    expect(h['Watching'], closeTo(48, 0.5));
     expect(h['Target amount'], closeTo(48, 0.5));
     expect(h['Target date'], closeTo(48, 0.5));
     expect(h['Monthly'], closeTo(48, 0.5));
@@ -213,7 +213,7 @@ void main() {
         w is Text && w.data == 'USD' && w.style?.color == AppColors.textTertiary),
         findsOneWidget);
 
-    await tester.tap(find.text('Source'));
+    await tester.tap(find.text('Watching'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Vault'));
     await tester.pumpAndSettle();
@@ -232,7 +232,7 @@ void main() {
     narrow(tester);
     await tester.pumpWidget(wrap(AppStore.empty()));
 
-    await tester.tap(find.text('Source'));
+    await tester.tap(find.text('Watching'));
     await tester.pumpAndSettle();
 
     // The title is not truncated…
@@ -251,7 +251,7 @@ void main() {
     phone(tester);
     await tester.pumpWidget(wrap(AppStore.empty()));
 
-    await tester.tap(find.text('Source'));
+    await tester.tap(find.text('Watching'));
     await tester.pumpAndSettle();
 
     // The create row stays; below it, the empty state.
@@ -272,7 +272,7 @@ void main() {
     for (final entry in cases.entries) {
       phone(tester);
       await tester.pumpWidget(wrap(AppStore.empty(), locale: Locale(entry.key)));
-      await tester.tap(find.text('Source').first);
+      await tester.tap(find.text('Watching').first);
       await tester.pumpAndSettle();
       expect(find.text(entry.value), findsOneWidget,
           reason: 'empty-state title in ${entry.key}');
@@ -296,5 +296,136 @@ void main() {
     // and tripped `_dependents.isEmpty`; the inline field must dispose cleanly.
     await tester.pumpWidget(const SizedBox());
     expect(tester.takeException(), isNull);
+  });
+
+  // ── The Watching row's value, three states (§1) ─────────────────────────────
+
+  testWidgets('Watching · nothing picked → "Not set", no chip', (tester) async {
+    phone(tester);
+    await tester.pumpWidget(wrap(AppStore.empty()));
+
+    final row = rowByLabel('Watching');
+    expect(find.descendant(of: row, matching: find.text('Not set')),
+        findsOneWidget);
+    // No account chip before a source is chosen.
+    expect(
+        find.descendant(
+            of: row,
+            matching: find.byWidgetPredicate((w) =>
+                w is Container &&
+                w.decoration is BoxDecoration &&
+                (w.decoration as BoxDecoration).borderRadius ==
+                    BorderRadius.circular(6))),
+        findsNothing);
+  });
+
+  testWidgets(
+      'Watching · New account picked → value is exactly "New account", no chip, '
+      'no goal name', (tester) async {
+    phone(tester);
+    await tester.pumpWidget(wrap(AppStore.empty()));
+
+    // Name the goal first — the row must not echo it.
+    await tester.enterText(nameField(), 'Macbook Pro M4');
+    await tester.pump();
+
+    await tester.tap(find.text('Watching'));
+    await tester.pumpAndSettle();
+    // The sheet's create row (its title is also "New account"); tap it.
+    await tester.tap(find.text('New account').last);
+    await tester.pumpAndSettle();
+
+    final row = rowByLabel('Watching');
+    // The value is exactly "New account" — no "New ·" prefix, no goal name.
+    expect(find.descendant(of: row, matching: find.text('New account')),
+        findsOneWidget);
+    expect(find.descendant(of: row, matching: find.text('Macbook Pro M4')),
+        findsNothing);
+    expect(find.descendant(of: row, matching: find.textContaining('New ·')),
+        findsNothing);
+    // No chip for a not-yet-created account.
+    expect(
+        find.descendant(
+            of: row,
+            matching: find.byWidgetPredicate((w) =>
+                w is Container &&
+                w.decoration is BoxDecoration &&
+                (w.decoration as BoxDecoration).borderRadius ==
+                    BorderRadius.circular(6))),
+        findsNothing);
+  });
+
+  testWidgets(
+      'Watching · existing account picked → name preceded by its coloured chip',
+      (tester) async {
+    phone(tester);
+    final store = AppStore.empty();
+    final acc = store.addAccount(
+      name: 'USD Wallet',
+      group: AccountGroup.spendable,
+      currency: 'USD',
+      startingBalance: 500,
+    );
+    await tester.pumpWidget(wrap(store));
+
+    await tester.tap(find.text('Watching'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('USD Wallet'));
+    await tester.pumpAndSettle();
+
+    final row = rowByLabel('Watching');
+    // The name is the value…
+    expect(find.descendant(of: row, matching: find.text('USD Wallet')),
+        findsOneWidget);
+    // …preceded by a 20pt chip tinted with the account's own colour.
+    expect(
+        find.descendant(
+            of: row,
+            matching: find.byWidgetPredicate((w) =>
+                w is Container &&
+                w.decoration is BoxDecoration &&
+                (w.decoration as BoxDecoration).color ==
+                    AppColors.tint(acc.color, 0.18))),
+        findsOneWidget);
+  });
+
+  testWidgets(
+      'renaming the goal does not change the Watching row (New account)',
+      (tester) async {
+    phone(tester);
+    await tester.pumpWidget(wrap(AppStore.empty()));
+
+    await tester.tap(find.text('Watching'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('New account').last);
+    await tester.pumpAndSettle();
+
+    final row = rowByLabel('Watching');
+    expect(find.descendant(of: row, matching: find.text('New account')),
+        findsOneWidget);
+
+    // Rename the goal — the row is unaffected because it never showed the name.
+    await tester.enterText(nameField(), 'A completely different name');
+    await tester.pump();
+    expect(find.descendant(of: row, matching: find.text('New account')),
+        findsOneWidget);
+    expect(
+        find.descendant(
+            of: row, matching: find.text('A completely different name')),
+        findsNothing);
+  });
+
+  testWidgets(
+      'row heights: the single-line Watching row is shorter than the two-line '
+      '"Done once reached" row', (tester) async {
+    phone(tester);
+    await tester.pumpWidget(wrap(AppStore.empty()));
+
+    final single = tester.getSize(rowByLabel('Watching')).height;
+    final twoLine = tester.getSize(rowByLabel('Done once reached')).height;
+    // The single-line row is the shared 48pt _LineRow…
+    expect(single, closeTo(48, 0.5));
+    // …and the two-line switch row grows past it to fit its subtitle.
+    expect(twoLine, greaterThan(single));
   });
 }
