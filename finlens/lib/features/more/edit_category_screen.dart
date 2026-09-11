@@ -157,6 +157,7 @@ class _EditCategoryScreenState extends State<EditCategoryScreen> {
                       DestructiveRow(
                         label: l.actionDeletePermanent,
                         onTap: () => _confirmDelete(store, l),
+                        opensSheet: true,
                       ),
                   ] else
                     DestructiveRow(
@@ -166,6 +167,7 @@ class _EditCategoryScreenState extends State<EditCategoryScreen> {
                           : l.catDeleteMsg,
                       onTap: () =>
                           used ? _confirmArchive(store, l) : _confirmDelete(store, l),
+                      opensSheet: true,
                     ),
                 ],
               ),

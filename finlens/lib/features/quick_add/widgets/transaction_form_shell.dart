@@ -23,6 +23,7 @@ class FieldSpec {
     this.valueMaxLines = 1,
     this.semanticValue,
     this.iconColor,
+    this.opensSheet = false,
     this.childRows,
     this.controller,
     this.focusNode,
@@ -39,6 +40,12 @@ class FieldSpec {
   /// Tints the leading icon — the Repeat row uses the accent when set (§3).
   final Color? iconColor;
   final VoidCallback? onTap;
+
+  /// Whether [onTap] raises a bottom sheet (`true` → downward chevron) or pushes
+  /// a screen (`false`, the default → rightward chevron). Every tappable Quick
+  /// Add field discloses a sheet in place, so each sets this true; the default
+  /// stays `false` so a future screen-pushing field is not silently flipped.
+  final bool opensSheet;
 
   /// Ties this row to a [Blocker.flashId] so an incomplete Save can flash it
   /// (spec §3). Null for rows that are never a validation target.
@@ -395,6 +402,7 @@ Widget _fieldRow(FieldSpec f, String? flashTarget) {
     // A flagged field's value goes red until it is filled (§3).
     valueColor: flagged ? AppColors.negative : f.valueColor,
     onTap: f.onTap,
+    opensSheet: f.opensSheet,
     hideLabel: f.hideLabel,
     valueMaxLines: f.valueMaxLines,
     semanticValue: f.semanticValue,

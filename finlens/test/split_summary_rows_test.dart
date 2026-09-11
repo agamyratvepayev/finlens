@@ -237,10 +237,13 @@ void main() {
   testWidgets('the child rows carry no chevron of their own', (tester) async {
     await _pumpForm(tester);
     await _applySplit(tester, 3);
-    // One chevron for the summary row; the lines add none.
+    // The From and summary (To) rows each carry a chevron; the split lines add
+    // none. Task 15: those rows open bottom sheets, so their glyph is now the
+    // downward chevron — the read-only lines still add nothing, so the count
+    // stays at the two field rows and never reaches the split lines.
     final chevrons = find.descendant(
       of: find.byType(TxnCard).first,
-      matching: find.byIcon(Icons.chevron_right_rounded),
+      matching: find.byIcon(Icons.keyboard_arrow_down_rounded),
     );
     expect(chevrons.evaluate().length, lessThan(4),
         reason: 'read-only lines: no chevron, no ×, no editing in place');

@@ -349,6 +349,7 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
                     DestructiveRow(
                       label: isOwner ? l.syncDeleteGroup : l.syncLeaveGroup,
                       onTap: () => _leaveGroup(isOwner: isOwner),
+                      opensSheet: true,
                     ),
                   ],
 
@@ -356,6 +357,7 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
                   DestructiveRow(
                     label: l.syncSignOut,
                     onTap: _signOut,
+                    opensSheet: true,
                   ),
                   const SizedBox(height: Insets.xl),
                 ],

@@ -1819,6 +1819,8 @@ class _NewAccountFormState extends State<_NewAccountForm> {
                     label: l.qaPaymentDay,
                     value: _paymentDay?.toString() ?? '—',
                     showChevron: true,
+                    // _pickPaymentDay raises a bottom sheet.
+                    opensSheet: true,
                     onTap: _pickPaymentDay,
                   ),
                 ],
@@ -1996,6 +1998,8 @@ class _NewAccountFormState extends State<_NewAccountForm> {
     return FormRow(
       label: l.naType,
       showChevron: true,
+      // _openTypeSheet raises the account-type bottom sheet.
+      opensSheet: true,
       onTap: _openTypeSheet,
       trailing: g == null
           ? Text(l.naRequired,
@@ -2741,6 +2745,8 @@ class _AddCurrencyFormState extends State<_AddCurrencyForm> {
                       label: l.curDecimals,
                       value: '$_decimals',
                       showChevron: true,
+                      // _pickDecimals raises a bottom sheet.
+                      opensSheet: true,
                       onTap: _pickDecimals,
                     ),
                   ],

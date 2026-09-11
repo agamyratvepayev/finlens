@@ -55,6 +55,7 @@ class TxnFieldRow extends StatelessWidget {
     this.semanticValue,
     this.iconColor,
     this.showChevron = true,
+    this.opensSheet = false,
   });
 
   final IconData icon;
@@ -92,6 +93,14 @@ class TxnFieldRow extends StatelessWidget {
   /// inline field in place — so its chevron goes while the ripple stays
   /// (inline-note spec §1). Every other tappable row keeps the chevron.
   final bool showChevron;
+
+  /// Which chevron to draw: `false` (default, so an unclassified row keeps
+  /// today's glyph) renders the rightward `chevron_right` ("tapping pushes a
+  /// screen"); `true` renders the downward `keyboard_arrow_down` ("tapping
+  /// discloses a bottom sheet in place"). Every tappable Quick Add field opens
+  /// a sheet, so its [FieldSpec] passes `true`. Size, colour and position are
+  /// unchanged.
+  final bool opensSheet;
 
   @override
   Widget build(BuildContext context) {
@@ -139,7 +148,9 @@ class TxnFieldRow extends StatelessWidget {
               if (!readOnly && showChevron) ...[
                 SizedBox(width: 5 * s),
                 Icon(
-                  Icons.chevron_right_rounded,
+                  opensSheet
+                      ? Icons.keyboard_arrow_down_rounded
+                      : Icons.chevron_right_rounded,
                   size: 17 * s,
                   color: AppColors.formChevron,
                 ),
@@ -221,7 +232,9 @@ class TxnFieldRow extends StatelessWidget {
             if (!readOnly && showChevron) ...[
               SizedBox(width: 5 * s),
               Icon(
-                Icons.chevron_right_rounded,
+                opensSheet
+                    ? Icons.keyboard_arrow_down_rounded
+                    : Icons.chevron_right_rounded,
                 size: 17 * s,
                 color: AppColors.formChevron,
               ),

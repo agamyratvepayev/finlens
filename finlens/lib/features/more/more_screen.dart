@@ -502,18 +502,28 @@ class _AccountRow extends StatelessWidget {
 /// row so the chevron's right edge (flush to the content edge) and the value's
 /// right edge (8 pt left of the box) land on the same x down the card (§3.2).
 class _RowTrailingChevron extends StatelessWidget {
-  const _RowTrailingChevron();
+  const _RowTrailingChevron({this.opensSheet = false});
+
+  /// `false` (default) keeps the rightward `chevron_right` for rows that push a
+  /// screen (Archive, Currencies, the signed-in account row); `true` renders the
+  /// downward `keyboard_arrow_down` for a row that raises a bottom sheet in place
+  /// (Language). Position, size and colour are unchanged.
+  final bool opensSheet;
 
   @override
   Widget build(BuildContext context) {
-    return const Row(
+    return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        SizedBox(width: 8),
+        const SizedBox(width: 8),
         SizedBox(
           width: 18,
-          child: Icon(Icons.chevron_right_rounded,
-              size: 18, color: AppColors.textTertiary),
+          child: Icon(
+              opensSheet
+                  ? Icons.keyboard_arrow_down_rounded
+                  : Icons.chevron_right_rounded,
+              size: 18,
+              color: AppColors.textTertiary),
         ),
       ],
     );
@@ -559,7 +569,8 @@ class _LanguageRow extends StatelessWidget {
               // and the chevron's line up with the other rows (§3.2).
               const SizedBox(width: Insets.sm),
               Text(value, style: AppText.amount, maxLines: 1),
-              const _RowTrailingChevron(),
+              // Language raises the language bottom sheet in place.
+              const _RowTrailingChevron(opensSheet: true),
             ],
           ),
         ),

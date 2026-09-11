@@ -285,9 +285,12 @@ void main() {
           find.ancestor(of: find.text(text), matching: find.byType(InkWell))
               .first;
 
-      double chevronRight(Finder row) => tester
-          .getRect(find.descendant(
-              of: row, matching: find.byIcon(Icons.chevron_right_rounded)))
+      // Task 15: the disclosure glyph now depends on the destination — Archive
+      // and the Tags cell push a screen (chevron_right), Language raises a bottom
+      // sheet (keyboard_arrow_down). Only the glyph changed; the chevron box's
+      // position is unchanged, so the alignment this test guards still holds.
+      double chevronRight(Finder row, IconData icon) => tester
+          .getRect(find.descendant(of: row, matching: find.byIcon(icon)))
           .right;
       double valueRight(Finder row, String value) =>
           tester.getRect(find.descendant(of: row, matching: find.text(value)))
@@ -298,9 +301,11 @@ void main() {
       final tagsCell = rowOf(l.moreTags); // the right split cell
 
       // Chevrons: the full-width rows and the right split cell all end at one x.
-      final chevX = chevronRight(archive);
-      expect(chevronRight(language), closeTo(chevX, 0.5));
-      expect(chevronRight(tagsCell), closeTo(chevX, 0.5));
+      final chevX = chevronRight(archive, Icons.chevron_right_rounded);
+      expect(chevronRight(language, Icons.keyboard_arrow_down_rounded),
+          closeTo(chevX, 0.5));
+      expect(chevronRight(tagsCell, Icons.chevron_right_rounded),
+          closeTo(chevX, 0.5));
 
       // Values: Archive's 0, Language's "English", and the Tags cell's 0 too.
       final valX = valueRight(archive, '0');

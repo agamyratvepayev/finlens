@@ -113,6 +113,8 @@ class _EditAccountScreenState extends State<EditAccountScreen> {
                         label: l.eaGroup,
                         value: _group.label(AppLocalizations.of(context)),
                         showChevron: true,
+                        // _pickGroup raises a bottom sheet.
+                        opensSheet: true,
                         onTap: _pickGroup,
                       ),
                       FormRow(
@@ -120,6 +122,8 @@ class _EditAccountScreenState extends State<EditAccountScreen> {
                         label: l.eaCurrency,
                         value: _currency,
                         showChevron: true,
+                        // pickCurrency raises a bottom sheet.
+                        opensSheet: true,
                         onTap: () async {
                           final c = await pickCurrency(context, _currency);
                           if (c != null) setState(() => _currency = c);
@@ -140,6 +144,8 @@ class _EditAccountScreenState extends State<EditAccountScreen> {
                               )
                             : l.obNotSet,
                         showChevron: true,
+                        // showOpeningBalanceSheet raises a bottom sheet.
+                        opensSheet: true,
                         onTap: () =>
                             showOpeningBalanceSheet(context, _account.id),
                       ),
@@ -170,6 +176,8 @@ class _EditAccountScreenState extends State<EditAccountScreen> {
                                 ? l.eaNotSet
                                 : ordinalDay(_statementDay!, AppLocalizations.of(context)),
                             showChevron: true,
+                            // _pickDay raises a bottom sheet.
+                            opensSheet: true,
                             onTap: () async {
                               final d = await _pickDay(AppLocalizations.of(context).eaStatementDay);
                               if (d != null) setState(() => _statementDay = d);
@@ -182,6 +190,8 @@ class _EditAccountScreenState extends State<EditAccountScreen> {
                                 ? l.eaNotSet
                                 : ordinalDay(_paymentDue!, AppLocalizations.of(context)),
                             showChevron: true,
+                            // _pickDay raises a bottom sheet.
+                            opensSheet: true,
                             onTap: () async {
                               final d = await _pickDay(AppLocalizations.of(context).eaPaymentDue);
                               if (d != null) setState(() => _paymentDue = d);
@@ -214,6 +224,7 @@ class _EditAccountScreenState extends State<EditAccountScreen> {
                         ? l.eaRemovePermanent
                         : l.eaRemoveHasHistory,
                     onTap: _confirmRemove,
+                    opensSheet: true,
                   ),
                 ],
               ),

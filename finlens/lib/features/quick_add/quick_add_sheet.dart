@@ -406,6 +406,8 @@ class _QuickAddScreenState extends State<QuickAddScreen>
       label: label ?? l.qaDate,
       value: l.dateWithTime(dateAbsolute(_date, l, now: AppStore.today), time),
       onTap: _pickDate,
+      // _pickDate raises the app-native date+time bottom sheet.
+      opensSheet: true,
     );
   }
 
@@ -417,6 +419,8 @@ class _QuickAddScreenState extends State<QuickAddScreen>
       label: AppLocalizations.of(context).qaTag,
       value: names.isEmpty ? null : names.map((n) => '#$n').join(' '),
       emptyText: AppLocalizations.of(context).qaNone,
+      // showTagPicker raises a bottom sheet.
+      opensSheet: true,
       onTap: () => showTagPicker(
         context,
         selected: _tagIds.toSet(),
@@ -460,6 +464,8 @@ class _QuickAddScreenState extends State<QuickAddScreen>
       emptyText: l.repeatNever,
       iconColor: _hasRepeat ? AppColors.accent : null,
       onTap: _openTxnRepeat,
+      // _openTxnRepeat raises the Repeat bottom sheet.
+      opensSheet: true,
     );
   }
 
@@ -582,6 +588,8 @@ class _QuickAddScreenState extends State<QuickAddScreen>
             value: from?.name,
             emptyText: AppLocalizations.of(context).qaChooseAccount,
             flashId: 'from',
+            // _pickAccountInto raises the account bottom sheet.
+            opensSheet: true,
             onTap: widget.fixedFromAccountId != null
                 ? null
                 : () => _pickAccountInto(store, isFrom: true, title: AppLocalizations.of(context).qaPaymentAccount),
@@ -595,6 +603,8 @@ class _QuickAddScreenState extends State<QuickAddScreen>
                 : to?.name,
             emptyText: AppLocalizations.of(context).qaChooseCategory,
             flashId: 'to',
+            // Both branches raise a bottom sheet (split editor / category picker).
+            opensSheet: true,
             onTap: _hasSplit
                 ? () => _openSplit(store)
                 : () => _pickCategoryInto(CategoryType.expense, isFrom: false),
@@ -644,6 +654,8 @@ class _QuickAddScreenState extends State<QuickAddScreen>
                 : from?.name,
             emptyText: AppLocalizations.of(context).qaChooseCategory,
             flashId: 'from',
+            // Both branches raise a bottom sheet (split editor / category picker).
+            opensSheet: true,
             onTap: _hasSplit
                 ? () => _openSplit(store)
                 : () => _pickCategoryInto(CategoryType.income, isFrom: true),
@@ -655,6 +667,8 @@ class _QuickAddScreenState extends State<QuickAddScreen>
             value: to?.name,
             emptyText: AppLocalizations.of(context).qaChooseAccount,
             flashId: 'to',
+            // _pickAccountInto raises the account bottom sheet.
+            opensSheet: true,
             onTap: () =>
                 _pickAccountInto(store, isFrom: false, title: AppLocalizations.of(context).qaIncomeAccount),
           ),
@@ -701,6 +715,8 @@ class _QuickAddScreenState extends State<QuickAddScreen>
             value: from?.name,
             emptyText: AppLocalizations.of(context).qaChooseAccount,
             flashId: 'from',
+            // _pickAccountInto raises the account bottom sheet.
+            opensSheet: true,
             onTap: widget.fixedFromAccountId != null
                 ? null
                 : () => _pickAccountInto(
@@ -716,6 +732,8 @@ class _QuickAddScreenState extends State<QuickAddScreen>
             value: to?.name,
             emptyText: AppLocalizations.of(context).qaChooseAccount,
             flashId: 'to',
+            // _pickAccountInto raises the account bottom sheet.
+            opensSheet: true,
             onTap: widget.fixedToAccountId != null
                 ? null
                 : () => _pickAccountInto(
@@ -735,6 +753,8 @@ class _QuickAddScreenState extends State<QuickAddScreen>
               label: AppLocalizations.of(context).qaRate,
               value: '1 ${from.currency} = ${rate.toStringAsFixed(4)} '
                   '${to.currency}',
+              // _editRate raises a bottom-sheet text prompt.
+              opensSheet: true,
               onTap: () => _editRate(from, to, rate),
             ),
             FieldSpec(
@@ -793,6 +813,8 @@ class _QuickAddScreenState extends State<QuickAddScreen>
             label: AppLocalizations.of(context).qaAccount,
             value: account?.name,
             emptyText: AppLocalizations.of(context).qaChooseAccount,
+            // _pickAccountInto raises the account bottom sheet.
+            opensSheet: true,
             onTap: () => _pickAccountInto(
               store,
               isFrom: false,
@@ -828,6 +850,8 @@ class _QuickAddScreenState extends State<QuickAddScreen>
             label: AppLocalizations.of(context).qaReason,
             value: store.categoryById(_fromRef)?.name,
             emptyText: AppLocalizations.of(context).qaAdjustment,
+            // _pickCategoryInto raises the category bottom sheet.
+            opensSheet: true,
             onTap: () => _pickCategoryInto(CategoryType.expense, isFrom: true),
           ),
           _noteField(),
@@ -881,6 +905,8 @@ class _QuickAddScreenState extends State<QuickAddScreen>
             label: AppLocalizations.of(context).qaAmount,
             value: _raw.isEmpty ? null : money(_amount, currency: _currency),
             emptyText: AppLocalizations.of(context).eaNotSet,
+            // _promptText raises a bottom-sheet text prompt.
+            opensSheet: true,
             onTap: () async {
               final v = await _promptText(
                 title: AppLocalizations.of(context).qaAmount,
@@ -897,6 +923,8 @@ class _QuickAddScreenState extends State<QuickAddScreen>
             label: AppLocalizations.of(context).qaAccount,
             value: account?.name,
             emptyText: AppLocalizations.of(context).eaNotSet,
+            // _pickAccountInto raises the account bottom sheet.
+            opensSheet: true,
             onTap: () =>
                 _pickAccountInto(store, isFrom: false, title: AppLocalizations.of(context).etLinkedAccount),
           ),
@@ -905,6 +933,8 @@ class _QuickAddScreenState extends State<QuickAddScreen>
             label: AppLocalizations.of(context).fieldCategory,
             value: store.categoryById(_fromRef)?.name,
             emptyText: AppLocalizations.of(context).eaNotSet,
+            // _pickCategoryInto raises the category bottom sheet.
+            opensSheet: true,
             onTap: () => _pickCategoryInto(CategoryType.expense, isFrom: true),
           ),
           // Repeat moves onto the transaction form's richer chooser (§5): a row

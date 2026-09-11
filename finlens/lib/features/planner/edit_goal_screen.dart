@@ -377,6 +377,7 @@ class _EditGoalScreenState extends State<EditGoalScreen> {
             label: l.egDeleteGoal,
             subtitle: l.goalDeleteRowDesc,
             onTap: _delete,
+            opensSheet: true,
           ),
       ],
     );

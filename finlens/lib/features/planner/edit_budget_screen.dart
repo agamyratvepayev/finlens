@@ -102,12 +102,15 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
               subtitle: '${money(_limitValue * _warn)} ${l.ebSpent}',
               value: percent(_warn, decimals: 0),
               showChevron: true,
+              // _pickThreshold raises a bottom sheet.
+              opensSheet: true,
               onTap: _pickThreshold,
             ),
           ],
         ),
         _historyCard(spent),
-        DestructiveRow(label: l.ebRemoveBudget, onTap: _confirmRemove),
+        DestructiveRow(
+            label: l.ebRemoveBudget, onTap: _confirmRemove, opensSheet: true),
       ],
     );
   }

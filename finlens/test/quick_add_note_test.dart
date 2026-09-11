@@ -182,13 +182,22 @@ void main() {
       matching: find.byType(Column),
     );
     // Date, Tags and Repeat still carry a chevron in the OPTIONAL card; if the
-    // note row still had one there would be four.
+    // note row still had one there would be four. Task 15: those three open
+    // bottom sheets, so their glyph is now the downward chevron — the note row
+    // still carries none.
+    expect(
+      find.descendant(
+        of: card.first,
+        matching: find.byIcon(Icons.keyboard_arrow_down_rounded),
+      ),
+      findsNWidgets(3),
+    );
     expect(
       find.descendant(
         of: card.first,
         matching: find.byIcon(Icons.chevron_right_rounded),
       ),
-      findsNWidgets(3),
+      findsNothing,
     );
   });
 

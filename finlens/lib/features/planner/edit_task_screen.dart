@@ -116,6 +116,8 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
               label: _payOut ? l.etPaidFrom : l.etPaidInto,
               subtitle: account?.name ?? l.fieldSelectAccount,
               showChevron: true,
+              // pickAccount raises a bottom sheet.
+              opensSheet: true,
               onTap: () async {
                 final a = await pickAccount(context, title: l.etLinkedAccount);
                 if (a != null) setState(() => _accountId = a.id);
@@ -153,6 +155,8 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
               label: _payOut ? l.etPaidTo : l.fieldCategory,
               subtitle: _destinationSubtitle(store, l),
               showChevron: true,
+              // _pickDestination raises a bottom sheet (category / pay-out picker).
+              opensSheet: true,
               onTap: _pickDestination,
             ),
             FormRow(
@@ -176,6 +180,8 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
               value:
                   _preview.isEmpty ? _repeats.label(AppLocalizations.of(context)) : null,
               showChevron: true,
+              // _pickRepeat raises a bottom sheet (showRepeatSheet).
+              opensSheet: true,
               onTap: _pickRepeat,
             ),
             // Remind is removed (§4): no notification package ships, so nothing

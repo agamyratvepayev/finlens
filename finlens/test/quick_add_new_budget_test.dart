@@ -8,6 +8,7 @@ import 'package:finlens/core/store/app_store.dart';
 import 'package:finlens/features/planner/edit_budget_screen.dart';
 import 'package:finlens/features/planner/planner_screen.dart';
 import 'package:finlens/features/quick_add/quick_add_sheet.dart';
+import 'package:finlens/features/quick_add/widgets/form_kit.dart';
 import 'package:finlens/l10n/app_localizations.dart';
 import 'package:finlens/theme/app_theme.dart';
 
@@ -74,7 +75,11 @@ void main() {
     await tester.pump(const Duration(milliseconds: 350));
 
     // Open the type menu via the chip's dropdown arrow.
-    await tester.tap(find.byIcon(Icons.keyboard_arrow_down_rounded));
+    // Task 15: Quick Add's optional rows (Date/Tags/Repeat) now also use the
+    // downward chevron, so scope the type-chip tap to the nav bar's own arrow.
+    await tester.tap(find.descendant(
+        of: find.byType(FormNavBar),
+        matching: find.byIcon(Icons.keyboard_arrow_down_rounded)));
     await tester.pump(const Duration(milliseconds: 350));
 
     // Every one of these labels is unique to the sheet (the nav bar shows only
@@ -174,7 +179,11 @@ void main() {
     expect(find.byType(QuickAddScreen), findsOneWidget);
 
     // Open the type menu and choose New Budget.
-    await tester.tap(find.byIcon(Icons.keyboard_arrow_down_rounded));
+    // Task 15: Quick Add's optional rows (Date/Tags/Repeat) now also use the
+    // downward chevron, so scope the type-chip tap to the nav bar's own arrow.
+    await tester.tap(find.descendant(
+        of: find.byType(FormNavBar),
+        matching: find.byIcon(Icons.keyboard_arrow_down_rounded)));
     await tester.pump(const Duration(milliseconds: 350));
     await tester.tap(find.text('New Budget'));
     await tester.pumpAndSettle();
@@ -499,7 +508,11 @@ void main() {
     );
     await tester.pump(const Duration(milliseconds: 350));
 
-    await tester.tap(find.byIcon(Icons.keyboard_arrow_down_rounded));
+    // Task 15: Quick Add's optional rows (Date/Tags/Repeat) now also use the
+    // downward chevron, so scope the type-chip tap to the nav bar's own arrow.
+    await tester.tap(find.descendant(
+        of: find.byType(FormNavBar),
+        matching: find.byIcon(Icons.keyboard_arrow_down_rounded)));
     await tester.pump(const Duration(milliseconds: 350));
 
     // The long tr rows ("Yeni bütçe") are present and nothing overflowed.

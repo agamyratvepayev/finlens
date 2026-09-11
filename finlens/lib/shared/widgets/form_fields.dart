@@ -42,6 +42,7 @@ class FormRow extends StatelessWidget {
     this.trailing,
     this.onTap,
     this.showChevron = false,
+    this.opensSheet = false,
     this.enabled = true,
     this.locked = false,
   });
@@ -54,6 +55,14 @@ class FormRow extends StatelessWidget {
   final Widget? trailing;
   final VoidCallback? onTap;
   final bool showChevron;
+
+  /// Which chevron [showChevron] draws — a disclosure direction, not decoration.
+  /// `false` (the default, so an unclassified row never silently flips) renders
+  /// the rightward `chevron_right` that says "tapping pushes a screen". `true`
+  /// renders the downward `keyboard_arrow_down` that says "tapping discloses a
+  /// bottom sheet in place", matching the Balance `Today` chip and the amount
+  /// hero's currency chip. Chevron position, size and colour are unchanged.
+  final bool opensSheet;
   final bool enabled;
 
   /// Read-only fields render a padlock and explain themselves in [subtitle]
@@ -148,10 +157,12 @@ class FormRow extends StatelessWidget {
                 ),
               ),
             if (showChevron)
-              const Padding(
-                padding: EdgeInsets.only(left: 2),
+              Padding(
+                padding: const EdgeInsets.only(left: 2),
                 child: Icon(
-                  Icons.chevron_right_rounded,
+                  opensSheet
+                      ? Icons.keyboard_arrow_down_rounded
+                      : Icons.chevron_right_rounded,
                   size: 18,
                   color: AppColors.textTertiary,
                 ),
@@ -371,11 +382,18 @@ class DestructiveRow extends StatelessWidget {
     required this.label,
     required this.onTap,
     this.subtitle,
+    this.opensSheet = false,
   });
 
   final String label;
   final String? subtitle;
   final VoidCallback onTap;
+
+  /// See [FormRow.opensSheet]. `false` (default) keeps today's `chevron_right`;
+  /// `true` renders `keyboard_arrow_down` for a row whose tap raises a bottom
+  /// sheet. Every current caller's confirmation is a bottom sheet
+  /// ([showDestructiveConfirm] is a `showModalBottomSheet`), so they pass `true`.
+  final bool opensSheet;
 
   @override
   Widget build(BuildContext context) {
@@ -418,8 +436,10 @@ class DestructiveRow extends StatelessWidget {
                   ],
                 ),
               ),
-              const Icon(
-                Icons.chevron_right_rounded,
+              Icon(
+                opensSheet
+                    ? Icons.keyboard_arrow_down_rounded
+                    : Icons.chevron_right_rounded,
                 size: 18,
                 color: AppColors.textTertiary,
               ),
