@@ -83,7 +83,7 @@ class _MarkPaidSheetState extends State<_MarkPaidSheet> {
   double get _amount => AmountEntry.value(_raw);
 
   String get _currency =>
-      _store.accountById(_fromAccountId)?.currency ?? 'USD';
+      _store.accountById(_fromAccountId)?.currency ?? _store.baseCurrency;
 
   bool get _differs =>
       (_amount - _task.expectedAmount.abs()).abs() >= 0.005;

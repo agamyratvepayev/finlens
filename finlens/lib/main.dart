@@ -10,6 +10,7 @@ import 'core/persistence/local_database.dart';
 import 'core/persistence/store_persister.dart';
 import 'core/persistence/sync_store.dart';
 import 'core/store/app_store.dart';
+import 'core/utils/formatters.dart';
 import 'core/sync/api_client.dart';
 import 'core/sync/sync_config.dart';
 import 'core/sync/sync_controller.dart';
@@ -60,6 +61,10 @@ Future<void> main() async {
   await store.loadLedgerPrefs();
   await store.loadLocale();
   await store.loadBaseCurrency();
+  // Prime the money formatters' default currency before the first frame, so a
+  // bare `money(x)` never paints a dollar and then corrects itself. The
+  // baseCurrency getter keeps it in sync thereafter (see AppStore.baseCurrency).
+  setFormatterBaseCurrency(store.baseCurrency);
 
   // Group sync rides on real persistence only — the dev-seed fixture has no
   // persister and must never push its data into a group.

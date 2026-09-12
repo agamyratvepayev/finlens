@@ -15,6 +15,24 @@ import '../models/currency_def.dart';
 
 const _minus = '−';
 
+/// The currency an omitted [money]/[moneyCompact] `currency` argument falls
+/// back to. It mirrors `AppStore.baseCurrency` — the store keeps it current via
+/// [setFormatterBaseCurrency] — so a bare `money(x)` renders in the store's
+/// base rather than a hard-coded dollar. A Dart default parameter must be a
+/// compile-time constant, so the resolution lives in the function body against
+/// this module-level value instead. It seeds to `'USD'` only for the window
+/// before the store has loaded, matching the store's own last-resort base.
+String _baseCurrency = 'USD';
+
+/// Point the money formatters' default currency at [code]. Called by
+/// `AppStore` whenever its resolved base currency changes, so every
+/// `money(...)`/`moneyCompact(...)` call that *omits* its currency argument
+/// renders in the current base without threading the base through every one of
+/// the ~150 call sites. An explicit `currency:` argument always wins over this.
+void setFormatterBaseCurrency(String code) {
+  if (code.isNotEmpty) _baseCurrency = code;
+}
+
 /// The token placed *before* an amount by the legacy prefix path: a bare symbol
 /// (`$`, `€`, `m`) when the currency has one, else the code plus a trailing
 /// space (`CHF `) so a code prefix never runs into the digits. Built-in symbols
@@ -108,7 +126,7 @@ String _group(String digits) {
 /// → $569). Both suppress cents; neither touches balances or totals elsewhere.
 String money(
   double value, {
-  String currency = 'USD',
+  String? currency,
   bool showSign = false,
   bool forceDecimals = false,
   bool masked = false,
@@ -116,10 +134,13 @@ String money(
   bool roundUp = false,
   bool noDecimals = false,
 }) {
+  // An omitted currency resolves to the store's base (see [_baseCurrency]);
+  // an explicit argument still wins.
+  final code = currency ?? _baseCurrency;
   // Custom currencies carry their own placement/spacing/decimal rules (spec
   // §7a); built-ins fall through to the legacy value-driven formatter below,
   // unchanged, so the sign/direction tests still hold.
-  final custom = customCurrencyDef(currency);
+  final custom = customCurrencyDef(code);
   if (custom != null) {
     return _moneyCustom(value, custom,
         showSign: showSign,
@@ -129,7 +150,7 @@ String money(
         noDecimals: noDecimals);
   }
 
-  final symbol = currencySymbol(currency);
+  final symbol = currencySymbol(code);
   if (masked) return '$symbol••••';
 
   final negative = value < 0;
@@ -159,8 +180,8 @@ String money(
 }
 
 /// Compact form for dense captions ("$8.4K/yr").
-String moneyCompact(double value, {String currency = 'USD'}) {
-  final symbol = currencySymbol(currency);
+String moneyCompact(double value, {String? currency}) {
+  final symbol = currencySymbol(currency ?? _baseCurrency);
   final abs = value.abs();
   final sign = value < 0 ? _minus : '';
   if (abs >= 1000000) {

@@ -322,8 +322,18 @@ class AppStore extends ChangeNotifier {
   /// The base currency every total is displayed in — the resolved value, never
   /// null. Reads live so a change in Preferences repaints every aggregate
   /// without an app restart (nothing caches it).
-  String get baseCurrency =>
-      resolveBaseCurrency(_baseCurrency, _accounts, _deviceLocaleCurrency);
+  String get baseCurrency {
+    final resolved =
+        resolveBaseCurrency(_baseCurrency, _accounts, _deviceLocaleCurrency);
+    // Mirror the resolved base into the money formatters so a bare `money(x)`
+    // (no currency argument) renders in the base rather than a hard-coded
+    // dollar. This getter is read live by every aggregate on every rebuild, so
+    // it is the natural single point to keep the formatter default current —
+    // including after a Preferences change, a sync/group hydration, or the
+    // first account seeding the base.
+    setFormatterBaseCurrency(resolved);
+    return resolved;
+  }
 
   /// The user's explicit choice (More ▸ Preferences). Stores it and notifies so
   /// every total recomputes and repaints immediately.

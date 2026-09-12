@@ -11,7 +11,7 @@ class AmountText extends StatelessWidget {
   const AmountText(
     this.value, {
     super.key,
-    this.currency = 'USD',
+    this.currency,
     this.style,
     this.color,
     this.showSign = false,
@@ -24,7 +24,7 @@ class AmountText extends StatelessWidget {
   const AmountText.balance(
     this.value, {
     super.key,
-    this.currency = 'USD',
+    this.currency,
     this.style,
     this.color,
     this.forceDecimals = false,
@@ -33,7 +33,12 @@ class AmountText extends StatelessWidget {
         signless = true;
 
   final double value;
-  final String currency;
+
+  /// The currency to render in. When null (the default), the amount renders in
+  /// the store's base currency — most on-screen figures are base-currency
+  /// aggregates, so the base is the right default rather than a fixed dollar.
+  /// Callers pass an explicit code for an account- or transaction-scoped amount.
+  final String? currency;
   final TextStyle? style;
   final Color? color;
   final bool showSign;
@@ -43,11 +48,12 @@ class AmountText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final masked = maskable && StoreScope.of(context).masked;
+    final store = StoreScope.of(context);
+    final masked = maskable && store.masked;
     return Text(
       money(
         value,
-        currency: currency,
+        currency: currency ?? store.baseCurrency,
         showSign: showSign,
         forceDecimals: forceDecimals,
         masked: masked,

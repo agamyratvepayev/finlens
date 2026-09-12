@@ -146,7 +146,9 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
               controller: _amount,
               hint: '0',
               trailing: Text(
-                currencySymbol(account?.currency ?? 'USD'),
+                // The chosen account's currency; before one is picked, fall
+                // back to the base rather than a fixed dollar.
+                currencySymbol(account?.currency ?? store.baseCurrency),
                 style: AppText.amount.copyWith(color: AppColors.textSecondary),
               ),
             ),

@@ -87,7 +87,10 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
               controller: _limit,
               hint: '0',
               trailing: Text(
-                currencySymbol('USD'),
+                // The limit is a base-currency figure by design (see the note
+                // above Budget.limit): spend is summed through Fx.toBase, so the
+                // marker names the base, not a fixed dollar.
+                currencySymbol(store.baseCurrency),
                 style: AppText.amount.copyWith(color: AppColors.textSecondary),
               ),
             ),

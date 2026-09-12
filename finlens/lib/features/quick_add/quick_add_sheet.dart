@@ -148,7 +148,13 @@ class _QuickAddScreenState extends State<QuickAddScreen>
   final _title = TextEditingController();
   final _titleFocus = FocusNode();
 
-  String _currency = 'USD';
+  /// The currency the transaction is *recorded in*. Set from the source when
+  /// editing/copying (initState), otherwise primed to the base currency once
+  /// the store is reachable (didChangeDependencies); picking an account
+  /// overrides it with that account's currency. It is never left as a
+  /// hard-coded dollar — a transaction saved before any account is chosen is
+  /// stored in the base, not in USD.
+  late String _currency;
   String? _fromRef;
   String? _toRef;
   DateTime _date = AppStore.today;
@@ -179,6 +185,12 @@ class _QuickAddScreenState extends State<QuickAddScreen>
       vsync: this, duration: const Duration(milliseconds: 200));
 
   bool _editLoaded = false;
+
+  /// Guards the one-time base-currency prime for a brand-new transaction (see
+  /// [_currency]). Without it, a store notification re-firing
+  /// didChangeDependencies would reset a currency the user had already fixed by
+  /// picking an account.
+  bool _currencyPrimed = false;
 
   bool get _isEditing => widget.editing != null;
   bool get _hasSplit => _splitLines != null;
@@ -227,6 +239,17 @@ class _QuickAddScreenState extends State<QuickAddScreen>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    // A brand-new transaction records in the base currency until an account is
+    // picked (an edit/copy already carries its source's currency, set in
+    // initState). Resolved here rather than initState because the store is only
+    // reachable now; a fixed account (scoped Quick Add) wins over the base.
+    if (!_currencyPrimed && widget.editing == null && widget.copyOf == null) {
+      _currencyPrimed = true;
+      final store = StoreScope.read(context);
+      final fixedId = widget.fixedFromAccountId ?? widget.fixedToAccountId;
+      final fixed = fixedId != null ? store.accountById(fixedId) : null;
+      _currency = fixed?.currency ?? store.baseCurrency;
+    }
     // Editing a saved transaction loads its repeat rule and, for a split, the
     // whole group (spec §1/§2). Done once, and here rather than initState so
     // the store is reachable.
