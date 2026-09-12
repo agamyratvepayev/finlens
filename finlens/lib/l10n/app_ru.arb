@@ -462,6 +462,8 @@
   "ebRollOver": "Переносить остаток",
   "ebRollOverDesc": "Добавлять остаток к следующему месяцу",
   "ebWarnAt": "Предупредить при",
+  "ebWarnCustom": "Другое",
+  "ebWarnRange": "1–100",
   "ebRemoveBudget": "Удалить бюджет",
   "ebAverage": "В среднем {average}. Попробуйте {suggestion}?",
   "ebRemoveTitle": "Удалить бюджет «{name}»?",

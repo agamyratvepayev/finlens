@@ -462,6 +462,8 @@
   "ebRollOver": "Galanyny geçir",
   "ebRollOverDesc": "Galanyny indiki aýa goş",
   "ebWarnAt": "Şu ýerde duýdur",
+  "ebWarnCustom": "Ýörite",
+  "ebWarnRange": "1–100",
   "ebRemoveBudget": "Býujeti aýyr",
   "ebAverage": "Ortaça {average}. {suggestion} synanyşyňmy?",
   "ebRemoveTitle": "{name} býujeti aýyrylsynmy?",

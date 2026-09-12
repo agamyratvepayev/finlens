@@ -585,6 +585,8 @@
   "ebRollOver": "Roll over unspent",
   "ebRollOverDesc": "Add leftovers to next month",
   "ebWarnAt": "Warn me at",
+  "ebWarnCustom": "Custom",
+  "ebWarnRange": "1–100",
   "ebRemoveBudget": "Remove budget",
   "ebAverage": "You average {average}. Try {suggestion}?",
   "@ebAverage": { "placeholders": { "average": {}, "suggestion": {} } },

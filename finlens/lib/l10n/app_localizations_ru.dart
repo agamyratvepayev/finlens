@@ -1754,6 +1754,12 @@ class AppLocalizationsRu extends AppLocalizations {
   String get ebWarnAt => 'Предупредить при';
 
   @override
+  String get ebWarnCustom => 'Другое';
+
+  @override
+  String get ebWarnRange => '1–100';
+
+  @override
   String get ebRemoveBudget => 'Удалить бюджет';
 
   @override

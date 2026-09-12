@@ -462,6 +462,8 @@
   "ebRollOver": "Kalanı devret",
   "ebRollOverDesc": "Kalanı gelecek aya ekle",
   "ebWarnAt": "Şurada uyar",
+  "ebWarnCustom": "Özel",
+  "ebWarnRange": "1–100",
   "ebRemoveBudget": "Bütçeyi kaldır",
   "ebAverage": "Ortalama {average}. {suggestion} deneyin mi?",
   "ebRemoveTitle": "{name} bütçesi kaldırılsın mı?",

@@ -1701,6 +1701,12 @@ class AppLocalizationsTr extends AppLocalizations {
   String get ebWarnAt => 'Şurada uyar';
 
   @override
+  String get ebWarnCustom => 'Özel';
+
+  @override
+  String get ebWarnRange => '1–100';
+
+  @override
   String get ebRemoveBudget => 'Bütçeyi kaldır';
 
   @override

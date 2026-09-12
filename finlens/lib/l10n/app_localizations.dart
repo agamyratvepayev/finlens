@@ -2608,6 +2608,18 @@ abstract class AppLocalizations {
   /// **'Warn me at'**
   String get ebWarnAt;
 
+  /// No description provided for @ebWarnCustom.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom'**
+  String get ebWarnCustom;
+
+  /// No description provided for @ebWarnRange.
+  ///
+  /// In en, this message translates to:
+  /// **'1–100'**
+  String get ebWarnRange;
+
   /// No description provided for @ebRemoveBudget.
   ///
   /// In en, this message translates to:

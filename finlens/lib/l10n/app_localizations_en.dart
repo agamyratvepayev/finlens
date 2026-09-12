@@ -1711,6 +1711,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ebWarnAt => 'Warn me at';
 
   @override
+  String get ebWarnCustom => 'Custom';
+
+  @override
+  String get ebWarnRange => '1–100';
+
+  @override
   String get ebRemoveBudget => 'Remove budget';
 
   @override

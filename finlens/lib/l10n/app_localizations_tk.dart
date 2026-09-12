@@ -1701,6 +1701,12 @@ class AppLocalizationsTk extends AppLocalizations {
   String get ebWarnAt => 'Şu ýerde duýdur';
 
   @override
+  String get ebWarnCustom => 'Ýörite';
+
+  @override
+  String get ebWarnRange => '1–100';
+
+  @override
   String get ebRemoveBudget => 'Býujeti aýyr';
 
   @override
