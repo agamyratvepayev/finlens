@@ -362,9 +362,10 @@ Future<({String id, bool isAccount})?> pickPayOutDestination(
   return showAppSheet<({String id, bool isAccount})>(
     context,
     title: l.mpChooseDestination,
-    initialSize: 0.7,
+    contentSized: true,
     builder: (context, controller) => ListView(
       controller: controller,
+      shrinkWrap: true,
       padding: const EdgeInsets.only(bottom: Insets.xxl),
       children: [
         Padding(

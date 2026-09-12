@@ -1076,9 +1076,13 @@ class _QuickAddScreenState extends State<QuickAddScreen>
     showAppSheet<void>(
       context,
       title: AppLocalizations.of(context).qaWhatAdding,
-      initialSize: 0.55,
+      // Seven fixed rows: hug them instead of opening at a fraction (task 20).
+      contentSized: true,
       builder: (sheetContext, controller) => ListView(
         controller: controller,
+        // shrinkWrap so the list is only as tall as its rows; the sheet's outer
+        // Flexible caps it and it scrolls once the rows outgrow the sheet.
+        shrinkWrap: true,
         padding: const EdgeInsets.fromLTRB(
           Insets.gutter,
           0,

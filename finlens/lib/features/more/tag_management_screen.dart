@@ -318,7 +318,7 @@ void _showCreateTag(BuildContext context, AppStore store) {
   showAppSheet<void>(
     context,
     title: l.tagNewTitle,
-    initialSize: 0.55,
+    contentSized: true,
     cancelLabel: l.actionCancel,
     builder: (context, controller) =>
         _TagSheetBody(store: store, tag: null, controller: controller),
@@ -330,7 +330,7 @@ void _showEditTag(BuildContext context, AppStore store, Tag tag) {
   showAppSheet<void>(
     context,
     title: l.tagEditTitle,
-    initialSize: 0.55,
+    contentSized: true,
     cancelLabel: l.actionCancel,
     builder: (context, controller) =>
         _TagSheetBody(store: store, tag: tag, controller: controller),
@@ -403,10 +403,13 @@ class _TagSheetBodyState extends State<_TagSheetBody> {
     final used = count > 0;
 
     return Column(
+      // Hug the content: the Save footer sits just below the field (task 20).
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Expanded(
+        Flexible(
           child: ListView(
             controller: widget.controller,
+            shrinkWrap: true,
             padding: const EdgeInsets.fromLTRB(
                 Insets.gutter, Insets.sm, Insets.gutter, Insets.lg),
             children: [

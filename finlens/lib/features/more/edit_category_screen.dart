@@ -189,9 +189,10 @@ class _EditCategoryScreenState extends State<EditCategoryScreen> {
     final picked = await showAppSheet<Color>(
       context,
       title: AppLocalizations.of(context).qaColour,
-      initialSize: 0.35,
+      contentSized: true,
       builder: (context, controller) => ListView(
         controller: controller,
+        shrinkWrap: true,
         padding: const EdgeInsets.fromLTRB(
             Insets.gutter, Insets.sm, Insets.gutter, Insets.xxl),
         children: [

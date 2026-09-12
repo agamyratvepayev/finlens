@@ -239,9 +239,10 @@ class _EditAccountScreenState extends State<EditAccountScreen> {
     return showAppSheet<int>(
       context,
       title: title,
-      initialSize: 0.6,
+      contentSized: true,
       builder: (context, controller) => GridView.builder(
         controller: controller,
+        shrinkWrap: true,
         padding: const EdgeInsets.fromLTRB(
           Insets.gutter,
           0,
@@ -273,9 +274,10 @@ class _EditAccountScreenState extends State<EditAccountScreen> {
     final picked = await showAppSheet<AccountGroup>(
       context,
       title: AppLocalizations.of(context).eaGroup,
-      initialSize: 0.65,
+      contentSized: true,
       builder: (context, controller) => ListView(
         controller: controller,
+        shrinkWrap: true,
         padding: const EdgeInsets.fromLTRB(
           Insets.gutter,
           0,

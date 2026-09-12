@@ -1242,7 +1242,7 @@ Future<Category?> showNewCategorySheet(
     context,
     title:
         type == CategoryType.expense ? l.qaNewExpenseCategory : l.qaNewIncomeCategory,
-    initialSize: 0.6,
+    contentSized: true,
     builder: (context, controller) => _NewCategoryForm(
       controller: controller,
       type: type,
@@ -1345,10 +1345,13 @@ class _NewCategoryFormState extends State<_NewCategoryForm> {
     final l = AppLocalizations.of(context);
     final duplicate = _duplicateName(store);
     return Column(
+      // Hug the content: the footer sits just below the fields (task 20).
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Expanded(
+        Flexible(
           child: ListView(
             controller: widget.controller,
+            shrinkWrap: true,
             padding: const EdgeInsets.fromLTRB(
                 Insets.gutter, Insets.md, Insets.gutter, Insets.xl),
             children: [
@@ -2060,10 +2063,11 @@ Future<AccountGroup?> showAccountTypeSheet(BuildContext context,
   return showAppSheet<AccountGroup>(
     context,
     title: l.naAccountType,
-    initialSize: 0.85,
+    contentSized: true,
     cancelLabel: l.actionCancel,
     builder: (context, controller) => ListView(
       controller: controller,
+      shrinkWrap: true,
       padding: const EdgeInsets.fromLTRB(
           Insets.gutter, 0, Insets.gutter, Insets.xxl),
       children: [
@@ -2417,9 +2421,10 @@ Future<int?> _showDayPicker(BuildContext context, int? current) {
   return showAppSheet<int>(
     context,
     title: l.qaPaymentDay,
-    initialSize: 0.6,
+    contentSized: true,
     builder: (context, controller) => GridView.count(
       controller: controller,
+      shrinkWrap: true,
       crossAxisCount: 7,
       padding: const EdgeInsets.fromLTRB(
           Insets.gutter, 0, Insets.gutter, Insets.xxl),
@@ -2465,7 +2470,7 @@ Future<String?> pickCurrency(BuildContext context, String current,
     // "Currency" title; the base-currency flow (spec §12) passes its own so the
     // sheet's rows/behaviour are otherwise unchanged.
     title: title ?? l.eaCurrency,
-    initialSize: 0.85,
+    contentSized: true,
     cancelLabel: l.actionCancel,
     actions: [
       _HeaderCreateAction<String>(
@@ -2524,6 +2529,9 @@ class _CurrencyPickerBodyState extends State<_CurrencyPickerBody> {
     final all = _allCurrencies(store).where((c) => _matches(c, q)).toList();
 
     return Column(
+      // Hug the content: a short (searched) list keeps the sheet short; the
+      // full catalog caps at the ceiling and scrolls (task 20).
+      mainAxisSize: MainAxisSize.min,
       children: [
         const SizedBox(height: Insets.sm),
         _SearchBar(
@@ -2531,9 +2539,10 @@ class _CurrencyPickerBodyState extends State<_CurrencyPickerBody> {
           onChanged: (v) => setState(() => _query = v),
         ),
         const SizedBox(height: Insets.md),
-        Expanded(
+        Flexible(
           child: ListView(
             controller: widget.controller,
+            shrinkWrap: true,
             padding: const EdgeInsets.fromLTRB(
                 Insets.gutter, 0, Insets.gutter, Insets.xxl),
             children: [
@@ -2632,7 +2641,7 @@ Future<String?> showAddCurrencySheet(BuildContext context) {
   return showAppSheet<String>(
     context,
     title: l.curAddTitle,
-    initialSize: 0.8,
+    contentSized: true,
     cancelLabel: l.actionCancel,
     builder: (context, controller) => _AddCurrencyForm(controller: controller),
   );
@@ -2655,7 +2664,7 @@ Future<bool?> showEditCurrencySheet(BuildContext context, CurrencyDef def) {
   return showAppSheet<bool>(
     context,
     title: l.curEditTitle,
-    initialSize: 0.8,
+    contentSized: true,
     cancelLabel: l.actionCancel,
     builder: (context, controller) =>
         _AddCurrencyForm(controller: controller, initial: def),
@@ -2739,10 +2748,13 @@ class _AddCurrencyFormState extends State<_AddCurrencyForm> {
         formatCurrencyExample(_def().copyWith(code: _codeUp.isEmpty ? 'CUR' : _codeUp), 9850);
 
     return Column(
+      // Hug the content: the footer sits just below the form (task 20).
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Expanded(
+        Flexible(
           child: ListView(
             controller: widget.controller,
+            shrinkWrap: true,
             padding: const EdgeInsets.fromLTRB(
                 Insets.gutter, Insets.sm, Insets.gutter, Insets.lg),
             children: [
