@@ -615,6 +615,22 @@ class AppLocalizationsTk extends AppLocalizations {
   String get moreCategories => 'Kategoriýalar';
 
   @override
+  String get moreAccounts => 'Hasaplar';
+
+  @override
+  String accActive(int count) {
+    return '$count işjeň';
+  }
+
+  @override
+  String accActiveArchived(int active, int archived) {
+    return '$active işjeň · $archived arhiwde';
+  }
+
+  @override
+  String get accSectionArchived => 'Arhiwlenen';
+
+  @override
   String get moreArchive => 'Arhiw';
 
   @override
@@ -2828,10 +2844,6 @@ class AppLocalizationsTk extends AppLocalizations {
   @override
   String get qaOwedHint =>
       'Bergiňizi položitel san hökmünde giriziň — ol arassa baýlygyňyzy azaldýar.';
-
-  @override
-  String get qaStartingBalanceHint =>
-      'Muny bir gezek giriziň. Mundan soň balans amallaryňyzdan hasaplanýar.';
 
   @override
   String get qaPaymentDayHint => 'Bundan gysga aýlar öz soňky gününi ulanýar.';

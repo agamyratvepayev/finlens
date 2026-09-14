@@ -616,6 +616,22 @@ class AppLocalizationsTr extends AppLocalizations {
   String get moreCategories => 'Kategoriler';
 
   @override
+  String get moreAccounts => 'Hesaplar';
+
+  @override
+  String accActive(int count) {
+    return '$count etkin';
+  }
+
+  @override
+  String accActiveArchived(int active, int archived) {
+    return '$active etkin · $archived arşivde';
+  }
+
+  @override
+  String get accSectionArchived => 'Arşivlenmiş';
+
+  @override
   String get moreArchive => 'Arşiv';
 
   @override
@@ -2828,10 +2844,6 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get qaOwedHint =>
       'Borcunuzu pozitif bir sayı olarak girin — net değerinizden düşülür.';
-
-  @override
-  String get qaStartingBalanceHint =>
-      'Bunu bir kez girin. Bundan sonra bakiye işlemlerinizden hesaplanır.';
 
   @override
   String get qaPaymentDayHint => 'Bundan kısa aylar son günlerini kullanır.';

@@ -618,6 +618,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get moreCategories => 'Categories';
 
   @override
+  String get moreAccounts => 'Accounts';
+
+  @override
+  String accActive(int count) {
+    return '$count active';
+  }
+
+  @override
+  String accActiveArchived(int active, int archived) {
+    return '$active active · $archived archived';
+  }
+
+  @override
+  String get accSectionArchived => 'Archived';
+
+  @override
   String get moreArchive => 'Archive';
 
   @override
@@ -2839,10 +2855,6 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get qaOwedHint =>
       'Enter what you owe as a positive number — it counts against your net worth.';
-
-  @override
-  String get qaStartingBalanceHint =>
-      'Enter this once. From now on the balance is calculated from your transactions.';
 
   @override
   String get qaPaymentDayHint => 'Months shorter than this use their last day.';

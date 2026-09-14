@@ -1832,17 +1832,25 @@ class _NewAccountFormState extends State<_NewAccountForm> {
                   ),
                 ],
               ]),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(Insets.xs, Insets.sm, 0, 0),
-                child: Text(
-                  _isLiability ? l.qaOwedHint : l.qaStartingBalanceHint,
-                  // Secondary, not the faintest tertiary: with the field no
-                  // longer shouting, this is the main thing drawing attention
-                  // to it (§3).
-                  style: const TextStyle(
-                      fontSize: 12, height: 1.4, color: AppColors.textSecondary),
+              // The starting-balance explainer ("Enter this once. From now on
+              // the balance is calculated from your transactions.") is removed
+              // by owner decision (More ▸ Accounts §4) — deliberately not
+              // replaced by any hint, placeholder, tooltip or info icon. The
+              // liability form keeps its own hint, which explains entering a
+              // debt as a positive number — a different point this removal does
+              // not touch.
+              if (_isLiability)
+                Padding(
+                  padding:
+                      const EdgeInsets.fromLTRB(Insets.xs, Insets.sm, 0, 0),
+                  child: Text(
+                    l.qaOwedHint,
+                    style: const TextStyle(
+                        fontSize: 12,
+                        height: 1.4,
+                        color: AppColors.textSecondary),
+                  ),
                 ),
-              ),
               if (group == AccountGroup.bankLoans)
                 Padding(
                   padding:

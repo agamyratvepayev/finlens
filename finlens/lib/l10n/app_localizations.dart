@@ -996,6 +996,30 @@ abstract class AppLocalizations {
   /// **'Categories'**
   String get moreCategories;
 
+  /// No description provided for @moreAccounts.
+  ///
+  /// In en, this message translates to:
+  /// **'Accounts'**
+  String get moreAccounts;
+
+  /// No description provided for @accActive.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} active'**
+  String accActive(int count);
+
+  /// No description provided for @accActiveArchived.
+  ///
+  /// In en, this message translates to:
+  /// **'{active} active · {archived} archived'**
+  String accActiveArchived(int active, int archived);
+
+  /// No description provided for @accSectionArchived.
+  ///
+  /// In en, this message translates to:
+  /// **'Archived'**
+  String get accSectionArchived;
+
   /// No description provided for @moreArchive.
   ///
   /// In en, this message translates to:
@@ -4491,12 +4515,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Enter what you owe as a positive number — it counts against your net worth.'**
   String get qaOwedHint;
-
-  /// No description provided for @qaStartingBalanceHint.
-  ///
-  /// In en, this message translates to:
-  /// **'Enter this once. From now on the balance is calculated from your transactions.'**
-  String get qaStartingBalanceHint;
 
   /// No description provided for @qaPaymentDayHint.
   ///

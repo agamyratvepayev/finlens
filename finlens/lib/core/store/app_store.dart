@@ -1001,6 +1001,22 @@ class AppStore extends ChangeNotifier {
   List<Account> get archivedAccounts =>
       _accounts.where((a) => a.archived).toList(growable: false);
 
+  /// Every account the More ▸ Accounts screen manages — non-archived, and
+  /// deliberately independent of the reporting cutoff [accounts] applies: that
+  /// screen is a setup surface, not a report, so an account opened after the
+  /// current `asOf` is still one whose name and type you can edit. Preserves the
+  /// private list's insertion order (the app's existing account order); the
+  /// screen adds no sort. Mirrors [archivedAccounts], which also reads the
+  /// private list.
+  List<Account> get manageableAccounts =>
+      _accounts.where((a) => !a.archived).toList(growable: false);
+
+  /// Non-archived account count — the More ▸ Accounts cell (§1.2). Cutoff-
+  /// independent, so it always equals the length of the list the Accounts
+  /// screen renders, and never double-counts the archived ones the Archive row
+  /// already carries.
+  int get activeAccountCount => manageableAccounts.length;
+
   List<Category> get categories =>
       _categories.where((c) => !c.archived).toList(growable: false);
 

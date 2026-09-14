@@ -20,6 +20,7 @@ import '../../theme/app_theme.dart';
 import '../../theme/app_typography.dart';
 import '../planner/archive_screen.dart';
 import '../quick_add/pickers.dart';
+import 'accounts_management_screen.dart';
 import 'category_management_screen.dart';
 import 'currency_management_screen.dart';
 import 'tag_management_screen.dart';
@@ -244,38 +245,54 @@ class MoreScreen extends StatelessWidget {
                 else
                   SectionLabel(l.moreData),
                 _card([
+                  // Accounts leads: it is the entity every transaction must
+                  // name, yet it was the one management surface the DATA card
+                  // never reached. The count is the non-archived accounts — the
+                  // archived ones are counted by the Archive row below, so
+                  // counting them here too would make the two rows contradict.
                   SplitCountRow(
-                    leftLabel: l.moreCategories,
+                    leftLabel: l.moreAccounts,
+                    leftCount: store.activeAccountCount,
+                    onLeftTap: () => Navigator.of(context, rootNavigator: true)
+                        .push(MaterialPageRoute(
+                      builder: (_) => const AccountsManagementScreen(),
+                    )),
                     // The live count (archived excluded) — never a total that
                     // includes archived. A row that says 16 above a screen
                     // listing 14 is the defect this screen exists to kill.
-                    leftCount: store.categoryCount,
-                    onLeftTap: () => Navigator.of(context, rootNavigator: true)
+                    rightLabel: l.moreCategories,
+                    rightCount: store.categoryCount,
+                    onRightTap: () => Navigator.of(context, rootNavigator: true)
                         .push(MaterialPageRoute(
                       builder: (_) => const CategoryManagementScreen(),
                     )),
-                    rightLabel: l.moreTags,
-                    rightCount: store.tagsInUseCount,
-                    onRightTap: () => Navigator.of(context, rootNavigator: true)
+                  ),
+                  // Full-width hairline: the split row above has no icon column
+                  // to align an indent to.
+                  const RowDivider(),
+                  // Tags moves down to pair with Currencies — both are data you
+                  // set up once and later correct (spec §1). Currencies' count is
+                  // what the currency screen lists: the codes in use plus the
+                  // ones you added. (Currencies loses its former leading icon
+                  // here: a SplitCountRow cell carries none, and cloning that row
+                  // is what keeps the Accounts cell identical to Categories.)
+                  SplitCountRow(
+                    leftLabel: l.moreTags,
+                    leftCount: store.tagsInUseCount,
+                    onLeftTap: () => Navigator.of(context, rootNavigator: true)
                         .push(MaterialPageRoute(
                       builder: (_) => const TagManagementScreen(),
                     )),
-                  ),
-                  // Full-width hairline: the row above has no icon column to
-                  // align an indent to.
-                  const RowDivider(),
-                  // Currencies is the same kind of thing as Categories and Tags
-                  // — data you set up once and later correct (spec §1). Its
-                  // count is what the currency screen lists: the codes actually
-                  // in use plus the ones you added.
-                  _CurrenciesRow(
-                    count: store.currencyRowCount,
-                    onTap: () => Navigator.of(context, rootNavigator: true)
+                    rightLabel: l.moreCurrencies,
+                    rightCount: store.currencyRowCount,
+                    onRightTap: () => Navigator.of(context, rootNavigator: true)
                         .push(MaterialPageRoute(
                       builder: (_) => const CurrencyManagementScreen(),
                     )),
                   ),
-                  const RowDivider(indent: 48),
+                  // Full-width again: the row above is a split row, no icon
+                  // column.
+                  const RowDivider(),
                   _ArchiveRow(
                     count: store.archivedCount,
                     onTap: () => Navigator.of(context, rootNavigator: true)
@@ -354,51 +371,6 @@ Widget _card(List<Widget> children) => AppCard(
 /// Renders at zero and prints `0` rather than disappearing: Archive has its own
 /// empty state, so a tap at zero lands somewhere coherent, and a row that
 /// vanishes and returns is a worse surprise than a bare `0`.
-/// More ▸ Data ▸ Currencies (spec §1) — modelled on [_ArchiveRow] so the two
-/// read as one card.
-class _CurrenciesRow extends StatelessWidget {
-  const _CurrenciesRow({required this.count, required this.onTap});
-
-  final int count;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    return InkWell(
-      onTap: onTap,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 38),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: Insets.md),
-          child: Row(
-            children: [
-              const SizedBox(
-                width: 24,
-                child: Icon(Icons.payments_rounded,
-                    size: 18, color: AppColors.textSecondary),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  l.moreCurrencies,
-                  style: AppText.body.copyWith(
-                      fontSize: 14.5, color: AppColors.textPrimary),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              const SizedBox(width: Insets.sm),
-              Text('$count', style: AppText.amount),
-              const _RowTrailingChevron(),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _ArchiveRow extends StatelessWidget {
   const _ArchiveRow({required this.count, required this.onTap});
 

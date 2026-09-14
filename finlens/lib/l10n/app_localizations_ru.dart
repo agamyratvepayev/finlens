@@ -633,6 +633,22 @@ class AppLocalizationsRu extends AppLocalizations {
   String get moreCategories => 'Категории';
 
   @override
+  String get moreAccounts => 'Счета';
+
+  @override
+  String accActive(int count) {
+    return '$count активных';
+  }
+
+  @override
+  String accActiveArchived(int active, int archived) {
+    return '$active активных · $archived в архиве';
+  }
+
+  @override
+  String get accSectionArchived => 'Архив';
+
+  @override
   String get moreArchive => 'Архив';
 
   @override
@@ -2888,10 +2904,6 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get qaOwedHint =>
       'Введите сумму долга положительным числом — она уменьшает капитал.';
-
-  @override
-  String get qaStartingBalanceHint =>
-      'Введите один раз. Дальше баланс рассчитывается по вашим операциям.';
 
   @override
   String get qaPaymentDayHint =>
