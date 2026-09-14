@@ -10,6 +10,7 @@ import '../../shared/widgets/form_fields.dart';
 import '../../shared/widgets/screen_header.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
+import '../quick_add/icon_picker_sheet.dart';
 import '../quick_add/pickers.dart';
 import '../quick_add/repeat_sheet.dart';
 import 'edit_scaffold.dart';
@@ -43,6 +44,10 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
   );
   late final TextEditingController _note =
       TextEditingController(text: _task.note ?? '');
+
+  /// The task's own glyph, editable from the title row (task 004 §5a). The
+  /// Schedule row tints it by direction, so this previews the glyph, not colour.
+  late IconData _icon = _task.icon;
 
   late String _accountId = _task.linkedAccountId;
   late String? _categoryId = _task.categoryId;
@@ -97,15 +102,13 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
       children: [
         FormSection(
           children: [
-            TextFieldRow(
-              icon: _task.icon,
-              label: l.etTaskTitle,
+            NameField(
               controller: _title,
-              trailing: const Icon(
-                Icons.edit_rounded,
-                size: 16,
-                color: AppColors.textTertiary,
-              ),
+              hint: l.qaTaskPlaceholder,
+              semanticsLabel: l.etTaskTitle,
+              leadingIcon: _icon,
+              onLeadingTap: _pickIcon,
+              leadingSemanticsLabel: l.qaIcon,
             ),
           ],
         ),
@@ -243,6 +246,15 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
     });
   }
 
+  Future<void> _pickIcon() async {
+    final picked = await showCategoryIconPicker(
+      context,
+      color: AppColors.task,
+      selected: _icon,
+    );
+    if (picked != null && mounted) setState(() => _icon = picked);
+  }
+
   Future<void> _pickDue() async {
     final picked = await showDatePicker(
       context: context,
@@ -287,6 +299,7 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
     _store.updateTask(
       _task,
       title: _title.text.trim(),
+      icon: _icon,
       linkedAccountId: _accountId,
       expectedAmount: _payOut ? -_amountValue : _amountValue,
       dueDate: _due,

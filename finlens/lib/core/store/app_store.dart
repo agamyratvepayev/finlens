@@ -3590,6 +3590,7 @@ class AppStore extends ChangeNotifier {
   void updateTask(
     Task task, {
     String? title,
+    IconData? icon,
     String? linkedAccountId,
     double? expectedAmount,
     DateTime? dueDate,
@@ -3608,6 +3609,7 @@ class AppStore extends ChangeNotifier {
   }) {
     task
       ..title = title ?? task.title
+      ..icon = icon ?? task.icon
       // A transfer task carries no budget category and vice versa (§10.4).
       ..categoryId = clearCategory ? null : (categoryId ?? task.categoryId)
       ..payToAccountId = clearPayTo ? null : (payToAccountId ?? task.payToAccountId)

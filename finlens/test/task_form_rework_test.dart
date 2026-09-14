@@ -7,6 +7,7 @@ import 'package:finlens/core/store/app_store.dart';
 import 'package:finlens/features/planner/edit_task_screen.dart';
 import 'package:finlens/features/quick_add/quick_add_sheet.dart';
 import 'package:finlens/l10n/app_localizations.dart';
+import 'package:finlens/shared/widgets/form_fields.dart';
 import 'package:finlens/theme/app_theme.dart';
 
 // flutter test hangs on the author's machine — run these yourself:
@@ -69,23 +70,23 @@ Future<void> _push(WidgetTester tester, Widget screen) async {
   await tester.pumpAndSettle();
 }
 
-/// The task hero (TextHeroCard) draws no repeating animation, so pumpAndSettle
-/// is safe for the task form. A numeric hero (Expense/Transfer) has a blinking
-/// caret controller that never settles — those tests pump a fixed duration.
+/// The task hero (a NameField, task 004) draws no repeating animation, so
+/// pumpAndSettle is safe for the task form. A numeric hero (Expense/Transfer)
+/// has a blinking caret controller that never settles — those pump a fixed one.
 Future<void> _openTask(WidgetTester tester, AppStore store) async {
   await tester.pumpWidget(_host(store));
   await _push(tester, const QuickAddScreen(initialType: QuickAddType.newTask));
 }
 
 void main() {
-  group('§1 · hero label sits above its field', () {
-    testWidgets('the caption is above the title field', (tester) async {
+  group('§1 · the title hero is one captionless name line (task 004)', () {
+    testWidgets('the hero is a NameField, no "Task title" caption, hint is label',
+        (tester) async {
       await _openTask(tester, _store());
-      final captionY = tester.getTopLeft(find.text('Task title')).dy;
-      // The task form has exactly one TextField: the hero title.
-      final fieldY = tester.getTopLeft(find.byType(TextField)).dy;
-      expect(captionY, lessThan(fieldY),
-          reason: 'caption must render above the field, not beneath it');
+      // One 48pt NameField, whose hint (the placeholder) carries the label's job.
+      expect(find.byType(NameField), findsOneWidget);
+      expect(find.text('Task title'), findsNothing);
+      expect(find.text('What needs doing?'), findsOneWidget);
     });
   });
 

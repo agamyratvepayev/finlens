@@ -1,6 +1,7 @@
 import '../../../l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 
+import '../../../shared/widgets/form_fields.dart';
 import '../../../theme/app_colors.dart';
 import 'amount_hero.dart';
 import 'form_kit.dart';
@@ -100,16 +101,25 @@ class NumericHero extends HeroSpec {
 
 class TextHero extends HeroSpec {
   const TextHero({
-    required this.caption,
     required this.placeholder,
     required this.controller,
     required this.focusNode,
+    required this.semanticsLabel,
+    required this.icon,
+    required this.onIconTap,
   });
 
-  final String caption;
   final String placeholder;
   final TextEditingController controller;
   final FocusNode focusNode;
+
+  /// What a screen reader calls the field (task 004 — the caption is gone).
+  final String semanticsLabel;
+
+  /// The task's own glyph — previewed here (glyph, not colour) and tappable to
+  /// open the icon picker (§5a).
+  final IconData icon;
+  final VoidCallback onIconTap;
 }
 
 /// A named section of fields. [title] of null renders the card with no label,
@@ -319,17 +329,35 @@ class TransactionFormShell extends StatelessWidget {
           onTap: onHeroTap,
           onCurrencyTap: hero.onCurrencyTap,
         ),
-      TextHero() => TextHeroCard(
-          caption: hero.caption,
-          placeholder: hero.placeholder,
-          controller: hero.controller,
-          focusNode: hero.focusNode,
+      // The task title is one of the six name fields (task 004): a single 48pt
+      // line, no caption, the glyph a plain-but-tappable icon that picks the
+      // task's icon. It keeps the Quick Add grid via the form scalers and margin.
+      TextHero() => Padding(
+          padding: const EdgeInsets.symmetric(horizontal: kFormMargin),
+          child: NameField(
+            controller: hero.controller,
+            focusNode: hero.focusNode,
+            hint: hero.placeholder,
+            semanticsLabel: hero.semanticsLabel,
+            leadingIcon: hero.icon,
+            onLeadingTap: hero.onIconTap,
+            leadingSemanticsLabel: AppLocalizations.of(context).qaIcon,
+            surface: AppColors.surfaceAlt,
+            radius: 14,
+            scale: formScale(context),
+            textScale: formTextScale(context),
+            padding: kRowPadding,
+            iconColumn: kIconColumn,
+            iconGap: kIconGap,
+          ),
         ),
     };
     return [
       // No section label: position alone marks the hero required.
       _FieldFlash(
-        active: flashTarget == 'amount',
+        // The task title flashes on an empty-title Save just as the amount hero
+        // does for the numeric types (§5c).
+        active: flashTarget == 'amount' || flashTarget == 'title',
         pulse: flashPulse,
         radius: 16,
         child: heroWidget,

@@ -96,18 +96,20 @@ class _EditAccountScreenState extends State<EditAccountScreen> {
               child: ListView(
                 padding: const EdgeInsets.only(bottom: Insets.xxl),
                 children: [
+                  // The name is the account's title, not one of its attributes,
+                  // so it sits in its own card above the rest (task 004 §4).
                   FormSection(
                     children: [
-                      TextFieldRow(
-                        icon: Icons.badge_rounded,
-                        label: l.eaName,
+                      NameField(
                         controller: _name,
-                        trailing: const Icon(
-                          Icons.edit_rounded,
-                          size: 16,
-                          color: AppColors.textTertiary,
-                        ),
+                        hint: l.qaExampleAccount,
+                        semanticsLabel: l.eaName,
+                        leadingIcon: Icons.badge_rounded,
                       ),
+                    ],
+                  ),
+                  FormSection(
+                    children: [
                       FormRow(
                         icon: Icons.folder_rounded,
                         label: l.eaGroup,

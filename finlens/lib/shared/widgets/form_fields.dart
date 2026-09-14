@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
@@ -273,6 +274,319 @@ class TextFieldRow extends StatelessWidget {
           ),
           ?trailing,
         ],
+      ),
+    );
+  }
+}
+
+/// The one name input (task 004).
+///
+/// A name is not one of a thing's attributes — it is the thing's title — so it
+/// looks the same in all six places the app asks for one: a single 48 pt line,
+/// no caption (the hint *is* the label), and a leading glyph that either sits
+/// there quietly, opens the icon picker, or (for the two task titles) is a
+/// plain-but-tappable glyph in the icon column.
+///
+/// This is deliberately **not** [TextFieldRow], which also draws amounts, limits
+/// and notes, where the caption is the only thing that says what the value means.
+class NameField extends StatefulWidget {
+  const NameField({
+    super.key,
+    required this.controller,
+    required this.hint,
+    required this.semanticsLabel,
+    this.focusNode,
+    this.leadingIcon,
+    this.leadingTile,
+    this.onLeadingTap,
+    this.leadingSemanticsLabel,
+    this.autofocus = false,
+    this.onChanged,
+    this.surface,
+    this.radius = 12,
+    this.scale = 1.0,
+    this.textScale = 1.0,
+    this.padding = 12.0,
+    this.iconColumn = 24.0,
+    this.iconGap = 12.0,
+  })  : assert(leadingIcon == null || leadingTile == null,
+            'a quiet glyph or a tappable tile, never both'),
+        assert(onLeadingTap == null || leadingIcon != null,
+            'onLeadingTap makes the quiet glyph tappable — it needs one');
+
+  final TextEditingController controller;
+
+  /// Shown when empty. It carries the label's job, so it is always supplied —
+  /// a cleared name field must not become a blank row.
+  final String hint;
+
+  /// What a screen reader calls this field, now that nothing prints it.
+  final String semanticsLabel;
+
+  final FocusNode? focusNode;
+
+  /// The quiet leading glyph. Mutually exclusive with [leadingTile]. When
+  /// [onLeadingTap] is supplied it becomes a plain-but-tappable glyph in the
+  /// icon column (the two task titles: tapping it picks the task's icon).
+  final IconData? leadingIcon;
+
+  /// The tappable 36 pt glyph tile the creation sheets use. Build it with
+  /// [NameGlyphTile] so the pencil badge cannot drift between the two sheets.
+  final Widget? leadingTile;
+
+  /// Makes [leadingIcon] its own tap target (icon-only, no square, no badge) —
+  /// the create/edit task glyph, which previews the task's icon and opens the
+  /// picker. Focus still arrives on a tap anywhere else in the row.
+  final VoidCallback? onLeadingTap;
+
+  /// A11y label for the tappable [leadingIcon] (e.g. "Icon").
+  final String? leadingSemanticsLabel;
+
+  final bool autofocus;
+  final ValueChanged<String>? onChanged;
+
+  /// Null when the field is a row inside a card that already paints a surface.
+  final Color? surface;
+
+  final double radius;
+
+  /// Quick Add scales its whole form with the screen width; the editors do not.
+  /// Both hosts keep their own row metrics so the name lines up with the rows
+  /// beside it — the *design* is identical, the grid it sits on is the host's.
+  final double scale;
+  final double textScale;
+  final double padding;
+  final double iconColumn;
+  final double iconGap;
+
+  @override
+  State<NameField> createState() => _NameFieldState();
+}
+
+class _NameFieldState extends State<NameField> {
+  FocusNode? _own;
+  FocusNode get _node => widget.focusNode ?? (_own ??= FocusNode());
+
+  @override
+  void dispose() {
+    _own?.dispose();
+    super.dispose();
+  }
+
+  /// Focuses the field and asks the platform for the keyboard directly:
+  /// [FocusNode.requestFocus] is a no-op when the field already holds focus, so
+  /// a keyboard dismissed by a drag would never return without this (the
+  /// behaviour the creation sheets' old `_focusName` guaranteed).
+  void _focus() {
+    if (!_node.hasFocus) _node.requestFocus();
+    SystemChannels.textInput.invokeMethod<void>('TextInput.show');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = widget.scale;
+    final t = widget.textScale;
+    return ListenableBuilder(
+      listenable: _node,
+      // The whole row — padding included — focuses the field; the leading
+      // tile/glyph and the clear button carry their own gestures inside it, so
+      // they win their own taps (§7).
+      builder: (context, _) => GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: _focus,
+        child: Container(
+          height: 48 * s,
+          decoration: BoxDecoration(
+            color: widget.surface,
+            borderRadius: BorderRadius.circular(widget.radius * s),
+            // Always one point, transparent when unfocused: the card cannot
+            // change size when focus arrives.
+            border: Border.all(
+              width: 1,
+              color: _node.hasFocus ? AppColors.accent : Colors.transparent,
+            ),
+          ),
+          padding: EdgeInsets.symmetric(horizontal: widget.padding * s),
+          child: Row(
+            children: [
+              ..._leading(s),
+              Expanded(
+                child: Semantics(
+                  textField: true,
+                  label: widget.semanticsLabel,
+                  child: TextField(
+                    controller: widget.controller,
+                    focusNode: _node,
+                    autofocus: widget.autofocus,
+                    onChanged: widget.onChanged,
+                    maxLines: 1,
+                    textInputAction: TextInputAction.done,
+                    textCapitalization: TextCapitalization.sentences,
+                    cursorColor: AppColors.accent,
+                    style: TextStyle(
+                      fontSize: 17 * s * t,
+                      fontWeight: FontWeight.w600,
+                      height: 1.2,
+                      color: AppColors.textPrimary,
+                    ),
+                    decoration: InputDecoration(
+                      isDense: true,
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.zero,
+                      hintText: widget.hint,
+                      hintStyle: TextStyle(
+                        fontSize: 17 * s * t,
+                        fontWeight: FontWeight.w400,
+                        height: 1.2,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              ValueListenableBuilder<TextEditingValue>(
+                valueListenable: widget.controller,
+                builder: (context, value, _) => value.text.isEmpty
+                    ? const SizedBox.shrink()
+                    : _clearButton(),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  List<Widget> _leading(double s) {
+    if (widget.leadingTile != null) {
+      return [widget.leadingTile!, SizedBox(width: widget.iconGap * s)];
+    }
+    if (widget.leadingIcon == null) return const [];
+    Widget glyph = SizedBox(
+      width: widget.iconColumn * s,
+      child: Icon(widget.leadingIcon,
+          size: 18 * s, color: AppColors.textSecondary),
+    );
+    if (widget.onLeadingTap != null) {
+      // A plain glyph that is its own button — no coloured square, no badge — so
+      // the row keeps the 48 pt line and the host's grid while the glyph opens
+      // the icon picker.
+      glyph = Semantics(
+        button: true,
+        label: widget.leadingSemanticsLabel,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: widget.onLeadingTap,
+          child: glyph,
+        ),
+      );
+    }
+    return [glyph, SizedBox(width: widget.iconGap * s)];
+  }
+
+  /// §0.4's clear button, unchanged in every number — a 22 pt `surfaceHigh`
+  /// circle in a 44 pt hit area — clearing the controller and keeping focus. It
+  /// is absent, not disabled, when empty, and takes width only when present.
+  Widget _clearButton() {
+    return SizedBox(
+      width: 44,
+      height: 44,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () {
+          widget.controller.clear();
+          _node.requestFocus();
+        },
+        child: Center(
+          child: Container(
+            width: 22,
+            height: 22,
+            decoration: const BoxDecoration(
+              color: AppColors.surfaceHigh,
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.close_rounded,
+              size: 13,
+              color: AppColors.textSecondary,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The leading tile of a creation sheet's name row (§1.1) — the thing's glyph,
+/// tappable, in a 44×44 hit area, carrying a pencil badge so it reads as its own
+/// button. One step smaller than the pre-task-004 sheet tile (40→36) so it fits
+/// the 48 pt [NameField] row; the hit area stays 44 while the drawing shrinks.
+class NameGlyphTile extends StatelessWidget {
+  const NameGlyphTile({
+    super.key,
+    required this.color,
+    required this.onTap,
+    required this.semanticsLabel,
+    this.icon,
+    this.emoji,
+    this.fallbackIcon = Icons.category_rounded,
+  });
+
+  final Color color;
+  final VoidCallback onTap;
+  final String semanticsLabel;
+
+  /// The glyph — an [icon] OR an [emoji]; [fallbackIcon] shows when both are null.
+  final IconData? icon;
+  final String? emoji;
+  final IconData fallbackIcon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: semanticsLabel,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: SizedBox(
+          width: 44,
+          height: 44,
+          child: Stack(
+            children: [
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: Color.alphaBlend(
+                        color.withValues(alpha: 0.18), AppColors.surfaceAlt),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  alignment: Alignment.center,
+                  child: emoji != null
+                      ? Text(emoji!, style: const TextStyle(fontSize: 18))
+                      : Icon(icon ?? fallbackIcon, size: 18, color: color),
+                ),
+              ),
+              Positioned(
+                right: 0,
+                bottom: 0,
+                child: Container(
+                  width: 14,
+                  height: 14,
+                  decoration: const BoxDecoration(
+                    color: AppColors.sheetCard,
+                    shape: BoxShape.circle,
+                  ),
+                  alignment: Alignment.center,
+                  child: const Icon(Icons.edit_rounded,
+                      size: 8, color: AppColors.textSecondary),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

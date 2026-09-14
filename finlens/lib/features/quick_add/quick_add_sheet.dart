@@ -14,6 +14,7 @@ import '../../theme/app_typography.dart';
 import '../planner/edit_budget_screen.dart';
 import '../planner/edit_goal_screen.dart';
 import 'date_time_sheet.dart';
+import 'icon_picker_sheet.dart';
 import 'pickers.dart';
 import 'type_menu.dart';
 import 'tag_picker_sheet.dart';
@@ -148,6 +149,10 @@ class _QuickAddScreenState extends State<QuickAddScreen>
   final _title = TextEditingController();
   final _titleFocus = FocusNode();
 
+  /// The glyph the Schedule row will carry. Seeded with the default `addTask`
+  /// used to hard-code, so an untouched form saves exactly what it saved before.
+  IconData _taskIcon = Icons.arrow_circle_up_rounded;
+
   /// The currency the transaction is *recorded in*. Set from the source when
   /// editing/copying (initState), otherwise primed to the base currency once
   /// the store is reachable (didChangeDependencies); picking an account
@@ -224,6 +229,14 @@ class _QuickAddScreenState extends State<QuickAddScreen>
     }
     // A text hero takes the system keyboard; a numeric one takes the keypad.
     _keypadOpen = !_isEditing && _type != QuickAddType.newTask;
+    // Focus the title on open under the same conditions _switchType does (§5b),
+    // so the keyboard rises whether the screen was reached from `+` or by
+    // switching type. The keypad stays closed — _keypadOpen already excludes it.
+    if (!_isEditing && widget.initialType == QuickAddType.newTask) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _titleFocus.requestFocus();
+      });
+    }
     // One at a time (inline-note spec §2): however the note gains focus, the
     // keypad closes. The row's own tap path closes it too; this is the
     // backstop for focus arriving any other way.
@@ -356,6 +369,7 @@ class _QuickAddScreenState extends State<QuickAddScreen>
   /// Whether the currently flagged field has since been filled (§3).
   bool _flagSatisfied(String flag) => switch (flag) {
         'amount' => _amount > 0,
+        'title' => _title.text.trim().isNotEmpty,
         'from' => _fromRef != null,
         'to' => _toRef != null,
         _ => true,
@@ -909,12 +923,15 @@ class _QuickAddScreenState extends State<QuickAddScreen>
       typeName: AppLocalizations.of(context).quickAddNewTask,
       accent: AppColors.task,
       accentDim: AppColors.taskDim,
-      // The only type with no amount, so the hero is text.
+      // The only type with no amount, so the hero is text (task 004): one 48pt
+      // name line whose glyph previews and picks the task's icon.
       hero: TextHero(
-        caption: AppLocalizations.of(context).etTaskTitle,
         placeholder: AppLocalizations.of(context).qaTaskPlaceholder,
         controller: _title,
         focusNode: _titleFocus,
+        semanticsLabel: AppLocalizations.of(context).etTaskTitle,
+        icon: _taskIcon,
+        onIconTap: _pickTaskIcon,
       ),
       groups: [
         FieldGroup(AppLocalizations.of(context).qaGroupRequired.toUpperCase(), [_dateField(label: AppLocalizations.of(context).qaDue)]),
@@ -975,9 +992,25 @@ class _QuickAddScreenState extends State<QuickAddScreen>
       // cleared, so the old `unmet: false` due-date blocker could never fire
       // (§6); only the title can be missing.
       blockers: [
-        Blocker(unmet: _title.text.trim().isEmpty, label: AppLocalizations.of(context).qaBlockNameTask),
+        Blocker(
+          unmet: _title.text.trim().isEmpty,
+          label: AppLocalizations.of(context).qaBlockNameTask,
+          // §5c — an empty-title Save toasts *and* flashes the hero, like amount.
+          flashId: 'title',
+        ),
       ],
     );
+  }
+
+  /// Opens the icon picker (icon-only) for the task's glyph (§5a). The Schedule
+  /// row tints the glyph by direction, so this previews the glyph, not colour.
+  Future<void> _pickTaskIcon() async {
+    final picked = await showCategoryIconPicker(
+      context,
+      color: AppColors.task,
+      selected: _taskIcon,
+    );
+    if (picked != null && mounted) setState(() => _taskIcon = picked);
   }
 
   // ── Pickers ───────────────────────────────────────────────────────────────
@@ -1468,7 +1501,7 @@ class _QuickAddScreenState extends State<QuickAddScreen>
           linkedAccountId: linked,
           expectedAmount: -_amount,
           dueDate: _date,
-          icon: Icons.arrow_circle_up_rounded,
+          icon: _taskIcon,
           categoryId: _fromRef,
           repeats: _repeatFreq,
           weekdays: _repeatWeekdays,

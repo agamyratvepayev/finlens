@@ -6,6 +6,7 @@ import 'package:finlens/core/models/models.dart';
 import 'package:finlens/core/store/app_store.dart';
 import 'package:finlens/features/quick_add/pickers.dart';
 import 'package:finlens/l10n/app_localizations.dart';
+import 'package:finlens/shared/widgets/form_fields.dart';
 import 'package:finlens/theme/app_theme.dart';
 
 // flutter test hangs on the author's machine — run these yourself:
@@ -189,10 +190,12 @@ void main() {
     await tester.tap(find.text('open'));
     await tester.pumpAndSettle();
 
-    // Autofocus already asked once; clear and tap the label area of the name row
-    // (outside the field), which must still ask the platform to show (§8a).
+    // Autofocus already asked once; clear and tap the name row's padding (the
+    // NameField's left inset, outside both the field and the glyph tile), which
+    // must still ask the platform to show the keyboard (§8a / task 004 §7).
     calls.clear();
-    await tester.tap(find.text('Account name'));
+    final rowTopLeft = tester.getTopLeft(find.byType(NameField));
+    await tester.tapAt(rowTopLeft + const Offset(3, 22));
     await tester.pump();
     expect(calls.any((c) => c.method == 'TextInput.show'), isTrue);
   });

@@ -43,10 +43,9 @@ void main() {
   Finder fieldInRow(String label) =>
       find.descendant(of: rowByLabel(label), matching: find.byType(TextField));
 
-  // The name field lives in a TextFieldRow (two-line, no InkWell), so it is
-  // scoped by that widget rather than by rowByLabel.
-  Finder nameFieldRow() =>
-      find.ancestor(of: find.text('Goal name'), matching: find.byType(TextFieldRow));
+  // The name field is now a NameField (task 004): one 48pt line, no caption, so
+  // it is scoped by its own widget rather than by a "Goal name" label.
+  Finder nameFieldRow() => find.byType(NameField);
   Finder nameField() =>
       find.descendant(of: nameFieldRow(), matching: find.byType(TextField));
 

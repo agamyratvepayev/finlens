@@ -1309,15 +1309,6 @@ class _NewCategoryFormState extends State<_NewCategoryForm> {
   bool _valid(AppStore store) =>
       _name.text.trim().isNotEmpty && !_duplicateName(store);
 
-  /// Shows the keyboard on a tap anywhere in the name row, even when the field
-  /// already holds focus — requestFocus is a no-op then, so a keyboard dismissed
-  /// by a drag never returns without asking the platform directly. The same fix
-  /// the account form uses (spec §7 / account spec §8a).
-  void _focusName() {
-    if (!_nameFocus.hasFocus) _nameFocus.requestFocus();
-    SystemChannels.textInput.invokeMethod<void>('TextInput.show');
-  }
-
   Future<void> _openIconPicker() async {
     final result = await showIconPicker(
       context,
@@ -1399,103 +1390,22 @@ class _NewCategoryFormState extends State<_NewCategoryForm> {
   }
 
   Widget _nameRow(AppLocalizations l) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.sheetCard,
-        borderRadius: BorderRadius.circular(11),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      child: Row(
-        children: [
-          _iconTile(l),
-          const SizedBox(width: Insets.md),
-          // Everything but the tile focuses the field; the whole area is one
-          // opaque tap target so a tap between the label and the field still
-          // opens the keyboard (spec §7).
-          Expanded(
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: _focusName,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(l.qaCategoryName,
-                      style: AppText.caption.copyWith(fontSize: 11.5)),
-                  TextField(
-                    controller: _name,
-                    focusNode: _nameFocus,
-                    autofocus: true,
-                    style: AppText.body.copyWith(fontSize: 15),
-                    cursorColor: AppColors.accentSoft,
-                    decoration: InputDecoration(
-                      isDense: true,
-                      border: InputBorder.none,
-                      contentPadding: const EdgeInsets.only(top: 2),
-                      hintText: l.qaExampleCategory,
-                      hintStyle:
-                          const TextStyle(color: AppColors.textTertiary),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// The leading tile of the name row — the category's glyph, tappable, ≥44×44 pt,
-  /// carrying a pencil badge so it reads as its own button (spec §7). Opens the
-  /// shared icon picker (§6).
-  Widget _iconTile(AppLocalizations l) {
-    final color = _color;
-    return Semantics(
-      button: true,
-      label: l.qaIcon,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
+    // One 48pt name line (task 004): the glyph tile leads, the hint is the label.
+    return NameField(
+      controller: _name,
+      focusNode: _nameFocus,
+      autofocus: true,
+      hint: l.qaExampleCategory,
+      semanticsLabel: l.qaCategoryName,
+      surface: AppColors.sheetCard,
+      radius: 11,
+      leadingTile: NameGlyphTile(
+        color: _color,
         onTap: _openIconPicker,
-        child: SizedBox(
-          width: 44,
-          height: 44,
-          child: Stack(
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: Color.alphaBlend(
-                        color.withValues(alpha: 0.18), AppColors.surfaceAlt),
-                    borderRadius: BorderRadius.circular(11),
-                  ),
-                  alignment: Alignment.center,
-                  child: _emoji != null
-                      ? Text(_emoji!, style: const TextStyle(fontSize: 20))
-                      : Icon(_icon ?? Icons.category_rounded,
-                          size: 20, color: color),
-                ),
-              ),
-              Positioned(
-                right: 0,
-                bottom: 0,
-                child: Container(
-                  width: 15,
-                  height: 15,
-                  decoration: const BoxDecoration(
-                    color: AppColors.sheetCard,
-                    shape: BoxShape.circle,
-                  ),
-                  alignment: Alignment.center,
-                  child: const Icon(Icons.edit_rounded,
-                      size: 9, color: AppColors.textSecondary),
-                ),
-              ),
-            ],
-          ),
-        ),
+        semanticsLabel: l.qaIcon,
+        icon: _icon,
+        emoji: _emoji,
+        fallbackIcon: Icons.category_rounded,
       ),
     );
   }
@@ -1691,14 +1601,6 @@ class _NewAccountFormState extends State<_NewAccountForm> {
         _emoji = null;
       }
     });
-  }
-
-  /// Shows the keyboard on a tap anywhere in the name row, even when the field
-  /// already holds focus — requestFocus is a no-op then, so a keyboard dismissed
-  /// by a drag never returns without asking the platform directly (spec §8a).
-  void _focusName() {
-    if (!_nameFocus.hasFocus) _nameFocus.requestFocus();
-    SystemChannels.textInput.invokeMethod<void>('TextInput.show');
   }
 
   /// Focuses a numeric row: the accent outline and caret move to it, the
@@ -1906,102 +1808,22 @@ class _NewAccountFormState extends State<_NewAccountForm> {
       );
 
   Widget _nameRow(AppLocalizations l) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.sheetCard,
-        borderRadius: BorderRadius.circular(11),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      child: Row(
-        children: [
-          _iconTile(l),
-          const SizedBox(width: Insets.md),
-          // Everything but the tile focuses the field (§1). The whole area is
-          // one opaque tap target so a tap between the label and the field still
-          // opens the keyboard.
-          Expanded(
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: _focusName,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(l.qaAccountName,
-                      style: AppText.caption.copyWith(fontSize: 11.5)),
-                  TextField(
-                    controller: _name,
-                    focusNode: _nameFocus,
-                    autofocus: true,
-                    style: AppText.body.copyWith(fontSize: 15),
-                    cursorColor: AppColors.accentSoft,
-                    decoration: InputDecoration(
-                      isDense: true,
-                      border: InputBorder.none,
-                      contentPadding: const EdgeInsets.only(top: 2),
-                      hintText: l.qaExampleAccount,
-                      hintStyle:
-                          const TextStyle(color: AppColors.textTertiary),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// The leading tile of the name row — the account's glyph, tappable, ≥44×44 pt,
-  /// carrying a pencil badge so it reads as its own button (§1/§7b).
-  Widget _iconTile(AppLocalizations l) {
-    final color = _glyphColor;
-    return Semantics(
-      button: true,
-      label: l.qaIcon,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
+    // One 48pt name line (task 004): the glyph tile leads, the hint is the label.
+    return NameField(
+      controller: _name,
+      focusNode: _nameFocus,
+      autofocus: true,
+      hint: l.qaExampleAccount,
+      semanticsLabel: l.qaAccountName,
+      surface: AppColors.sheetCard,
+      radius: 11,
+      leadingTile: NameGlyphTile(
+        color: _glyphColor,
         onTap: _openIconPicker,
-        child: SizedBox(
-          width: 44,
-          height: 44,
-          child: Stack(
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: Color.alphaBlend(
-                        color.withValues(alpha: 0.18), AppColors.surfaceAlt),
-                    borderRadius: BorderRadius.circular(11),
-                  ),
-                  alignment: Alignment.center,
-                  child: _emoji != null
-                      ? Text(_emoji!, style: const TextStyle(fontSize: 20))
-                      : Icon(_icon ?? Icons.account_balance_wallet_rounded,
-                          size: 20, color: color),
-                ),
-              ),
-              Positioned(
-                right: 0,
-                bottom: 0,
-                child: Container(
-                  width: 15,
-                  height: 15,
-                  decoration: const BoxDecoration(
-                    color: AppColors.sheetCard,
-                    shape: BoxShape.circle,
-                  ),
-                  alignment: Alignment.center,
-                  child: const Icon(Icons.edit_rounded,
-                      size: 9, color: AppColors.textSecondary),
-                ),
-              ),
-            ],
-          ),
-        ),
+        semanticsLabel: l.qaIcon,
+        icon: _icon,
+        emoji: _emoji,
+        fallbackIcon: Icons.account_balance_wallet_rounded,
       ),
     );
   }

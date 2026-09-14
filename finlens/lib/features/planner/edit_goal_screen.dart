@@ -269,13 +269,12 @@ class _EditGoalScreenState extends State<EditGoalScreen> {
         // ── Name ──
         FormSection(
           children: [
-            TextFieldRow(
-              icon: Icons.flag_rounded,
-              label: l.egGoalName,
+            NameField(
               controller: _name,
               focusNode: _nameFocus,
               hint: l.qaExampleGoal,
-              trailing: _nameClear(),
+              semanticsLabel: l.egGoalName,
+              leadingIcon: Icons.flag_rounded,
             ),
           ],
         ),
@@ -374,41 +373,6 @@ class _EditGoalScreenState extends State<EditGoalScreen> {
             opensSheet: true,
           ),
       ],
-    );
-  }
-
-  // ── Name clear button (§1) ─────────────────────────────────────────────────
-
-  /// A 22pt clear button in a 44pt hit area, in a slot reserved whether or not
-  /// it shows — so the field text never shifts. Present only when there is
-  /// something to clear; clears the field and keeps focus.
-  Widget _nameClear() {
-    if (_name.text.isEmpty) return const SizedBox(width: 44, height: 44);
-    return SizedBox(
-      width: 44,
-      height: 44,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: () {
-          _name.clear();
-          _nameFocus.requestFocus();
-        },
-        child: Center(
-          child: Container(
-            width: 22,
-            height: 22,
-            decoration: const BoxDecoration(
-              color: AppColors.surfaceHigh,
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.close_rounded,
-              size: 13,
-              color: AppColors.textSecondary,
-            ),
-          ),
-        ),
-      ),
     );
   }
 

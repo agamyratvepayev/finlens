@@ -96,6 +96,10 @@ class _EditCategoryScreenState extends State<EditCategoryScreen> {
               child: ListView(
                 padding: const EdgeInsets.only(bottom: Insets.xxl),
                 children: [
+                  // The name is the category's title, not one of its attributes,
+                  // so it sits in its own card above the rest (task 004 §4). An
+                  // archived category is read-only — its name is a value, not an
+                  // input, so it stays a locked FormRow.
                   FormSection(
                     children: [
                       if (_archived)
@@ -106,13 +110,16 @@ class _EditCategoryScreenState extends State<EditCategoryScreen> {
                           enabled: false,
                         )
                       else
-                        TextFieldRow(
-                          icon: Icons.label_rounded,
-                          label: l.qaCategoryName,
+                        NameField(
                           controller: _name,
-                          trailing: const Icon(Icons.edit_rounded,
-                              size: 16, color: AppColors.textTertiary),
+                          hint: l.qaExampleCategory,
+                          semanticsLabel: l.qaCategoryName,
+                          leadingIcon: Icons.label_rounded,
                         ),
+                    ],
+                  ),
+                  FormSection(
+                    children: [
                       FormRow(
                         icon: Icons.category_rounded,
                         label: l.qaIcon,
