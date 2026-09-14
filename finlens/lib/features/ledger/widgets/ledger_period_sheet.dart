@@ -114,7 +114,7 @@ class _PeriodSheetState extends State<_PeriodSheet> {
                       key: const ValueKey('calendar'),
                       store: widget.store,
                       initialFrom: lens?.start ?? _seedFrom(),
-                      initialTo: lens?.end ?? AppStore.today,
+                      initialTo: lens?.end ?? widget.store.today,
                       onBack: _goPeriod,
                       onApply: _applyRange,
                     )
@@ -134,8 +134,7 @@ class _PeriodSheetState extends State<_PeriodSheet> {
 
   /// A friendly 4-day starter window: today−3 … today.
   DateTime _seedFrom() =>
-      DateTime(AppStore.today.year, AppStore.today.month, AppStore.today.day)
-          .subtract(const Duration(days: 3));
+      widget.store.today.subtract(const Duration(days: 3));
 }
 
 // ── Period page ──────────────────────────────────────────────────────────────
@@ -167,7 +166,7 @@ class _PeriodPageState extends State<_PeriodPage> {
       _monthsWithData[year] ??= widget.store.ledgerMonthsWithData(year);
 
   int get _minYear => widget.store.earliestTxnYear;
-  int get _maxYear => AppStore.today.year;
+  int get _maxYear => widget.store.today.year;
 
   void _stepYear(int delta) {
     final next = _year + delta;
@@ -201,7 +200,7 @@ class _PeriodPageState extends State<_PeriodPage> {
                 Expanded(
                   child: Text(
                       lens != null
-                          ? lens.label(AppStore.today, AppLocalizations.of(context))
+                          ? lens.label(widget.store.today, AppLocalizations.of(context))
                           : '${AppLocalizations.of(context).ldgCustomRange}…',
                       style: const TextStyle(
                           fontSize: 15, color: AppColors.accentLight)),
@@ -231,7 +230,7 @@ class _PeriodPageState extends State<_PeriodPage> {
             selectedMonth: widget.store.period.month,
             lensActive: widget.store.isRangeLensActive,
             monthsWithData: _monthsFor(_year),
-            today: AppStore.today,
+            today: widget.store.today,
             onPick: widget.onPickMonth,
           ),
         ),
@@ -580,7 +579,7 @@ class _CalendarPage extends StatelessWidget {
         ),
         const SizedBox(height: Insets.md),
         RangeCalendar(
-          today: AppStore.today,
+          today: store.today,
           initialFrom: initialFrom,
           initialTo: initialTo,
           disableFuture: true,

@@ -4,6 +4,7 @@ import 'package:finlens/core/models/models.dart';
 import 'package:finlens/core/persistence/store_mappers.dart';
 import 'package:finlens/core/persistence/sync_store.dart';
 import 'package:finlens/core/store/app_store.dart';
+import 'package:finlens/core/utils/clock.dart';
 import 'package:finlens/core/sync/store_diff.dart';
 
 /// The sync engine's shadow diff: the live store serialized through the same
@@ -22,7 +23,7 @@ void main() {
         lastUsedAt: DateTime(2026, 1, 2),
       );
 
-  AppStore storeWith(List<Tag> tags) => AppStore(
+  AppStore storeWith(List<Tag> tags) => AppStore(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)), 
         accounts: [],
         categories: [],
         budgets: [],
@@ -44,7 +45,7 @@ void main() {
 
   test('empty store, empty shadow → only the two meta rows push', () {
     final changes = diffAgainstShadow(
-      snapshotAsRecords(AppStore.empty()),
+      snapshotAsRecords(AppStore.empty(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)))),
       const [],
     );
     expect(changes, hasLength(2));

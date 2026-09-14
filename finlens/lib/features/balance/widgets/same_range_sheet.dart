@@ -219,7 +219,7 @@ class _CustomRangeState extends State<_CustomRange> {
         // The Same-transactions calendar keeps its original behaviour: empty
         // start, future days tappable, and Apply disabled at n = 0.
         RangeCalendar(
-          today: AppStore.today,
+          today: store.today,
           hasData: daysWithTxn.contains,
           countBetween: (from, to) => store.sameCountBetween(
             widget.sameKey,

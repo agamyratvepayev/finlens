@@ -48,7 +48,7 @@ class PeriodRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final today = AppStore.today;
+    final today = StoreScope.of(context).today;
     // A ledger does not look forward.
     final canForward = range.end.isBefore(DateTime(today.year, today.month, today.day));
 

@@ -8,6 +8,7 @@ import 'package:finlens/core/persistence/backup_codec.dart';
 import 'package:finlens/core/persistence/local_database.dart';
 import 'package:finlens/core/persistence/store_mappers.dart';
 import 'package:finlens/core/store/app_store.dart';
+import 'package:finlens/core/utils/clock.dart';
 
 /// budgets-as-object spec §A.4 — the legacy per-category budget columns migrate
 /// into [Budget] objects, and a backup written before this change (no `budgets`
@@ -90,7 +91,7 @@ void main() {
   // ── a pre-v5 backup restores intact (the spec's v1→v2 requirement) ───────────
 
   test('a pre-v5 backup (budgets still on categories) restores every budget', () {
-    final store = AppStore(
+    final store = AppStore(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)), 
       accounts: const <Account>[],
       categories: [
         Category(
@@ -157,7 +158,7 @@ void main() {
   // ── a v5 backup round-trips budgets faithfully ───────────────────────────────
 
   test('a v5 backup round-trips a Budget through the budgets array', () {
-    final store = AppStore(
+    final store = AppStore(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)), 
       accounts: const <Account>[],
       categories: [
         Category(

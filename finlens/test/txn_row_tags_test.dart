@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:finlens/core/models/models.dart';
 import 'package:finlens/core/store/app_store.dart';
+import 'package:finlens/core/utils/clock.dart';
 import 'package:finlens/core/utils/formatters.dart';
 import 'package:finlens/features/ledger/ledger_scope.dart';
 import 'package:finlens/features/ledger/widgets/ledger_txn_row.dart';
@@ -37,7 +38,7 @@ Account _acc(String id, String name) => Account(
       startingBalance: 1000,
     );
 
-AppStore _store({String category = 'Groceries'}) => AppStore(
+AppStore _store({String category = 'Groceries'}) => AppStore(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)), 
       accounts: [_acc('a1', 'Main Checking'), _acc('a2', 'Cash Wallet')],
       categories: [_cat(category)],
       txns: const <Txn>[],

@@ -9,6 +9,7 @@ import '../../features/balance/balance_filter.dart';
 import '../../features/balance/balance_order.dart';
 import '../../features/balance/same_transactions.dart';
 import '../../features/ledger/trans_filter.dart';
+import '../utils/clock.dart';
 import '../utils/date_range.dart';
 import '../models/models.dart';
 import '../utils/formatters.dart';
@@ -22,6 +23,7 @@ import '../utils/uuid.dart';
 /// balance is locked" rule (spec 6.2) enforceable rather than decorative.
 class AppStore extends ChangeNotifier {
   AppStore({
+    Clock clock = Clock.system,
     required List<Account> accounts,
     required List<Category> categories,
     required List<Txn> txns,
@@ -34,7 +36,8 @@ class AppStore extends ChangeNotifier {
     int? idSeq,
     int? tagSchema,
     String? baseCurrency,
-  })  : _accounts = List.of(accounts),
+  })  : _clock = clock,
+        _accounts = List.of(accounts),
         _categories = List.of(categories),
         _txns = List.of(txns),
         _goals = List.of(goals),
@@ -48,7 +51,14 @@ class AppStore extends ChangeNotifier {
         // it resolves to `today` for both a migrated and a fresh store. Never
         // AppStore.today at render, which would drift daily. Existing budgets are
         // NOT backfilled — history begins empty and fills from the first edit.
-        budgetHistorySince = budgetHistorySince ?? today {
+        budgetHistorySince = budgetHistorySince ?? _dayOf(clock) {
+    // Derived period controls that used to read the pinned constant in a field
+    // initializer. They can only be set once the clock is available (an instance
+    // getter is unreachable from an initializer list), so they land here at the
+    // top of the body: the Ledger's month and the Schedule completed range both
+    // open on the period containing the real today (spec §3).
+    _period = DateTime(today.year, today.month);
+    _completedRange = RangePreset.thisMonth.resolve(today);
     // Persistence seam: restore the id counter (so hydrated ids never collide
     // with freshly minted ones) and the tag schema (so already-reified tag ids
     // are never re-migrated). Both no-op on the seed path where they are null.
@@ -74,13 +84,26 @@ class AppStore extends ChangeNotifier {
   /// An empty store — the first-run state before anything has been persisted.
   /// `main()` uses this when the local database is still empty (spec: fresh
   /// installs start blank, not seeded with demo data).
-  factory AppStore.empty() => AppStore(
+  factory AppStore.empty({Clock clock = Clock.system}) => AppStore(
+        clock: clock,
         accounts: const [],
         categories: const [],
         txns: const [],
         goals: const [],
         tasks: const [],
       );
+
+  /// The app's injected clock. Production reads the real time; tests pin it with
+  /// [Clock.fixed]. This is the only clock in the app (spec §1).
+  final Clock _clock;
+
+  /// Midnight of a clock's current day — the same computation as [today], but
+  /// static so it can seed [budgetHistorySince] from an initializer list, where
+  /// the instance getter is unreachable.
+  static DateTime _dayOf(Clock clock) {
+    final n = clock.now();
+    return DateTime(n.year, n.month, n.day);
+  }
 
   /// Current on-load tag schema. Bumping this re-runs [_migrateTags].
   static const int tagSchemaVersion = 1;
@@ -229,9 +252,24 @@ class AppStore extends ChangeNotifier {
   int get tagSchema => _tagSchema;
 
   // ── Reference date ────────────────────────────────────────────────────────
-  // The seed data is authored around the mockups' "August 2026". Pinning
-  // "today" keeps the documented screens reproducible instead of drifting.
-  static final DateTime today = DateTime(2026, 8, 9, 14, 32);
+  // One clock, injected. Production reads the real time; tests and the demo
+  // fixtures pin it with [Clock.fixed]. There is no wall-clock read outside the
+  // system clock — a second reading is how Schedule drifted out of sync with
+  // Balance while both believed they agreed (spec §1).
+
+  /// Midnight of the current day.
+  ///
+  /// It used to be a timestamp (`14:32`), which made every day-comparison depend
+  /// on what time the app happened to be opened. Date arithmetic across this app
+  /// compares *days*; give it days. Keeps its name so its readers do not change.
+  DateTime get today {
+    final n = _clock.now();
+    return DateTime(n.year, n.month, n.day);
+  }
+
+  /// The actual instant. Use this only where the time of day is part of the fact
+  /// being recorded — a record's `createdAt`, never a comparison.
+  DateTime get now => _clock.now();
 
   /// The day this store first ran with budget-detail CHANGES (see constructor).
   /// Displayed in the section's footnote; fixed for the store's lifetime.
@@ -732,7 +770,7 @@ class AppStore extends ChangeNotifier {
   // right on first open. A preset persists as its preset and re-resolves against
   // today; a custom range persists its dates. Restored before first paint.
   static const _completedRangeKey = 'schedule_completed_range';
-  DateRange _completedRange = RangePreset.thisMonth.resolve(today);
+  late DateRange _completedRange; // set in the constructor body from `today`
   DateRange get completedRange => _completedRange;
 
   void setCompletedRange(DateRange range) {
@@ -790,7 +828,7 @@ class AppStore extends ChangeNotifier {
   /// shows the period the reader ended on.
   DateRange? _insightWindow;
   DateRange get insightWindow => _insightWindow ??=
-      currentPresetFor(_insightPeriodUnit).resolve(AppStore.today);
+      currentPresetFor(_insightPeriodUnit).resolve(today);
 
   void setInsightWindow(DateRange window) {
     _insightWindow = window;
@@ -922,8 +960,9 @@ class AppStore extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Month currently in focus for Ledger + Planner headers.
-  DateTime _period = DateTime(2026, 8);
+  /// Month currently in focus for Ledger + Planner headers. Set in the
+  /// constructor body to the month containing the real today (spec §3).
+  late DateTime _period;
   DateTime get period => _period;
   void shiftPeriod(int months) {
     // Ledger range lens: a header swipe exits the lens onto the month it was set
@@ -1242,7 +1281,7 @@ class AppStore extends ChangeNotifier {
       }
       return existing;
     }
-    final now = DateTime.now();
+    final now = this.now;
     final tag = Tag(id: _nextId('tg'), name: name, createdAt: now, lastUsedAt: now);
     _tags.add(tag);
     notifyListeners();
@@ -2719,6 +2758,12 @@ class AppStore extends ChangeNotifier {
       fromRef: fromRef,
       toRef: toRef,
       date: date,
+      // Stamp the real recording instant, distinct from the (user-editable)
+      // transaction date (spec §5b). Before this, `createdAt` defaulted to
+      // `date`, so a misfiled record was indistinguishable from a correct one;
+      // from now on the two are independent facts. Existing records are NOT
+      // backfilled — a null/derived past value stays as it was.
+      createdAt: now,
       exchangeRate: exchangeRate,
       toAmount: toAmount,
       fee: fee,

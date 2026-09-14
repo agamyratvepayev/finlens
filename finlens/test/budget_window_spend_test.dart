@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:finlens/core/models/models.dart';
 import 'package:finlens/core/store/app_store.dart';
+import 'package:finlens/core/utils/clock.dart';
 
 /// budgets-as-object spec §A.2 / §A.3 — the window, the spend and the rollover
 /// carry. Pure store arithmetic; no widgets.
@@ -10,7 +11,7 @@ import 'package:finlens/core/store/app_store.dart';
 /// flutter test hangs on the author's machine — run these yourself:
 ///   flutter test test/budget_window_spend_test.dart
 void main() {
-  AppStore store() => AppStore(
+  AppStore store() => AppStore(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)), 
         accounts: [
           Account(
               id: 'a-family',

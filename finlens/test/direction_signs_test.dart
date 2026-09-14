@@ -116,7 +116,7 @@ void main() {
       // The figures that must now be unsigned are the row amounts and the day
       // nets. Build them from the same query the screen uses and assert none
       // of them renders a sign.
-      final range = RangePreset.thisMonth.resolve(AppStore.today);
+      final range = RangePreset.thisMonth.resolve(DateTime(2026, 8, 9));
       final rows = LedgerQuery(
         store: store,
         scope: const AllAccountsScope(),

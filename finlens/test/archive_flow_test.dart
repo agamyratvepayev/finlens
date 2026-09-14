@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:finlens/core/models/models.dart';
 import 'package:finlens/core/store/app_store.dart';
+import 'package:finlens/core/utils/clock.dart';
 import 'package:finlens/features/balance/edit_account_screen.dart';
 import 'package:finlens/l10n/app_localizations.dart';
 import 'package:finlens/shared/widgets/txn_row.dart';
@@ -82,7 +83,7 @@ void main() {
       'archiving a non-zero balance account is refused and offers Move money',
       (tester) async {
     _portrait(tester);
-    final store = AppStore(
+    final store = AppStore(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)), 
       accounts: [_account('a1', 'Cash (USD Wallet)', startingBalance: 5000)],
       categories: const <Category>[],
       // An income of 199 gives it history AND a $5,199 balance.
@@ -110,7 +111,7 @@ void main() {
   testWidgets('archiving a zero-balance account proceeds to the impact list',
       (tester) async {
     _portrait(tester);
-    final store = AppStore(
+    final store = AppStore(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)), 
       accounts: [_account('a1', 'Cash (USD Wallet)', startingBalance: 100)],
       categories: [_category('c1', 'Groceries')],
       // 100 starting − 100 spent = 0, and the account has history.
@@ -134,7 +135,7 @@ void main() {
   testWidgets("an archived category's past transactions still render its name",
       (tester) async {
     _portrait(tester);
-    final store = AppStore(
+    final store = AppStore(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)), 
       accounts: [_account('a1', 'Checking')],
       categories: [_category('c1', 'Groceries', archived: true)],
       txns: [_expense('t1', 'a1', 'c1', 42)],

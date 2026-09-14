@@ -740,6 +740,7 @@ class _LedgerScreenState extends State<LedgerScreen> {
     final dateLabel = dateGroupLabel(
       day.date,
       AppLocalizations.of(context),
+      store.today,
     ).toUpperCase();
     final totalLabel = money(net, signless: true, masked: store.masked);
 
@@ -1371,7 +1372,7 @@ class _PeriodTitle extends StatelessWidget {
     final lens = store.rangeLens;
     final isLens = lens != null;
     final titleText = isLens
-        ? lens.label(AppStore.today, l)
+        ? lens.label(store.today, l)
         : monthYearLong(store.period, l);
     final days = isLens ? lens.days : 0;
     final semanticLabel = isLens

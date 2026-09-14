@@ -7,6 +7,7 @@ import 'package:finlens/core/models/models.dart';
 import 'package:finlens/core/persistence/backup_codec.dart';
 import 'package:finlens/core/persistence/local_database.dart';
 import 'package:finlens/core/store/app_store.dart';
+import 'package:finlens/core/utils/clock.dart';
 
 // flutter test hangs on the author's machine — run these yourself:
 //   flutter test test/category_backup_test.dart
@@ -16,7 +17,7 @@ import 'package:finlens/core/store/app_store.dart';
 // categories) must still decode — yielding null emoji/createdAt with the
 // colour and icon unchanged (category-picker spec §5 / §10).
 
-AppStore _storeWith(Category c) => AppStore(
+AppStore _storeWith(Category c) => AppStore(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)), 
       accounts: const <Account>[],
       categories: [c],
       txns: const <Txn>[],

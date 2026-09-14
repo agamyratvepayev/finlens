@@ -3,7 +3,6 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:finlens/core/data/seed_data.dart';
 import 'package:finlens/core/models/models.dart';
-import 'package:finlens/core/store/app_store.dart';
 import 'package:finlens/core/utils/date_range.dart';
 import 'package:finlens/features/planner/schedule_horizon.dart';
 
@@ -11,7 +10,7 @@ import 'package:finlens/features/planner/schedule_horizon.dart';
 /// the dev machine — these files are written but not run there; verify with
 /// `flutter analyze` and run the suite elsewhere.
 void main() {
-  final today = AppStore.today; // 9 Aug 2026, 14:32
+  final today = DateTime(2026, 8, 9); // 9 Aug 2026
 
   Task mkTask({
     required double amount,

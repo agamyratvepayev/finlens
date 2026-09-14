@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:finlens/core/data/seed_data.dart';
 import 'package:finlens/core/models/models.dart';
 import 'package:finlens/core/store/app_store.dart';
+import 'package:finlens/core/utils/clock.dart';
 import 'package:finlens/features/planner/edit_budget_screen.dart';
 import 'package:finlens/features/planner/planner_screen.dart';
 import 'package:finlens/features/quick_add/quick_add_sheet.dart';
@@ -129,7 +130,7 @@ void main() {
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
 
-    final store = AppStore.empty();
+    final store = AppStore.empty(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)));
     store.addCategory(
       name: 'TripFundZZ',
       type: CategoryType.expense,
@@ -247,7 +248,7 @@ void main() {
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
 
-    final store = AppStore.empty();
+    final store = AppStore.empty(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)));
     store.addCategory(
       name: 'BudgetedZZ',
       type: CategoryType.expense,
@@ -273,7 +274,7 @@ void main() {
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
 
-    final store = AppStore.empty();
+    final store = AppStore.empty(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)));
 
     await _openPicker(tester, store);
 

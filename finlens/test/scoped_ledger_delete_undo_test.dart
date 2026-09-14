@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:finlens/core/models/models.dart';
 import 'package:finlens/core/store/app_store.dart';
+import 'package:finlens/core/utils/clock.dart';
 import 'package:finlens/features/ledger/ledger_scope.dart';
 import 'package:finlens/features/ledger/scoped_ledger_screen.dart';
 import 'package:finlens/features/ledger/widgets/ledger_txn_row.dart';
@@ -45,7 +46,7 @@ Txn _txn(String id, double amount, int day, {String note = ''}) => Txn(
       note: note,
     );
 
-AppStore _store() => AppStore(
+AppStore _store() => AppStore(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)), 
       accounts: [_acc('a1', 'Main Checking')],
       categories: [_cat('c-food', 'Groceries')],
       txns: [

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../core/models/models.dart';
-import '../../core/store/app_store.dart';
 import '../../core/utils/formatters.dart';
 import '../../l10n/app_localizations.dart';
 import '../../theme/app_colors.dart';
@@ -16,6 +15,7 @@ import '../../theme/app_colors.dart';
   AppLocalizations l,
   Goal goal,
   GoalMetrics m,
+  DateTime today,
 ) {
   if (!m.sourceAvailable) {
     return (text: l.goalSourceUnavailable, attention: true);
@@ -23,7 +23,7 @@ import '../../theme/app_colors.dart';
 
   if (m.reached) {
     if (m.targetDate != null) {
-      final daysEarly = m.targetDate!.difference(AppStore.today).inDays;
+      final daysEarly = m.targetDate!.difference(today).inDays;
       if (daysEarly > 0) {
         return (text: l.goalReachedEarly(daysEarly), attention: false);
       }

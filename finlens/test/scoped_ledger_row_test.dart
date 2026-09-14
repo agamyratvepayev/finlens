@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:finlens/core/models/models.dart';
 import 'package:finlens/core/store/app_store.dart';
+import 'package:finlens/core/utils/clock.dart';
 import 'package:finlens/core/utils/search_fold.dart';
 import 'package:finlens/features/ledger/ledger_scope.dart';
 import 'package:finlens/features/ledger/widgets/ledger_txn_row.dart';
@@ -35,7 +36,7 @@ Category _cat(String id, String name) => Category(
 void main() {
   late AppStore store;
   setUp(() {
-    store = AppStore(
+    store = AppStore(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)), 
       accounts: [_acc('a1', 'Main Checking'), _acc('a2', 'Cash Wallet')],
       categories: [_cat('c-cat', 'Groceries')],
       txns: const <Txn>[],

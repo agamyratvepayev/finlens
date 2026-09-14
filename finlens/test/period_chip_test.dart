@@ -43,7 +43,7 @@ void main() {
   testWidgets('‹ steps the cursor without opening the sheet; the label opens it',
       (tester) async {
     final store = buildSeedStore();
-    final range = RangePreset.thisMonth.resolve(AppStore.today);
+    final range = RangePreset.thisMonth.resolve(DateTime(2026, 8, 9));
     var steps = 0;
     var picks = 0;
 
@@ -67,7 +67,7 @@ void main() {
     expect(steps, -1);
     expect(picks, 0, reason: 'the arrow must not open the sheet');
 
-    await tester.tap(find.text(range.label(AppStore.today, AppLocalizationsEn())));
+    await tester.tap(find.text(range.label(DateTime(2026, 8, 9), AppLocalizationsEn())));
     expect(picks, 1, reason: 'tapping the label opens the sheet');
   });
 
@@ -93,7 +93,7 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester
-        .tap(find.text(RangePreset.thisMonth.resolve(AppStore.today).label(AppStore.today, AppLocalizationsEn())));
+        .tap(find.text(RangePreset.thisMonth.resolve(DateTime(2026, 8, 9)).label(DateTime(2026, 8, 9), AppLocalizationsEn())));
     await tester.pumpAndSettle();
 
     // A RenderFlex overflow throws during layout; none may occur.

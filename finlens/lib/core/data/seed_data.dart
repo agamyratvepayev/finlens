@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/models.dart';
 import '../store/app_store.dart';
+import '../utils/clock.dart';
 import 'seed_history.dart';
 
 /// Mock data layer. Every figure here is lifted from the mockups in Tech Spec
@@ -10,7 +11,11 @@ import 'seed_history.dart';
 /// This is the only file that knows the data is fake — swapping it for a
 /// repository backed by an API means replacing [buildSeedStore] alone.
 AppStore buildSeedStore() {
-  final now = AppStore.today;
+  // The mockups are authored around 9 August 2026, 14:32. The demo fixture pins
+  // its clock to that instant (spec §1 — "pinned only in tests"; this fixture is
+  // a test-shaped demo), so every documented screen reproduces exactly and the
+  // seed data is byte-identical to before the clock became real.
+  final now = DateTime(2026, 8, 9, 14, 32);
   DateTime at(int day, [int hour = 12, int minute = 0]) =>
       DateTime(2026, 8, day, hour, minute);
 
@@ -797,6 +802,7 @@ AppStore buildSeedStore() {
   ];
 
   return AppStore(
+    clock: Clock.fixed(now),
     accounts: accounts,
     categories: categories,
     txns: txns,

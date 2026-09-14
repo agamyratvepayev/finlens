@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:finlens/core/data/seed_data.dart';
 import 'package:finlens/core/models/models.dart';
 import 'package:finlens/core/store/app_store.dart';
+import 'package:finlens/core/utils/clock.dart';
 import 'package:finlens/core/utils/date_range.dart';
 import 'package:finlens/features/balance/same_transactions.dart';
 
@@ -27,7 +28,7 @@ Txn tx(
       note: note,
     );
 
-AppStore storeWith(List<Txn> txns) => AppStore(
+AppStore storeWith(List<Txn> txns) => AppStore(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)), 
       accounts: const <Account>[],
       categories: const <Category>[],
       txns: txns,

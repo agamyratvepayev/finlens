@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:finlens/core/models/models.dart';
 import 'package:finlens/core/store/app_store.dart';
+import 'package:finlens/core/utils/clock.dart';
 import 'package:finlens/features/quick_add/pickers.dart';
 import 'package:finlens/l10n/app_localizations.dart';
 import 'package:finlens/shared/widgets/form_fields.dart';
@@ -20,7 +21,7 @@ Account _acc(String id, String name) => Account(
       startingBalance: 1000,
     );
 
-AppStore _store() => AppStore(
+AppStore _store() => AppStore(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)), 
       accounts: [_acc('a1', 'Main Checking')],
       categories: const <Category>[],
       txns: const <Txn>[],

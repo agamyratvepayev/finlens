@@ -861,7 +861,7 @@ class _EndsSheetState extends State<_EndsSheet> {
       firstDate: DateTime(widget.date.year, widget.date.month, widget.date.day)
           .add(const Duration(days: 1)),
       lastDate: DateTime(2100),
-      now: AppStore.today,
+      now: StoreScope.read(context).today,
     );
     if (d == null || !mounted) return;
     setState(() {

@@ -161,7 +161,7 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
         store.snapshotTasks.isNotEmpty ||
         store.snapshotTags.isNotEmpty;
     if (hasData) {
-      final now = DateTime.now();
+      final now = store.now;
       final stamp = '${now.year.toString().padLeft(4, '0')}-'
           '${now.month.toString().padLeft(2, '0')}-'
           '${now.day.toString().padLeft(2, '0')}';

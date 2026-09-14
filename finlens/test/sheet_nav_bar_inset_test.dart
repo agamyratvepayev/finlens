@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:finlens/core/models/models.dart';
 import 'package:finlens/core/store/app_store.dart';
+import 'package:finlens/core/utils/clock.dart';
 import 'package:finlens/features/quick_add/pickers.dart';
 import 'package:finlens/l10n/app_localizations.dart';
 import 'package:finlens/theme/app_theme.dart';
@@ -29,7 +30,7 @@ Account _acc(String id, String name) => Account(
       startingBalance: 2580,
     );
 
-AppStore _oneAccountStore() => AppStore(
+AppStore _oneAccountStore() => AppStore(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)), 
       accounts: [_acc('a1', 'My Wallet')],
       categories: const <Category>[],
       txns: const <Txn>[],

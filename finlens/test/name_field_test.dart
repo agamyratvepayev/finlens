@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:finlens/core/data/seed_data.dart';
 import 'package:finlens/core/models/models.dart';
 import 'package:finlens/core/store/app_store.dart';
+import 'package:finlens/core/utils/clock.dart';
 import 'package:finlens/features/balance/edit_account_screen.dart';
 import 'package:finlens/features/more/edit_category_screen.dart';
 import 'package:finlens/features/planner/edit_goal_screen.dart';
@@ -68,7 +69,7 @@ void main() {
   }
 
   AppStore accountStore() {
-    final s = AppStore(
+    final s = AppStore(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)), 
       accounts: const [],
       categories: const [],
       txns: const [],
@@ -85,7 +86,7 @@ void main() {
   }
 
   AppStore categoryStore() {
-    final s = AppStore(
+    final s = AppStore(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)), 
       accounts: const [],
       categories: const [],
       txns: const [],
@@ -125,7 +126,7 @@ void main() {
 
   testWidgets('goal editor: one NameField, no "Goal name" caption', (t) async {
     phone(t);
-    await t.pumpWidget(wrap(AppStore.empty(), const EditGoalScreen()));
+    await t.pumpWidget(wrap(AppStore.empty(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32))), const EditGoalScreen()));
     expect(find.byType(NameField), findsOneWidget);
     expect(find.text('Goal name'), findsNothing);
     expect(t.getSize(find.byType(NameField)).height, closeTo(48, 0.5));
@@ -191,7 +192,7 @@ void main() {
   testWidgets('the name field keeps its old caption as a semantics label',
       (t) async {
     phone(t);
-    await t.pumpWidget(wrap(AppStore.empty(), const EditGoalScreen()));
+    await t.pumpWidget(wrap(AppStore.empty(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32))), const EditGoalScreen()));
     // egGoalName = "Goal name" is invisible text but a real semantics label.
     expect(
       find.bySemanticsLabel('Goal name'),
@@ -297,7 +298,7 @@ void main() {
   testWidgets('clear is absent when empty, present once typed, keeps focus once cleared',
       (t) async {
     phone(t);
-    await t.pumpWidget(wrap(AppStore.empty(), const EditGoalScreen()));
+    await t.pumpWidget(wrap(AppStore.empty(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32))), const EditGoalScreen()));
 
     expect(find.byIcon(Icons.close_rounded), findsNothing);
 
@@ -317,7 +318,7 @@ void main() {
 
   testWidgets('the goal editor has exactly one clear button', (t) async {
     phone(t);
-    await t.pumpWidget(wrap(AppStore.empty(), const EditGoalScreen()));
+    await t.pumpWidget(wrap(AppStore.empty(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32))), const EditGoalScreen()));
     await t.enterText(
         find.descendant(
             of: find.byType(NameField), matching: find.byType(TextField)),
@@ -405,7 +406,7 @@ void main() {
       await t.pumpAndSettle();
     }
 
-    AppStore oneAccount() => AppStore(
+    AppStore oneAccount() => AppStore(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)), 
           accounts: [
             Account(
                 id: 'a1',
@@ -514,7 +515,7 @@ void main() {
   // ── §5a · the Schedule row renders the task's own glyph ────────────────────
 
   testWidgets('the Schedule row renders the task glyph', (t) async {
-    final store = AppStore(
+    final store = AppStore(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)), 
       accounts: [
         Account(
             id: 'a1',
@@ -532,7 +533,7 @@ void main() {
           title: 'Water the plants',
           linkedAccountId: 'a1',
           expectedAmount: 0,
-          dueDate: AppStore.today.add(const Duration(days: 2)),
+          dueDate: DateTime(2026, 8, 9).add(const Duration(days: 2)),
           icon: Icons.local_florist_rounded,
         ),
       ],

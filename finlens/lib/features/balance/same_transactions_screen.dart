@@ -64,13 +64,13 @@ class _SameTransactionsScreenState extends State<SameTransactionsScreen> {
     final key = SameKey.of(origin);
     final info = _KeyInfo.resolve(store, origin, key, AppLocalizations.of(context));
     final choice = store.sameListRange;
-    final range = choice.resolve(AppStore.today);
+    final range = choice.resolve(store.today);
     final all = store.sameTransactions(key, from: range.start, to: range.end);
     // The frequency rate divides by the selected window, except All time, whose
     // year-2000 start is artificial — there the transaction span stands in.
     final unbounded =
         !choice.isCustom && choice.preset == SameRangePreset.allTime;
-    final stats = SameStats.of(all, AppStore.today,
+    final stats = SameStats.of(all, store.today,
         window: unbounded ? null : range, base: store.baseCurrency);
     final shown = widget.showAll ? all : all.take(5).toList();
 
@@ -417,7 +417,7 @@ class _SameTransactionsScreenState extends State<SameTransactionsScreen> {
     final choice = store.sameListRange;
     final l = AppLocalizations.of(context);
     final label = (choice.isCustom
-            ? choice.resolve(AppStore.today).label(AppStore.today, l)
+            ? choice.resolve(store.today).label(store.today, l)
             : choice.preset!.label(l))
         .toUpperCase();
 
@@ -573,7 +573,8 @@ class _SameTransactionsScreenState extends State<SameTransactionsScreen> {
   }
 
   Widget _emptyMessage(_KeyInfo info, DateRange range) {
-    final label = range.label(AppStore.today, AppLocalizations.of(context));
+    final label =
+        range.label(StoreScope.of(context).today, AppLocalizations.of(context));
     // The account no longer scopes an income/expense key, so the empty message
     // names the category alone (spec §6); a transfer's categoryName is its
     // "A → B" title.

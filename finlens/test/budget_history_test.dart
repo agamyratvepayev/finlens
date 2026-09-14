@@ -4,13 +4,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:finlens/core/data/seed_data.dart';
 import 'package:finlens/core/models/models.dart';
 import 'package:finlens/core/store/app_store.dart';
+import 'package:finlens/core/utils/clock.dart';
 import 'package:finlens/core/utils/formatters.dart';
 
 /// Budget-detail CHANGES — the store write paths (spec §3/§4). A budget edited
 /// over three months: each field value is written once, by the right method,
 /// with the right `from`/`to`, and only when something actually changed.
 void main() {
-  AppStore emptyStore() => AppStore(
+  AppStore emptyStore() => AppStore(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)), 
         accounts: const [],
         categories: const [],
         txns: const [],
@@ -139,7 +140,7 @@ void main() {
     expect(added, hasLength(3));
     expect(added.map((e) => e.field),
         containsAll(<String>['limit', 'rollover', 'warn']));
-    expect(added.every((e) => e.at == AppStore.today), isTrue);
+    expect(added.every((e) => e.at == store.today), isTrue);
   });
 
   // ── removed / restored survive ─────────────────────────────────────────────
@@ -200,7 +201,7 @@ void main() {
       icon: Icons.shopping_cart_rounded,
       color: Colors.green,
     );
-    final store = AppStore(
+    final store = AppStore(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)), 
       accounts: const [],
       categories: [preExisting],
       txns: const [],
@@ -231,7 +232,7 @@ void main() {
   // ── budgetHistorySince ─────────────────────────────────────────────────────
 
   test('budgetHistorySince defaults to today when a store is built fresh', () {
-    expect(emptyStore().budgetHistorySince, AppStore.today);
-    expect(buildSeedStore().budgetHistorySince, AppStore.today);
+    expect(emptyStore().budgetHistorySince, emptyStore().today);
+    expect(buildSeedStore().budgetHistorySince, buildSeedStore().today);
   });
 }

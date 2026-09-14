@@ -325,16 +325,17 @@ class AccountRow extends StatelessWidget {
       );
     case AccountGroup.payables:
       if (a.paymentDue == null) return (text: null, color: null);
+      final today = store.today;
       final due = DateTime(
-        AppStore.today.year,
-        AppStore.today.month,
+        today.year,
+        today.month,
         a.paymentDue!,
       );
       final days = due
           .difference(DateTime(
-            AppStore.today.year,
-            AppStore.today.month,
-            AppStore.today.day,
+            today.year,
+            today.month,
+            today.day,
           ))
           .inDays;
       // Spec 1.3 — the label warms up as the due date approaches.
@@ -345,9 +346,10 @@ class AccountRow extends StatelessWidget {
       );
     case AccountGroup.bankLoans:
       if (a.paymentDue == null) return (text: null, color: null);
+      final today = store.today;
       final next = DateTime(
-        AppStore.today.year,
-        AppStore.today.month + (a.paymentDue! < AppStore.today.day ? 1 : 0),
+        today.year,
+        today.month + (a.paymentDue! < today.day ? 1 : 0),
         a.paymentDue!,
       );
       return (text: l.balNextPayment(dayMonthYear(next, l)), color: null);

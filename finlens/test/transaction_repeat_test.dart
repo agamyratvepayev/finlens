@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:finlens/core/models/models.dart';
 import 'package:finlens/core/store/app_store.dart';
+import 'package:finlens/core/utils/clock.dart';
 import 'package:finlens/features/quick_add/quick_add_sheet.dart';
 import 'package:finlens/l10n/app_localizations.dart';
 import 'package:finlens/theme/app_colors.dart';
@@ -14,7 +15,7 @@ import 'package:finlens/theme/app_theme.dart';
 // ── Fixtures ─────────────────────────────────────────────────────────────────
 
 AppStore _store({List<Txn> txns = const [], List<Task> tasks = const []}) =>
-    AppStore(
+    AppStore(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)), 
       accounts: [
         Account(
             id: 'a1',

@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:finlens/core/models/models.dart';
 import 'package:finlens/core/store/app_store.dart';
+import 'package:finlens/core/utils/clock.dart';
 import 'package:finlens/features/balance/same_transactions.dart';
 import 'package:finlens/features/balance/same_transactions_screen.dart';
 import 'package:finlens/l10n/app_localizations.dart';
@@ -64,7 +65,7 @@ AppStore _store({
   required List<Category> categories,
   required List<Txn> txns,
 }) =>
-    AppStore(
+    AppStore(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)), 
       accounts: accounts,
       categories: categories,
       txns: txns,

@@ -8,6 +8,7 @@ import 'package:finlens/core/models/enums.dart';
 import 'package:finlens/core/persistence/backup_codec.dart';
 import 'package:finlens/core/persistence/store_mappers.dart';
 import 'package:finlens/core/store/app_store.dart';
+import 'package:finlens/core/utils/clock.dart';
 import 'package:finlens/core/utils/formatters.dart';
 
 /// Persistence for edited and deleted currencies (spec §5). `store_mappers`
@@ -24,7 +25,7 @@ void main() {
   });
   tearDown(() => setCustomCurrencies(const []));
 
-  AppStore emptyStore() => AppStore(
+  AppStore emptyStore() => AppStore(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)), 
         accounts: const [],
         categories: const [],
         txns: const [],

@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:finlens/core/models/enums.dart';
 import 'package:finlens/core/store/app_store.dart';
+import 'package:finlens/core/utils/clock.dart';
 import 'package:finlens/core/utils/date_range.dart';
 import 'package:finlens/features/balance/balance_screen.dart'
     show BalanceScreen;
@@ -37,7 +38,7 @@ void main() {
   // Balance fires off preference writes; give them a mock backing store.
   setUp(() => SharedPreferences.setMockInitialValues(<String, Object>{}));
 
-  AppStore emptyStore() => AppStore(
+  AppStore emptyStore() => AppStore(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)), 
     accounts: const [],
     categories: const [],
     txns: const [],

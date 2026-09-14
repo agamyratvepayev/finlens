@@ -69,17 +69,17 @@ void main() {
 
   group('the Behind verdict uses the section verb', () {
     test('SAVING → save', () {
-      expect(goalVerdict(l, goal, behind(GoalSection.saving)).text,
+      expect(goalVerdict(l, goal, behind(GoalSection.saving), DateTime(2026, 8, 9)).text,
           r'Behind · save $970/mo');
     });
 
     test('PAYING OFF → pay', () {
-      expect(goalVerdict(l, goal, behind(GoalSection.payingOff)).text,
+      expect(goalVerdict(l, goal, behind(GoalSection.payingOff), DateTime(2026, 8, 9)).text,
           r'Behind · pay $970/mo');
     });
 
     test('EARNING → earn', () {
-      expect(goalVerdict(l, goal, behind(GoalSection.earning)).text,
+      expect(goalVerdict(l, goal, behind(GoalSection.earning), DateTime(2026, 8, 9)).text,
           r'Behind · earn $970/mo');
     });
 
@@ -91,7 +91,7 @@ void main() {
     });
 
     test('WAITING ON never quotes a rate — no verb, no "Behind"', () {
-      final text = goalVerdict(l, goal, behind(GoalSection.waitingOn)).text;
+      final text = goalVerdict(l, goal, behind(GoalSection.waitingOn), DateTime(2026, 8, 9)).text;
       expect(text, isNot(contains('collect')));
       expect(text, isNot(startsWith('Behind')));
     });

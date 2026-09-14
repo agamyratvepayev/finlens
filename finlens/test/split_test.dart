@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:finlens/core/models/models.dart';
 import 'package:finlens/core/persistence/backup_codec.dart';
 import 'package:finlens/core/store/app_store.dart';
+import 'package:finlens/core/utils/clock.dart';
 import 'package:finlens/features/quick_add/split_sheet.dart';
 
 // flutter test hangs on the author's machine — run these yourself:
@@ -110,7 +111,7 @@ void main() {
 
   test('a split stores one transaction per line sharing a splitGroupId (§2)',
       () {
-    final store = AppStore(
+    final store = AppStore(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)), 
       accounts: [
         Account(
             id: 'a1',
@@ -182,7 +183,7 @@ void main() {
 
   test('a split group survives encodeBackup → decodeBackup with grouping intact',
       () {
-    final store = AppStore(
+    final store = AppStore(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)), 
       accounts: [
         Account(
             id: 'a1',

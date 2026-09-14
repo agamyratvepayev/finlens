@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:finlens/core/models/models.dart';
 import 'package:finlens/core/store/app_store.dart';
+import 'package:finlens/core/utils/clock.dart';
 import 'package:finlens/features/quick_add/quick_add_sheet.dart';
 import 'package:finlens/features/quick_add/widgets/amount_hero.dart'
     show NumericKeypad;
@@ -34,7 +35,7 @@ Category _cat(String id, String name, Color c) => Category(
       color: c,
     );
 
-AppStore _store() => AppStore(
+AppStore _store() => AppStore(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)), 
       accounts: [
         Account(
           id: 'a1',

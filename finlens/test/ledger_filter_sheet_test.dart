@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:finlens/core/models/models.dart';
 import 'package:finlens/core/store/app_store.dart';
+import 'package:finlens/core/utils/clock.dart';
 import 'package:finlens/features/ledger/ledger_screen.dart';
 import 'package:finlens/theme/app_theme.dart';
 
@@ -48,7 +49,7 @@ Txn _exp(String id, double amt, String from, String cat, int day,
       tagIds: tags,
     );
 
-AppStore _store() => AppStore(
+AppStore _store() => AppStore(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)), 
       accounts: [
         _acc('a1', 'Main Checking'),
         _acc('a2', 'Savings'),
@@ -132,7 +133,7 @@ AppStore _store() => AppStore(
 
 /// Seven equal-weight expense categories (Cat A … Cat G) so the EXPENSES section
 /// truncates at 5 and the strip reads "2 more categories".
-AppStore _manyStore() => AppStore(
+AppStore _manyStore() => AppStore(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)), 
       accounts: [_acc('a1', 'Main Checking')],
       categories: [
         for (final n in ['A', 'B', 'C', 'D', 'E', 'F', 'G'])

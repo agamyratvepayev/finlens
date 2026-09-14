@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:finlens/core/data/seed_data.dart';
 import 'package:finlens/core/models/models.dart';
 import 'package:finlens/core/store/app_store.dart';
+import 'package:finlens/core/utils/clock.dart';
 import 'package:finlens/features/planner/planner_screen.dart';
 import 'package:finlens/features/planner/widgets/goal_scope_sheet.dart';
 import 'package:finlens/l10n/app_localizations.dart';
@@ -147,7 +148,7 @@ void main() {
   testWidgets('no goals → the header slot is empty and EmptyState is unchanged',
       (tester) async {
     bigScreen(tester);
-    final store = AppStore(
+    final store = AppStore(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)), 
       accounts: const [],
       categories: const [],
       txns: const [],

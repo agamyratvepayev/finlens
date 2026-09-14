@@ -16,7 +16,7 @@ const _eps = 0.005;
 /// preview and the see-all subtitle: month presets read `August 2026` (not
 /// `1–31 Aug`), the year reads `2026`, all-time reads its own word, and
 /// everything else uses the compressed day-range label.
-String insightWindowLabel(DateRange w, AppLocalizations l) {
+String insightWindowLabel(DateRange w, AppLocalizations l, DateTime today) {
   switch (w.preset) {
     case RangePreset.thisMonth:
     case RangePreset.lastMonth:
@@ -29,7 +29,7 @@ String insightWindowLabel(DateRange w, AppLocalizations l) {
     case RangePreset.lastWeek:
     case RangePreset.last3Months:
     case null:
-      return w.label(AppStore.today, l);
+      return w.label(today, l);
   }
 }
 
@@ -144,7 +144,7 @@ class InsightFilterPreview extends StatelessWidget {
 
     final rows = <Widget>[
       _row(
-        label: '${l.insNetWorth.toUpperCase()} · ${insightWindowLabel(window, l)}',
+        label: '${l.insNetWorth.toUpperCase()} · ${insightWindowLabel(window, l, store.today)}',
         value: AmountText(netChange,
             showSign: true,
             style: AppText.groupAmount

@@ -100,7 +100,7 @@ class _EditGoalScreenState extends State<EditGoalScreen> {
 
   bool get _isEditing => _goal != null;
 
-  static DateTime get _today => AppStore.today;
+  DateTime get _today => _store.today;
 
   @override
   void initState() {

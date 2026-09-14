@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:finlens/core/models/models.dart';
 import 'package:finlens/core/store/app_store.dart';
+import 'package:finlens/core/utils/clock.dart';
 import 'package:finlens/features/balance/same_transactions_screen.dart';
 import 'package:finlens/l10n/app_localizations.dart';
 import 'package:finlens/shared/widgets/detail_row.dart';
@@ -18,7 +19,7 @@ void main() {
 
   testWidgets('the detail card is built from DetailRow and renders the same '
       'four labels/values', (tester) async {
-    final store = AppStore(
+    final store = AppStore(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)), 
       accounts: [
         Account(
           id: 'a1',

@@ -559,7 +559,8 @@ class _BalanceScreenState extends State<BalanceScreen> {
   }
 
   Future<void> _pickDate(AppStore store) async {
-    final picked = await showReportingDateSheet(context, selected: store.asOf);
+    final picked = await showReportingDateSheet(context,
+        selected: store.asOf, today: store.today);
     if (picked == null) return;
     store.setAsOf(picked == liveDate ? null : picked);
   }

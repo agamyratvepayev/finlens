@@ -40,7 +40,16 @@ class _PlannerScreenState extends State<PlannerScreen> {
 
   /// Planner's own month вЂ” never `store.period`. Stepping it leaves Ledger and
   /// Insight untouched (spec 5.1: Planner stops driving the global period).
-  late DateTime _month = DateTime(AppStore.today.year, AppStore.today.month);
+  /// Opens on the month containing the real today; primed in [initState] from
+  /// the store's clock (spec §3).
+  late DateTime _month;
+
+  @override
+  void initState() {
+    super.initState();
+    final today = StoreScope.read(context).today;
+    _month = DateTime(today.year, today.month);
+  }
 
   /// Schedule's own forward horizon (В§1). Its own state вЂ” it never reads or
   /// writes `_month`, `store.period` or anything global.
@@ -54,8 +63,8 @@ class _PlannerScreenState extends State<PlannerScreen> {
   void _stepTab(int delta) => setState(() => _tab = (_tab + delta + 3) % 3);
 
   Future<void> _openHorizonSheet(BuildContext context) async {
-    final today = AppStore.today;
     final store = StoreScope.read(context);
+    final today = store.today;
     final counts = store.horizonCounts([
       for (final p in ScheduleHorizon.presetOrder)
         ScheduleHorizon.rangeOf(p, today),
@@ -1078,7 +1087,7 @@ class _GoalCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final m = store.goalMetrics(goal);
-    final verdict = goalVerdict(l, goal, m);
+    final verdict = goalVerdict(l, goal, m, store.today);
 
     // One composed sentence for the screen reader вЂ” name, the amount pair, then
     // the verdict (which now carries the section's verb). ExcludeSemantics on

@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:finlens/core/data/seed_data.dart';
 import 'package:finlens/core/models/models.dart';
 import 'package:finlens/core/store/app_store.dart';
+import 'package:finlens/core/utils/clock.dart';
 import 'package:finlens/core/utils/date_range.dart';
 
 /// Unit tests for the Ledger tab's range-lens window: the store accessor, the
@@ -29,7 +30,7 @@ Txn _tx(String id, TxnType type, String from, String to, double amount,
       date: date,
     );
 
-AppStore _store(List<Txn> txns) => AppStore(
+AppStore _store(List<Txn> txns) => AppStore(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)), 
       accounts: [_acc('A')],
       categories: const <Category>[],
       txns: txns,

@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:finlens/core/data/seed_data.dart';
 import 'package:finlens/core/models/models.dart';
 import 'package:finlens/core/store/app_store.dart';
+import 'package:finlens/core/utils/clock.dart';
 import 'package:finlens/core/utils/date_range.dart';
 import 'package:finlens/features/balance/balance_filter.dart';
 import 'package:finlens/features/insight/insight_screen.dart';
@@ -16,12 +17,12 @@ import 'package:finlens/theme/app_theme.dart';
 /// The order of §1, the four bodies, the header per state, the actions, the
 /// no-opacity rule, and layout at every width × scale × locale.
 void main() {
-  final today = AppStore.today; // 2026-08-09
+  final today = DateTime(2026, 8, 9); // 2026-08-09
 
   // ── Fixtures ────────────────────────────────────────────────────────────────
 
   AppStore emptyStore() =>
-      AppStore(accounts: [], categories: [], txns: [], goals: [], tasks: []);
+      AppStore(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)), accounts: [], categories: [], txns: [], goals: [], tasks: []);
 
   // State 2: accounts exist, nothing recorded. Three spendable accounts; the
   // first carries the whole standing balance so the holdings line reads a total.
@@ -69,7 +70,7 @@ void main() {
         type: CategoryType.expense,
         icon: Icons.fastfood_rounded,
         color: Colors.red);
-    final s = AppStore(
+    final s = AppStore(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)), 
         accounts: [], categories: [cat], txns: [], goals: [], tasks: []);
     final a = s.addAccount(
         name: 'Visible',
@@ -193,7 +194,7 @@ void main() {
           type: CategoryType.expense,
           icon: Icons.fastfood_rounded,
           color: Colors.red);
-      final s = AppStore(
+      final s = AppStore(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)), 
           accounts: [], categories: [cat], txns: [], goals: [], tasks: []);
       final a = s.addAccount(
           name: 'A',
@@ -254,7 +255,7 @@ void main() {
         type: CategoryType.expense,
         icon: Icons.fastfood_rounded,
         color: Colors.red);
-    final s = AppStore(
+    final s = AppStore(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)), 
         accounts: [], categories: [cat], txns: [], goals: [], tasks: []);
     final a = s.addAccount(
         name: 'A',

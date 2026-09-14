@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'core/data/dev_seed_data.dart';
+import 'core/diagnostics/clock_damage_report.dart';
 import 'core/persistence/local_database.dart';
 import 'core/persistence/store_persister.dart';
 import 'core/persistence/sync_store.dart';
@@ -65,6 +66,14 @@ Future<void> main() async {
   // bare `money(x)` never paints a dollar and then corrects itself. The
   // baseCurrency getter keeps it in sync thereafter (see AppStore.baseCurrency).
   setFormatterBaseCurrency(store.baseCurrency);
+
+  // Clock damage report (spec §5c): debug-only, read-only, off by default.
+  // Run with `flutter run --dart-define=CLOCK_REPORT=true` to print the report
+  // (lower/upper bound stated in its first lines). It writes nothing to the
+  // store and ships in no release build (`kDebugMode` tree-shakes it out).
+  if (kDebugMode && bool.fromEnvironment('CLOCK_REPORT', defaultValue: false)) {
+    debugPrint(analyzeClockDamage(store).toText());
+  }
 
   // Group sync rides on real persistence only — the dev-seed fixture has no
   // persister and must never push its data into a group.

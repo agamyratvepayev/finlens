@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:finlens/core/models/models.dart';
 import 'package:finlens/core/store/app_store.dart';
+import 'package:finlens/core/utils/clock.dart';
 import 'package:finlens/features/planner/widgets/goal_scope_sheet.dart';
 import 'package:finlens/l10n/app_localizations_en.dart';
 
@@ -33,7 +34,7 @@ void main() {
     List<Account> accounts = const [],
     List<Goal> goals = const [],
   }) =>
-      AppStore(
+      AppStore(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)), 
         accounts: accounts,
         categories: const [],
         txns: const [],

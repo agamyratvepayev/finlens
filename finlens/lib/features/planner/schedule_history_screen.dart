@@ -79,7 +79,7 @@ class _ScheduleHistoryScreenState extends State<ScheduleHistoryScreen> {
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
     final l = AppLocalizations.of(context);
-    final today = AppStore.today;
+    final today = store.today;
     final all = store.scheduleEvents(_range(today));
     final filtered = all.where(_matches).toList();
 
@@ -376,11 +376,12 @@ class _ScheduleHistoryScreenState extends State<ScheduleHistoryScreen> {
     );
     if (picked == null || !mounted) return;
     if (picked == 'since') {
+      final today = StoreScope.read(context).today;
       final date = await showDatePicker(
         context: context,
-        initialDate: AppStore.today,
+        initialDate: today,
         firstDate: DateTime(2024),
-        lastDate: AppStore.today,
+        lastDate: today,
       );
       if (date != null) {
         setState(() {

@@ -155,7 +155,7 @@ Future<void> _runBackup(BuildContext context, AppStore store) async {
   final l = AppLocalizations.of(context);
   final messenger = ScaffoldMessenger.of(context);
   try {
-    final now = DateTime.now();
+    final now = store.now;
     final bytes = Uint8List.fromList(
       utf8.encode(encodeBackup(store, exportedAt: now)),
     );

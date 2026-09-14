@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:finlens/core/data/seed_data.dart';
 import 'package:finlens/core/models/enums.dart';
 import 'package:finlens/core/store/app_store.dart';
+import 'package:finlens/core/utils/clock.dart';
 import 'package:finlens/features/balance/balance_screen.dart' show BalanceScreen;
 import 'package:finlens/features/insight/insight_screen.dart' show InsightScreen;
 import 'package:finlens/features/planner/planner_screen.dart'
@@ -23,7 +24,7 @@ import 'package:finlens/theme/app_theme.dart';
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues(<String, Object>{}));
 
-  AppStore emptyStore() => AppStore(
+  AppStore emptyStore() => AppStore(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)), 
         accounts: const [],
         categories: const [],
         txns: const [],

@@ -127,7 +127,9 @@ class LedgerDayCard extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    dateGroupLabel(group.date, AppLocalizations.of(context)).toUpperCase(),
+                    dateGroupLabel(group.date, AppLocalizations.of(context),
+                            StoreScope.of(context).today)
+                        .toUpperCase(),
                     style: const TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w700,

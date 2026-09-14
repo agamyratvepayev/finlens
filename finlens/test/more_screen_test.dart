@@ -5,6 +5,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:finlens/core/data/seed_data.dart';
 import 'package:finlens/core/models/models.dart';
 import 'package:finlens/core/store/app_store.dart';
+import 'package:finlens/core/utils/clock.dart';
 import 'package:finlens/features/more/more_screen.dart';
 import 'package:finlens/features/more/tag_management_screen.dart';
 import 'package:finlens/features/more/widgets/split_action_row.dart';
@@ -58,7 +59,7 @@ void main() {
       );
 
   // A store with nothing archived: two accounts, two live categories, no tags.
-  AppStore noArchiveStore() => AppStore(
+  AppStore noArchiveStore() => AppStore(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)), 
         accounts: [
           Account(
               id: 'a1',

@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:finlens/core/data/seed_data.dart';
 import 'package:finlens/core/models/models.dart';
 import 'package:finlens/core/store/app_store.dart';
+import 'package:finlens/core/utils/clock.dart';
 import 'package:finlens/features/planner/edit_budget_screen.dart';
 import 'package:finlens/features/planner/edit_goal_screen.dart';
 import 'package:finlens/features/planner/edit_scaffold.dart';
@@ -95,7 +96,7 @@ void main() {
   testWidgets('New goal screen renders a TypePill: "New goal", violet dot, '
       'chevron (not a padlock)', (tester) async {
     _size(tester, 390, 844);
-    await tester.pumpWidget(_host(AppStore.empty(), home: const EditGoalScreen()));
+    await tester.pumpWidget(_host(AppStore.empty(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32))), home: const EditGoalScreen()));
 
     final pill = find.byType(TypePill);
     expect(pill, findsOneWidget);
@@ -128,7 +129,7 @@ void main() {
   testWidgets('New budget screen renders a TypePill reading "New budget", not '
       '"Edit budget"', (tester) async {
     _size(tester, 390, 844);
-    final store = AppStore.empty();
+    final store = AppStore.empty(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)));
     final cat = _unbudgetedCategory(store);
     await tester.pumpWidget(
         _host(store, home: EditBudgetScreen(categoryId: cat.id)));
@@ -157,7 +158,7 @@ void main() {
 
   testWidgets('Edit goal shows a centred title and no pill', (tester) async {
     _size(tester, 390, 844);
-    final store = AppStore.empty();
+    final store = AppStore.empty(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)));
     final goal = _oneGoal(store);
     await tester.pumpWidget(
         _host(store, home: EditGoalScreen(goalId: goal.id)));
@@ -169,7 +170,7 @@ void main() {
   testWidgets('Edit budget (category already budgeted) shows a title, no pill',
       (tester) async {
     _size(tester, 390, 844);
-    final store = AppStore.empty();
+    final store = AppStore.empty(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)));
     final cat = _unbudgetedCategory(store);
     store.updateBudget(cat, monthlyBudget: 200);
     await tester.pumpWidget(
@@ -193,7 +194,7 @@ void main() {
   testWidgets('tapping the New goal pill opens the menu with the check on '
       '"New goal"', (tester) async {
     _size(tester, 390, 844);
-    await tester.pumpWidget(_host(AppStore.empty(), home: const EditGoalScreen()));
+    await tester.pumpWidget(_host(AppStore.empty(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32))), home: const EditGoalScreen()));
 
     await tester.tap(find.byType(TypePill));
     await tester.pumpAndSettle();
@@ -213,7 +214,7 @@ void main() {
   testWidgets('tapping the New budget pill opens the menu with the check on '
       '"New budget"', (tester) async {
     _size(tester, 390, 844);
-    final store = AppStore.empty();
+    final store = AppStore.empty(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)));
     final cat = _unbudgetedCategory(store);
     await tester.pumpWidget(
         _host(store, home: EditBudgetScreen(categoryId: cat.id)));
@@ -237,7 +238,7 @@ void main() {
   testWidgets('from New goal, picking Expense pops the goal screen and lands on '
       'QuickAddScreen (expense)', (tester) async {
     _size(tester, 390, 844);
-    await tester.pumpWidget(_goalFlowHost(AppStore.empty()));
+    await tester.pumpWidget(_goalFlowHost(AppStore.empty(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)))));
     await tester.tap(find.text('open'));
     await tester.pumpAndSettle();
     expect(find.byType(EditGoalScreen), findsOneWidget);
@@ -259,7 +260,7 @@ void main() {
   testWidgets('from New goal, picking New budget lands on the budget screen',
       (tester) async {
     _size(tester, 390, 844);
-    final store = AppStore.empty();
+    final store = AppStore.empty(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)));
     _unbudgetedCategory(store);
     await tester.pumpWidget(_goalFlowHost(store));
     await tester.tap(find.text('open'));
@@ -281,7 +282,7 @@ void main() {
   testWidgets('picking "New goal" on the New goal screen closes the sheet and '
       'leaves the screen mounted with fields untouched', (tester) async {
     _size(tester, 390, 844);
-    await tester.pumpWidget(_host(AppStore.empty(), home: const EditGoalScreen()));
+    await tester.pumpWidget(_host(AppStore.empty(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32))), home: const EditGoalScreen()));
 
     // Type a name (first field is Goal name), then re-pick the current type.
     await tester.enterText(find.byType(TextField).first, 'Holiday');
@@ -301,7 +302,7 @@ void main() {
   testWidgets('a half-filled goal name is discarded silently when the type is '
       'switched — no confirmation dialog', (tester) async {
     _size(tester, 390, 844);
-    await tester.pumpWidget(_goalFlowHost(AppStore.empty()));
+    await tester.pumpWidget(_goalFlowHost(AppStore.empty(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)))));
     await tester.tap(find.text('open'));
     await tester.pumpAndSettle();
 
@@ -393,12 +394,12 @@ void main() {
 
       // New goal.
       await tester.pumpWidget(
-          _host(AppStore.empty(), home: const EditGoalScreen(), locale: Locale(code)));
+          _host(AppStore.empty(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32))), home: const EditGoalScreen(), locale: Locale(code)));
       await tester.pump();
       expect(tester.takeException(), isNull, reason: 'New goal overflow in $code');
 
       // New budget.
-      final store = AppStore.empty();
+      final store = AppStore.empty(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)));
       final cat = _unbudgetedCategory(store);
       await tester.pumpWidget(_host(store,
           home: EditBudgetScreen(categoryId: cat.id), locale: Locale(code)));

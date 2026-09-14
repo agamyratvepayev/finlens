@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:finlens/core/models/models.dart';
 import 'package:finlens/core/store/app_store.dart';
+import 'package:finlens/core/utils/clock.dart';
 import 'package:finlens/features/ledger/ledger_scope.dart';
 import 'package:finlens/features/ledger/widgets/ledger_txn_row.dart';
 import 'package:finlens/l10n/app_localizations.dart';
@@ -40,7 +41,7 @@ Category _cat(String id) => Category(
       color: const Color(0xFF30D158),
     );
 
-AppStore _store(List<Account> accounts, {List<Txn> txns = const []}) => AppStore(
+AppStore _store(List<Account> accounts, {List<Txn> txns = const []}) => AppStore(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)), 
       accounts: accounts,
       categories: [_cat('c-cat')],
       txns: txns,

@@ -4,6 +4,7 @@ import 'package:flutter/widgets.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 import '../persistence/sync_store.dart';
+import '../utils/clock.dart';
 import 'api_client.dart';
 import 'sync_config.dart';
 import 'sync_engine.dart';
@@ -14,10 +15,15 @@ import 'sync_models.dart';
 /// and a syncing/offline status flicker must not trigger full DB rewrites.
 /// Distributed via [SyncScope], mirroring StoreScope's `of`/`read` contract.
 class SyncController extends ChangeNotifier {
-  SyncController(this._syncStore, this._api);
+  SyncController(this._syncStore, this._api, {this._clock = Clock.system});
 
   final SyncStore _syncStore;
   final SyncApiClient _api;
+
+  /// The one clock (spec §1): `_lastSyncedAt` is a real-world event time, so in
+  /// production this reads the real clock — but through the injected [Clock], so
+  /// there is no second wall-clock read in `lib/`.
+  final Clock _clock;
 
   String? _token;
   AuthUser? _user;
@@ -225,7 +231,7 @@ class SyncController extends ChangeNotifier {
   }
 
   Future<void> reportSynced() async {
-    _lastSyncedAt = DateTime.now();
+    _lastSyncedAt = _clock.now();
     await _syncStore.setMeta(
       SyncStore.kLastSyncedAt,
       '${_lastSyncedAt!.millisecondsSinceEpoch}',

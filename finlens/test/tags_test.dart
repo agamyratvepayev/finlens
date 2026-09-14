@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:finlens/core/models/models.dart';
 import 'package:finlens/core/store/app_store.dart';
+import 'package:finlens/core/utils/clock.dart';
 import 'package:finlens/features/ledger/trans_filter.dart';
 import 'package:finlens/features/more/tag_management_screen.dart';
 import 'package:finlens/features/quick_add/tag_picker_sheet.dart';
@@ -41,7 +42,7 @@ Txn _exp(String id, DateTime date, List<String> tagIds) => Txn(
     );
 
 AppStore _store({List<Txn> txns = const [], List<Tag> tags = const []}) =>
-    AppStore(
+    AppStore(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)), 
       accounts: [_acc('a1')],
       categories: [_cat('c1')],
       txns: txns,

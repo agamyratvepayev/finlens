@@ -51,14 +51,14 @@ class GoalDetailScreen extends StatelessWidget {
     final isArchived = goal.status != GoalStatus.active;
     // §3 — frozen at the day the goal ended; a data-error goal with no end date
     // falls back to today rather than crashing.
-    final asOf = isArchived ? (goal.endedAt ?? AppStore.today) : null;
+    final asOf = isArchived ? (goal.endedAt ?? store.today) : null;
     final reachedOutcome = goal.status == GoalStatus.reached;
 
     final m = store.goalMetrics(goal, asOf: asOf);
     // The archived body never reads the live verdict: its outcome comes from
     // completedAt / stoppedAt, so a source archived after the goal ended cannot
     // rewrite it to "source unavailable" (§3).
-    final verdict = isArchived ? null : goalVerdict(l, goal, m);
+    final verdict = isArchived ? null : goalVerdict(l, goal, m, store.today);
 
     // §10 — SafeArea keeps bottom:false so the top bar can hug the notch, which
     // means the scroll view itself must clear the home indicator: the safe-area
@@ -90,7 +90,10 @@ class GoalDetailScreen extends StatelessWidget {
                     _ArchiveActions(store: store, goal: goal),
                   // Forecasts (rate/projection/pace) are replaced by the frozen
                   // outcome on an archived record (§2.5).
-                  if (isArchived) _outcome(l, goal, m) else _columns(l, m),
+                  if (isArchived)
+                    _outcome(l, goal, m, store.today)
+                  else
+                    _columns(l, m, store.today),
                   _watching(context, l, store, goal, m),
                   if (goal.source.isAccount)
                     _movements(context, l, store, goal, asOf: asOf),
@@ -145,7 +148,7 @@ class GoalDetailScreen extends StatelessWidget {
                 const SizedBox(height: 1),
                 if (isArchived)
                   Text(
-                    _outcomeLine(l, goal, reachedOutcome),
+                    _outcomeLine(l, goal, reachedOutcome, store.today),
                     style: AppText.caption.copyWith(
                       height: 1.2,
                       color: reachedOutcome
@@ -172,8 +175,9 @@ class GoalDetailScreen extends StatelessWidget {
   /// The header line on an archived goal: `Reached on 14 May 2026` /
   /// `Stopped on 3 Apr 2026`. Deliberately not [goalVerdict] — that is written
   /// for live goals and the Goals-tab card depends on it unchanged (§2.5).
-  String _outcomeLine(AppLocalizations l, Goal goal, bool reachedOutcome) {
-    final on = goal.endedAt ?? AppStore.today;
+  String _outcomeLine(
+      AppLocalizations l, Goal goal, bool reachedOutcome, DateTime today) {
+    final on = goal.endedAt ?? today;
     return reachedOutcome
         ? l.goalOutcomeReachedOn(dayMonthYear(on, l))
         : l.goalOutcomeStoppedOn(dayMonthYear(on, l));
@@ -257,8 +261,8 @@ class GoalDetailScreen extends StatelessWidget {
 
   // ── STARTED · TARGET · AT THIS RATE ────────────────────────────────────────
 
-  Widget _columns(AppLocalizations l, GoalMetrics m) {
-    final now = AppStore.today;
+  Widget _columns(AppLocalizations l, GoalMetrics m, DateTime today) {
+    final now = today;
     final started = DateTime(now.year, now.month - m.monthsElapsed, now.day);
     // AT THIS RATE lands amber when it falls after TARGET, positive when before,
     // neutral when there is nothing to project (§5).
@@ -347,9 +351,9 @@ class GoalDetailScreen extends StatelessWidget {
   /// archived goal (§2.5). Reached: `TARGET · REACHED ON · TOOK`. Abandoned:
   /// `TARGET · STOPPED ON · GOT TO`. Same geometry as the app's other
   /// three-column stat cards.
-  Widget _outcome(AppLocalizations l, Goal goal, GoalMetrics m) {
+  Widget _outcome(AppLocalizations l, Goal goal, GoalMetrics m, DateTime today) {
     final reachedOutcome = goal.status == GoalStatus.reached;
-    final on = dayMonth(goal.endedAt ?? AppStore.today, l);
+    final on = dayMonth(goal.endedAt ?? today, l);
     final List<({String label, Widget value})> cols = reachedOutcome
         ? [
             (label: l.goalColTarget, value: _outcomeAmount(m.target)),
@@ -437,7 +441,7 @@ class GoalDetailScreen extends StatelessWidget {
   ) {
     if (goal.source.isCategory) {
       final cat = store.categoryById(goal.source.id);
-      final windowEnd = goal.targetDate ?? AppStore.today;
+      final windowEnd = goal.targetDate ?? store.today;
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

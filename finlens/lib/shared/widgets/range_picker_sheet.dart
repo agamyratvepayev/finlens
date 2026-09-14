@@ -167,12 +167,12 @@ class _PresetList extends StatelessWidget {
   }
 
   Widget _presetRow(BuildContext context, RangePreset preset, AppLocalizations l) {
+    final today = StoreScope.of(context).today;
     final active = current.preset == preset;
-    final resolved = preset.resolve(AppStore.today);
+    final resolved = preset.resolve(today);
     // `All time` earns its trailing label most: nothing else on the sheet says
     // when the data begins (spec §1.1).
-    final resolvedLabel =
-        resolved.label(AppStore.today, l, firstEver: firstData);
+    final resolvedLabel = resolved.label(today, l, firstEver: firstData);
     return Semantics(
       button: true,
       selected: active,
@@ -229,16 +229,17 @@ class _PresetList extends StatelessWidget {
   Widget _customRow(BuildContext context, AppLocalizations l) {
     // While a custom range is live, the row says which one — otherwise the only
     // way to learn the active custom window is to open the calendar (spec §1.2).
+    final today = StoreScope.of(context).today;
     final isCustom = current.preset == null;
     final sub = isCustom
-        ? '${current.label(AppStore.today, l)} · ${l.insDaysCount(current.days)}'
+        ? '${current.label(today, l)} · ${l.insDaysCount(current.days)}'
         : null;
     return Semantics(
       button: true,
       // "Select date range, currently 5–9 Aug, 5 days." (spec §9).
       label: isCustom
           ? l.insA11yCustomRow(
-              current.label(AppStore.today, l), l.insDaysCount(current.days))
+              current.label(today, l), l.insDaysCount(current.days))
           : l.insSelectDateRange,
       child: ExcludeSemantics(
         child: InkWell(
@@ -304,7 +305,7 @@ class _CustomRange extends StatelessWidget {
       children: [
         _SheetTitle(l.insSelectDateRange),
         RangeCalendar(
-          today: AppStore.today,
+          today: StoreScope.of(context).today,
           hasData: hasData,
           countBetween: countBetween,
           disableFuture: disableFuture,

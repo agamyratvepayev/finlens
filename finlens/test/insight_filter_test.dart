@@ -14,7 +14,7 @@ import 'package:finlens/features/insight/insight_screen.dart';
 /// waterfall residual, and the grid-selection rule. These are the tests that
 /// prove the filtered screen still closes both identities and never lies.
 void main() {
-  final today = AppStore.today; // 2026-08-09
+  final today = DateTime(2026, 8, 9); // 2026-08-09
   final august = RangePreset.thisMonth.resolve(today);
   final customJulAug = DateRange(
       DateTime(2026, 7, 15), DateTime(2026, 8, 15, 23, 59, 59, 999));

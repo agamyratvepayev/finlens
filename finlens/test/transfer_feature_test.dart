@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:finlens/core/models/models.dart';
 import 'package:finlens/core/store/app_store.dart';
+import 'package:finlens/core/utils/clock.dart';
 import 'package:finlens/features/ledger/ledger_scope.dart';
 import 'package:finlens/features/ledger/transfer_detail_screen.dart';
 import 'package:finlens/theme/app_theme.dart';
@@ -31,7 +32,7 @@ Category _cat(String id, String name) => Category(
       color: Colors.orange,
     );
 
-AppStore _store() => AppStore(
+AppStore _store() => AppStore(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)), 
       accounts: [_acc('a1', 'Main Checking'), _acc('a2', 'Savings')],
       categories: [_cat('c1', 'Groceries')],
       txns: const <Txn>[],
@@ -132,7 +133,7 @@ void main() {
   group('§6 — cross-currency keeps each leg in its own currency and a rate', () {
     test('the source and destination amounts and the rate are all preserved',
         () {
-      final store = AppStore(
+      final store = AppStore(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)), 
         accounts: [
           _acc('u', 'USD Account', currency: 'USD'),
           _acc('e', 'EUR Account', currency: 'EUR'),

@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:finlens/core/models/models.dart';
 import 'package:finlens/core/store/app_store.dart';
+import 'package:finlens/core/utils/clock.dart';
 import 'package:finlens/features/planner/edit_goal_screen.dart';
 import 'package:finlens/l10n/app_localizations.dart';
 import 'package:finlens/shared/widgets/form_fields.dart';
@@ -60,7 +61,7 @@ void main() {
   }
 
   AppStore storeWithOneAccount(String currency, AccountGroup group) {
-    final s = AppStore.empty();
+    final s = AppStore.empty(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)));
     s.addAccount(
       name: 'Vault',
       group: group,
@@ -74,7 +75,7 @@ void main() {
       'typing a monthly amount derives the date, dims that row, and switches '
       'the caption', (tester) async {
     phone(tester);
-    await tester.pumpWidget(wrap(AppStore.empty()));
+    await tester.pumpWidget(wrap(AppStore.empty(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)))));
 
     // Untouched: both halves read "Not set" and the caption is the "either" line.
     expect(find.text('Set either one — the other follows.'), findsOneWidget);
@@ -96,7 +97,7 @@ void main() {
       'the reverse — picking a date derives the monthly figure and switches '
       'the caption', (tester) async {
     phone(tester);
-    await tester.pumpWidget(wrap(AppStore.empty()));
+    await tester.pumpWidget(wrap(AppStore.empty(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)))));
 
     await tester.enterText(fieldInRow('Target amount'), '12000');
     await tester.pump();
@@ -117,7 +118,7 @@ void main() {
   testWidgets('the name clear button appears only when filled and keeps focus',
       (tester) async {
     phone(tester);
-    await tester.pumpWidget(wrap(AppStore.empty()));
+    await tester.pumpWidget(wrap(AppStore.empty(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)))));
 
     // Empty name → no clear button, but its slot is reserved.
     expect(find.byIcon(Icons.close_rounded), findsNothing);
@@ -140,7 +141,7 @@ void main() {
   testWidgets('Watching and Monthly read "Not set" and no instruction leaks in',
       (tester) async {
     phone(tester);
-    await tester.pumpWidget(wrap(AppStore.empty()));
+    await tester.pumpWidget(wrap(AppStore.empty(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)))));
 
     // None of the retired instruction strings render as a value anywhere.
     expect(find.text('Choose what to watch'), findsNothing);
@@ -159,7 +160,7 @@ void main() {
   testWidgets('Target amount, Target date, Monthly and Watching are equal height',
       (tester) async {
     phone(tester);
-    await tester.pumpWidget(wrap(AppStore.empty()));
+    await tester.pumpWidget(wrap(AppStore.empty(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)))));
 
     final h = {
       for (final label in ['Watching', 'Target amount', 'Target date', 'Monthly'])
@@ -176,7 +177,7 @@ void main() {
   testWidgets('the chip and the plain code share a right edge with the values',
       (tester) async {
     phone(tester);
-    await tester.pumpWidget(wrap(AppStore.empty()));
+    await tester.pumpWidget(wrap(AppStore.empty(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)))));
 
     // The locked chip (Target amount) — a Tooltip wraps it.
     final chipRight = tester.getRect(find.byType(Tooltip)).right;
@@ -229,7 +230,7 @@ void main() {
   testWidgets('New account renders in full at 320pt with its description below',
       (tester) async {
     narrow(tester);
-    await tester.pumpWidget(wrap(AppStore.empty()));
+    await tester.pumpWidget(wrap(AppStore.empty(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)))));
 
     await tester.tap(find.text('Watching'));
     await tester.pumpAndSettle();
@@ -248,7 +249,7 @@ void main() {
 
   testWidgets('the picker shows an empty state with no sources', (tester) async {
     phone(tester);
-    await tester.pumpWidget(wrap(AppStore.empty()));
+    await tester.pumpWidget(wrap(AppStore.empty(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)))));
 
     await tester.tap(find.text('Watching'));
     await tester.pumpAndSettle();
@@ -270,7 +271,7 @@ void main() {
     };
     for (final entry in cases.entries) {
       phone(tester);
-      await tester.pumpWidget(wrap(AppStore.empty(), locale: Locale(entry.key)));
+      await tester.pumpWidget(wrap(AppStore.empty(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32))), locale: Locale(entry.key)));
       await tester.tap(find.text('Watching').first);
       await tester.pumpAndSettle();
       expect(find.text(entry.value), findsOneWidget,
@@ -285,7 +286,7 @@ void main() {
       'regression (§7): entering a monthly value then disposing throws no '
       'FlutterError', (tester) async {
     phone(tester);
-    await tester.pumpWidget(wrap(AppStore.empty()));
+    await tester.pumpWidget(wrap(AppStore.empty(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)))));
 
     await tester.enterText(fieldInRow('Target amount'), '6000');
     await tester.enterText(fieldInRow('Monthly'), '250');
@@ -301,7 +302,7 @@ void main() {
 
   testWidgets('Watching · nothing picked → "Not set", no chip', (tester) async {
     phone(tester);
-    await tester.pumpWidget(wrap(AppStore.empty()));
+    await tester.pumpWidget(wrap(AppStore.empty(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)))));
 
     final row = rowByLabel('Watching');
     expect(find.descendant(of: row, matching: find.text('Not set')),
@@ -322,7 +323,7 @@ void main() {
       'Watching · New account picked → value is exactly "New account", no chip, '
       'no goal name', (tester) async {
     phone(tester);
-    await tester.pumpWidget(wrap(AppStore.empty()));
+    await tester.pumpWidget(wrap(AppStore.empty(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)))));
 
     // Name the goal first — the row must not echo it.
     await tester.enterText(nameField(), 'Macbook Pro M4');
@@ -358,7 +359,7 @@ void main() {
       'Watching · existing account picked → name preceded by its coloured chip',
       (tester) async {
     phone(tester);
-    final store = AppStore.empty();
+    final store = AppStore.empty(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)));
     final acc = store.addAccount(
       name: 'USD Wallet',
       group: AccountGroup.spendable,
@@ -392,7 +393,7 @@ void main() {
       'renaming the goal does not change the Watching row (New account)',
       (tester) async {
     phone(tester);
-    await tester.pumpWidget(wrap(AppStore.empty()));
+    await tester.pumpWidget(wrap(AppStore.empty(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)))));
 
     await tester.tap(find.text('Watching'));
     await tester.pumpAndSettle();
@@ -418,7 +419,7 @@ void main() {
       'row heights: the single-line Watching row is shorter than the two-line '
       '"Done once reached" row', (tester) async {
     phone(tester);
-    await tester.pumpWidget(wrap(AppStore.empty()));
+    await tester.pumpWidget(wrap(AppStore.empty(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)))));
 
     final single = tester.getSize(rowByLabel('Watching')).height;
     final twoLine = tester.getSize(rowByLabel('Done once reached')).height;

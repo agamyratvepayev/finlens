@@ -23,7 +23,7 @@ Widget _app(AppStore store, Widget home) => StoreScope(
       ),
     );
 
-DateRange _thisMonth() => RangePreset.thisMonth.resolve(AppStore.today);
+DateRange _thisMonth() => RangePreset.thisMonth.resolve(DateTime(2026, 8, 9));
 
 void main() {
   // ── Unit — the preset list is shared (spec §1.4 / §12) ─────────────────────
@@ -74,7 +74,7 @@ void main() {
     final store = buildSeedStore();
     final w = _thisMonth();
     final before = w.start.subtract(const Duration(days: 1));
-    final end = w.end.isAfter(AppStore.today) ? AppStore.today : w.end;
+    final end = w.end.isAfter(DateTime(2026, 8, 9)) ? DateTime(2026, 8, 9) : w.end;
 
     // Unfiltered: netWorthOn(before) + change == netWorthOn(end).
     expect(

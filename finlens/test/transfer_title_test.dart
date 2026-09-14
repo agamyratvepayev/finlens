@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:finlens/core/models/models.dart';
 import 'package:finlens/core/store/app_store.dart';
+import 'package:finlens/core/utils/clock.dart';
 import 'package:finlens/shared/widgets/transfer_title.dart';
 import 'package:finlens/shared/widgets/txn_row.dart';
 import 'package:finlens/theme/app_colors.dart';
@@ -27,7 +28,7 @@ Txn _transfer(String from, String to, {String note = ''}) => Txn(
       note: note,
     );
 
-AppStore _store() => AppStore(
+AppStore _store() => AppStore(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)), 
       accounts: [_acc('a1', 'Main Checking'), _acc('a2', 'Main Credit Card')],
       categories: const <Category>[],
       txns: const <Txn>[],

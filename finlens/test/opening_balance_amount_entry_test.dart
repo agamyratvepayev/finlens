@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:finlens/core/models/models.dart';
 import 'package:finlens/core/store/app_store.dart';
+import 'package:finlens/core/utils/clock.dart';
 import 'package:finlens/features/balance/opening_balance_sheet.dart';
 import 'package:finlens/features/quick_add/widgets/amount_hero.dart';
 import 'package:finlens/l10n/app_localizations.dart';
@@ -28,7 +29,7 @@ Account _asset(String id, String name, double opening,
       openingDate: DateTime(2026, 8, 1),
     );
 
-AppStore _store(List<Account> accounts) => AppStore(
+AppStore _store(List<Account> accounts) => AppStore(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)), 
       accounts: accounts,
       categories: const <Category>[],
       txns: const <Txn>[],

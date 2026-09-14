@@ -241,11 +241,13 @@ String hhmm(DateTime d) =>
 
 /// "Today, 14:32" / "Tomorrow, 09:00" / "9 Aug, 14:32" / "9 Aug 2025, 14:32".
 ///
-/// [now] exists because the app pins its reference date rather than reading the
-/// wall clock — comparing against `DateTime.now()` made a transaction dated
-/// "today" render as an absolute date whenever the two disagreed.
-String dateTimeLabel(DateTime d, AppLocalizations l, {DateTime? now}) {
-  final today = now ?? DateTime.now();
+/// [now] is required and comes from the app's one clock (`store.today`/
+/// `store.now`) — never the wall clock. Comparing against a second wall-clock
+/// read made a transaction dated "today" render as an absolute date whenever the
+/// two disagreed (spec §2). A model/formatter must be handed the reference date,
+/// not read one of its own.
+String dateTimeLabel(DateTime d, AppLocalizations l, {required DateTime now}) {
+  final today = now;
   final day = DateTime(d.year, d.month, d.day);
   final base = DateTime(today.year, today.month, today.day);
   final delta = day.difference(base).inDays;
@@ -272,17 +274,20 @@ String dateTimeLabel(DateTime d, AppLocalizations l, {DateTime? now}) {
 /// caller (it depends on the device's 12-/24-hour setting, which needs a
 /// `BuildContext`); this returns only the date half: "9 Aug" this year,
 /// "9 Aug 2025" otherwise.
-String dateAbsolute(DateTime d, AppLocalizations l, {DateTime? now}) {
-  final today = now ?? DateTime.now();
+String dateAbsolute(DateTime d, AppLocalizations l, {required DateTime now}) {
+  final today = now;
   return d.year == today.year ? dayMonth(d, l) : dayMonthYear(d, l);
 }
 
 /// Ledger date-group headings: "Today", "Yesterday · 8 Aug", "7 Aug".
-String dateGroupLabel(DateTime d, AppLocalizations l) {
-  final now = DateTime.now();
-  final today = DateTime(now.year, now.month, now.day);
+///
+/// [today] comes from the app's one clock (`store.today`), passed in — never a
+/// second wall-clock read. A heading computed from a different clock than the
+/// rows it sits over is the same bug wearing a smaller hat (spec §2).
+String dateGroupLabel(DateTime d, AppLocalizations l, DateTime today) {
+  final ref = DateTime(today.year, today.month, today.day);
   final day = DateTime(d.year, d.month, d.day);
-  final diff = today.difference(day).inDays;
+  final diff = ref.difference(day).inDays;
   if (diff == 0) return l.dateToday;
   if (diff == 1) return l.dateGroupYesterday(dayMonth(d, l));
   return dayMonth(d, l);

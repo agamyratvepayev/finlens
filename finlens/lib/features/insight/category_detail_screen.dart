@@ -41,9 +41,6 @@ class CategoryDetailScreen extends StatelessWidget {
   static const _periods = 6;
   static const _eps = 0.005;
 
-  DateTime get _startOfToday =>
-      DateTime(AppStore.today.year, AppStore.today.month, AppStore.today.day);
-
   @override
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
@@ -64,7 +61,7 @@ class CategoryDetailScreen extends StatelessWidget {
 
     final window = store.insightWindow;
     final expense = category.type == CategoryType.expense;
-    final today = _startOfToday;
+    final today = store.today;
 
     double valueOf(DateRange w) => expense
         ? store.spentInCategoryWindow(categoryId, w)
@@ -122,8 +119,8 @@ class CategoryDetailScreen extends StatelessWidget {
     // the window's name — a comparison of six periods has to say what it is
     // comparing (spec §6.2).
     final heroLabel = currentPartial
-        ? elapsedWindow.label(AppStore.today, l)
-        : insightWindowLabel(window, l);
+        ? elapsedWindow.label(store.today, l)
+        : insightWindowLabel(window, l, store.today);
 
     final labels = [
       for (var i = 0; i < windows.length; i++)
@@ -268,7 +265,7 @@ class CategoryDetailScreen extends StatelessWidget {
   void _step(BuildContext context, int steps) {
     final store = StoreScope.read(context);
     final w = store.insightWindow;
-    if (steps > 0 && !w.end.isBefore(_startOfToday)) return;
+    if (steps > 0 && !w.end.isBefore(store.today)) return;
     HapticFeedback.lightImpact();
     store.setInsightWindow(w.copyShifted(steps));
   }
@@ -312,10 +309,10 @@ class CategoryDetailScreen extends StatelessWidget {
           23, 59, 59, 999);
       final prevElapsed = DateRange(ps, pe);
       prev = valueOf(prevElapsed);
-      rangeLabel = prevElapsed.label(AppStore.today, l);
+      rangeLabel = prevElapsed.label(store.today, l);
     } else {
       prev = valueOf(prevWindow);
-      rangeLabel = insightWindowLabel(prevWindow, l);
+      rangeLabel = insightWindowLabel(prevWindow, l, store.today);
     }
 
     if (prev <= _eps) {

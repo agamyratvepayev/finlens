@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:finlens/core/models/models.dart';
 import 'package:finlens/core/store/app_store.dart';
+import 'package:finlens/core/utils/clock.dart';
 import 'package:finlens/features/balance/balance_filter.dart';
 import 'package:finlens/main.dart';
 
@@ -17,7 +18,7 @@ void main() {
   // The store's fire-and-forget preference writes need a mock backing store.
   setUp(() => SharedPreferences.setMockInitialValues(<String, Object>{}));
 
-  AppStore emptyStore() => AppStore(
+  AppStore emptyStore() => AppStore(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)), 
         accounts: const [],
         categories: const [],
         txns: const [],
@@ -26,7 +27,7 @@ void main() {
       );
 
   AppStore oneAccountStore({double balance = 100}) {
-    final store = AppStore(
+    final store = AppStore(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)), 
       accounts: const [],
       categories: const [],
       txns: const [],
@@ -236,7 +237,7 @@ void main() {
 
   testWidgets('two accounts summing to zero show \$0 and the full header — '
       'not a new user', (tester) async {
-    final store = AppStore(
+    final store = AppStore(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)), 
       accounts: const [],
       categories: const [],
       txns: const [],

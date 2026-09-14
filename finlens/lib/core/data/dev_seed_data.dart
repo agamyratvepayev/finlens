@@ -13,15 +13,17 @@
 /// marked by an id prefix ([kDevSeedIdPrefix]) so they can be told apart from
 /// any real record without polluting a user-visible field.
 ///
-/// The generator is deterministic: a fixed RNG seed and dates anchored to
-/// [AppStore.today] mean every build produces the same data, and it shifts with
-/// the app's clock rather than going stale.
+/// The generator is deterministic: a fixed RNG seed and dates anchored to a
+/// pinned reference day (9 Aug 2026, the mockups' instant) mean every build
+/// produces exactly the same data, and the fixture's own clock is pinned to that
+/// day so its August history sits in the current period.
 library;
 
 import 'dart:math';
 
 import '../models/models.dart';
 import '../store/app_store.dart';
+import '../utils/clock.dart';
 import 'seed_data.dart';
 
 /// Prefix stamped on every seeded transaction's id. This is the marker used to
@@ -86,7 +88,12 @@ List<Txn> buildDevTxns(DateTime today) => _Gen(today)._run();
 /// back-computed so documented targets hold) plus the seeded history.
 AppStore buildDevSeedStore() {
   final prod = buildSeedStore();
-  final today = AppStore.today;
+  // The debug fixture pins the same 9 Aug 2026 instant the mockups are authored
+  // around, so its rich August history sits in the current period and the app is
+  // populated for development (it also keeps this generator's balance
+  // reconciliation reproducible). Production, by contrast, reads the real clock.
+  final clock = Clock.fixed(DateTime(2026, 8, 9, 14, 32));
+  final today = DateTime(2026, 8, 9, 14, 32);
   final devTxns = buildDevTxns(today);
 
   // Sum each account's signed contribution using the canonical ledger rule
@@ -99,6 +106,7 @@ AppStore buildDevSeedStore() {
   // migration would then mis-read those ids as names. [buildDevTxns] is pure, so
   // a second call is a clean, independent copy.
   final probe = AppStore(
+    clock: clock,
     accounts: [for (final a in prod.accounts) _withOpening(a, 0)],
     categories: prod.categories,
     txns: buildDevTxns(today),
@@ -113,6 +121,7 @@ AppStore buildDevSeedStore() {
   ];
 
   return AppStore(
+    clock: clock,
     accounts: devAccounts,
     categories: prod.categories,
     txns: devTxns,

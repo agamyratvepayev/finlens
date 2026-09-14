@@ -63,9 +63,9 @@ class SeeAllScreen extends StatelessWidget {
     final filterActive = accFilter.isActive || catHidden.isNotEmpty;
 
     final subtitle = filtered
-        ? '${insightWindowLabel(window, l)} · '
+        ? '${insightWindowLabel(window, l, store.today)} · '
             '${l.insCategoriesShown(rows.length, fullRows.length)}'
-        : '${insightWindowLabel(window, l)} · '
+        : '${insightWindowLabel(window, l, store.today)} · '
             '${l.insCategoriesCount(fullRows.length)}';
 
     return Scaffold(

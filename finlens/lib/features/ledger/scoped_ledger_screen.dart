@@ -144,7 +144,7 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
     final unit = scope is AccountScope
         ? store.accountPeriodUnit
         : store.categoryPeriodUnit;
-    return currentPresetFor(unit).resolve(AppStore.today);
+    return currentPresetFor(unit).resolve(store.today);
   }
 
   /// Persist the chosen unit under this screen's type — account screens share
@@ -1270,7 +1270,7 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
       account.currency,
       target.currency,
     );
-    store.setOpeningBalance(target, amount: converted, date: AppStore.today);
+    store.setOpeningBalance(target, amount: converted, date: store.today);
     if (!mounted) return;
     showOpeningBalanceSheet(context, target.id);
   }
@@ -1349,7 +1349,7 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
 
   Future<void> _pickRange(AppStore store) async {
     setState(() => _rangeSheetOpen = true);
-    final today = AppStore.today;
+    final today = store.today;
     final picked = await showModalBottomSheet<RangePreset>(
       context: context,
       backgroundColor: AppColors.surfaceAlt,

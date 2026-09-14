@@ -28,7 +28,7 @@ Widget _chip(
           body: Align(
             alignment: Alignment.topCenter,
             child: PeriodRow(
-              range: RangePreset.thisMonth.resolve(AppStore.today),
+              range: RangePreset.thisMonth.resolve(DateTime(2026, 8, 9)),
               totalIn: totalIn,
               totalOut: totalOut,
               filter: null,
@@ -79,7 +79,7 @@ void main() {
     final chip = tester.getRect(find.byType(PeriodRow));
     final label = tester.getRect(
       find.text(
-        RangePreset.thisMonth.resolve(AppStore.today).label(AppStore.today, AppLocalizationsEn()),
+        RangePreset.thisMonth.resolve(DateTime(2026, 8, 9)).label(DateTime(2026, 8, 9), AppLocalizationsEn()),
       ),
     );
 

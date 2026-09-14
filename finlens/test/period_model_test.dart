@@ -3,10 +3,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:finlens/core/models/models.dart';
 import 'package:finlens/core/store/app_store.dart';
+import 'package:finlens/core/utils/clock.dart';
 import 'package:finlens/core/utils/date_range.dart';
 import 'package:finlens/features/ledger/ledger_scope.dart';
 
-final _today = AppStore.today; // 2026-08-09 14:32
+final _today = DateTime(2026, 8, 9); // 2026-08-09
 
 DateTime _d(int y, int m, int day) => DateTime(y, m, day);
 
@@ -93,7 +94,7 @@ void main() {
   group('in/out totals for one account (index-backed query)', () {
     late AppStore store;
     setUp(() {
-      store = AppStore(
+      store = AppStore(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)), 
         accounts: [_acc('A'), _acc('B'), _acc('C')],
         categories: const <Category>[],
         txns: [

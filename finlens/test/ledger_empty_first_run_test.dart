@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:finlens/core/models/models.dart';
 import 'package:finlens/core/store/app_store.dart';
+import 'package:finlens/core/utils/clock.dart';
 import 'package:finlens/core/utils/formatters.dart' show monthYearLong;
 import 'package:finlens/features/balance/balance_screen.dart' show EmptyState;
 import 'package:finlens/features/ledger/ledger_screen.dart';
@@ -16,7 +17,7 @@ import 'package:finlens/theme/app_theme.dart';
 /// A store with no data of any kind — a genuine fresh install: `store.txns` is
 /// empty, so §1's `everRecorded` is false and the whole instrument panel is
 /// meant to go quiet.
-AppStore _emptyStore() => AppStore(
+AppStore _emptyStore() => AppStore(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)), 
       accounts: const [],
       categories: const [],
       txns: const [],

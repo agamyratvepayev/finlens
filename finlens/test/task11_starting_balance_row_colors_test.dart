@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:finlens/core/models/models.dart';
 import 'package:finlens/core/store/app_store.dart';
+import 'package:finlens/core/utils/clock.dart';
 import 'package:finlens/features/quick_add/pickers.dart';
 import 'package:finlens/features/quick_add/widgets/amount_hero.dart';
 import 'package:finlens/l10n/app_localizations.dart';
@@ -21,7 +22,7 @@ import 'package:finlens/theme/app_theme.dart';
 // typed yet". Empty → the placeholder is dim; filled and unfocused → the whole
 // number is bright (`textPrimary`), with no tertiary anywhere in the figure.
 
-AppStore _store() => AppStore(
+AppStore _store() => AppStore(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)), 
       accounts: [
         Account(
           id: 'a1',

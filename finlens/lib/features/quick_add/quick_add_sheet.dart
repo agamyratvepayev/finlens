@@ -137,7 +137,7 @@ class _QuickAddScreenState extends State<QuickAddScreen>
   late String _currency;
   String? _fromRef;
   String? _toRef;
-  DateTime _date = AppStore.today;
+  late DateTime _date; // primed from the store's clock in initState
   /// Selected tag IDS (not names). Resolved to display names for the field.
   List<String> _tagIds = [];
 
@@ -184,6 +184,9 @@ class _QuickAddScreenState extends State<QuickAddScreen>
   @override
   void initState() {
     super.initState();
+    // The one clock: a new/copied transaction defaults to the real today (spec
+    // §3 — this is the default that stops entries being written to 9 August).
+    final today = StoreScope.read(context).today;
     final source = widget.editing ?? widget.copyOf;
     if (source != null) {
       _type = switch (source.type) {
@@ -197,12 +200,13 @@ class _QuickAddScreenState extends State<QuickAddScreen>
       _fromRef = source.fromRef;
       _toRef = source.toRef;
       // Spec 2.2 — a copy lands on today; an edit keeps its original date.
-      _date = widget.editing != null ? source.date : AppStore.today;
+      _date = widget.editing != null ? source.date : today;
       _tagIds = List.of(source.tagIds);
       _note.text = source.note;
       _hasFee = (source.fee ?? 0) > 0;
       _rateOverride = source.exchangeRate;
     } else {
+      _date = today;
       _type = widget.initialType;
       _fromRef = widget.fixedFromAccountId;
       _toRef = widget.fixedToAccountId;
@@ -432,7 +436,8 @@ class _QuickAddScreenState extends State<QuickAddScreen>
     return FieldSpec(
       icon: Icons.event_rounded,
       label: label ?? l.qaDate,
-      value: l.dateWithTime(dateAbsolute(_date, l, now: AppStore.today), time),
+      value: l.dateWithTime(
+          dateAbsolute(_date, l, now: StoreScope.read(context).today), time),
       onTap: _pickDate,
       // _pickDate raises the app-native date+time bottom sheet.
       opensSheet: true,
@@ -1082,7 +1087,7 @@ class _QuickAddScreenState extends State<QuickAddScreen>
       initial: _date,
       firstDate: DateTime(2020),
       lastDate: DateTime(2035),
-      now: AppStore.today,
+      now: StoreScope.read(context).today,
     );
     if (d == null || !mounted) return;
     setState(() => _date = d);
@@ -1154,7 +1159,7 @@ class _QuickAddScreenState extends State<QuickAddScreen>
         child: Text(
           // Never edited shows the created stamp alone rather than "never
           // edited" — the absence already says it.
-          '${AppLocalizations.of(context).qaCreated(dateTimeLabel(txn.createdAt, AppLocalizations.of(context), now: AppStore.today))}'
+          '${AppLocalizations.of(context).qaCreated(dateTimeLabel(txn.createdAt, AppLocalizations.of(context), now: StoreScope.read(context).today))}'
           '${AppLocalizations.of(context).qaEditedTimes(edits)}',
           textAlign: TextAlign.center,
           style: const TextStyle(

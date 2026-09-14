@@ -41,7 +41,7 @@ Widget _app(
       ),
     );
 
-DateRange _augustMonth() => RangePreset.thisMonth.resolve(AppStore.today);
+DateRange _augustMonth() => RangePreset.thisMonth.resolve(DateTime(2026, 8, 9));
 
 void main() {
   // ── Isolation (§2, §11) ────────────────────────────────────────────────────

@@ -51,7 +51,7 @@ class _OpeningBalanceSheetState extends State<_OpeningBalanceSheet> {
 
   late final double _originalAmount = _account.startingBalance.abs();
   late final DateTime _originalDate = _dayOf(
-    _account.openingDate ?? AppStore.today,
+    _account.openingDate ?? _store.today,
   );
 
   // The amount is held as the literal keys the user pressed ("500", "500.",
@@ -116,7 +116,7 @@ class _OpeningBalanceSheetState extends State<_OpeningBalanceSheet> {
       // An opening balance cannot be dated into the future; the app's reference
       // "today" is the ceiling for the picker itself. The earliest-transaction
       // rule is enforced inline below so an invalid choice is shown, not hidden.
-      lastDate: AppStore.today,
+      lastDate: _store.today,
     );
     if (picked != null) {
       setState(() => _date = _dayOf(picked));

@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:finlens/core/models/models.dart';
 import 'package:finlens/core/store/app_store.dart';
+import 'package:finlens/core/utils/clock.dart';
 import 'package:finlens/core/utils/formatters.dart';
 import 'package:finlens/features/planner/edit_budget_screen.dart';
 import 'package:finlens/features/planner/edit_task_screen.dart';
@@ -27,7 +28,7 @@ AppStore _store({
   List<Task> tasks = const [],
   String currency = 'TMT',
 }) =>
-    AppStore(
+    AppStore(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)), 
       accounts: [
         Account(
           id: 'a1',
@@ -133,7 +134,7 @@ void main() {
         title: 'Rent',
         linkedAccountId: '', // no account chosen yet
         expectedAmount: 0,
-        dueDate: AppStore.today,
+        dueDate: DateTime(2026, 8, 9),
         icon: Icons.home_rounded,
       );
       final store = _store(tasks: [task]);
@@ -153,7 +154,7 @@ void main() {
         title: 'Rent',
         linkedAccountId: 'gone', // resolves to null → base fallback
         expectedAmount: 0,
-        dueDate: AppStore.today,
+        dueDate: DateTime(2026, 8, 9),
         icon: Icons.home_rounded,
       );
       final store = _store(tasks: [task]);

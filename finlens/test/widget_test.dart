@@ -3,7 +3,6 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:finlens/core/data/seed_data.dart';
 import 'package:finlens/core/models/models.dart';
-import 'package:finlens/core/store/app_store.dart';
 import 'package:finlens/main.dart';
 
 void main() {
@@ -75,7 +74,7 @@ void main() {
     store.markTaskPaid(
       task,
       amount: task.expectedAmount.abs(),
-      date: AppStore.today,
+      date: DateTime(2026, 8, 9),
       fromAccountId: task.linkedAccountId,
       toRef: task.categoryId!,
     );

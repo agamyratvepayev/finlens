@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:finlens/core/models/models.dart';
 import 'package:finlens/core/store/app_store.dart';
+import 'package:finlens/core/utils/clock.dart';
 import 'package:finlens/features/balance/balance_screen.dart' show EmptyState;
 import 'package:finlens/features/ledger/ledger_screen.dart'
     show buildFirstRunHint;
@@ -47,7 +48,7 @@ void main() {
     addTearDown(tester.view.reset);
   }
 
-  AppStore emptyStore() => AppStore(
+  AppStore emptyStore() => AppStore(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)), 
         accounts: const [],
         categories: const [],
         txns: const [],
@@ -68,7 +69,7 @@ void main() {
   // empty, but `unbudgetedSpendingCategories(aug)` is not. The tab must NOT show
   // its empty state, and the month control must stay.
   AppStore unbudgetedSpendingStore() {
-    final store = AppStore(
+    final store = AppStore(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)), 
       accounts: [account('a1')],
       categories: [
         Category(
@@ -98,7 +99,7 @@ void main() {
   // A store whose only task falls well past the default Next-30-days horizon:
   // open (so not "no tasks at all") but out of window (so `_nothingDue`, not
   // `_emptyState`).
-  AppStore futureTaskStore() => AppStore(
+  AppStore futureTaskStore() => AppStore(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)), 
         accounts: [account('a1')],
         categories: const [],
         txns: const [],
@@ -118,7 +119,7 @@ void main() {
   // One budgeted category → totalBudget > 0, so the Budgets tab is populated and
   // its summary renders (August 2026 is the current month, so the Pace legend
   // shows).
-  AppStore budgetedStore() => AppStore(
+  AppStore budgetedStore() => AppStore(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)), 
         accounts: [account('a1')],
         categories: [
           Category(
@@ -147,7 +148,7 @@ void main() {
   // A store whose only goal is abandoned: `goals` (active) is empty so the Goals
   // tab shows its empty state, but `archivedCount` is 1 — the ••• must stay, or
   // the archived goal is unreachable.
-  AppStore archivedGoalStore() => AppStore(
+  AppStore archivedGoalStore() => AppStore(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)), 
         accounts: [account('a1')],
         categories: const [],
         txns: const [],
@@ -273,7 +274,7 @@ void main() {
       'scope control', (tester) async {
     bigScreen(tester);
     // Empty budgets, but one goal exists → each header reflects its own tab.
-    final store = AppStore(
+    final store = AppStore(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)), 
       accounts: [account('a1')],
       categories: const [],
       txns: const [],

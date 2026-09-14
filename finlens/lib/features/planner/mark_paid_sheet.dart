@@ -67,7 +67,7 @@ class _MarkPaidSheetState extends State<_MarkPaidSheet> {
   late final bool _payOut = _task.isPayOut;
 
   late String _raw = AmountEntry.fromDouble(_task.expectedAmount.abs());
-  late DateTime _date = AppStore.today;
+  late DateTime _date = _store.today;
 
   /// The account the money leaves (pay-out) or lands in (pay-in).
   late String _fromAccountId = _task.linkedAccountId;

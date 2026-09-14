@@ -3,13 +3,14 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:finlens/core/models/models.dart';
 import 'package:finlens/core/store/app_store.dart';
+import 'package:finlens/core/utils/clock.dart';
 import 'package:finlens/features/quick_add/quick_add_sheet.dart';
 import 'package:finlens/theme/app_theme.dart';
 
 // flutter test hangs on the author's machine — run these yourself:
 //   flutter test test/quick_add_form_test.dart
 
-AppStore _store() => AppStore(
+AppStore _store() => AppStore(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)), 
       accounts: [
         Account(
             id: 'a1',
@@ -146,7 +147,7 @@ void main() {
       date: DateTime(2026, 8, 15),
       recurrenceTaskId: 'k1',
     );
-    final store = AppStore(
+    final store = AppStore(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)), 
       accounts: [
         Account(
             id: 'a1',

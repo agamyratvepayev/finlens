@@ -196,7 +196,7 @@ class ArchiveScreen extends StatelessWidget {
                                   color: c.color,
                                   title: c.name,
                                   subtitle:
-                                      '${l.arTypeBudget} · ${l.arRemovedLine(dayMonth(store.removedOnOf(c) ?? AppStore.today, l))}',
+                                      '${l.arTypeBudget} · ${l.arRemovedLine(dayMonth(store.removedOnOf(c) ?? store.today, l))}',
                                   trailing: _ActionPill(
                                       label: l.actionRestore,
                                       onTap: () => store.restoreBudget(

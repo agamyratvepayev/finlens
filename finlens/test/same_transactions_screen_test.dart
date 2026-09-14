@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:finlens/core/models/models.dart';
 import 'package:finlens/core/store/app_store.dart';
+import 'package:finlens/core/utils/clock.dart';
 import 'package:finlens/features/balance/same_transactions.dart';
 import 'package:finlens/features/balance/same_transactions_screen.dart';
 import 'package:finlens/theme/app_theme.dart';
@@ -20,7 +21,7 @@ Txn tx(String id, TxnType type, String from, String to,
       date: date ?? DateTime(2026, 8, 9),
     );
 
-AppStore storeWith(List<Txn> txns) => AppStore(
+AppStore storeWith(List<Txn> txns) => AppStore(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)), 
       accounts: const <Account>[],
       categories: const <Category>[],
       txns: txns,
@@ -88,7 +89,7 @@ void main() {
 
   testWidgets('a note-less expense row shows the account on line 1, never the '
       'category as a title (spec §4)', (tester) async {
-    final store = AppStore(
+    final store = AppStore(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)), 
       accounts: [_acc('a1', 'Main Checking')],
       categories: [_cat('c1', 'Groceries')],
       txns: [
@@ -117,7 +118,7 @@ void main() {
 
   testWidgets('a transfer row carries no account line — only the header names '
       'the accounts (spec §4)', (tester) async {
-    final store = AppStore(
+    final store = AppStore(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)), 
       accounts: [_acc('a1', 'Main Checking'), _acc('a2', 'Savings')],
       categories: const <Category>[],
       txns: [
@@ -143,7 +144,7 @@ void main() {
 
   // Spec §5/§9 — the one-line stats band must fit at 320pt with four-digit
   // values, and must not clip at 130% text scale (it wraps/grows instead).
-  AppStore band12() => AppStore(
+  AppStore band12() => AppStore(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)), 
         accounts: [_acc('a1', 'Main Checking')],
         categories: [_cat('c1', 'Groceries')],
         txns: [
@@ -208,7 +209,7 @@ void main() {
   // Three expenses on 8–9 Aug (span 1 day) that the old span-based rule hid:
   // with the window as the denominator (Last 3 months, today 9 Aug → 70 days)
   // the honest rate is ~1/month, so the line renders.
-  AppStore eatingOut() => AppStore(
+  AppStore eatingOut() => AppStore(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)), 
         accounts: [_acc('a1', 'Main Checking')],
         categories: [_cat('c1', 'Eating out')],
         txns: [

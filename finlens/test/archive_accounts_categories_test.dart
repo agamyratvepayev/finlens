@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:finlens/core/models/models.dart';
 import 'package:finlens/core/store/app_store.dart';
+import 'package:finlens/core/utils/clock.dart';
 
 // Retiring accounts and categories — store-level acceptance.
 // `flutter test` hangs on the author's machine, so run these yourself:
@@ -70,7 +71,7 @@ AppStore _store({
   List<Goal>? goals,
   List<Task>? tasks,
 }) =>
-    AppStore(
+    AppStore(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)), 
       accounts: accounts ?? [_account('a1', 'Checking')],
       categories: categories ?? [_category('c1', 'Groceries')],
       budgets: budgets ?? const <Budget>[],
@@ -147,7 +148,7 @@ void main() {
 
       expect(cat.archived, isTrue);
       expect(store.monthlyLimitOf(cat), isNull);
-      expect(store.removedOnOf(cat), AppStore.today);
+      expect(store.removedOnOf(cat), store.today);
       // It is now BOTH an archived category and a removed budget — two
       // independently restorable rows.
       expect(store.archivedCategories.map((c) => c.id), contains('c1'));

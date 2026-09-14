@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/store/app_store.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_colors.dart';
@@ -14,12 +13,13 @@ import '../../../theme/app_typography.dart';
 Future<DateTime?> showReportingDateSheet(
   BuildContext context, {
   required DateTime? selected,
+  required DateTime today,
 }) {
   return showModalBottomSheet<DateTime>(
     context: context,
     backgroundColor: AppColors.surfaceAlt,
     isScrollControlled: true,
-    builder: (_) => _DateSheet(selected: selected),
+    builder: (_) => _DateSheet(selected: selected, today: today),
   );
 }
 
@@ -27,9 +27,10 @@ Future<DateTime?> showReportingDateSheet(
 final liveDate = DateTime.utc(1970);
 
 class _DateSheet extends StatefulWidget {
-  const _DateSheet({required this.selected});
+  const _DateSheet({required this.selected, required this.today});
 
   final DateTime? selected;
+  final DateTime today;
 
   @override
   State<_DateSheet> createState() => _DateSheetState();
@@ -37,16 +38,15 @@ class _DateSheet extends StatefulWidget {
 
 class _DateSheetState extends State<_DateSheet> {
   late DateTime _month = DateTime(
-    (widget.selected ?? AppStore.today).year,
-    (widget.selected ?? AppStore.today).month,
+    (widget.selected ?? widget.today).year,
+    (widget.selected ?? widget.today).month,
   );
-  late DateTime _picked = widget.selected ?? AppStore.today;
+  late DateTime _picked = widget.selected ?? widget.today;
 
-  DateTime get _today =>
-      DateTime(AppStore.today.year, AppStore.today.month, AppStore.today.day);
+  DateTime get _today => widget.today;
 
   bool get _canGoNext =>
-      _month.isBefore(DateTime(AppStore.today.year, AppStore.today.month));
+      _month.isBefore(DateTime(widget.today.year, widget.today.month));
 
   @override
   Widget build(BuildContext context) {

@@ -4,7 +4,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:finlens/core/data/dev_seed_data.dart';
 import 'package:finlens/core/data/seed_data.dart';
 import 'package:finlens/core/models/models.dart';
-import 'package:finlens/core/store/app_store.dart';
 import 'package:finlens/features/balance/same_transactions.dart';
 
 // Verification for the development data seeder. `flutter test` hangs on the
@@ -13,7 +12,7 @@ import 'package:finlens/features/balance/same_transactions.dart';
 // The generator is deterministic (fixed RNG + AppStore.today), so a pass here
 // is a pass everywhere.
 
-final DateTime _today = AppStore.today;
+final DateTime _today = DateTime(2026, 8, 9, 14, 32);
 
 /// Does [t] touch [accountId] in an account role?
 bool _touches(Txn t, String accountId) {

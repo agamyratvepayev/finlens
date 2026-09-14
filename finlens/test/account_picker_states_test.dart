@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:finlens/core/models/models.dart';
 import 'package:finlens/core/store/app_store.dart';
+import 'package:finlens/core/utils/clock.dart';
 import 'package:finlens/features/quick_add/pickers.dart';
 import 'package:finlens/l10n/app_localizations.dart';
 import 'package:finlens/theme/app_theme.dart';
@@ -25,7 +26,7 @@ Account _acc(String id, String name, AccountGroup group) => Account(
       startingBalance: 1000,
     );
 
-AppStore _emptyStore() => AppStore(
+AppStore _emptyStore() => AppStore(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)), 
       accounts: const <Account>[],
       categories: const <Category>[],
       txns: const <Txn>[],
@@ -33,7 +34,7 @@ AppStore _emptyStore() => AppStore(
       tasks: const <Task>[],
     );
 
-AppStore _populatedStore() => AppStore(
+AppStore _populatedStore() => AppStore(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)), 
       accounts: [
         _acc('a1', 'Main Checking', AccountGroup.spendable),
         _acc('a2', 'Savings', AccountGroup.spendable),

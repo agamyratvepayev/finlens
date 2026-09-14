@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:finlens/core/models/models.dart';
 import 'package:finlens/core/persistence/backup_codec.dart';
 import 'package:finlens/core/store/app_store.dart';
+import 'package:finlens/core/utils/clock.dart';
 import 'package:finlens/core/utils/formatters.dart';
 
 // flutter test hangs on the author's machine — run these yourself:
@@ -12,7 +13,7 @@ AppStore _emptyStore({
   List<Account> accounts = const [],
   List<CurrencyDef> currencies = const [],
 }) =>
-    AppStore(
+    AppStore(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)), 
       accounts: accounts,
       categories: const [],
       txns: const [],

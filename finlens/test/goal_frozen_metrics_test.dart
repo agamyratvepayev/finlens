@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:finlens/core/models/models.dart';
 import 'package:finlens/core/store/app_store.dart';
+import 'package:finlens/core/utils/clock.dart';
 
 /// Frozen figures (§3). An archived goal's record is a photograph: `goalMetrics`
 /// takes an `asOf` date that freezes every figure at the day the goal ended, and
@@ -32,7 +33,7 @@ void main() {
     List<Txn> txns = const [],
     List<Goal> goals = const [],
   }) =>
-      AppStore(
+      AppStore(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)), 
         accounts: accounts,
         categories: categories,
         txns: txns,

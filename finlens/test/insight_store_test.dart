@@ -12,7 +12,7 @@ import 'package:finlens/core/utils/fx.dart';
 /// screen is not lying — the two identities in §0, the delegation refactor, the
 /// empty-period rule, and the §9 FX fix.
 void main() {
-  final today = AppStore.today; // 2026-08-09
+  final today = DateTime(2026, 8, 9); // 2026-08-09
 
   DateRange month(int y, int m) =>
       DateRange(DateTime(y, m, 1), DateTime(y, m + 1, 0, 23, 59, 59, 999),

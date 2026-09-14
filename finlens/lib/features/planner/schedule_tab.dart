@@ -117,7 +117,7 @@ class ScheduleSummary extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final today = AppStore.today;
+    final today = store.today;
     final h = horizon.range(today);
 
     final projection = store.projection(h);
@@ -258,7 +258,7 @@ class _ScheduleTabState extends State<ScheduleTab> {
   Widget build(BuildContext context) {
     final store = widget.store;
     final l = AppLocalizations.of(context);
-    final today = AppStore.today;
+    final today = store.today;
     final h = widget.horizon.range(today);
 
     // "No tasks at all" (§3), named so the header can gate on the same test:
@@ -400,7 +400,7 @@ class _TaskRow extends StatelessWidget {
     final l = AppLocalizations.of(context);
     final payOut = task.isPayOut;
     final color = payOut ? AppColors.negative : AppColors.positive;
-    final overdue = task.daysUntilDue(AppStore.today) < 0;
+    final overdue = task.daysUntilDue(store.today) < 0;
     final account = store.accountById(task.linkedAccountId)?.name;
 
     final row = InkWell(
@@ -501,7 +501,7 @@ class _TaskRow extends StatelessWidget {
     // section total already say "late" three times over (§A3). The full "late"
     // wording moves to the screen reader (§A4), which sees none of those.
     final late = overdue
-        ? l.schOverdueDays(-task.daysUntilDue(AppStore.today))
+        ? l.schOverdueDays(-task.daysUntilDue(store.today))
         : null;
 
     return Text.rich(
@@ -545,7 +545,7 @@ class _TaskRow extends StatelessWidget {
       // The eye lost the word "late" (§A3); the screen reader, which cannot see
       // the red header or total, gains the full phrase here — right after the
       // due date (§A4).
-      if (overdue) l.schDaysLate(-task.daysUntilDue(AppStore.today)),
+      if (overdue) l.schDaysLate(-task.daysUntilDue(store.today)),
       if (account != null)
         '${payOut ? l.schSemFrom : l.schSemInto} $account',
       if (task.isRecurring)
@@ -623,8 +623,8 @@ class _CompletedSection extends StatelessWidget {
 
     // The chosen range's own name — a preset by its preset label, a custom range
     // by its compressed day-range label — folded into "… completed" (§B1).
-    final rangeLabel =
-        range.preset?.label(l) ?? range.label(AppStore.today, l);
+    final rangeLabel = range.preset?.label(l) ??
+        range.label(StoreScope.of(context).today, l);
     final headerText = l.schCompletedIn(rangeLabel).toUpperCase();
 
     final count = Text(l.schItemsCount(events.length), style: headerStyle);
@@ -898,7 +898,7 @@ class ScheduleEventRow extends StatelessWidget {
   }
 
   String _whenLabel(BuildContext context, AppLocalizations l) {
-    final today = AppStore.today;
+    final today = StoreScope.read(context).today;
     final d = event.date;
     if (d.year == today.year && d.month == today.month && d.day == today.day) {
       return l.schToday;

@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:finlens/core/models/models.dart';
 import 'package:finlens/core/store/app_store.dart';
+import 'package:finlens/core/utils/clock.dart';
 import 'package:finlens/features/quick_add/icon_picker_sheet.dart';
 import 'package:finlens/features/quick_add/pickers.dart';
 import 'package:finlens/l10n/app_localizations.dart';
@@ -42,7 +43,7 @@ List<Category> _n(int n, {CategoryType type = CategoryType.expense}) => [
       for (var i = 0; i < n; i++) _cat('c$i', 'Cat $i', type: type),
     ];
 
-AppStore _store(List<Category> cats, {List<Txn> txns = const []}) => AppStore(
+AppStore _store(List<Category> cats, {List<Txn> txns = const []}) => AppStore(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)), 
       accounts: [
         Account(
           id: 'a1',

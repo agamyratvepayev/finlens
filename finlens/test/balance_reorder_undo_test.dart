@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:finlens/core/models/models.dart';
 import 'package:finlens/core/store/app_store.dart';
+import 'package:finlens/core/utils/clock.dart';
 import 'package:finlens/features/balance/balance_screen.dart';
 import 'package:finlens/features/balance/widgets/account_rows.dart';
 import 'package:finlens/l10n/app_localizations.dart';
@@ -23,7 +24,7 @@ Account _acc(String id, String name, double bal) => Account(
       startingBalance: bal,
     );
 
-AppStore _store() => AppStore(
+AppStore _store() => AppStore(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)), 
       accounts: [
         _acc('a1', 'Alpha', 3000),
         _acc('a2', 'Bravo', 2000),

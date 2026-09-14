@@ -94,7 +94,7 @@ void main() {
 
   test('rows and day totals are signed the same way', () {
     final store = buildSeedStore();
-    final range = RangePreset.allTime.resolve(AppStore.today);
+    final range = RangePreset.allTime.resolve(DateTime(2026, 8, 9));
     final q = LedgerQuery(
       store: store,
       scope: const AllAccountsScope(),
@@ -148,7 +148,7 @@ void main() {
 
   test('an internal transfer is excluded from In and Out', () {
     final store = buildSeedStore();
-    final range = RangePreset.allTime.resolve(AppStore.today);
+    final range = RangePreset.allTime.resolve(DateTime(2026, 8, 9));
 
     LedgerQuery q(LedgerScope s) => LedgerQuery(
           store: store,

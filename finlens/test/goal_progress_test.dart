@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:finlens/core/models/models.dart';
 import 'package:finlens/core/store/app_store.dart';
+import 'package:finlens/core/utils/clock.dart';
 
 /// Goals, rebuilt on real balances (§1). Progress is derived from the ledger,
 /// never stored — these tests pin the derivation, the latch and the history.
@@ -32,7 +33,7 @@ void main() {
     List<Txn> txns = const [],
     List<Goal> goals = const [],
   }) =>
-      AppStore(
+      AppStore(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)), 
         accounts: accounts,
         categories: categories,
         txns: txns,
@@ -239,7 +240,7 @@ void main() {
       source: const GoalSource.account('acc'),
       targetAmount: 1000,
       targetDate: DateTime(2026, 12, 1),
-      createdAt: AppStore.today,
+      createdAt: DateTime(2026, 8, 9),
     );
     final store = storeWith(
       accounts: [account('acc', AccountGroup.spendable, 100)],

@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:finlens/core/models/models.dart';
 import 'package:finlens/core/store/app_store.dart';
+import 'package:finlens/core/utils/clock.dart';
 import 'package:finlens/features/ledger/ledger_scope.dart';
 import 'package:finlens/features/ledger/widgets/ledger_txn_row.dart';
 import 'package:finlens/theme/app_theme.dart';
@@ -47,7 +48,7 @@ Txn _transfer(String id, {String note = ''}) => Txn(
 void main() {
   late AppStore store;
   setUp(() {
-    store = AppStore(
+    store = AppStore(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)), 
       accounts: [_acc('a1', 'Main Checking'), _acc('a2', 'Cash Wallet')],
       categories: const <Category>[],
       txns: const <Txn>[],
@@ -175,7 +176,7 @@ void main() {
       (tester) async {
     // The tag left the meta line for the title line, so the account no longer
     // shares that line with anything — it simply ellipsizes when too long.
-    store = AppStore(
+    store = AppStore(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)), 
       accounts: [
         _acc('a1', 'An extremely long account name that will not fit'),
         _acc('a2', 'Cash Wallet'),

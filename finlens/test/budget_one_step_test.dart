@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:finlens/core/models/models.dart';
 import 'package:finlens/core/store/app_store.dart';
+import 'package:finlens/core/utils/clock.dart';
 import 'package:finlens/features/planner/budget_detail_screen.dart';
 import 'package:finlens/features/planner/edit_budget_screen.dart';
 import 'package:finlens/l10n/app_localizations.dart';
@@ -72,13 +73,13 @@ void main() {
     _size(tester, 390, 844);
 
     // Create mode: no category chosen.
-    await tester.pumpWidget(_host(AppStore.empty(), const EditBudgetScreen()));
+    await tester.pumpWidget(_host(AppStore.empty(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32))), const EditBudgetScreen()));
     await tester.pumpAndSettle();
     expect(find.text('New budget'), findsOneWidget);
     expect(find.text('WHAT YOU ACTUALLY SPENT'), findsNothing);
 
     // Edit mode: a budgeted category.
-    final store = AppStore.empty();
+    final store = AppStore.empty(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)));
     final cat = _budgeted(store);
     await tester
         .pumpWidget(_host(store, EditBudgetScreen(categoryId: cat.id)));
@@ -91,7 +92,7 @@ void main() {
   testWidgets('edit mode shows a padlock and the Category row is inert',
       (tester) async {
     _size(tester, 390, 844);
-    final store = AppStore.empty();
+    final store = AppStore.empty(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)));
     final cat = _budgeted(store, name: 'Grocery');
     await tester
         .pumpWidget(_host(store, EditBudgetScreen(categoryId: cat.id)));
@@ -109,7 +110,7 @@ void main() {
   // ── §6 · the edit screen has no Remove budget row ──────────────────────────
   testWidgets('the edit screen carries no Remove budget row', (tester) async {
     _size(tester, 390, 844);
-    final store = AppStore.empty();
+    final store = AppStore.empty(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)));
     final cat = _budgeted(store);
     await tester
         .pumpWidget(_host(store, EditBudgetScreen(categoryId: cat.id)));
@@ -121,7 +122,7 @@ void main() {
   testWidgets('Warn me at reads 80% until a limit is typed, then live',
       (tester) async {
     _size(tester, 390, 844);
-    final store = AppStore.empty();
+    final store = AppStore.empty(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)));
     final cat = _unbudgeted(store);
     // Create mode with a category chosen, so only the limit is missing.
     await tester
@@ -147,7 +148,7 @@ void main() {
         tester.widget<TextButton>(find.widgetWithText(TextButton, 'Save')).enabled;
 
     // No category, no limit → disabled.
-    await tester.pumpWidget(_host(AppStore.empty(), const EditBudgetScreen()));
+    await tester.pumpWidget(_host(AppStore.empty(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32))), const EditBudgetScreen()));
     await tester.pumpAndSettle();
     expect(saveEnabled(), isFalse);
 
@@ -157,7 +158,7 @@ void main() {
     expect(saveEnabled(), isFalse);
 
     // A category, no limit → disabled; then a limit → enabled.
-    final store = AppStore.empty();
+    final store = AppStore.empty(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)));
     final cat = _unbudgeted(store);
     await tester
         .pumpWidget(_host(store, EditBudgetScreen(categoryId: cat.id)));
@@ -173,7 +174,7 @@ void main() {
     testWidgets('the four rows measure equal at ${scale}x text scale',
         (tester) async {
       _size(tester, 390, 844);
-      final store = AppStore.empty();
+      final store = AppStore.empty(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)));
       final cat = _budgeted(store);
       await tester.pumpWidget(
           _host(store, EditBudgetScreen(categoryId: cat.id), textScale: scale));
@@ -193,7 +194,7 @@ void main() {
   testWidgets('the budget detail ••• menu reads Edit / Remove / Archive',
       (tester) async {
     _size(tester, 390, 844);
-    final store = AppStore.empty();
+    final store = AppStore.empty(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)));
     final cat = _budgeted(store);
     await tester.pumpWidget(_host(
       store,
@@ -220,7 +221,7 @@ void main() {
 
   // ── §5 · removing a budget keeps the category, files it under removed ──────
   test('removeBudget leaves the category and files it under removedBudgets', () {
-    final store = AppStore.empty();
+    final store = AppStore.empty(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)));
     final cat = _budgeted(store);
     expect(store.monthlyBudgetForCategory(cat.id), isNotNull);
 
@@ -239,7 +240,7 @@ void main() {
   testWidgets('no overflow at 320pt in tr with a 2,000,000 limit',
       (tester) async {
     _size(tester, 320, 568);
-    final store = AppStore.empty();
+    final store = AppStore.empty(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)));
     final cat = _budgeted(store, name: 'Ev', limit: 2000000);
     await tester.pumpWidget(_host(
       store,

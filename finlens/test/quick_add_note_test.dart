@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:finlens/core/data/seed_data.dart';
 import 'package:finlens/core/models/models.dart';
 import 'package:finlens/core/store/app_store.dart';
+import 'package:finlens/core/utils/clock.dart';
 import 'package:finlens/features/quick_add/quick_add_sheet.dart';
 import 'package:finlens/features/quick_add/widgets/amount_hero.dart';
 import 'package:finlens/theme/app_theme.dart';
@@ -31,7 +32,7 @@ Widget _app(AppStore store, {NavigatorObserver? observer, Txn? editing}) =>
 
 /// Minimal savable fixture: one account, one expense category, fixed ids so
 /// the form can be pre-filled and Save needs no pickers.
-AppStore _store() => AppStore(
+AppStore _store() => AppStore(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)), 
       accounts: [
         Account(
             id: 'a1',
@@ -336,7 +337,7 @@ void main() {
       currency: 'USD',
       fromRef: 'a1',
       toRef: 'g',
-      date: AppStore.today,
+      date: DateTime(2026, 8, 9),
       note: 'seeded note',
     );
     await tester.pumpWidget(_app(store, editing: txn));

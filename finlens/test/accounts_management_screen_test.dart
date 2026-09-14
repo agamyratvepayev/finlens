@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:finlens/core/models/models.dart';
 import 'package:finlens/core/store/app_store.dart';
+import 'package:finlens/core/utils/clock.dart';
 import 'package:finlens/features/balance/edit_account_screen.dart';
 import 'package:finlens/features/more/accounts_management_screen.dart';
 import 'package:finlens/l10n/app_localizations.dart';
@@ -30,7 +31,7 @@ Account _acc(
     );
 
 AppStore _store(List<Account> accounts, {List<Txn> txns = const <Txn>[]}) =>
-    AppStore(
+    AppStore(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)), 
       accounts: accounts,
       categories: const <Category>[],
       txns: txns,

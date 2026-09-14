@@ -764,8 +764,8 @@ class Task {
   /// transfer, not a spend.
   bool get isTransfer => isPayOut && payToAccountId != null;
 
-  /// Overdue relative to [today] — the app's single clock (`AppStore.today`),
-  /// never `DateTime.now()`. Schedule was the only surface reading the wall
+  /// Overdue relative to [today] — the app's single clock (`store.today`),
+  /// never the wall clock. Schedule was the only surface reading the wall
   /// clock; passing the reference date in keeps it in sync with every other tab
   /// (§11.1). A model importing the store would be the wrong layering direction.
   bool isOverdue(DateTime today) =>

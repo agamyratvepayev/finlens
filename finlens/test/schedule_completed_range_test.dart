@@ -57,7 +57,7 @@ void _payInternetOn(AppStore store, DateTime date) {
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
-  final today = AppStore.today; // 9 Aug 2026
+  final today = DateTime(2026, 8, 9); // 9 Aug 2026
 
   // ── Persistence: round-trip + preset re-resolves (§B3) ──────────────────────
   test('a preset range re-resolves against a later today; a custom range keeps '

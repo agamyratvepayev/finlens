@@ -60,8 +60,7 @@ class _InsightScreenState extends State<InsightScreen> {
   /// window itself now lives in the store (spec §6.1).
   bool _gridExpanded = false;
 
-  DateTime get _startOfToday =>
-      DateTime(AppStore.today.year, AppStore.today.month, AppStore.today.day);
+  DateTime get _startOfToday => StoreScope.read(context).today;
 
   /// A report of the past never looks forward: stepping stops at the period
   /// containing today (spec §2.1).
@@ -114,7 +113,7 @@ class _InsightScreenState extends State<InsightScreen> {
   void _clearCustom() {
     final store = StoreScope.read(context);
     store.setInsightWindow(
-        currentPresetFor(store.insightPeriodUnit).resolve(AppStore.today));
+        currentPresetFor(store.insightPeriodUnit).resolve(store.today));
     setState(() => _gridExpanded = false);
   }
 
@@ -170,7 +169,7 @@ class _InsightScreenState extends State<InsightScreen> {
             children: [
               if (hasRecords)
                 _InsightHeader(
-                  label: insightWindowLabel(w, l),
+                  label: insightWindowLabel(w, l, report.store.today),
                   isCustom: w.preset == null,
                   filterActive: report.filterActive,
                   hiddenCount: report.hiddenCount,
@@ -349,7 +348,7 @@ class _Report {
     final before = startDay.subtract(const Duration(days: 1));
     // `now` anchors to today, never the future — a report of the past does not
     // claim data it cannot have (spec §4.2).
-    final nowAnchor = w.end.isAfter(AppStore.today) ? AppStore.today : w.end;
+    final nowAnchor = w.end.isAfter(store.today) ? store.today : w.end;
 
     final flow = store.categoryFlowInWindow(w, visible: visible);
     List<(Category?, String, double)> rows(Map<String, double> m) {
@@ -856,7 +855,7 @@ class _EmptyWindowBody extends StatelessWidget {
 
     Widget? goLink;
     if (target != null) {
-      final label = insightWindowLabel(target, l);
+      final label = insightWindowLabel(target, l, store.today);
       // ← for a past window, → for a future one (spec §5).
       final back = target.start.isBefore(window.start);
       goLink = _EmptyLink(
@@ -871,14 +870,15 @@ class _EmptyWindowBody extends StatelessWidget {
         children: [
           Semantics(
             container: true,
-            label: l.insA11yEmptyWindow(insightWindowLabel(window, l)),
+            label: l.insA11yEmptyWindow(insightWindowLabel(window, l, store.today)),
             child: ExcludeSemantics(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const _EmptyHero(),
                   const SizedBox(height: 16),
-                  _emptyTitle(l.insEmptyWindow(insightWindowLabel(window, l))),
+                  _emptyTitle(
+                      l.insEmptyWindow(insightWindowLabel(window, l, store.today))),
                   // §6: the window is empty only because the filter hides its
                   // records. Name the count and offer the second action.
                   if (byFilter) ...[

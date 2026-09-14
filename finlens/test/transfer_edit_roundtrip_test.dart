@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:finlens/core/models/models.dart';
 import 'package:finlens/core/store/app_store.dart';
+import 'package:finlens/core/utils/clock.dart';
 import 'package:finlens/features/quick_add/quick_add_sheet.dart';
 import 'package:finlens/features/quick_add/widgets/amount_hero.dart';
 import 'package:finlens/theme/app_theme.dart';
@@ -23,7 +24,7 @@ Account _acc(String id, String name, String currency, {double start = 5000}) =>
       startingBalance: start,
     );
 
-AppStore _crossStore(Txn seed) => AppStore(
+AppStore _crossStore(Txn seed) => AppStore(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)), 
       accounts: [
         _acc('usd', 'USD Wallet', 'USD'),
         _acc('eur', 'EUR Wallet', 'EUR'),

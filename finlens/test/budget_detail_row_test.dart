@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:finlens/core/models/models.dart';
 import 'package:finlens/core/store/app_store.dart';
+import 'package:finlens/core/utils/clock.dart';
 import 'package:finlens/features/planner/budget_detail_screen.dart';
 import 'package:finlens/l10n/app_localizations.dart';
 import 'package:finlens/shared/widgets/detail_row.dart';
@@ -71,7 +72,7 @@ Budget _budget(String catId, {double limit = 500}) => Budget(
 AppStore _store(List<Txn> txns,
         {List<Account>? accounts, List<Category>? categories}) {
   final cats = categories ?? [_cat('c1', 'Eating out')];
-  return AppStore(
+  return AppStore(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)), 
     accounts: accounts ?? [_acc('a1', 'Main Checking')],
     categories: cats,
     budgets: [for (final c in cats) _budget(c.id)],

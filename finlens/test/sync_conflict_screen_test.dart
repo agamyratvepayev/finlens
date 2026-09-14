@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:finlens/core/persistence/local_database.dart';
 import 'package:finlens/core/persistence/sync_store.dart';
 import 'package:finlens/core/store/app_store.dart';
+import 'package:finlens/core/utils/clock.dart';
 import 'package:finlens/core/sync/api_client.dart';
 import 'package:finlens/core/sync/sync_controller.dart';
 import 'package:finlens/features/sync/conflict_screen.dart';
@@ -35,7 +36,7 @@ void main() {
   Widget harness() => SyncScope(
         controller: controller,
         child: StoreScope(
-          store: AppStore.empty(),
+          store: AppStore.empty(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32))),
           child: MaterialApp(
             theme: AppTheme.dark,
             localizationsDelegates: const [

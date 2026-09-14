@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:finlens/core/models/models.dart';
 import 'package:finlens/core/persistence/backup_codec.dart';
 import 'package:finlens/core/store/app_store.dart';
+import 'package:finlens/core/utils/clock.dart';
 import 'package:finlens/core/utils/fx.dart';
 
 // flutter test hangs on the author's machine — run these yourself:
@@ -28,7 +29,7 @@ Account _acc(
       openedOn: openedOn,
     );
 
-AppStore _store({List<Account> accounts = const []}) => AppStore(
+AppStore _store({List<Account> accounts = const []}) => AppStore(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)), 
       accounts: accounts,
       categories: const [],
       txns: const [],
