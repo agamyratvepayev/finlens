@@ -871,6 +871,8 @@
   "a11yShown": "görkezilýär",
   "a11yPartiallyShown": "bölekleýin görkezilýär",
   "a11yHidden": "gizlenen",
+  "a11yMoreActions": "Başga amallar",
+  "a11yAdd": "Goş",
   "a11yDoubleTapShow": "Ähli hasaplary görkezmek üçin iki gezek basyň",
   "a11yDoubleTapHide": "Ähli hasaplary gizlemek üçin iki gezek basyň",
   "a11yInternalTransfer": "içki geçirim",

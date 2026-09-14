@@ -7,6 +7,7 @@ import '../../core/utils/formatters.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/amount_text.dart';
 import '../../shared/widgets/app_card.dart';
+import '../../shared/widgets/header_menu.dart';
 import '../../shared/widgets/screen_header.dart';
 import '../../shared/widgets/section_header.dart' show HorizontalSectionSwipe;
 import '../../theme/app_colors.dart';
@@ -194,7 +195,9 @@ class _PlannerScreenState extends State<PlannerScreen> {
               // list leaves the slot empty (§1).
               ScreenHeader(
                 titleWidget: _titleWidget(context, store),
-                showEye: !untouched,
+                // The eye moved into the ••• menu below (spec §3): masking is now
+                // its first row, so the header carries at most ••• and +.
+                showEye: false,
                 onAdd: () {
                   // Each tab's + creates that tab's own thing (§5). Goals use their
                   // own full-screen form (the WATCHING picker and targetв†”date pair
@@ -213,26 +216,32 @@ class _PlannerScreenState extends State<PlannerScreen> {
                         : QuickAddType.newBudget,
                   );
                 },
-                // The ••• (Archive) is drawn only once there is something archived to
-                // reach; on an untouched Planner it would open an empty screen (§2).
+                // The ••• menu is drawn only once the Planner has been touched:
+                // before that there is nothing to mask (no figures yet) and
+                // nothing archived to reach, so a menu would hold nothing (§5).
+                // Once touched it always carries the mask toggle, with Archive
+                // below it (spec 5.8 — Archive lives behind the menu, never a tab).
                 trailing: untouched
                     ? null
-                    : IconButton(
-                        visualDensity: VisualDensity.compact,
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints.tightFor(
-                          width: 36,
-                          height: 36,
-                        ),
-                        icon: const Icon(Icons.more_horiz_rounded, size: 22),
-                        color: AppColors.textPrimary,
-                        // Spec 5.8 — Archive lives behind the ••• menu, never a tab.
-                        onPressed: () =>
-                            Navigator.of(context, rootNavigator: true).push(
-                              MaterialPageRoute(
-                                builder: (_) => const ArchiveScreen(),
+                    : HeaderCircleButton(
+                        icon: Icons.more_horiz_rounded,
+                        semanticLabel: l.a11yMoreActions,
+                        onTap: () => showHeaderMenu(
+                          context,
+                          actions: [
+                            HeaderMenuAction(
+                              icon: Icons.inventory_2_rounded,
+                              label: l.moreArchive,
+                              onSelected: () =>
+                                  Navigator.of(context, rootNavigator: true)
+                                      .push(
+                                MaterialPageRoute(
+                                  builder: (_) => const ArchiveScreen(),
+                                ),
                               ),
                             ),
+                          ],
+                        ),
                       ),
               ),
               // Row 2 вЂ” a segmented control, above the summary (spec В§1). Margin 14

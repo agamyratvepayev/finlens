@@ -12,6 +12,7 @@ import '../../core/utils/fx.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/amount_text.dart';
 import '../../shared/widgets/app_card.dart';
+import '../../shared/widgets/header_menu.dart';
 import '../../shared/widgets/range_picker_sheet.dart';
 import '../../shared/widgets/screen_header.dart';
 import '../../shared/widgets/section_header.dart';
@@ -479,7 +480,6 @@ class _InsightHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final store = StoreScope.of(context);
     final l = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(
@@ -542,28 +542,28 @@ class _InsightHeader extends StatelessWidget {
             ),
             const SizedBox(width: 7),
           ],
-          Semantics(
-            value:
-                filterActive ? l.insFilterActive(hiddenCount) : l.insFilterOff,
-            child: _CircleButton(
-              icon: filterActive
-                  ? Icons.filter_alt_rounded
-                  : Icons.filter_alt_outlined,
-              // Active fills accent with a white glyph — the only visual cue
-              // that the report is filtered (spec §2).
-              accent: filterActive,
-              tint: filterActive ? Colors.white : AppColors.textSecondary,
-              tooltip: l.insFilterAccounts,
-              onTap: onFilter,
-            ),
-          ),
-          const SizedBox(width: 7),
+          // The eye and the filter both moved into the ••• menu (spec §3): the
+          // eye becomes the menu's first row (masking), the filter the row below.
+          // The active-filter cue that used to fill this circle accent now lives
+          // on the menu's Filter row — the ••• itself never carries a badge (§8).
           _CircleButton(
-            icon: store.masked
-                ? Icons.visibility_off_rounded
-                : Icons.visibility_rounded,
+            icon: Icons.more_horiz_rounded,
             tint: AppColors.textSecondary,
-            onTap: store.toggleMasked,
+            tooltip: l.a11yMoreActions,
+            onTap: () => showHeaderMenu(
+              context,
+              actions: [
+                HeaderMenuAction(
+                  icon: filterActive
+                      ? Icons.filter_alt_rounded
+                      : Icons.filter_alt_outlined,
+                  label: l.insFilterAccounts,
+                  subtitle:
+                      filterActive ? l.insFilterActive(hiddenCount) : null,
+                  onSelected: onFilter,
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -572,8 +572,8 @@ class _InsightHeader extends StatelessWidget {
 }
 
 /// A 26pt circular tool button — Insight's header clone (spec §2/§13). Smaller
-/// than the shared [ScreenHeader]'s 36pt so four of them fit beside a long month
-/// at 320pt.
+/// than the shared [ScreenHeader]'s 36pt so the range × and the ••• fit beside a
+/// long month at 320pt.
 ///
 /// Intentionally *not* [HeaderCircleButton]: Insight's header is the small clone
 /// (26pt, no `+`). Do not merge the two.
@@ -581,21 +581,19 @@ class _CircleButton extends StatelessWidget {
   const _CircleButton({
     required this.icon,
     this.onTap,
-    this.accent = false,
     this.tint,
     this.tooltip,
   });
 
   final IconData icon;
   final VoidCallback? onTap;
-  final bool accent;
   final Color? tint;
   final String? tooltip;
 
   @override
   Widget build(BuildContext context) {
     final button = Material(
-      color: accent ? AppColors.accent : AppColors.surfaceAlt,
+      color: AppColors.surfaceAlt,
       shape: const CircleBorder(),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -603,8 +601,7 @@ class _CircleButton extends StatelessWidget {
         child: SizedBox(
           width: 26,
           height: 26,
-          child: Icon(icon,
-              size: accent ? 17 : 16, color: tint ?? AppColors.textPrimary),
+          child: Icon(icon, size: 16, color: tint ?? AppColors.textPrimary),
         ),
       ),
     );

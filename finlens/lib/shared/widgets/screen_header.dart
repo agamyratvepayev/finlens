@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/store/app_store.dart';
+import '../../l10n/app_localizations.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/app_typography.dart';
@@ -40,6 +41,7 @@ class ScreenHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
+    final l = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         Insets.gutter,
@@ -75,6 +77,7 @@ class ScreenHeader extends StatelessWidget {
               icon: store.masked
                   ? Icons.visibility_off_rounded
                   : Icons.visibility_rounded,
+              semanticLabel: l.moreMaskAmounts,
               onTap: store.toggleMasked,
             ),
           if (showAdd) ...[
@@ -82,6 +85,7 @@ class ScreenHeader extends StatelessWidget {
             HeaderCircleButton(
               icon: Icons.add_rounded,
               accent: true,
+              semanticLabel: l.a11yAdd,
               onTap: onAdd,
             ),
           ],
@@ -109,6 +113,7 @@ class HeaderCircleButton extends StatelessWidget {
     this.accent = false,
     this.plain = false,
     this.tint,
+    this.semanticLabel,
   });
 
   /// The one diameter. Call sites that reserve the button's footprint measure
@@ -128,9 +133,14 @@ class HeaderCircleButton extends StatelessWidget {
   /// leave it null and keep the default textPrimary glyph.
   final Color? tint;
 
+  /// Screen-reader label. An icon-only control must never announce as
+  /// unlabelled; call sites that carry one (the eye, the `+`, the `•••` menu)
+  /// pass it here. Null leaves the button's rendering byte-identical.
+  final String? semanticLabel;
+
   @override
   Widget build(BuildContext context) {
-    return Material(
+    final button = Material(
       color: plain
           ? Colors.transparent
           : (accent ? AppColors.accent : AppColors.surfaceAlt),
@@ -149,6 +159,8 @@ class HeaderCircleButton extends StatelessWidget {
         ),
       ),
     );
+    if (semanticLabel == null) return button;
+    return Semantics(button: true, label: semanticLabel, child: button);
   }
 }
 

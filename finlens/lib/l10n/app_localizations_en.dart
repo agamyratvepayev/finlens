@@ -3169,6 +3169,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get a11yHidden => 'hidden';
 
   @override
+  String get a11yMoreActions => 'More actions';
+
+  @override
+  String get a11yAdd => 'Add';
+
+  @override
   String get a11yDoubleTapShow => 'Double tap to show all accounts';
 
   @override

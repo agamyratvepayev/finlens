@@ -871,6 +871,8 @@
   "a11yShown": "показано",
   "a11yPartiallyShown": "частично показано",
   "a11yHidden": "скрыто",
+  "a11yMoreActions": "Ещё действия",
+  "a11yAdd": "Добавить",
   "a11yDoubleTapShow": "Двойное нажатие — показать все счета",
   "a11yDoubleTapHide": "Двойное нажатие — скрыть все счета",
   "a11yInternalTransfer": "внутренний перевод",

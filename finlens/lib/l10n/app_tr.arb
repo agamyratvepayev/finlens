@@ -871,6 +871,8 @@
   "a11yShown": "gösteriliyor",
   "a11yPartiallyShown": "kısmen gösteriliyor",
   "a11yHidden": "gizli",
+  "a11yMoreActions": "Diğer eylemler",
+  "a11yAdd": "Ekle",
   "a11yDoubleTapShow": "Tüm hesapları göstermek için çift dokunun",
   "a11yDoubleTapHide": "Tüm hesapları gizlemek için çift dokunun",
   "a11yInternalTransfer": "iç transfer",

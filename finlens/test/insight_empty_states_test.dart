@@ -302,12 +302,17 @@ void main() {
       await tester.pump(const Duration(milliseconds: 300));
     }
 
+    // The eye and the filter moved into the ••• menu (header-controls spec §3):
+    // the header now shows a single ••• once there is anything to report, and
+    // both the mask toggle and the filter live inside the sheet it opens — so
+    // hasFilter()/hasMask() are only true with the menu open.
+    bool hasMenu() =>
+        find.byIcon(Icons.more_horiz_rounded).evaluate().isNotEmpty;
     bool hasFilter() =>
         find.byIcon(Icons.filter_alt_outlined).evaluate().isNotEmpty ||
         find.byIcon(Icons.filter_alt_rounded).evaluate().isNotEmpty;
-    bool hasEye() =>
-        find.byIcon(Icons.visibility_rounded).evaluate().isNotEmpty ||
-        find.byIcon(Icons.visibility_off_rounded).evaluate().isNotEmpty;
+    bool hasMask() =>
+        find.byIcon(Icons.visibility_outlined).evaluate().isNotEmpty;
     bool hasAdd() => find.byIcon(Icons.add_rounded).evaluate().isNotEmpty;
 
     testWidgets('state 1 — no accounts: no header, intro body, Balance signpost',
@@ -315,9 +320,8 @@ void main() {
       await pump(tester, emptyStore());
       final l = await AppLocalizations.delegate.load(const Locale('en'));
       expect(find.text(l.insEmptyNoAccountsTitle), findsOneWidget);
-      // The header is absent entirely — no filter, eye, add, or window chevron.
-      expect(hasFilter(), isFalse);
-      expect(hasEye(), isFalse);
+      // The header is absent entirely — no menu, add, or window chevron.
+      expect(hasMenu(), isFalse);
       expect(hasAdd(), isFalse);
       expect(find.byIcon(Icons.keyboard_arrow_down_rounded), findsNothing);
       // No creation action, and no fourth row either: Insight creates nothing,
@@ -334,9 +338,8 @@ void main() {
       // States 1 and 2 share one body — same title, no hero/holdings line.
       expect(find.text(l.insEmptyNoAccountsTitle), findsOneWidget);
       expect(find.textContaining('3 accounts'), findsNothing);
-      // Still no records → the whole header is gone, eye included (§1).
-      expect(hasFilter(), isFalse);
-      expect(hasEye(), isFalse);
+      // Still no records → the whole header is gone, menu included (§1).
+      expect(hasMenu(), isFalse);
       expect(hasAdd(), isFalse);
       expect(find.byIcon(Icons.keyboard_arrow_down_rounded), findsNothing);
       // The signpost is gone in this state too — it was the only thing that
@@ -346,16 +349,25 @@ void main() {
       expect(find.text(l.insEmptyNoAccountsBody), findsOneWidget);
     });
 
-    testWidgets('state 3 — everything hidden: filter filled, no add',
-        (tester) async {
+    testWidgets(
+        'state 3 — everything hidden: ••• present, menu shows the mask toggle '
+        'and the filled filter, no add', (tester) async {
       await pump(tester, everythingHidden());
       final l = await AppLocalizations.delegate.load(const Locale('en'));
       expect(find.text(l.insEmptyAllHiddenTitle), findsOneWidget);
-      // The active glyph is the filled variant.
-      expect(find.byIcon(Icons.filter_alt_rounded), findsOneWidget);
-      expect(hasEye(), isTrue);
-      expect(hasAdd(), isFalse);
       expect(find.text(l.insEmptyShowAll), findsOneWidget);
+      // The header carries the single ••• menu; no + ever. Closed, neither the
+      // filter nor the mask glyph is in the tree.
+      expect(hasMenu(), isTrue);
+      expect(hasAdd(), isFalse);
+      expect(hasFilter(), isFalse);
+      expect(hasMask(), isFalse);
+      // Open it: the mask toggle is present and the active filter shows its
+      // filled glyph.
+      await tester.tap(find.byIcon(Icons.more_horiz_rounded));
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(hasMask(), isTrue);
+      expect(find.byIcon(Icons.filter_alt_rounded), findsOneWidget);
     });
 
     testWidgets('state 4 — empty window: names the window and its destination',
@@ -364,8 +376,7 @@ void main() {
       await pump(tester, s);
       expect(find.textContaining('No records in'), findsOneWidget);
       expect(find.textContaining('Go to'), findsOneWidget);
-      expect(hasFilter(), isTrue);
-      expect(hasEye(), isTrue);
+      expect(hasMenu(), isTrue);
       expect(hasAdd(), isFalse);
     });
 
@@ -382,20 +393,24 @@ void main() {
       }
     });
 
-    testWidgets('no records → no header children; one record → window+filter+eye',
+    testWidgets('no records → no header children; one record → window + •••',
         (tester) async {
-      // No records: header absent, so no window chevron, filter or eye.
+      // No records: header absent, so no window chevron and no menu.
       await pump(tester, accountsNoTxns());
       expect(find.byIcon(Icons.keyboard_arrow_down_rounded), findsNothing);
-      expect(hasFilter(), isFalse);
-      expect(hasEye(), isFalse);
+      expect(hasMenu(), isFalse);
 
-      // A populated store restores the full header.
+      // A populated store restores the full header: the window title and the
+      // single ••• menu, never a +.
       await pump(tester, buildSeedStore());
       expect(find.byIcon(Icons.keyboard_arrow_down_rounded), findsOneWidget);
-      expect(hasFilter(), isTrue);
-      expect(hasEye(), isTrue);
+      expect(hasMenu(), isTrue);
       expect(hasAdd(), isFalse);
+      // The mask toggle and the filter are one tap away, inside the menu.
+      await tester.tap(find.byIcon(Icons.more_horiz_rounded));
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(hasMask(), isTrue);
+      expect(hasFilter(), isTrue);
     });
 
     testWidgets('no accounts wins even with a stale filter (ordering)',

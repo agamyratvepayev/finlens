@@ -3158,6 +3158,12 @@ class AppLocalizationsTr extends AppLocalizations {
   String get a11yHidden => 'gizli';
 
   @override
+  String get a11yMoreActions => 'Diğer eylemler';
+
+  @override
+  String get a11yAdd => 'Ekle';
+
+  @override
   String get a11yDoubleTapShow => 'Tüm hesapları göstermek için çift dokunun';
 
   @override

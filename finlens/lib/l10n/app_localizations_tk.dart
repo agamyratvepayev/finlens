@@ -3158,6 +3158,12 @@ class AppLocalizationsTk extends AppLocalizations {
   String get a11yHidden => 'gizlenen';
 
   @override
+  String get a11yMoreActions => 'Başga amallar';
+
+  @override
+  String get a11yAdd => 'Goş';
+
+  @override
   String get a11yDoubleTapShow =>
       'Ähli hasaplary görkezmek üçin iki gezek basyň';
 

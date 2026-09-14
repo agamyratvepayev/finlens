@@ -4984,6 +4984,18 @@ abstract class AppLocalizations {
   /// **'hidden'**
   String get a11yHidden;
 
+  /// Screen-reader label for the ••• header overflow menu button (header-controls spec §6).
+  ///
+  /// In en, this message translates to:
+  /// **'More actions'**
+  String get a11yMoreActions;
+
+  /// Screen-reader label for the + header button (header-controls spec §6).
+  ///
+  /// In en, this message translates to:
+  /// **'Add'**
+  String get a11yAdd;
+
   /// No description provided for @a11yDoubleTapShow.
   ///
   /// In en, this message translates to:

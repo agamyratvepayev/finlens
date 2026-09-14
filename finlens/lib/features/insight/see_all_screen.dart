@@ -7,6 +7,7 @@ import '../../core/utils/formatters.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/amount_text.dart';
 import '../../shared/widgets/app_card.dart';
+import '../../shared/widgets/header_menu.dart';
 import '../../shared/widgets/screen_header.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
@@ -82,9 +83,26 @@ class SeeAllScreen extends StatelessWidget {
               ),
               showBack: true,
               showAdd: false,
-              trailing: _FilterButton(
-                active: filterActive,
-                onTap: () => showInsightFilterSheet(context, window),
+              // The eye and the filter both live in the ••• menu now (spec §3):
+              // masking is its first row, the filter the row below. The active-
+              // filter cue moves onto that row's icon; the ••• never badges (§8).
+              showEye: false,
+              trailing: HeaderCircleButton(
+                icon: Icons.more_horiz_rounded,
+                semanticLabel: l.a11yMoreActions,
+                onTap: () => showHeaderMenu(
+                  context,
+                  actions: [
+                    HeaderMenuAction(
+                      icon: filterActive
+                          ? Icons.filter_alt_rounded
+                          : Icons.filter_alt_outlined,
+                      label: l.insFilterAccounts,
+                      onSelected: () =>
+                          showInsightFilterSheet(context, window),
+                    ),
+                  ],
+                ),
               ),
             ),
             Expanded(
@@ -182,35 +200,6 @@ class SeeAllScreen extends StatelessWidget {
     Navigator.of(context, rootNavigator: true).push(
       MaterialPageRoute(
         builder: (_) => EditBudgetScreen(categoryId: best!.id),
-      ),
-    );
-  }
-}
-
-/// A 36pt circular filter button for the see-all header, filling accent when
-/// either filter is active (spec §5, mirroring the main header's cue).
-class _FilterButton extends StatelessWidget {
-  const _FilterButton({required this.active, required this.onTap});
-  final bool active;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: active ? AppColors.accent : AppColors.surfaceAlt,
-      shape: const CircleBorder(),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: SizedBox(
-          width: 36,
-          height: 36,
-          child: Icon(
-            active ? Icons.filter_alt_rounded : Icons.filter_alt_outlined,
-            size: 19,
-            color: active ? Colors.white : AppColors.textSecondary,
-          ),
-        ),
       ),
     );
   }

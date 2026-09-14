@@ -3231,6 +3231,12 @@ class AppLocalizationsRu extends AppLocalizations {
   String get a11yHidden => 'скрыто';
 
   @override
+  String get a11yMoreActions => 'Ещё действия';
+
+  @override
+  String get a11yAdd => 'Добавить';
+
+  @override
   String get a11yDoubleTapShow => 'Двойное нажатие — показать все счета';
 
   @override
