@@ -197,9 +197,9 @@ class _BalanceScreenState extends State<BalanceScreen> {
 
   // ── Header ────────────────────────────────────────────────────────────────
 
-  /// Header: label + dots + controls, then the hero amount alone, the slim
-  /// ratio bar, and a tool row (counter + the four tools). Pinned — only the
-  /// list scrolls.
+  /// Header: row 1 (label + dots + controls), then the hero amount sharing one
+  /// row with the four tools. On NET WORTH the slim ratio bar still follows.
+  /// Pinned — only the list scrolls.
   Widget _header(AppStore store, bool hasAccounts) {
     final filter = store.balanceFilter;
     final showRatio = _section == BalanceSection.all && !_searching;
@@ -221,12 +221,12 @@ class _BalanceScreenState extends State<BalanceScreen> {
       curve: Curves.easeOut,
       alignment: Alignment.topCenter,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(
-          Insets.gutter,
-          Insets.sm,
-          Insets.gutter,
-          4,
-        ),
+        // 6 above row 1, 14 below the amount row — the largest gap is the last,
+        // because the header-ends / list-begins boundary is the most important
+        // one on the screen. `height: 1.0` even-leading on the amount (see
+        // [_amountStyle]) strips the font's own dead space, so these render at
+        // the value specified rather than ~7pt larger.
+        padding: const EdgeInsets.fromLTRB(Insets.gutter, 6, Insets.gutter, 14),
         child: Stack(
           children: [
             AnimatedSwitcher(
@@ -248,8 +248,13 @@ class _BalanceScreenState extends State<BalanceScreen> {
                           height: HeaderCircleButton.diameter,
                           child: _headerRow1(store),
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 8),
+                        // The amount and the four tools now share one row (see
+                        // [_amountRow]); the delta badge and the count line are
+                        // gone. Searching swaps this whole row for the field.
                         _headerRow2(store),
+                        // The ratio bar is unchanged — same NET-WORTH-only
+                        // condition, same widget, same gap. Out of scope here.
                         if (showRatio) ...[
                           const SizedBox(height: 8),
                           _RatioBar(
@@ -259,11 +264,6 @@ class _BalanceScreenState extends State<BalanceScreen> {
                                 .abs(),
                           ),
                         ],
-                        // The tools left the hero's line for a row of their own,
-                        // mirroring the Ledger's counter + tool-cluster grammar.
-                        // The search field takes this row's place while
-                        // searching, so the row never stacks on top of the field.
-                        if (!_searching) _toolRow(store),
                       ],
                     )
                   // First run: no NET WORTH label, no hero, no delta line — a
@@ -328,17 +328,23 @@ class _BalanceScreenState extends State<BalanceScreen> {
     );
   }
 
-  /// The hero amount owns its line now; search replaces it in place, so the
-  /// row never changes height.
+  /// The amount and the four tools share this row now; search replaces it in
+  /// place, so the row never changes height.
   Widget _headerRow2(AppStore store) {
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 180),
-      child: _searching ? _searchField() : _amountOnly(store),
+      child: _searching ? _searchField() : _amountRow(store),
     );
   }
 
-  Widget _amountOnly(AppStore store) {
+  /// The hero amount on the left, the four tools on the right, optically
+  /// centred against each other. The delta badge and the "N groups · M
+  /// accounts" count are both gone — the one slot beside the amount now holds
+  /// the tools, and the filter button alone carries the "total is partial"
+  /// signal when a filter is active.
+  Widget _amountRow(AppStore store) {
     final filter = store.balanceFilter;
+    final l = AppLocalizations.of(context);
     // Every headline figure is the *filtered* one — hiding Valuables has to
     // move Net Worth, not just drop a row. The store getters stay unfiltered so
     // no other tab is affected; the filtering lives here.
@@ -351,191 +357,100 @@ class _BalanceScreenState extends State<BalanceScreen> {
       ),
     };
 
-    final amountColumn = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        FittedBox(
-          fit: BoxFit.scaleDown,
-          alignment: Alignment.centerLeft,
-          child: AmountText.balance(
-            amount,
-            style: AppText.heroAmount,
-            color: color,
-          ),
-        ),
-        // Without this line a user can easily believe a historical view
-        // is live data.
-        if (store.isHistorical)
-          Text(
-            'as of ${dayMonthYear(store.asOf!, AppLocalizations.of(context))}',
-            style: AppText.asOfLine,
-          ),
-      ],
-    );
+    // The three pages' totals are all computable here, so the font size is
+    // solved from the widest of them and never jumps when the user swipes
+    // between sections. (Balances render unsigned per the app's rule, so the
+    // magnitudes drive width; the spec's minus-sign width case does not apply —
+    // see the report.)
+    final measured = <String>[
+      _display(store, filter.netWorth(store)),
+      _display(store, filter.sectionTotal(store, assets: true)),
+      _display(store, filter.sectionTotal(store, assets: false)),
+    ];
 
-    // Net worth keeps the ratio bar below it. The assets-only and
-    // liabilities-only views have no bar, so the period-comparison chip that
-    // used to live on the deleted Assets/Liabilities screens renders here — the
-    // only place these two views carry a comparison at all.
-    if (_section == BalanceSection.all) {
-      return Align(
-        key: const ValueKey('amount'),
-        alignment: Alignment.centerLeft,
-        child: amountColumn,
-      );
-    }
+    // The tools act on the list. When the current section has nothing to act on
+    // — e.g. LIABILITIES with no liabilities ($0) — they are not built, and the
+    // amount stands alone. A section whose accounts are all filter-hidden keeps
+    // its tools so the filter stays reachable (the in-list "Adjust filter" link
+    // is the other way back).
+    final listHasAccounts =
+        _visibleGroups.any((g) => store.groupCount(g) > 0);
+    final tools =
+        listHasAccounts ? _buildTools(store) : const <_HeaderTool>[];
+
+    // Without this line a user can easily believe a historical view is live
+    // data. It rides under the amount; the tools centre against the amount.
+    final asOf = store.isHistorical
+        ? Text('as of ${dayMonthYear(store.asOf!, l)}', style: AppText.asOfLine)
+        : null;
+
     return Align(
       key: const ValueKey('amount'),
       alignment: Alignment.centerLeft,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          Expanded(child: amountColumn),
-          const SizedBox(width: Insets.sm),
-          DeltaChip(
-            fraction: store.netWorthDeltaFraction,
-            caption: store.comparePeriod.caption(AppLocalizations.of(context)),
-            isLiability: _section == BalanceSection.liabilities,
-          ),
-        ],
+      child: _BalanceAmountRow(
+        display: _display(store, amount),
+        color: color,
+        measured: measured,
+        asOf: asOf,
+        tools: tools,
       ),
     );
   }
 
-  /// Counter on the left, the four tools on the right — the Ledger's tool-row
-  /// grammar, brought to Balance. The buttons are the same [ToolCluster] that
-  /// used to sit beside the hero; only their position changed.
-  Widget _toolRow(AppStore store) {
+  /// The amount string exactly as [AmountText.balance] would render it (same
+  /// `money()` call), so the width the ladder measures matches what paints —
+  /// masking included.
+  String _display(AppStore store, double value) => money(
+        value,
+        currency: store.baseCurrency,
+        signless: true,
+        masked: store.masked,
+      );
+
+  /// The four tools, same icons / actions / active semantics as before; only
+  /// their size (via the ladder) and the filter button's active look change.
+  List<_HeaderTool> _buildTools(AppStore store) {
     final filter = store.balanceFilter;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(0, 9, 0, 2),
-      child: Row(
-        children: [
-          Expanded(child: _counter(store)),
-          const SizedBox(width: Insets.sm),
-          ToolCluster(
-            tools: [
-              // No dot: the sort tool joins the filter's convention two entries
-              // below — it brightens its glyph one step (muted → high-emphasis)
-              // when the order is non-default, and the surface never changes.
-              // swap_vert_rounded has no meaningful outlined counterpart, so the
-              // brightness step alone carries the state.
-              Tool(
-                icon: Icons.swap_vert_rounded,
-                tooltip: AppLocalizations.of(context).balSortTooltip,
-                iconColor: store.sortIsActive ? AppColors.textPrimary : null,
-                semanticValue: store.sortIsActive
-                    ? store.balanceSort.label(AppLocalizations.of(context))
-                    : AppLocalizations.of(context).balSortDefault,
-                onTap: _pickSort,
-              ),
-              Tool(
-                icon: _anyOpen
-                    ? Icons.unfold_less_rounded
-                    : Icons.unfold_more_rounded,
-                tooltip: _anyOpen
-                    ? AppLocalizations.of(context).actionCollapseAll
-                    : AppLocalizations.of(context).actionExpandAll,
-                filled: !_anyOpen,
-                onTap: _toggleAll,
-              ),
-              // Active state is icon-only by design: the funnel fills and
-              // brightens one step, the surface never changes. The live Net
-              // Worth preview inside the sheet is what tells the user the cost.
-              Tool(
-                icon: filter.isActive
-                    ? Icons.filter_alt_rounded
-                    : Icons.filter_alt_outlined,
-                iconColor: filter.isActive ? AppColors.textPrimary : null,
-                tooltip: AppLocalizations.of(context).balFilterCategories,
-                semanticValue: filter.isActive
-                    ? AppLocalizations.of(
-                        context,
-                      ).balFilterActive(filter.hiddenItemCount(store))
-                    : AppLocalizations.of(context).balFilterOff,
-                onTap: () => showBalanceFilterSheet(context),
-              ),
-              Tool(
-                icon: Icons.search_rounded,
-                tooltip: AppLocalizations.of(context).actionSearch,
-                onTap: _openSearch,
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// "7 groups · 24 accounts", or "7 groups · 18 of 24 accounts" when the
-  /// filter hides some — each half stays short until it is actually narrowed.
-  /// Counts the section currently in view; ellipsizes before it can push the
-  /// tools.
-  Widget _counter(AppStore store) {
-    final filter = store.balanceFilter;
-    final groups = _visibleGroups
-        .where((g) => store.accountsIn(g).isNotEmpty)
-        .toList();
-    final groupsTotal = groups.length;
-    final groupsVisible = groups
-        .where((g) => filter.isGroupVisible(store, g))
-        .length;
-    var accountsTotal = 0;
-    var accountsVisible = 0;
-    for (final g in groups) {
-      accountsTotal += store.accountsIn(g).length;
-      accountsVisible += filter.visibleAccounts(store, g).length;
-    }
-
-    return Semantics(
-      liveRegion: true,
-      child: RichText(
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        text: TextSpan(
-          style: const TextStyle(
-            fontSize: 13,
-            height: 1.2,
-            fontWeight: FontWeight.w500,
-            color: AppColors.textSecondary,
-          ),
-          children: [
-            ..._countSpans(groupsVisible, groupsTotal, 'group', 'groups'),
-            const TextSpan(text: ' · '),
-            ..._countSpans(
-              accountsVisible,
-              accountsTotal,
-              'account',
-              'accounts',
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// One half of the counter — short "N nouns" when nothing is hidden, or the
-  /// bright "V of T nouns" reading (V emphasised) when it is narrowed.
-  List<InlineSpan> _countSpans(
-    int visible,
-    int total,
-    String one,
-    String many,
-  ) {
-    final noun = total == 1 ? one : many;
-    if (visible == total) {
-      return [TextSpan(text: '$total $noun')];
-    }
+    final l = AppLocalizations.of(context);
     return [
-      TextSpan(
-        text: '$visible',
-        style: const TextStyle(
-          fontWeight: FontWeight.w700,
-          color: AppColors.textPrimary,
-        ),
+      // The sort tool brightens its glyph one step (muted → high-emphasis) when
+      // the order is non-default; the surface never changes. Unchanged.
+      _HeaderTool(
+        icon: Icons.swap_vert_rounded,
+        onTap: _pickSort,
+        semanticLabel: l.balSortTooltip,
+        semanticValue:
+            store.sortIsActive ? store.balanceSort.label(l) : l.balSortDefault,
+        iconColor: store.sortIsActive ? AppColors.textPrimary : null,
       ),
-      TextSpan(text: ' of $total $noun'),
+      _HeaderTool(
+        icon: _anyOpen
+            ? Icons.unfold_less_rounded
+            : Icons.unfold_more_rounded,
+        onTap: _toggleAll,
+        semanticLabel:
+            _anyOpen ? l.actionCollapseAll : l.actionExpandAll,
+        filled: !_anyOpen,
+      ),
+      // With the count line gone, the filter button carries the whole "this
+      // total is partial" signal, so its active state is unmistakable: accent
+      // @ 20% fill, accentLight glyph.
+      _HeaderTool(
+        icon: filter.isActive
+            ? Icons.filter_alt_rounded
+            : Icons.filter_alt_outlined,
+        onTap: () => showBalanceFilterSheet(context),
+        semanticLabel: l.balFilterCategories,
+        semanticValue: filter.isActive
+            ? l.balFilterActive(filter.hiddenItemCount(store))
+            : l.balFilterOff,
+        filterActive: filter.isActive,
+      ),
+      _HeaderTool(
+        icon: Icons.search_rounded,
+        onTap: _openSearch,
+        semanticLabel: l.actionSearch,
+      ),
     ];
   }
 
@@ -1251,6 +1166,276 @@ class _PendingMove {
 
   final CustomOrder order;
   final AccountSort sort;
+}
+
+// ── Header amount row + tools ─────────────────────────────────────────────
+//
+// The amount and the four tool buttons share one row, optically centred. The
+// amount is never truncated, abbreviated or rounded; a three-step ladder shrinks
+// the font (30 → 22), then the buttons (28 → 24), then drops the tools to their
+// own row — in that order, and only as far as needed. See [_BalanceAmountRow].
+
+const double _kAmountMax = 30; // never larger
+const double _kAmountMin = 22; // never smaller — below this the balance stops
+// outranking the 13.5pt account rows beneath it, so it never gives way further.
+
+const double _kTool = 28, _kToolGap = 6, _kToolRadius = 8;
+const double _kToolTight = 24, _kToolGapTight = 4, _kToolRadiusTight = 7;
+
+const double _kAmountToolsMinGap = 10;
+const double _kToolGlyph = 15;
+const double _kToolsBelowGap = 8; // step 3 only
+
+/// The amount's style. `height: 1.0` with even leading removes the font's own
+/// dead space from the box, so the gaps above and below render at the value
+/// specified rather than ~7pt larger. `letterSpacing` is a fraction of the size,
+/// so rendered width is exactly proportional to it — which is why the ladder can
+/// solve step 1 from a single measurement instead of iterating.
+TextStyle _amountStyle(double size, Color? color) => TextStyle(
+      fontSize: size,
+      fontWeight: FontWeight.w700,
+      letterSpacing: -0.025 * size,
+      height: 1.0,
+      leadingDistribution: TextLeadingDistribution.even,
+      color: color ?? AppColors.textPrimary,
+      fontFeatures: const [FontFeature.tabularFigures()],
+    );
+
+/// One header tool. Same fields the shared [Tool] carried, so the four buttons
+/// keep their icons, actions and active semantics; [filterActive] is the one new
+/// state (see [_ToolButton]).
+class _HeaderTool {
+  const _HeaderTool({
+    required this.icon,
+    required this.onTap,
+    required this.semanticLabel,
+    this.semanticValue,
+    this.filled = false,
+    this.iconColor,
+    this.filterActive = false,
+  });
+
+  final IconData icon;
+  final VoidCallback onTap;
+  final String semanticLabel;
+  final String? semanticValue;
+
+  /// Collapse-all's "on" look — accent fill, white glyph. Unchanged.
+  final bool filled;
+
+  /// Sort's "non-default" look — glyph brightened one step, surface unchanged.
+  final Color? iconColor;
+
+  /// Only the filter tool sets this. The count line is gone, so the active
+  /// filter carries the whole "partial total" signal: accent @ 20% fill,
+  /// accentLight glyph.
+  final bool filterActive;
+}
+
+/// One rung of the scale-down ladder.
+class _Step {
+  const _Step(
+    this.fontSize,
+    this.toolSize,
+    this.toolGap,
+    this.toolRadius,
+    this.toolsBelow,
+  );
+
+  final double fontSize, toolSize, toolGap, toolRadius;
+  final bool toolsBelow;
+}
+
+/// The amount + tools row and its ladder. The amount leads, the tools trail, and
+/// the space between them is whatever is left — nothing is ever placed there.
+class _BalanceAmountRow extends StatelessWidget {
+  const _BalanceAmountRow({
+    required this.display,
+    required this.color,
+    required this.measured,
+    required this.asOf,
+    required this.tools,
+  });
+
+  /// The current section's amount, already formatted (never reformatted here).
+  final String display;
+  final Color? color;
+
+  /// All three pages' formatted totals; the font size is solved from the widest
+  /// so it does not jump on a section swipe.
+  final List<String> measured;
+  final Widget? asOf;
+  final List<_HeaderTool> tools;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(builder: (context, c) => _row(context, c.maxWidth));
+  }
+
+  Widget _row(BuildContext context, double maxWidth) {
+    final step = _resolve(context, maxWidth);
+
+    // Never wraps, never ellipsises, never abbreviates. The ladder guarantees it
+    // fits, so an overflow could only mean the ladder is wrong — let it show in
+    // debug rather than silently truncating a figure.
+    final amount = Text(
+      display,
+      maxLines: 1,
+      softWrap: false,
+      style: _amountStyle(step.fontSize, color),
+    );
+
+    final left = asOf == null
+        ? amount
+        : Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [amount, asOf!],
+          );
+
+    if (step.toolsBelow) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Align(alignment: Alignment.centerLeft, child: left),
+          const SizedBox(height: _kToolsBelowGap),
+          Align(alignment: Alignment.centerRight, child: _toolRow(step)),
+        ],
+      );
+    }
+
+    return Row(
+      // center, not baseline: 28pt buttons hung from a 30pt text baseline sit
+      // visibly below the digits' optical centre.
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Expanded(child: Align(alignment: Alignment.centerLeft, child: left)),
+        if (tools.isNotEmpty) _toolRow(step),
+      ],
+    );
+  }
+
+  Widget _toolRow(_Step step) => Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (var i = 0; i < tools.length; i++) ...[
+            if (i > 0) SizedBox(width: step.toolGap),
+            _ToolButton(
+              tool: tools[i],
+              size: step.toolSize,
+              radius: step.toolRadius,
+            ),
+          ],
+        ],
+      );
+
+  /// Each step is entered only when the previous one does not fit. The amount
+  /// never gives way: it is not truncated, abbreviated or rounded at any step.
+  _Step _resolve(BuildContext context, double maxWidth) {
+    final scaler = MediaQuery.textScalerOf(context);
+    final dir = Directionality.of(context);
+
+    double toolsWidth(double size, double gap) => tools.isEmpty
+        ? 0
+        : tools.length * size + (tools.length - 1) * gap + _kAmountToolsMinGap;
+
+    // The widest of the three totals at [fontSize]. letterSpacing is
+    // proportional to the size, so this is proportional to it too.
+    double widthAt(double fontSize) {
+      var w = 0.0;
+      for (final s in measured) {
+        final width = (TextPainter(
+          text: TextSpan(text: s, style: _amountStyle(fontSize, color)),
+          textDirection: dir,
+          textScaler: scaler,
+          maxLines: 1,
+        )..layout())
+            .width;
+        if (width > w) w = width;
+      }
+      return w;
+    }
+
+    final wMax = widthAt(_kAmountMax);
+
+    // step 0 — it fits as it is
+    final room0 = maxWidth - toolsWidth(_kTool, _kToolGap);
+    if (wMax <= room0) {
+      return const _Step(_kAmountMax, _kTool, _kToolGap, _kToolRadius, false);
+    }
+
+    // step 1 — shrink the font, down to the floor
+    final fitted = (_kAmountMax * room0 / wMax).clamp(_kAmountMin, _kAmountMax);
+    if (fitted > _kAmountMin) {
+      return _Step(fitted, _kTool, _kToolGap, _kToolRadius, false);
+    }
+
+    // step 2 — font is on the floor; tighten the buttons
+    final room2 = maxWidth - toolsWidth(_kToolTight, _kToolGapTight);
+    if (widthAt(_kAmountMin) <= room2) {
+      return const _Step(
+        _kAmountMin,
+        _kToolTight,
+        _kToolGapTight,
+        _kToolRadiusTight,
+        false,
+      );
+    }
+
+    // step 3 — the amount takes the full width, the tools drop below it
+    return const _Step(_kAmountMin, _kTool, _kToolGap, _kToolRadius, true);
+  }
+}
+
+/// One header tool button. Painted at [size]; the hit area follows the screen's
+/// existing tool-button convention (opaque, at paint size — see [ToolCluster]).
+class _ToolButton extends StatelessWidget {
+  const _ToolButton({
+    required this.tool,
+    required this.size,
+    required this.radius,
+  });
+
+  final _HeaderTool tool;
+  final double size, radius;
+
+  @override
+  Widget build(BuildContext context) {
+    final Color fill;
+    final Color glyph;
+    if (tool.filterActive) {
+      // accent @ 20% fill, accentLight glyph — the sole "partial total" cue.
+      fill = AppColors.tint(AppColors.accent, 0.20);
+      glyph = AppColors.accentLight;
+    } else if (tool.filled) {
+      fill = AppColors.accent;
+      glyph = Colors.white;
+    } else {
+      fill = AppColors.surfaceAlt;
+      glyph = tool.iconColor ?? AppColors.textSecondary;
+    }
+
+    return Semantics(
+      button: true,
+      label: tool.semanticLabel,
+      value: tool.semanticValue,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: tool.onTap,
+        child: Container(
+          width: size,
+          height: size,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: fill,
+            borderRadius: BorderRadius.circular(radius),
+          ),
+          child: Icon(tool.icon, size: _kToolGlyph, color: glyph),
+        ),
+      ),
+    );
+  }
 }
 
 // ── Header pieces ───────────────────────────────────────────────────────────
