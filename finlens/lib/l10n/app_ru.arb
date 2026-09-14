@@ -464,11 +464,11 @@
   "ebTitle": "Изменить бюджет",
   "ebMonthlyLimit": "Месячный лимит",
   "ebRollOver": "Переносить остаток",
-  "ebRollOverDesc": "Добавлять остаток к следующему месяцу",
   "ebWarnAt": "Предупредить при",
   "ebWarnCustom": "Другое",
   "ebWarnRange": "1–100",
   "ebRemoveBudget": "Удалить бюджет",
+  "bdRemoveBudget": "Удалить бюджет",
   "ebAverage": "В среднем {average}. Попробуйте {suggestion}?",
   "ebRemoveTitle": "Удалить бюджет «{name}»?",
   "ebRemoveMsg": "Вы перестанете отслеживать лимит для этой категории.",
@@ -516,7 +516,6 @@
   "egToGo": "осталось",
 
   "ebWhatSpent": "Сколько вы реально потратили",
-  "ebSpent": "потрачено",
 
   "etTitle": "Изменить задачу",
   "etTaskTitle": "Название задачи",
@@ -760,6 +759,7 @@
   "qaNoAccountsYet": "Счетов пока нет",
   "qaNoAccountsYetBody": "Для записи этой операции понадобится счёт.",
   "qaNewCategory": "Новая категория",
+  "qaAlreadyBudgeted": "Уже в бюджете",
   "qaNewExpenseCategory": "Новая категория расходов",
   "qaNewIncomeCategory": "Новая категория доходов",
   "qaNoCategoriesYet": "Категорий пока нет",

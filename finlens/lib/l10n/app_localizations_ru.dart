@@ -1764,9 +1764,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get ebRollOver => 'Переносить остаток';
 
   @override
-  String get ebRollOverDesc => 'Добавлять остаток к следующему месяцу';
-
-  @override
   String get ebWarnAt => 'Предупредить при';
 
   @override
@@ -1777,6 +1774,9 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get ebRemoveBudget => 'Удалить бюджет';
+
+  @override
+  String get bdRemoveBudget => 'Удалить бюджет';
 
   @override
   String ebAverage(Object average, Object suggestion) {
@@ -2005,9 +2005,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get ebWhatSpent => 'Сколько вы реально потратили';
-
-  @override
-  String get ebSpent => 'потрачено';
 
   @override
   String get etTitle => 'Изменить задачу';
@@ -2801,6 +2798,9 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get qaNewCategory => 'Новая категория';
+
+  @override
+  String get qaAlreadyBudgeted => 'Уже в бюджете';
 
   @override
   String get qaNewExpenseCategory => 'Новая категория расходов';

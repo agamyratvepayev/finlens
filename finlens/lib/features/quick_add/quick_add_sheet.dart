@@ -64,44 +64,18 @@ Future<void> showQuickAdd(
   );
 }
 
-/// New Budget leaves the numeric-hero sheet the way New Goal does (§3), but asks
-/// one question first: a budget needs a category. Lists expense categories that
-/// carry no budget yet — including ones with no spending in the period, which is
-/// the whole point — sorted by the period's spend descending then name, and on a
-/// pick pushes [EditBudgetScreen]. Dismissing does nothing. The sheet ALWAYS
-/// opens: with nothing to pick it draws an empty block and its title-row
-/// `New category` action, never a snackbar (§1/§7).
+/// New Budget leaves the Quick Add sheet the way New Goal does (§4), landing on
+/// [EditBudgetScreen] in create mode with no category chosen. The category is
+/// picked *on that screen* now — the old category-first sheet is gone, and the
+/// picker it used is reached from the screen's Category row instead (spec §3/§4).
 ///
-/// [context] must stay valid after any open Quick Add screen has been popped
-/// and must resolve to the root navigator; the type-menu caller pops Quick Add
-/// first and passes the navigator's overlay context (a descendant of the root
+/// [context] must stay valid after any open Quick Add screen has been popped and
+/// must resolve to the root navigator; the type-menu caller pops Quick Add first
+/// and passes the navigator's overlay context (a descendant of the root
 /// navigator that outlives the pop) for exactly this reason.
-Future<void> startNewBudgetFlow(BuildContext context) async {
-  final store = StoreScope.read(context);
-  // The month the Planner is showing (§6) — the same month EditBudgetScreen's
-  // history reads — drives both the spend figures and the sort. Derived once
-  // here and passed down so the sheet never computes its own.
-  final month = DateTime(store.period.year, store.period.month);
-  final candidates = store.categories
-      .where((c) =>
-          c.type == CategoryType.expense &&
-          store.monthlyBudgetForCategory(c.id) == null &&
-          store.removedOnOf(c) == null)
-      .toList()
-    ..sort((a, b) {
-      final bySpend = store
-          .spentInCategory(b.id, month)
-          .compareTo(store.spentInCategory(a.id, month));
-      return bySpend != 0
-          ? bySpend
-          : a.name.toLowerCase().compareTo(b.name.toLowerCase());
-    });
-
-  final picked =
-      await pickBudgetCategory(context, candidates: candidates, month: month);
-  if (picked == null || !context.mounted) return;
-  Navigator.of(context, rootNavigator: true).push(
-    MaterialPageRoute(builder: (_) => EditBudgetScreen(categoryId: picked.id)),
+Future<void> startNewBudgetFlow(BuildContext context) {
+  return Navigator.of(context, rootNavigator: true).push(
+    MaterialPageRoute(builder: (_) => const EditBudgetScreen()),
   );
 }
 

@@ -464,11 +464,11 @@
   "ebTitle": "Bütçeyi düzenle",
   "ebMonthlyLimit": "Aylık limit",
   "ebRollOver": "Kalanı devret",
-  "ebRollOverDesc": "Kalanı gelecek aya ekle",
   "ebWarnAt": "Şurada uyar",
   "ebWarnCustom": "Özel",
   "ebWarnRange": "1–100",
   "ebRemoveBudget": "Bütçeyi kaldır",
+  "bdRemoveBudget": "Bütçeyi kaldır",
   "ebAverage": "Ortalama {average}. {suggestion} deneyin mi?",
   "ebRemoveTitle": "{name} bütçesi kaldırılsın mı?",
   "ebRemoveMsg": "Bu kategori için limit takibini bırakacaksınız.",
@@ -516,7 +516,6 @@
   "egToGo": "kaldı",
 
   "ebWhatSpent": "Gerçekte ne harcadınız",
-  "ebSpent": "harcandı",
 
   "etTitle": "Görevi düzenle",
   "etTaskTitle": "Görev başlığı",
@@ -760,6 +759,7 @@
   "qaNoAccountsYet": "Henüz hesabınız yok",
   "qaNoAccountsYetBody": "Bu işlemi kaydetmek için bir hesap gerekiyor.",
   "qaNewCategory": "Yeni kategori",
+  "qaAlreadyBudgeted": "Zaten bütçeli",
   "qaNewExpenseCategory": "Yeni gider kategorisi",
   "qaNewIncomeCategory": "Yeni gelir kategorisi",
   "qaNoCategoriesYet": "Henüz kategori yok",

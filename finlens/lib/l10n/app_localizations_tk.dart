@@ -1711,9 +1711,6 @@ class AppLocalizationsTk extends AppLocalizations {
   String get ebRollOver => 'Galanyny geçir';
 
   @override
-  String get ebRollOverDesc => 'Galanyny indiki aýa goş';
-
-  @override
   String get ebWarnAt => 'Şu ýerde duýdur';
 
   @override
@@ -1724,6 +1721,9 @@ class AppLocalizationsTk extends AppLocalizations {
 
   @override
   String get ebRemoveBudget => 'Býujeti aýyr';
+
+  @override
+  String get bdRemoveBudget => 'Býujeti aýyr';
 
   @override
   String ebAverage(Object average, Object suggestion) {
@@ -1949,9 +1949,6 @@ class AppLocalizationsTk extends AppLocalizations {
 
   @override
   String get ebWhatSpent => 'Hakykatda näçe harçladyňyz';
-
-  @override
-  String get ebSpent => 'harçlandy';
 
   @override
   String get etTitle => 'Tabşyrygy üýtget';
@@ -2741,6 +2738,9 @@ class AppLocalizationsTk extends AppLocalizations {
 
   @override
   String get qaNewCategory => 'Täze kategoriýa';
+
+  @override
+  String get qaAlreadyBudgeted => 'Eýýäm býujetde';
 
   @override
   String get qaNewExpenseCategory => 'Täze çykdajy kategoriýasy';

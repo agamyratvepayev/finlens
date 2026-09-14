@@ -6,21 +6,29 @@ import '../../core/store/app_store.dart';
 import '../../core/utils/formatters.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/app_card.dart';
-import '../../shared/widgets/destructive_sheet.dart';
-import '../../shared/widgets/form_fields.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/app_typography.dart';
+import '../quick_add/pickers.dart';
 import '../quick_add/type_menu.dart';
 import 'edit_scaffold.dart';
 import 'widgets/percent_input_formatter.dart';
 
-/// Spec 5.4 — the category is locked; the limit is the only truly editable
-/// field, flanked by three months of actuals to base it on.
+/// One screen, two modes (spec §7). In **create** mode the category starts
+/// unset and the row is a picker; the limit and the two settings are entered,
+/// and there is no spend history to show. In **edit** mode the category is
+/// fixed (a locked value) and the three-month history card sits below the form.
+///
+/// The mode is derived, not passed: a category that carries no monthly budget is
+/// being created, one that does is being edited. `Remove budget` used to close
+/// this screen; it now lives in the budget detail's ••• menu (spec §5).
 class EditBudgetScreen extends StatefulWidget {
-  const EditBudgetScreen({super.key, required this.categoryId});
+  const EditBudgetScreen({super.key, this.categoryId});
 
-  final String categoryId;
+  /// The category to edit, the category pre-selected for a new budget (the
+  /// Budgets tab's per-row `Set` shortcut), or null to open create mode with no
+  /// category chosen yet (the `+` and Quick Add's New budget).
+  final String? categoryId;
 
   @override
   State<EditBudgetScreen> createState() => _EditBudgetScreenState();
@@ -28,24 +36,38 @@ class EditBudgetScreen extends StatefulWidget {
 
 class _EditBudgetScreenState extends State<EditBudgetScreen> {
   late final AppStore _store = StoreScope.read(context);
-  late final Category _category = _store.categoryById(widget.categoryId)!;
 
-  /// Whether this screen is *creating* a budget. Derived, not passed: the
-  /// creation flow only offers categories that carry no budget yet (see
-  /// startNewBudgetFlow's candidate filter), so "no budget on this category"
-  /// *is* "being created". Captured once here rather than recomputed in build:
-  /// _save() writes the budget through the store (firing notifyListeners) before
-  /// it pops, and build subscribes via StoreScope.of — so the predicate would
-  /// flip true→false for the frames the screen animates away, blinking the pill
-  /// into the plain title. Latched at construction, it cannot.
-  late final bool _isNew =
-      _store.monthlyBudgetForCategory(widget.categoryId) == null;
+  /// The budgeted category. Null in create mode until the picker sets it; fixed
+  /// (and locked) in edit mode.
+  Category? _category;
 
-  late final TextEditingController _limit = TextEditingController(
-    text: (_store.monthlyLimitOf(_category) ?? 0).toStringAsFixed(0),
-  );
-  late bool _rollover = _store.rolloverOf(_category);
-  late double _warn = _store.warnThresholdOf(_category);
+  /// Whether this screen is *creating* a budget. Latched at construction rather
+  /// than recomputed in build: _save writes the budget through the store (firing
+  /// notifyListeners) before it pops, and build subscribes via StoreScope.of —
+  /// so the predicate would flip true→false for the frames the screen animates
+  /// away, blinking the New-budget pill into the plain Edit title.
+  late final bool _isNew;
+
+  late final TextEditingController _limit;
+  late bool _rollover;
+  late double _warn;
+
+  @override
+  void initState() {
+    super.initState();
+    _category = widget.categoryId == null
+        ? null
+        : _store.categoryById(widget.categoryId!);
+    _isNew = _category == null ||
+        _store.monthlyBudgetForCategory(_category!.id) == null;
+    final existingLimit =
+        _category == null ? null : _store.monthlyLimitOf(_category!);
+    _limit = TextEditingController(
+      text: (existingLimit ?? 0) > 0 ? existingLimit!.toStringAsFixed(0) : '',
+    );
+    _rollover = _category == null ? false : _store.rolloverOf(_category!);
+    _warn = _category == null ? 0.8 : _store.warnThresholdOf(_category!);
+  }
 
   @override
   void dispose() {
@@ -55,13 +77,18 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
 
   double get _limitValue => double.tryParse(_limit.text.trim()) ?? 0;
 
+  /// Save is unreachable until the two facts a budget cannot exist without are
+  /// present: a category and a positive limit. (Replaced the old `_limitValue >
+  /// 0`, which could only ever run with a category already locked in.)
+  bool get _canSave => _category != null && _limitValue > 0;
+
   /// Spec 5.4 — the last three months of actual spend, and a limit suggested
-  /// from their average. Budgets usually fail because the limit was a guess.
+  /// from their average. Only ever read in edit mode, where the category is set.
   List<(DateTime, double)> get _history {
     final out = <(DateTime, double)>[];
     for (var i = 0; i < 3; i++) {
       final month = DateTime(_store.period.year, _store.period.month - i);
-      out.add((month, _store.spentInCategory(_category.id, month)));
+      out.add((month, _store.spentInCategory(_category!.id, month)));
     }
     return out;
   }
@@ -78,64 +105,168 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
     final l = AppLocalizations.of(context);
-    final spent = store.spentInCategory(_category.id, store.period);
 
     return EditScaffold(
       title: l.ebTitle,
       // Creating a budget is reachable from the type menu, so it must be able to
       // reopen it; editing an existing budget has nothing to switch to (§2).
-      // Taking the label off the type also fixes the "Edit budget" wording the
-      // creation path used to show.
+      // The pill also carries the create-mode title, "New budget".
       type: _isNew ? QuickAddType.newBudget : null,
       onTypeTap: _isNew ? _showTypeMenu : null,
-      onSave: _limitValue > 0 ? _save : null,
+      onSave: _canSave ? _save : null,
       children: [
-        FormSection(
+        _card(l, store),
+        // No history for a budget that does not exist yet (spec §6).
+        if (!_isNew) _historyCard(store.spentInCategory(_category!.id, store.period)),
+      ],
+    );
+  }
+
+  // ── The form card — four single-line rows (spec §2) ─────────────────────────
+
+  Widget _card(AppLocalizations l, AppStore store) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+          Insets.gutter, 0, Insets.gutter, Insets.md),
+      child: AppCard(
+        child: Column(
           children: [
-            // Spec 5.4 — changing the category would mean a different budget.
-            FormRow(
-              icon: _category.icon,
-              label: _category.name,
-              subtitle: l.fieldCategory,
-              locked: true,
-            ),
-            TextFieldRow(
+            _categoryRow(l),
+            const RowDivider(),
+            _BudgetRow(
               icon: Icons.attach_money_rounded,
               label: l.ebMonthlyLimit,
-              controller: _limit,
-              hint: '0',
-              trailing: Text(
-                // The limit is a base-currency figure by design (see the note
-                // above Budget.limit): spend is summed through Fx.toBase, so the
-                // marker names the base, not a fixed dollar.
-                currencySymbol(store.baseCurrency),
-                style: AppText.amount.copyWith(color: AppColors.textSecondary),
-              ),
+              trailing: _limitTrailing(store),
             ),
-            ToggleRow(
+            const RowDivider(),
+            _BudgetRow(
               icon: Icons.repeat_rounded,
               label: l.ebRollOver,
-              subtitle: l.ebRollOverDesc,
-              value: _rollover,
-              onChanged: (v) => setState(() => _rollover = v),
+              dense: true,
+              trailing: Switch.adaptive(
+                value: _rollover,
+                onChanged: (v) => setState(() => _rollover = v),
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                activeThumbColor: Colors.white,
+                activeTrackColor: AppColors.accent,
+                inactiveTrackColor: AppColors.surfaceHigh,
+              ),
             ),
-            FormRow(
+            const RowDivider(),
+            _BudgetRow(
               icon: Icons.notifications_active_rounded,
               label: l.ebWarnAt,
-              subtitle: '${money(_limitValue * _warn)} ${l.ebSpent}',
-              value: percent(_warn, decimals: 0),
-              showChevron: true,
-              // _pickThreshold raises a bottom sheet.
-              opensSheet: true,
+              trailing: _pickerTrailing(_warnLabel(l)),
               onTap: _pickThreshold,
             ),
           ],
         ),
-        _historyCard(spent),
-        DestructiveRow(
-            label: l.ebRemoveBudget, onTap: _confirmRemove, opensSheet: true),
-      ],
+      ),
     );
+  }
+
+  Widget _categoryRow(AppLocalizations l) {
+    if (_isNew) {
+      // A picker: tapping opens the category sheet; the value is the chosen
+      // name, or "Not set" (muted). The InkWell announces it as a button.
+      return _BudgetRow(
+        icon: Icons.category_rounded,
+        label: l.fieldCategory,
+        trailing: _pickerTrailing(_category?.name ?? l.eaNotSet,
+            muted: _category == null),
+        onTap: _pickCategory,
+      );
+    }
+    // Edit mode: the category is fixed. Changing it would detach the budget from
+    // the spend history below, so the row is inert and announces enabled: false.
+    return Semantics(
+      enabled: false,
+      child: _BudgetRow(
+        icon: Icons.category_rounded,
+        label: l.fieldCategory,
+        trailing: _lockedTrailing(_category!.name),
+      ),
+    );
+  }
+
+  /// Value + downward chevron. Category (create mode) and Warn me at.
+  Widget _pickerTrailing(String value, {bool muted = false}) => Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            value,
+            style: AppText.body.copyWith(
+              fontSize: 14.5,
+              color: muted ? AppColors.textSecondary : AppColors.textPrimary,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(width: 4),
+          const Icon(Icons.keyboard_arrow_down_rounded,
+              size: 18, color: AppColors.textTertiary),
+        ],
+      );
+
+  /// Value + padlock, no chevron. Category in edit mode.
+  Widget _lockedTrailing(String value) => Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            value,
+            style: AppText.body
+                .copyWith(fontSize: 14.5, color: AppColors.textSecondary),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(width: 6),
+          const Icon(Icons.lock_rounded, size: 13, color: AppColors.textTertiary),
+        ],
+      );
+
+  /// The amount field, right-aligned, currency symbol after it. The field's
+  /// keyboard and formatting are unchanged from its old home (hard boundary);
+  /// only its position changed and an onChanged was added so the Warn me at line
+  /// resolves live as the limit is typed.
+  Widget _limitTrailing(AppStore store) => Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            width: 96,
+            child: TextField(
+              controller: _limit,
+              textAlign: TextAlign.right,
+              style: AppText.amount.copyWith(
+                color: _limitValue > 0
+                    ? AppColors.textPrimary
+                    : AppColors.textTertiary,
+              ),
+              cursorColor: AppColors.accentSoft,
+              onChanged: (_) => setState(() {}),
+              decoration: const InputDecoration(
+                isDense: true,
+                border: InputBorder.none,
+                contentPadding: EdgeInsets.zero,
+                hintText: '0',
+                hintStyle: TextStyle(color: AppColors.textTertiary),
+              ),
+            ),
+          ),
+          const SizedBox(width: 5),
+          Text(
+            currencySymbol(store.baseCurrency),
+            style: AppText.amount.copyWith(color: AppColors.textSecondary),
+          ),
+        ],
+      );
+
+  /// `80%` while the limit is unset or zero; `80% · $1,600` once it is known.
+  /// The amount is the figure the percentage resolves to — without it `80%` is
+  /// eighty per cent of an unstated number. Never `80% · $0`.
+  String _warnLabel(AppLocalizations l) {
+    final pct = percent(_warn, decimals: 0);
+    if (_limitValue <= 0) return pct;
+    return '$pct · ${money(_limitValue * _warn)}';
   }
 
   Widget _historyCard(double currentSpend) {
@@ -191,8 +322,6 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
                       children: [
                         Expanded(
                           child: Text(
-                            // Rounded: the point is a graspable figure to
-                            // base a limit on, not accounting precision.
                             l.ebAverage(money(_average.roundToDouble()),
                                 money(_suggestion)),
                             style: AppText.caption.copyWith(fontSize: 12.5),
@@ -218,6 +347,34 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
         ],
       ),
     );
+  }
+
+  /// Opens the category picker (spec §3): the same sheet the two-step flow used,
+  /// now returning a category into this row instead of pushing a screen. The
+  /// candidate list is every expense category — budgeted ones are shown dimmed
+  /// and unselectable by the sheet — bar those whose budget was removed (they
+  /// live in the Archive and are restored, not recreated).
+  Future<void> _pickCategory() async {
+    FocusManager.instance.primaryFocus?.unfocus();
+    final month = DateTime(_store.period.year, _store.period.month);
+    final candidates = _store.categories
+        .where((c) =>
+            c.type == CategoryType.expense &&
+            !c.archived &&
+            _store.removedOnOf(c) == null)
+        .toList()
+      ..sort((a, b) {
+        final bySpend = _store
+            .spentInCategory(b.id, month)
+            .compareTo(_store.spentInCategory(a.id, month));
+        return bySpend != 0
+            ? bySpend
+            : a.name.toLowerCase().compareTo(b.name.toLowerCase());
+      });
+    final picked =
+        await pickBudgetCategory(context, candidates: candidates, month: month);
+    if (!mounted || picked == null) return;
+    setState(() => _category = picked);
   }
 
   Future<void> _pickThreshold() async {
@@ -247,36 +404,72 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
 
   void _save() {
     _store.updateBudget(
-      _category,
+      _category!,
       monthlyBudget: _limitValue,
       rollover: _rollover,
       warnThreshold: _warn,
     );
     Navigator.of(context).pop();
   }
+}
 
-  /// Spec 5.5 — the critical distinction: a budget is not a category.
-  Future<void> _confirmRemove() async {
-    final count = _store.txnCountForCategory(_category.id);
-    final newTotal = _store.totalBudget - (_store.effectiveLimitOf(_category) ?? 0);
+/// One row of the budget form. A single line: leading icon, label, trailing.
+/// Every row is capped to the same height by [_kMinHeight], so the four measure
+/// equal even though a switch is taller than a line of text; [dense] only trims
+/// the switch row's padding so its taller control still lands inside that box.
+class _BudgetRow extends StatelessWidget {
+  const _BudgetRow({
+    required this.icon,
+    required this.label,
+    required this.trailing,
+    this.onTap,
+    this.dense = false,
+  });
 
-    final l = AppLocalizations.of(context);
-    final ok = await showDestructiveConfirm(
-      context,
-      title: l.ebRemoveTitle(_category.name),
-      message: l.ebRemoveMsg,
-      impact: [
-        ImpactLine.kept(l.ebCategoryStays(_category.name, count)),
-        ImpactLine.lost(l.ebWarningsDisappear),
-        ImpactLine.lost(l.ebTotalDrops(
-            money(_store.totalBudget), money(newTotal))),
-      ],
-      confirmLabel: l.ebRemoveBudget,
+  final IconData icon;
+  final String label;
+  final Widget trailing;
+  final VoidCallback? onTap;
+  final bool dense;
+
+  /// Holds every row to one height. Sized to clear a line of label text and a
+  /// shrink-wrapped switch at 100% and 130% text scale, so no row exceeds it and
+  /// all four resolve to exactly this.
+  static const double _kMinHeight = 48;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: _kMinHeight),
+        child: Padding(
+          padding: EdgeInsets.symmetric(
+            horizontal: Insets.md,
+            vertical: dense ? Insets.xs : Insets.sm,
+          ),
+          child: Row(
+            children: [
+              SizedBox(
+                width: 24,
+                child: Icon(icon, size: 18, color: AppColors.textSecondary),
+              ),
+              const SizedBox(width: Insets.md),
+              Expanded(
+                child: Text(
+                  label,
+                  style: AppText.body.copyWith(fontSize: 14.5),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: Insets.sm),
+              trailing,
+            ],
+          ),
+        ),
+      ),
     );
-
-    if (!ok || !mounted) return;
-    _store.removeBudget(_category);
-    Navigator.of(context).pop();
   }
 }
 

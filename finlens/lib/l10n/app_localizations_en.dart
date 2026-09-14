@@ -1721,9 +1721,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ebRollOver => 'Roll over unspent';
 
   @override
-  String get ebRollOverDesc => 'Add leftovers to next month';
-
-  @override
   String get ebWarnAt => 'Warn me at';
 
   @override
@@ -1734,6 +1731,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get ebRemoveBudget => 'Remove budget';
+
+  @override
+  String get bdRemoveBudget => 'Remove budget';
 
   @override
   String ebAverage(Object average, Object suggestion) {
@@ -1959,9 +1959,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get ebWhatSpent => 'What you actually spent';
-
-  @override
-  String get ebSpent => 'spent';
 
   @override
   String get etTitle => 'Edit task';
@@ -2752,6 +2749,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get qaNewCategory => 'New category';
+
+  @override
+  String get qaAlreadyBudgeted => 'Already budgeted';
 
   @override
   String get qaNewExpenseCategory => 'New expense category';

@@ -256,7 +256,7 @@ void main() {
         findsOneWidget);
   });
 
-  testWidgets('from New goal, picking New budget lands on the category picker',
+  testWidgets('from New goal, picking New budget lands on the budget screen',
       (tester) async {
     _size(tester, 390, 844);
     final store = AppStore.empty();
@@ -270,8 +270,12 @@ void main() {
     await tester.tap(find.text('New budget'));
     await tester.pumpAndSettle();
 
+    // The goal screen is gone and the one-step budget screen is up in create
+    // mode — no "Budget which category?" step any more (spec §4).
     expect(find.byType(EditGoalScreen), findsNothing);
-    expect(find.text('Budget which category?'), findsOneWidget);
+    expect(find.byType(EditBudgetScreen), findsOneWidget);
+    expect(find.text('New budget'), findsOneWidget);
+    expect(find.text('Budget which category?'), findsNothing);
   });
 
   testWidgets('picking "New goal" on the New goal screen closes the sheet and '

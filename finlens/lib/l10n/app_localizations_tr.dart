@@ -1711,9 +1711,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String get ebRollOver => 'Kalanı devret';
 
   @override
-  String get ebRollOverDesc => 'Kalanı gelecek aya ekle';
-
-  @override
   String get ebWarnAt => 'Şurada uyar';
 
   @override
@@ -1724,6 +1721,9 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get ebRemoveBudget => 'Bütçeyi kaldır';
+
+  @override
+  String get bdRemoveBudget => 'Bütçeyi kaldır';
 
   @override
   String ebAverage(Object average, Object suggestion) {
@@ -1948,9 +1948,6 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get ebWhatSpent => 'Gerçekte ne harcadınız';
-
-  @override
-  String get ebSpent => 'harcandı';
 
   @override
   String get etTitle => 'Görevi düzenle';
@@ -2741,6 +2738,9 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get qaNewCategory => 'Yeni kategori';
+
+  @override
+  String get qaAlreadyBudgeted => 'Zaten bütçeli';
 
   @override
   String get qaNewExpenseCategory => 'Yeni gider kategorisi';

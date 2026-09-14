@@ -2620,12 +2620,6 @@ abstract class AppLocalizations {
   /// **'Roll over unspent'**
   String get ebRollOver;
 
-  /// No description provided for @ebRollOverDesc.
-  ///
-  /// In en, this message translates to:
-  /// **'Add leftovers to next month'**
-  String get ebRollOverDesc;
-
   /// No description provided for @ebWarnAt.
   ///
   /// In en, this message translates to:
@@ -2649,6 +2643,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Remove budget'**
   String get ebRemoveBudget;
+
+  /// No description provided for @bdRemoveBudget.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove budget'**
+  String get bdRemoveBudget;
 
   /// No description provided for @ebAverage.
   ///
@@ -2973,12 +2973,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'What you actually spent'**
   String get ebWhatSpent;
-
-  /// No description provided for @ebSpent.
-  ///
-  /// In en, this message translates to:
-  /// **'spent'**
-  String get ebSpent;
 
   /// No description provided for @etTitle.
   ///
@@ -4329,6 +4323,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'New category'**
   String get qaNewCategory;
+
+  /// No description provided for @qaAlreadyBudgeted.
+  ///
+  /// In en, this message translates to:
+  /// **'Already budgeted'**
+  String get qaAlreadyBudgeted;
 
   /// No description provided for @qaNewExpenseCategory.
   ///

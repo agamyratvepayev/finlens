@@ -214,6 +214,22 @@ class BudgetDetailScreen extends StatelessWidget {
                 );
               },
             ),
+            // Remove just the budget (spec §5) — the middle of the three in
+            // severity: the editor changes the budget, this drops it, Archive
+            // removes the category everywhere. The category and its transactions
+            // are untouched; the budget goes to the Archive's REMOVED BUDGETS.
+            // Same layout as its neighbours, only the colour differs (no divider,
+            // caption or badge between the three).
+            ListTile(
+              leading: const Icon(Icons.delete_outline_rounded,
+                  color: AppColors.negative),
+              title: Text(AppLocalizations.of(context).bdRemoveBudget,
+                  style: AppText.body.copyWith(color: AppColors.negative)),
+              onTap: () {
+                Navigator.of(sheetContext).pop();
+                _confirmRemoveBudget(context, category);
+              },
+            ),
             // Archive the category itself (§4) — the honest home for the action
             // in an app with no standalone category screen: the one per-category
             // ••• menu there is. Distinct from "Edit budget": archiving retires
@@ -234,6 +250,36 @@ class BudgetDetailScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  /// Spec §5 — remove the budget, leaving the category and its transactions
+  /// intact. The removed budget appears in the Archive's REMOVED BUDGETS section.
+  /// Uses the app's existing destructive-confirmation sheet.
+  Future<void> _confirmRemoveBudget(
+      BuildContext context, Category category) async {
+    final store = StoreScope.read(context);
+    final l = AppLocalizations.of(context);
+    final count = store.txnCountForCategory(category.id);
+    final newTotal =
+        store.totalBudget - (store.effectiveLimitOf(category) ?? 0);
+
+    final ok = await showDestructiveConfirm(
+      context,
+      title: l.ebRemoveTitle(category.name),
+      message: l.ebRemoveMsg,
+      impact: [
+        ImpactLine.kept(l.ebCategoryStays(category.name, count)),
+        ImpactLine.lost(l.ebWarningsDisappear),
+        ImpactLine.lost(
+            l.ebTotalDrops(money(store.totalBudget), money(newTotal))),
+      ],
+      confirmLabel: l.ebRemoveBudget,
+    );
+    if (!ok || !context.mounted) return;
+    store.removeBudget(category);
+    // The budget is gone; this screen answers "how did I do against the limit?"
+    // for a budget that no longer exists, so return to Planner.
+    Navigator.of(context).pop();
   }
 
   /// §4 — archive the category. A scheduled item that books into it would keep

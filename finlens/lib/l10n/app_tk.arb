@@ -464,11 +464,11 @@
   "ebTitle": "Býujeti üýtget",
   "ebMonthlyLimit": "Aýlyk çäk",
   "ebRollOver": "Galanyny geçir",
-  "ebRollOverDesc": "Galanyny indiki aýa goş",
   "ebWarnAt": "Şu ýerde duýdur",
   "ebWarnCustom": "Ýörite",
   "ebWarnRange": "1–100",
   "ebRemoveBudget": "Býujeti aýyr",
+  "bdRemoveBudget": "Býujeti aýyr",
   "ebAverage": "Ortaça {average}. {suggestion} synanyşyňmy?",
   "ebRemoveTitle": "{name} býujeti aýyrylsynmy?",
   "ebRemoveMsg": "Bu kategoriýa üçin çäk yzarlamany bes edersiňiz.",
@@ -516,7 +516,6 @@
   "egToGo": "galdy",
 
   "ebWhatSpent": "Hakykatda näçe harçladyňyz",
-  "ebSpent": "harçlandy",
 
   "etTitle": "Tabşyrygy üýtget",
   "etTaskTitle": "Tabşyrygyň ady",
@@ -760,6 +759,7 @@
   "qaNoAccountsYet": "Heniz hasabyňyz ýok",
   "qaNoAccountsYetBody": "Bu amaly bellige almak üçin bir hasap gerek.",
   "qaNewCategory": "Täze kategoriýa",
+  "qaAlreadyBudgeted": "Eýýäm býujetde",
   "qaNewExpenseCategory": "Täze çykdajy kategoriýasy",
   "qaNewIncomeCategory": "Täze girdeji kategoriýasy",
   "qaNoCategoriesYet": "Heniz kategoriýa ýok",

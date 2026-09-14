@@ -589,11 +589,11 @@
   "ebTitle": "Edit budget",
   "ebMonthlyLimit": "Monthly limit",
   "ebRollOver": "Roll over unspent",
-  "ebRollOverDesc": "Add leftovers to next month",
   "ebWarnAt": "Warn me at",
   "ebWarnCustom": "Custom",
   "ebWarnRange": "1–100",
   "ebRemoveBudget": "Remove budget",
+  "bdRemoveBudget": "Remove budget",
   "ebAverage": "You average {average}. Try {suggestion}?",
   "@ebAverage": { "placeholders": { "average": {}, "suggestion": {} } },
   "ebRemoveTitle": "Remove {name} budget?",
@@ -668,7 +668,6 @@
   "egToGo": "to go",
 
   "ebWhatSpent": "What you actually spent",
-  "ebSpent": "spent",
 
   "etTitle": "Edit task",
   "etTaskTitle": "Task title",
@@ -946,6 +945,7 @@
   "qaNoAccountsYet": "No accounts yet",
   "qaNoAccountsYetBody": "You'll need one to record this transaction.",
   "qaNewCategory": "New category",
+  "qaAlreadyBudgeted": "Already budgeted",
   "qaNewExpenseCategory": "New expense category",
   "qaNewIncomeCategory": "New income category",
   "qaNoCategoriesYet": "No categories yet",

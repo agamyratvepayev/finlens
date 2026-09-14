@@ -833,10 +833,11 @@ class _CategoryPickerBodyState extends State<_CategoryPickerBody> {
 }
 
 /// New Budget's category picker (§1–§7). Deliberately *not* [pickCategory]: it
-/// lists only expense categories that carry no budget — including ones with no
-/// spending in the period, which is the whole point of the flow — names the
-/// period's spend once over the value column (not a per-row filter), and the
-/// caller filters and sorts (spend descending, then name).
+/// lists expense categories — including ones with no spending in the period,
+/// which is the whole point of the flow — names the period's spend once over the
+/// value column (not a per-row filter), and the caller filters and sorts (spend
+/// descending, then name). Categories that already carry a budget are passed in
+/// too and shown dimmed and unselectable, rather than hidden (spec §3c).
 ///
 /// The sheet ALWAYS opens (§1): the caller no longer guards on an empty list.
 /// With nothing to pick the body is a single empty block (§3) and the title-row
@@ -850,7 +851,9 @@ Future<Category?> pickBudgetCategory(
   final l = AppLocalizations.of(context);
   return showAppSheet<Category>(
     context,
-    title: l.qaBudgetWhichCategory,
+    // The field's own name — the picker is no longer a step with its own title,
+    // it fills the budget screen's Category row (spec §3b).
+    title: l.fieldCategory,
     // Mirrors [pickAccount] (§2). `CategoryType.expense` is not a guess: the
     // candidate filter only ever offers expense categories, so an income one
     // created here could never be budgeted. `_HeaderCreateAction` pops the sheet
@@ -953,14 +956,20 @@ class _BudgetCategoryPickerBody extends StatelessWidget {
   }
 
   /// A single 48pt line (§4): icon, name, the period's spend right-aligned, and
-  /// the chevron. The height is a `minHeight` floor, not a hard box, so a normal
-  /// row is exactly 48pt yet grows at large text scale rather than clipping (§7).
+  /// the chevron. A category that already carries a budget stays in the list but
+  /// renders dimmed and inert (spec §3c) — hiding it would answer "where is
+  /// Grocery?" with a blank. The height is a `minHeight` floor, not a hard box,
+  /// so a normal row is 48pt yet grows at large text scale rather than clipping
+  /// (§7).
   Widget _budgetCategoryRow(
     BuildContext context,
     AppStore store,
     AppLocalizations l,
     Category c,
   ) {
+    if (store.monthlyBudgetForCategory(c.id) != null) {
+      return _budgetedRow(l, c);
+    }
     final spent = store.spentInCategory(c.id, month);
     // The period's spend, right-aligned and never shrinking. A confident $0
     // would be a claim rather than a blank, so zero renders as an em dash — the
@@ -1005,6 +1014,63 @@ class _BudgetCategoryPickerBody extends StatelessWidget {
                 ),
               ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// A category that already carries a budget: kept in the list, dimmed, and
+  /// unselectable (no `InkWell`, no chevron). The spend/chevron a live row shows
+  /// give way to an `Already budgeted` reason — the row previously showed nothing
+  /// for these categories (they were filtered out), so the reason is added, not
+  /// replacing an existing figure. Announced with the reason so a screen reader
+  /// hears why the row is inert, not merely that it is (spec §3c/§8).
+  Widget _budgetedRow(AppLocalizations l, Category c) {
+    return Semantics(
+      enabled: false,
+      excludeSemantics: true,
+      label: '${c.name}, ${l.qaAlreadyBudgeted}',
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 48),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: Insets.md),
+          child: Row(
+            children: [
+              // The category colour, faded — the dim ramp (spec §3c).
+              Opacity(
+                opacity: 0.45,
+                child: IconTile(c.icon, color: c.color, size: 30),
+              ),
+              const SizedBox(width: Insets.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      c.name,
+                      style: AppText.rowTitle.copyWith(
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.textTertiary,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 1),
+                    Text(
+                      l.qaAlreadyBudgeted,
+                      style: AppText.caption.copyWith(
+                        fontSize: 11.5,
+                        color: AppColors.textQuaternary,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
       ),
