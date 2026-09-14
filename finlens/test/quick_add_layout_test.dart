@@ -45,6 +45,39 @@ void main() {
     }
   }
 
+  // Task 007 — the New-task amount types in place on the docked keypad, so the
+  // task form must also survive the keypad being open, at both text scales.
+  for (final entry in _sizes.entries) {
+    for (final textScale in const [1.0, 1.3]) {
+      testWidgets(
+          'newTask amount + keypad lays out with no overflow at ${entry.key} @${textScale}x',
+          (tester) async {
+        tester.view.physicalSize = entry.value;
+        tester.view.devicePixelRatio = 1.0;
+        tester.platformDispatcher.textScaleFactorTestValue = textScale;
+        addTearDown(tester.view.reset);
+        addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+
+        await tester.pumpWidget(_app(buildSeedStore(), QuickAddType.newTask));
+        await tester.pump(const Duration(milliseconds: 350));
+
+        // Closed keypad — the baseline the values-loop already covers, re-checked
+        // here under the raised text scale.
+        expect(tester.takeException(), isNull);
+
+        // Open the keypad by focusing the amount row, then a full number.
+        await tester.tap(find.text('Amount'));
+        await tester.pump(const Duration(milliseconds: 350));
+        for (final k in ['1', '2', '3', '4', '5', '6']) {
+          await tester.tap(find.text(k));
+          await tester.pump();
+        }
+        await tester.pump(const Duration(milliseconds: 350));
+        expect(tester.takeException(), isNull);
+      });
+    }
+  }
+
   testWidgets('Save states name the first unmet requirement', (tester) async {
     tester.view.physicalSize = _sizes['390x844']!;
     tester.view.devicePixelRatio = 1.0;

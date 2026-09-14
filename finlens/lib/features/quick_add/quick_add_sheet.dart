@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 
 import '../../core/l10n/enum_labels.dart';
@@ -142,6 +143,11 @@ class _QuickAddScreenState extends State<QuickAddScreen>
 
   bool _keypadOpen = false;
 
+  /// The task form's amount row, so [_focusAmount] can scroll it above the
+  /// docked keypad (task 007 §5.4). Unused by the numeric types — their hero
+  /// sits at the top and never needs it.
+  final _amountRowKey = GlobalKey();
+
   // Transfer
   double? _rateOverride;
 
@@ -215,10 +221,21 @@ class _QuickAddScreenState extends State<QuickAddScreen>
     // keypad closes. The row's own tap path closes it too; this is the
     // backstop for focus arriving any other way.
     _noteFocus.addListener(_onNoteFocus);
+    // The title now shares a form with the keypad (the task's inline amount,
+    // task 007): however the title gains focus, the keypad closes too. Before
+    // this change only the note needed the backstop, because the title only ever
+    // appeared on a form with no keypad.
+    _titleFocus.addListener(_onTitleFocus);
   }
 
   void _onNoteFocus() {
     if (_noteFocus.hasFocus && _keypadOpen) {
+      setState(() => _keypadOpen = false);
+    }
+  }
+
+  void _onTitleFocus() {
+    if (_titleFocus.hasFocus && _keypadOpen) {
       setState(() => _keypadOpen = false);
     }
   }
@@ -912,25 +929,18 @@ class _QuickAddScreenState extends State<QuickAddScreen>
         FieldGroup(AppLocalizations.of(context).qaGroupOptional.toUpperCase(), [
           // Demoted from Required: most tasks have no amount. When set, the
           // task can later be turned into a transaction in one tap.
+          // Typed in place (task 007): the docked keypad writes here, a tap
+          // focuses the row instead of opening a sheet, and the currency-neutral
+          // icon (§3) sits beside a tappable currency chip.
           FieldSpec(
-            // Currency-neutral (§3): the value already carries the symbol
-            // through money(), so the icon must not hard-code a dollar.
             icon: Icons.numbers_rounded,
             label: AppLocalizations.of(context).qaAmount,
-            value: _raw.isEmpty ? null : money(_amount, currency: _currency),
+            raw: _raw,
+            currency: _currency,
             emptyText: AppLocalizations.of(context).eaNotSet,
-            // _promptText raises a bottom-sheet text prompt.
-            opensSheet: true,
-            onTap: () async {
-              final v = await _promptText(
-                title: AppLocalizations.of(context).qaAmount,
-                initial: _raw,
-                hint: '0',
-                numeric: true,
-              );
-              if (v == null || !mounted) return;
-              setState(() => _raw = v.trim());
-            },
+            slotKey: _amountRowKey,
+            onTap: _focusAmount,
+            onCurrencyTap: _pickTaskCurrency,
           ),
           FieldSpec(
             icon: Icons.account_balance_wallet_rounded,
@@ -985,6 +995,44 @@ class _QuickAddScreenState extends State<QuickAddScreen>
       selected: _taskIcon,
     );
     if (picked != null && mounted) setState(() => _taskIcon = picked);
+  }
+
+  /// The task form's only numeric target (task 007). The title and the note hold
+  /// the system keyboard; the keypad and the keyboard are never up together
+  /// (inline-note spec §2). The shell's pointer-down has already closed the
+  /// keypad by the time this runs on tap-up, so it is set true unconditionally —
+  /// as onHeroTap does.
+  void _focusAmount() {
+    _titleFocus.unfocus();
+    _noteFocus.unfocus();
+    setState(() => _keypadOpen = true);
+    SemanticsService.sendAnnouncement(
+      View.of(context),
+      AppLocalizations.of(context).qaAmount,
+      Directionality.of(context),
+    );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final ctx = _amountRowKey.currentContext;
+      if (ctx != null) {
+        Scrollable.ensureVisible(ctx,
+            alignment: 0.5, duration: const Duration(milliseconds: 150));
+      }
+    });
+  }
+
+  /// Opens the currency picker for the task's amount (task 007 §4). The task
+  /// form's first currency control — the value otherwise follows the linked
+  /// account.
+  Future<void> _pickTaskCurrency() async {
+    // The shell's pointer-down has already closed the keypad by the time this
+    // runs. Changing the unit is not leaving the field, so put it back.
+    final wasOpen = _keypadOpen || _type == QuickAddType.newTask;
+    final c = await pickCurrency(context, _currency);
+    if (!mounted) return;
+    setState(() {
+      if (c != null) _currency = c;
+      _keypadOpen = wasOpen;
+    });
   }
 
   // ── Pickers ───────────────────────────────────────────────────────────────

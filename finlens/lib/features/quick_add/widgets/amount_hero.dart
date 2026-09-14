@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/models/currency_def.dart';
 import '../../../core/utils/formatters.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_colors.dart';
 import 'form_kit.dart';
 
@@ -66,6 +68,25 @@ abstract final class AmountEntry {
     final rest = dot < 0 ? '.00' : '0' * (2 - decimals.length);
     return (typed: typed, rest: rest);
   }
+
+  /// The typed/untyped split **without a currency token**, for rows that carry
+  /// the unit in a chip beside the number.
+  ///
+  /// [split] prefixes the symbol and assumes two decimal places; this one does
+  /// neither and takes the count from `currencyDef(currency).decimals`, so a JPY
+  /// row pads nothing and a dinar row pads three.
+  static ({String typed, String rest}) splitPlain(String raw, String currency) {
+    final def = currencyDef(currency);
+    final zeros = def.decimals > 0 ? '.${'0' * def.decimals}' : '';
+    if (raw.isEmpty) return (typed: '', rest: '0$zeros');
+    final dot = raw.indexOf('.');
+    final wholeRaw = dot < 0 ? raw : raw.substring(0, dot);
+    final whole = _group(wholeRaw.isEmpty ? '0' : wholeRaw);
+    if (dot < 0) return (typed: whole, rest: zeros);
+    final decs = raw.substring(dot + 1);
+    final pad = def.decimals - decs.length;
+    return (typed: '$whole.$decs', rest: pad > 0 ? '0' * pad : '');
+  }
 }
 
 /// The hero card. No border, no tint, no coloured background — the number is
@@ -103,7 +124,7 @@ class NumericHeroCard extends StatelessWidget {
 
     final chip = onCurrencyTap == null
         ? null
-        : _CurrencyChip(currency: currency, onTap: onCurrencyTap!);
+        : CurrencyChip(currency: currency, onTap: onCurrencyTap!);
 
     // The whole amount string, caret aside — the caret is a fixed-width column
     // between the typed part and the dimmed remainder, so add it as a constant.
@@ -442,8 +463,11 @@ class _AmountTextState extends State<_AmountText>
   }
 }
 
-class _CurrencyChip extends StatelessWidget {
-  const _CurrencyChip({required this.currency, required this.onTap});
+/// The currency control: the code, a chevron, and a tap that opens the picker.
+/// Shared by the numeric hero and [TxnAmountFieldRow] — one chip, two callers,
+/// so a change to either shows up in both.
+class CurrencyChip extends StatelessWidget {
+  const CurrencyChip({super.key, required this.currency, required this.onTap});
 
   final String currency;
   final VoidCallback onTap;
@@ -451,34 +475,328 @@ class _CurrencyChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = formScale(context);
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 10 * s, vertical: 6 * s),
-        decoration: BoxDecoration(
-          color: AppColors.surfaceAlt,
-          borderRadius: BorderRadius.circular(8 * s),
+    return Semantics(
+      button: true,
+      label: '$currency · ${AppLocalizations.of(context).eaCurrency}',
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: EdgeInsets.symmetric(horizontal: 10 * s, vertical: 6 * s),
+          decoration: BoxDecoration(
+            color: AppColors.surfaceAlt,
+            borderRadius: BorderRadius.circular(8 * s),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                currency,
+                style: TextStyle(
+                  fontSize: 12.5 * s * formTextScale(context),
+                  fontWeight: FontWeight.w600,
+                  height: 1.2,
+                  color: AppColors.chipText,
+                ),
+              ),
+              SizedBox(width: 2 * s),
+              Icon(
+                Icons.keyboard_arrow_down_rounded,
+                size: 8 * s,
+                color: AppColors.chipText.withValues(alpha: 0.5),
+              ),
+            ],
+          ),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
+      ),
+    );
+  }
+}
+
+/// The amount row typed in place (task 007).
+///
+/// Unfocused it is [TxnFieldRow]'s geometry exactly, minus the chevron —
+/// tapping opens nothing, and those two absences are what say so. Focused, the
+/// keypad docked at the form's foot writes here; the accent outline, the accent
+/// icon and a blinking caret mark it three ways at once, so focus never rests
+/// on colour alone.
+class TxnAmountFieldRow extends StatefulWidget {
+  const TxnAmountFieldRow({
+    super.key,
+    required this.icon,
+    required this.label,
+    required this.raw,
+    required this.currency,
+    required this.emptyText,
+    required this.focused,
+    required this.onTap,
+    required this.onCurrencyTap,
+  });
+
+  final IconData icon;
+  final String label;
+
+  /// The literal characters typed, straight from the form's `_raw`.
+  final String raw;
+  final String currency;
+
+  /// Shown while [raw] is empty *and* the row is unfocused. The instant the row
+  /// takes focus the dim `0.00` replaces it; the two never coexist.
+  final String emptyText;
+
+  /// True while the docked keypad writes to this row.
+  final bool focused;
+
+  final VoidCallback onTap;
+  final VoidCallback onCurrencyTap;
+
+  @override
+  State<TxnAmountFieldRow> createState() => _TxnAmountFieldRowState();
+}
+
+class _TxnAmountFieldRowState extends State<TxnAmountFieldRow>
+    with SingleTickerProviderStateMixin {
+  /// Caret blink, the same 1050 ms period the hero and the starting-balance row
+  /// use. Runs only while focused, so an unfocused row costs no ticker.
+  late final AnimationController _blink = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1050),
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.focused) _blink.repeat();
+  }
+
+  @override
+  void didUpdateWidget(TxnAmountFieldRow old) {
+    super.didUpdateWidget(old);
+    if (widget.focused && !old.focused) _blink.repeat();
+    if (!widget.focused && old.focused) _blink.stop();
+  }
+
+  @override
+  void dispose() {
+    _blink.dispose();
+    super.dispose();
+  }
+
+  static double _measure(String s, TextStyle style, TextScaler scaler) {
+    final tp = TextPainter(
+      text: TextSpan(text: s, style: style),
+      textDirection: TextDirection.ltr,
+      textScaler: scaler,
+    )..layout();
+    return tp.width;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = formScale(context);
+    final t = formTextScale(context);
+    final scaler = MediaQuery.textScalerOf(context);
+
+    final focused = widget.focused;
+    final filled = widget.raw.isNotEmpty;
+    // The chip is a property of an amount: absent until there is one, or until
+    // the row is focused and there is about to be (§1).
+    final showChip = focused || filled;
+    final showEmpty = !filled && !focused;
+
+    final labelStyle = TextStyle(
+      fontSize: 15 * s * t,
+      fontWeight: FontWeight.w400,
+      height: 1.2,
+      color: AppColors.textPrimary,
+    );
+    // The value takes TxnFieldRow's style exactly — 15 pt w400, not the
+    // starting-balance row's 16 pt w600. Here the amount is one optional row
+    // among five and must not outweigh Account, Category and Repeat beside it.
+    TextStyle numStyle(Color c) => TextStyle(
+          fontSize: 15 * s * t,
+          fontWeight: FontWeight.w400,
+          height: 1.2,
+          color: c,
+        );
+
+    final parts = AmountEntry.splitPlain(widget.raw, widget.currency);
+    // Task 11: the typed digits are always bright; the untyped padding is dim
+    // only while the keypad is still writing here (or the field is empty), and
+    // joins the number at full brightness once the row is filled and unfocused.
+    // Pale means "not typed yet", never "these are the decimals".
+    final restColor =
+        (filled && !focused) ? AppColors.textPrimary : AppColors.textTertiary;
+
+    final Widget value = showEmpty
+        ? Text(
+            widget.emptyText,
+            textAlign: TextAlign.right,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: numStyle(AppColors.formDim2),
+          )
+        : Text.rich(
+            TextSpan(children: [
+              if (parts.typed.isNotEmpty)
+                TextSpan(
+                    text: parts.typed,
+                    style: numStyle(AppColors.textPrimary)),
+              if (focused)
+                WidgetSpan(
+                  alignment: PlaceholderAlignment.middle,
+                  child: AnimatedBuilder(
+                    animation: _blink,
+                    builder: (context, _) => Opacity(
+                      opacity: _blink.value < 0.5 ? 1 : 0,
+                      child: Container(
+                        width: 2,
+                        height: 17 * s,
+                        margin: const EdgeInsets.symmetric(horizontal: 1),
+                        color: AppColors.accent,
+                      ),
+                    ),
+                  ),
+                ),
+              if (parts.rest.isNotEmpty)
+                TextSpan(text: parts.rest, style: numStyle(restColor)),
+            ]),
+            textAlign: TextAlign.right,
+            maxLines: 1,
+            softWrap: false,
+          );
+
+    final chip = showChip
+        ? CurrencyChip(currency: widget.currency, onTap: widget.onCurrencyTap)
+        : null;
+
+    final icon = Icon(
+      widget.icon,
+      size: 18 * s,
+      color: focused ? AppColors.accent : AppColors.formDim2,
+    );
+
+    final content = LayoutBuilder(
+      builder: (context, c) {
+        final labelW = _measure(widget.label, labelStyle, scaler);
+        final shown =
+            showEmpty ? widget.emptyText : '${parts.typed}${parts.rest}';
+        final valueW = _measure(shown, numStyle(AppColors.textPrimary), scaler) +
+            (focused ? 4 : 0); // the caret column
+        final chipW = chip == null
+            ? 0.0
+            // padL(10) + code + gap(2) + chevron(8) + padR(10), all ·s — the
+            // same arithmetic the hero uses, so the two chips measure alike.
+            : 10 * s +
+                _measure(
+                  widget.currency,
+                  TextStyle(
+                      fontSize: 12.5 * s * t,
+                      fontWeight: FontWeight.w600,
+                      height: 1.2),
+                  scaler,
+                ) +
+                2 * s +
+                8 * s +
+                10 * s +
+                6 * s; // the gap before it
+        final iconW = kIconColumn * s;
+        final gaps = kIconGap * s * 2;
+        // One line only if the label and the amount unit both fit with a little
+        // breathing room between them.
+        final oneLine =
+            iconW + gaps + labelW + 16 * s + valueW + chipW <= c.maxWidth;
+
+        if (oneLine) {
+          return Row(
+            children: [
+              SizedBox(width: iconW, child: icon),
+              SizedBox(width: kIconGap * s),
+              // Capped, not Flexible: a second flex child would split the free
+              // space with the value and the value's right edge would move with
+              // the label's length — the misalignment this row exists to avoid.
+              ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: 150 * s),
+                child: Text(
+                  widget.label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: labelStyle,
+                ),
+              ),
+              SizedBox(width: kIconGap * s),
+              Expanded(child: value),
+              if (chip != null) ...[SizedBox(width: 6 * s), chip],
+            ],
+          );
+        }
+
+        // Two-line fallback — label above, the amount below, right-aligned.
+        // The number is never truncated and never shrunk, and the chip never
+        // wraps on its own.
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              currency,
-              style: TextStyle(
-                fontSize: 12.5 * s * formTextScale(context),
-                fontWeight: FontWeight.w600,
-                height: 1.2,
-                color: AppColors.chipText,
+            SizedBox(
+              width: iconW,
+              child: Padding(padding: EdgeInsets.only(top: 1 * s), child: icon),
+            ),
+            SizedBox(width: kIconGap * s),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(widget.label, style: labelStyle),
+                  SizedBox(height: 4 * s),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      Flexible(child: value),
+                      if (chip != null) ...[SizedBox(width: 6 * s), chip],
+                    ],
+                  ),
+                ],
               ),
             ),
-            SizedBox(width: 2 * s),
-            Icon(
-              Icons.keyboard_arrow_down_rounded,
-              size: 8 * s,
-              color: AppColors.chipText.withValues(alpha: 0.5),
-            ),
           ],
-        ),
+        );
+      },
+    );
+
+    final body = Container(
+      // Focused: the accent outline, inset inside the card. The margin/padding
+      // swap keeps the content in place, so the text barely moves when the
+      // outline appears — the same swap TxnNoteFieldRow and the starting
+      // balance row use.
+      margin: focused ? const EdgeInsets.all(3) : EdgeInsets.zero,
+      decoration: focused
+          ? BoxDecoration(
+              border: Border.all(
+                color: AppColors.accent.withValues(alpha: 0.55),
+                width: 1.5,
+              ),
+              borderRadius: BorderRadius.circular(8),
+            )
+          : null,
+      constraints: BoxConstraints(minHeight: focused ? 48 * s - 6 : 48 * s),
+      padding: EdgeInsets.symmetric(
+        horizontal: focused ? kRowPadding * s - 3 : kRowPadding * s,
+      ),
+      child: content,
+    );
+
+    return Semantics(
+      button: true,
+      focused: focused,
+      excludeSemantics: true,
+      label: showEmpty
+          ? '${widget.label} ${widget.emptyText}'
+          : '${widget.label} '
+              '${money(AmountEntry.value(widget.raw), currency: widget.currency)}',
+      child: InkWell(
+        onTap: widget.onTap,
+        borderRadius: BorderRadius.circular(14 * s),
+        child: body,
       ),
     );
   }

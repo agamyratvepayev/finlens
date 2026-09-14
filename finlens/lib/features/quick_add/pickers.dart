@@ -2145,15 +2145,6 @@ class _StartingBalanceRowState extends State<_StartingBalanceRow>
     super.dispose();
   }
 
-  static String _groupDigits(String digits) {
-    final buf = StringBuffer();
-    for (var i = 0; i < digits.length; i++) {
-      if (i > 0 && (digits.length - i) % 3 == 0) buf.write(',');
-      buf.write(digits[i]);
-    }
-    return buf.toString();
-  }
-
   static double _measure(String s, TextStyle style, TextScaler scaler) {
     final tp = TextPainter(
       text: TextSpan(text: s, style: style),
@@ -2163,31 +2154,12 @@ class _StartingBalanceRowState extends State<_StartingBalanceRow>
     return tp.width;
   }
 
-  /// Splits the display into what the user actually typed (grouped) and the
-  /// decimal remainder only there to hold the column — the same split the
-  /// Quick Add hero paints, so the caret lands after the last typed digit.
-  ({String typed, String rest}) _parts() {
-    final def = currencyDef(widget.currency);
-    final raw = widget.raw;
-    final zeros = def.decimals > 0 ? '.${'0' * def.decimals}' : '';
-    if (raw.isEmpty) return (typed: '', rest: '0$zeros');
-    final dot = raw.indexOf('.');
-    final whole = _groupDigits(
-        (dot < 0 ? raw : raw.substring(0, dot)).isEmpty
-            ? '0'
-            : (dot < 0 ? raw : raw.substring(0, dot)));
-    if (dot < 0) return (typed: whole, rest: zeros);
-    final decs = raw.substring(dot + 1);
-    final pad = def.decimals - decs.length;
-    return (typed: '$whole.$decs', rest: pad > 0 ? '0' * pad : '');
-  }
-
   @override
   Widget build(BuildContext context) {
     final def = currencyDef(widget.currency);
     final focused = widget.focused;
     final filled = widget.raw.isNotEmpty;
-    final parts = _parts();
+    final parts = AmountEntry.splitPlain(widget.raw, widget.currency);
 
     // Task 11: the typed digits are always bright; the untyped decimal padding
     // is dim only while the keypad is still writing here (or the field is

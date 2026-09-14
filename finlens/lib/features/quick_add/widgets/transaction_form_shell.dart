@@ -30,6 +30,10 @@ class FieldSpec {
     this.focusNode,
     this.maxLength,
     this.counterThreshold,
+    this.raw,
+    this.currency,
+    this.onCurrencyTap,
+    this.slotKey,
   });
 
   final IconData icon;
@@ -78,6 +82,20 @@ class FieldSpec {
   final FocusNode? focusNode;
   final int? maxLength;
   final int? counterThreshold;
+
+  /// Inline numeric editing (task 007). When [raw] is set the shell renders a
+  /// [TxnAmountFieldRow] driven by the form's docked keypad instead of a
+  /// value/chevron row, and [onTap] focuses the row rather than opening anything.
+  /// [currency] and [onCurrencyTap] must be set alongside it.
+  ///
+  /// Mutually exclusive with [controller] (the Note row's hatch).
+  final String? raw;
+  final String? currency;
+  final VoidCallback? onCurrencyTap;
+
+  /// Attached to the rendered amount row so the form can scroll it above the
+  /// docked keypad (task 007 §5.4). Only the task's amount field sets it.
+  final GlobalKey? slotKey;
 }
 
 /// The hero card's content: a number the keypad drives, or free text.
@@ -377,7 +395,7 @@ class TransactionFormShell extends StatelessWidget {
                   active: f.flashId != null && f.flashId == flashTarget,
                   pulse: flashPulse,
                   radius: 0,
-                  child: _fieldRow(f, flashTarget),
+                  child: _fieldRow(f, flashTarget, keypadOpen),
                 )
               else
                 Column(
@@ -387,7 +405,7 @@ class TransactionFormShell extends StatelessWidget {
                       active: f.flashId != null && f.flashId == flashTarget,
                       pulse: flashPulse,
                       radius: 0,
-                      child: _fieldRow(f, flashTarget),
+                      child: _fieldRow(f, flashTarget, keypadOpen),
                     ),
                     ...f.childRows!,
                   ],
@@ -406,8 +424,10 @@ class TransactionFormShell extends StatelessWidget {
 
 /// The card row for [f]. Extracted so a field with child rows and one without
 /// build the identical row.
-Widget _fieldRow(FieldSpec f, String? flashTarget) {
+Widget _fieldRow(FieldSpec f, String? flashTarget, bool keypadOpen) {
   final flagged = f.flashId != null && f.flashId == flashTarget;
+  assert(f.raw == null || f.controller == null,
+      'a field is either an inline amount or an inline note, never both');
   // The Note row edits in place (inline-note spec §1): no route, no sheet — a
   // TextField bound to the caller's controller, committing as the user types.
   if (f.controller != null) {
@@ -420,6 +440,24 @@ Widget _fieldRow(FieldSpec f, String? flashTarget) {
       maxLength: f.maxLength!,
       counterThreshold: f.counterThreshold!,
       onEditingStarted: f.onTap,
+    );
+  }
+  // The amount row types in place (task 007): the docked keypad writes to it and
+  // a tap focuses the row rather than opening a sheet.
+  if (f.raw != null) {
+    return TxnAmountFieldRow(
+      key: f.slotKey,
+      icon: f.icon,
+      label: f.label,
+      raw: f.raw!,
+      currency: f.currency!,
+      emptyText: f.emptyText ?? '',
+      // The task form has no numeric hero, so keypadOpen names this row
+      // unambiguously. The day a second numeric row lands on this form, this
+      // line is the one that has to grow a target.
+      focused: keypadOpen,
+      onTap: f.onTap!,
+      onCurrencyTap: f.onCurrencyTap!,
     );
   }
   return TxnFieldRow(
