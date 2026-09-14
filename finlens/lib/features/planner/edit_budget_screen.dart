@@ -11,6 +11,7 @@ import '../../shared/widgets/form_fields.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/app_typography.dart';
+import '../quick_add/type_menu.dart';
 import 'edit_scaffold.dart';
 import 'widgets/percent_input_formatter.dart';
 
@@ -28,6 +29,17 @@ class EditBudgetScreen extends StatefulWidget {
 class _EditBudgetScreenState extends State<EditBudgetScreen> {
   late final AppStore _store = StoreScope.read(context);
   late final Category _category = _store.categoryById(widget.categoryId)!;
+
+  /// Whether this screen is *creating* a budget. Derived, not passed: the
+  /// creation flow only offers categories that carry no budget yet (see
+  /// startNewBudgetFlow's candidate filter), so "no budget on this category"
+  /// *is* "being created". Captured once here rather than recomputed in build:
+  /// _save() writes the budget through the store (firing notifyListeners) before
+  /// it pops, and build subscribes via StoreScope.of — so the predicate would
+  /// flip true→false for the frames the screen animates away, blinking the pill
+  /// into the plain title. Latched at construction, it cannot.
+  late final bool _isNew =
+      _store.monthlyBudgetForCategory(widget.categoryId) == null;
 
   late final TextEditingController _limit = TextEditingController(
     text: (_store.monthlyLimitOf(_category) ?? 0).toStringAsFixed(0),
@@ -70,6 +82,12 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
 
     return EditScaffold(
       title: l.ebTitle,
+      // Creating a budget is reachable from the type menu, so it must be able to
+      // reopen it; editing an existing budget has nothing to switch to (§2).
+      // Taking the label off the type also fixes the "Edit budget" wording the
+      // creation path used to show.
+      type: _isNew ? QuickAddType.newBudget : null,
+      onTypeTap: _isNew ? _showTypeMenu : null,
       onSave: _limitValue > 0 ? _save : null,
       children: [
         FormSection(
@@ -214,6 +232,17 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
         onChanged: (v) => setState(() => _warn = v),
       ),
     );
+  }
+
+  Future<void> _showTypeMenu() async {
+    // The limit field may hold the keyboard; it must not linger over the sheet.
+    FocusManager.instance.primaryFocus?.unfocus();
+    final picked = await showQuickAddTypeMenu(
+      context,
+      current: QuickAddType.newBudget,
+    );
+    if (!mounted || picked == null || picked == QuickAddType.newBudget) return;
+    await switchCreationType(context, picked);
   }
 
   void _save() {

@@ -818,6 +818,84 @@ class HintStrip extends StatelessWidget {
 // The pinned SaveBar was removed (spec §3): the nav bar's Save is the only
 // commit, and it names/flashes the missing field on an incomplete tap.
 
+/// The nav-bar type control: a coloured dot, the type's name, and the chevron
+/// that says the name is a menu. Shared by Quick Add's [FormNavBar] and the Goal
+/// and Budget creation screens — all three are reachable from the same menu, so
+/// all three must be able to reopen it.
+///
+/// Every measurement is lifted from [FormNavBar], not re-derived. [locked] (or an
+/// [onTap] of null) renders the padlock and does not respond — Quick Add's edit
+/// mode. A screen with no type to switch shows no pill at all and keeps its plain
+/// title; see EditScaffold.
+class TypePill extends StatelessWidget {
+  const TypePill({
+    super.key,
+    required this.typeName,
+    required this.accent,
+    required this.onTap,
+    this.locked = false,
+  });
+
+  final String typeName;
+  final Color accent;
+  final VoidCallback? onTap;
+  final bool locked;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = formScale(context);
+    final t = formTextScale(context);
+    return Semantics(
+      button: true,
+      enabled: !locked && onTap != null,
+      child: GestureDetector(
+        onTap: locked ? null : onTap,
+        child: Container(
+          padding: EdgeInsets.symmetric(horizontal: 13 * s, vertical: 6 * s),
+          decoration: BoxDecoration(
+            color: AppColors.surfaceAlt,
+            borderRadius: BorderRadius.circular(100),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 6 * s,
+                height: 6 * s,
+                decoration: BoxDecoration(color: accent, shape: BoxShape.circle),
+              ),
+              SizedBox(width: 7 * s),
+              // Flexible so the pill yields instead of overflowing: the side
+              // slots are laid out first, and on a 320pt screen "New Goal" plus
+              // the dot and chevron wanted ~1px more than the centre had. The
+              // type name is the one thing here that can afford to ellipsise.
+              Flexible(
+                child: Text(
+                  typeName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 14 * s * t,
+                    fontWeight: FontWeight.w600,
+                    height: 1.2,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+              ),
+              SizedBox(width: 5 * s),
+              Icon(
+                locked ? Icons.lock_rounded : Icons.keyboard_arrow_down_rounded,
+                size: 9 * s,
+                color: AppColors.textPrimary.withValues(alpha: 0.5),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// Nav bar: Cancel / type pill / Save.
 ///
 /// Save appears here *and* pinned at the bottom. The bottom button is the one
@@ -868,58 +946,11 @@ class FormNavBar extends StatelessWidget {
             ),
             Expanded(
               child: Center(
-                child: GestureDetector(
-                  onTap: locked ? null : onTypeTap,
-                  child: Container(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: 13 * s,
-                      vertical: 6 * s,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.surfaceAlt,
-                      borderRadius: BorderRadius.circular(100),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 6 * s,
-                          height: 6 * s,
-                          decoration: BoxDecoration(
-                            color: accent,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        SizedBox(width: 7 * s),
-                        // Flexible so the pill yields instead of overflowing:
-                        // the side slots are laid out first, and on a 320pt
-                        // screen "New Goal" plus the dot and chevron wanted
-                        // ~1px more than the centre had. The type name is the
-                        // one thing here that can afford to ellipsise.
-                        Flexible(
-                          child: Text(
-                            typeName,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 14 * s * t,
-                              fontWeight: FontWeight.w600,
-                              height: 1.2,
-                              color: AppColors.textPrimary,
-                            ),
-                          ),
-                        ),
-                        SizedBox(width: 5 * s),
-                        Icon(
-                          locked
-                              ? Icons.lock_rounded
-                              : Icons.keyboard_arrow_down_rounded,
-                          size: 9 * s,
-                          color: AppColors.textPrimary.withValues(alpha: 0.5),
-                        ),
-                      ],
-                    ),
-                  ),
+                child: TypePill(
+                  typeName: typeName,
+                  accent: accent,
+                  onTap: onTypeTap,
+                  locked: locked,
                 ),
               ),
             ),

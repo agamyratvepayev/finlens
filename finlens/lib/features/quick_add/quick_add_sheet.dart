@@ -7,7 +7,6 @@ import '../../core/store/app_store.dart';
 import '../../core/utils/formatters.dart';
 import '../../core/utils/fx.dart';
 import '../../l10n/app_localizations.dart';
-import '../../shared/widgets/app_card.dart';
 import '../../shared/widgets/txn_row.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
@@ -16,6 +15,7 @@ import '../planner/edit_budget_screen.dart';
 import '../planner/edit_goal_screen.dart';
 import 'date_time_sheet.dart';
 import 'pickers.dart';
+import 'type_menu.dart';
 import 'tag_picker_sheet.dart';
 import 'split_sheet.dart';
 import 'widgets/split_summary_rows.dart';
@@ -1071,96 +1071,18 @@ class _QuickAddScreenState extends State<QuickAddScreen>
     );
   }
 
-  void _showTypeMenu() {
+  Future<void> _showTypeMenu() async {
     setState(() => _keypadOpen = false);
-    showAppSheet<void>(
-      context,
-      title: AppLocalizations.of(context).qaWhatAdding,
-      // Seven fixed rows: hug them instead of opening at a fraction (task 20).
-      contentSized: true,
-      builder: (sheetContext, controller) => ListView(
-        controller: controller,
-        // shrinkWrap so the list is only as tall as its rows; the sheet's outer
-        // Flexible caps it and it scrolls once the rows outgrow the sheet.
-        shrinkWrap: true,
-        padding: const EdgeInsets.fromLTRB(
-          Insets.gutter,
-          0,
-          Insets.gutter,
-          Insets.xxl,
-        ),
-        children: [
-          AppCard(
-            child: Column(
-              children: [
-                for (var i = 0; i < QuickAddType.values.length; i++) ...[
-                  if (i > 0) const RowDivider(indent: Insets.md),
-                  _typeOption(sheetContext, QuickAddType.values[i]),
-                ],
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _typeOption(BuildContext sheetContext, QuickAddType type) {
-    return InkWell(
-      onTap: () {
-        Navigator.of(sheetContext).pop();
-        // Goals live on their own full-screen form — close the sheet and the
-        // Quick Add screen, then open the goal editor.
-        if (type == QuickAddType.newGoal) {
-          final nav = Navigator.of(context, rootNavigator: true);
-          nav.pop();
-          nav.push(MaterialPageRoute(builder: (_) => const EditGoalScreen()));
-          return;
-        }
-        // A budget also leaves the sheet, but needs a category first (§3): close
-        // the type sheet (above) and the Quick Add screen, then run the flow off
-        // the navigator's overlay context. That context is a descendant of the
-        // root navigator (so `Navigator.of`/`showModalBottomSheet` resolve to it)
-        // and outlives the popped Quick Add screen — the QuickAdd context does
-        // not, and the navigator's own context has no Navigator above it.
-        if (type == QuickAddType.newBudget) {
-          final nav = Navigator.of(context, rootNavigator: true);
-          final overlayContext = nav.overlay!.context;
-          nav.pop();
-          startNewBudgetFlow(overlayContext);
-          return;
-        }
-        _switchType(type);
-      },
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: Insets.md,
-          vertical: Insets.md,
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 10,
-              height: 10,
-              decoration: BoxDecoration(
-                color: type.color,
-                shape: BoxShape.circle,
-              ),
-            ),
-            const SizedBox(width: Insets.md),
-            Expanded(
-                child: Text(type.label(AppLocalizations.of(sheetContext)),
-                    style: AppText.rowTitle)),
-            if (type == _type)
-              const Icon(
-                Icons.check_rounded,
-                size: 18,
-                color: AppColors.accent,
-              ),
-          ],
-        ),
-      ),
-    );
+    final picked = await showQuickAddTypeMenu(context, current: _type);
+    if (!mounted || picked == null || picked == _type) return;
+    // New goal and New budget leave this shell for a full-screen form; the four
+    // transaction types and New task switch config in place, carrying the
+    // amount, date and refs across (§4).
+    if (picked == QuickAddType.newGoal || picked == QuickAddType.newBudget) {
+      await switchCreationType(context, picked);
+      return;
+    }
+    _switchType(picked);
   }
 
   // ── Editing extras ────────────────────────────────────────────────────────

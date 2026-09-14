@@ -14,6 +14,7 @@ import '../../theme/app_theme.dart';
 import '../../theme/app_typography.dart';
 import '../balance/balance_screen.dart' show EmptyState;
 import '../quick_add/pickers.dart';
+import '../quick_add/type_menu.dart';
 import 'edit_scaffold.dart';
 import 'goal_presentation.dart';
 
@@ -258,6 +259,10 @@ class _EditGoalScreenState extends State<EditGoalScreen> {
 
     return EditScaffold(
       title: _isEditing ? l.egTitle : l.goalNewTitle,
+      // Creating a goal is reachable from the type menu, so it must be able to
+      // reopen it; editing an existing goal has nothing to switch to (§2).
+      type: _isEditing ? null : QuickAddType.newGoal,
+      onTypeTap: _isEditing ? null : _showTypeMenu,
       onSave: _canSave ? _save : null,
       header: _isEditing ? _progressHeader(l) : null,
       children: [
@@ -681,6 +686,19 @@ class _EditGoalScreenState extends State<EditGoalScreen> {
       _primary = _Pair.date;
     });
     _syncMonthlyDisplay();
+  }
+
+  // ── Type switch (create only) ───────────────────────────────────────────────
+
+  Future<void> _showTypeMenu() async {
+    // The name field may hold the keyboard; it must not linger over the sheet.
+    FocusManager.instance.primaryFocus?.unfocus();
+    final picked = await showQuickAddTypeMenu(
+      context,
+      current: QuickAddType.newGoal,
+    );
+    if (!mounted || picked == null || picked == QuickAddType.newGoal) return;
+    await switchCreationType(context, picked);
   }
 
   // ── Save / delete ──────────────────────────────────────────────────────────

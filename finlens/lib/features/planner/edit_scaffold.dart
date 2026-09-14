@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 
+import '../../core/l10n/enum_labels.dart';
+import '../../core/models/enums.dart';
 import '../../l10n/app_localizations.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/app_typography.dart';
+import '../quick_add/widgets/form_kit.dart';
 
 /// Cancel / title / Save shell shared by Edit Budget, Edit Goal and Edit Task
 /// (specs 5.4, 5.6, 5.7 — all three use the same chrome).
@@ -14,8 +17,12 @@ class EditScaffold extends StatelessWidget {
     required this.children,
     this.onSave,
     this.header,
-  });
+    this.type,
+    this.onTypeTap,
+  }) : assert((type == null) == (onTypeTap == null),
+            'a pill is a type and a way to change it, or neither');
 
+  /// The centred title, used when no [type] is supplied.
   final String title;
   final List<Widget> children;
 
@@ -24,6 +31,12 @@ class EditScaffold extends StatelessWidget {
 
   /// Optional block pinned under the header (e.g. a goal's progress bar).
   final Widget? header;
+
+  /// When set, the centre slot is a [TypePill] for this type instead of [title].
+  /// Only creation screens pass it: editing an existing record has nothing to
+  /// switch to, so those screens keep the plain title.
+  final QuickAddType? type;
+  final VoidCallback? onTypeTap;
 
   @override
   Widget build(BuildContext context) {
@@ -50,7 +63,14 @@ class EditScaffold extends StatelessWidget {
                   ),
                   Expanded(
                     child: Center(
-                      child: Text(title, style: AppText.rowTitle),
+                      child: type == null
+                          ? Text(title, style: AppText.rowTitle)
+                          : TypePill(
+                              typeName:
+                                  type!.label(AppLocalizations.of(context)),
+                              accent: type!.color,
+                              onTap: onTypeTap,
+                            ),
                     ),
                   ),
                   TextButton(
