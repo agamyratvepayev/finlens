@@ -201,7 +201,8 @@ class _QuickAddScreenState extends State<QuickAddScreen>
     super.initState();
     // The one clock: a new/copied transaction defaults to the real today (spec
     // §3 — this is the default that stops entries being written to 9 August).
-    final today = StoreScope.read(context).today;
+    final store = StoreScope.read(context);
+    final today = store.today;
     final source = widget.editing ?? widget.copyOf;
     if (source != null) {
       _type = switch (source.type) {
@@ -210,7 +211,13 @@ class _QuickAddScreenState extends State<QuickAddScreen>
         TxnType.transfer => QuickAddType.transfer,
         TxnType.rebalance => QuickAddType.rebalance,
       };
-      _raw = AmountEntry.fromDouble(source.amount);
+      // A rebalance stores the *delta*, but the hero shows the *balance*
+      // (Rebalance §1b): seed it with the account's resulting balance —
+      // baseline + delta, i.e. its current balance magnitude — so reopening a
+      // saved rebalance shows the balance it was set to, never the raw delta.
+      _raw = source.type == TxnType.rebalance
+          ? AmountEntry.fromDouble(store.balanceOf(source.toRef).abs())
+          : AmountEntry.fromDouble(source.amount);
       _currency = source.currency;
       _fromRef = source.fromRef;
       _toRef = source.toRef;
@@ -441,6 +448,8 @@ class _QuickAddScreenState extends State<QuickAddScreen>
         'title' => _title.text.trim().isNotEmpty,
         'from' => _fromRef != null,
         'to' => _toRef != null,
+        // Rebalance's category row (§4): the picked category lands in _fromRef.
+        'category' => _fromRef != null,
         _ => true,
       };
 
@@ -468,8 +477,16 @@ class _QuickAddScreenState extends State<QuickAddScreen>
         _noteFocus.unfocus();
         setState(() => _keypadOpen = true);
       },
-      onKey: (k) => setState(() => _raw = AmountEntry.press(_raw, k)),
-      onBackspace: () => setState(() => _raw = AmountEntry.backspace(_raw)),
+      onKey: (k) => setState(() {
+        _raw = AmountEntry.press(_raw, k);
+        // A changed amount can flip the difference's sign, which changes which
+        // category list applies; drop a category that no longer fits (§4).
+        if (_type == QuickAddType.rebalance) _reconcileRebalanceCategory(store);
+      }),
+      onBackspace: () => setState(() {
+        _raw = AmountEntry.backspace(_raw);
+        if (_type == QuickAddType.rebalance) _reconcileRebalanceCategory(store);
+      }),
       onDismissKeypad: () => setState(() => _keypadOpen = false),
     );
   }
@@ -1107,86 +1124,169 @@ class _QuickAddScreenState extends State<QuickAddScreen>
     }
   }
 
-  FormConfig _rebalance(AppStore store) {
+  /// Value that moves on its own — a price, not a payment. Only these two groups
+  /// book a revaluation; everywhere else a difference is money that came in or
+  /// went out and was never recorded (Rebalance §3).
+  bool _isRevaluation(Account a) =>
+      a.group == AccountGroup.investments || a.group == AccountGroup.valuables;
+
+  /// The account's balance excluding the record being edited — the baseline a
+  /// new balance is compared against (Rebalance §1a). On create there is nothing
+  /// to exclude, so this is [AppStore.balanceOf]; on edit, `balanceOf` already
+  /// contains the delta being replaced, and subtracting a new balance from it
+  /// double-counts the old one, so the editing record's effect is removed first.
+  double _baselineBalance(AppStore store, String accountId) {
+    final base = store.balanceOf(accountId);
+    final editing = widget.editing;
+    if (editing == null) return base;
+    return base - store.effectOfTxnOn(editing, accountId);
+  }
+
+  /// Drops a chosen rebalance category when it no longer belongs to the list the
+  /// current difference calls for — an income category stranded on a now-negative
+  /// difference, or any category once the account became a revaluation (§4).
+  /// A silently retained expense category on an income is the bug this task is
+  /// about; the sign flipping is exactly when it happens.
+  void _reconcileRebalanceCategory(AppStore store) {
+    if (_fromRef == null) return;
     final account = store.accountById(_toRef);
-    final current = account == null ? 0.0 : store.balanceOf(account.id);
-    final entered = _raw.isEmpty ? null : _amount;
-    final diff = entered == null ? null : entered - current;
+    if (account == null) return;
+    if (_isRevaluation(account)) {
+      _fromRef = null; // a price change files under no category
+      return;
+    }
+    if (_raw.isEmpty) return; // no difference yet — nothing to reconcile against
+    final baseline = _baselineBalance(store, account.id);
+    final signed = account.group.isAsset ? _amount : -_amount;
+    final diff = signed - baseline;
+    final needed = diff >= 0 ? CategoryType.income : CategoryType.expense;
+    if (store.categoryById(_fromRef)?.type != needed) _fromRef = null;
+  }
+
+  FormConfig _rebalance(AppStore store) {
+    final l = AppLocalizations.of(context);
+    final account = store.accountById(_toRef);
+    final isReval = account != null && _isRevaluation(account);
+    // The baseline the new balance is measured against — balanceOf on create,
+    // balanceOf minus the editing record on edit (§1a). Rendered by `Current`.
+    final baseline =
+        account == null ? 0.0 : _baselineBalance(store, account.id);
+    final entered = _raw.isEmpty ? null : _amount; // a magnitude (§1d)
+    // The keypad cannot type a minus, so the account gives the balance its side:
+    // an asset is positive, a liability negative (§1d).
+    final newBalance = entered == null || account == null
+        ? null
+        : (account.group.isAsset ? entered : -entered);
+    final diff = newBalance == null ? null : newBalance - baseline;
+    // Every figure here is the account's own currency now (§1c) — no _currency.
+    final currency = account?.currency ?? _currency;
 
     return FormConfig(
-      typeName: AppLocalizations.of(context).quickAddRebalance,
+      typeName: l.quickAddRebalance,
       accent: AppColors.rebalance,
       accentDim: AppColors.rebalanceDim,
-      // The user types what the balance *is*, not what changed.
-      hero: _amountHero(AppLocalizations.of(context).qaNewBalance),
+      // The user types what the balance *is*, not what changed. The unit is the
+      // account's property, so the chip is locked (§2a).
+      hero: NumericHero(
+        label: l.qaNewBalance,
+        raw: _raw,
+        currency: currency,
+        currencyLocked: true,
+      ),
       groups: [
-        FieldGroup(AppLocalizations.of(context).qaGroupRequired.toUpperCase(), [
+        FieldGroup(l.qaGroupRequired.toUpperCase(), [
           FieldSpec(
             icon: Icons.donut_large_rounded,
-            label: AppLocalizations.of(context).qaAccount,
+            label: l.qaAccount,
             value: account?.name,
-            emptyText: AppLocalizations.of(context).qaChooseAccount,
+            emptyText: l.qaChooseAccount,
             // _pickAccountInto raises the account bottom sheet.
             opensSheet: true,
             onTap: () => _pickAccountInto(
               store,
               isFrom: false,
-              title: AppLocalizations.of(context).qaRevaluedAccount,
-              alsoSetFrom: true,
+              title: l.qaRevaluedAccount,
             ),
           ),
           FieldSpec(
             icon: Icons.menu_book_rounded,
-            label: AppLocalizations.of(context).qaCurrent,
+            label: l.qaCurrent,
+            // Same account, same unit as the chip two rows up: drop the token,
+            // keep the sign and the dim colour (§2c). The spoken value keeps it.
             value: account == null
                 ? null
-                : money(current, currency: account.currency),
+                : money(baseline, currency: currency, withSymbol: false),
+            semanticValue: account == null
+                ? null
+                : money(baseline, currency: currency),
             emptyText: '—',
             valueColor: AppColors.textSecondary,
           ),
           FieldSpec(
             icon: Icons.swap_vert_rounded,
-            label: AppLocalizations.of(context).qaDifference,
+            label: l.qaDifference,
             value: diff == null
                 ? null
-                : money(diff, currency: _currency, showSign: true),
+                : money(diff,
+                    currency: currency, withSymbol: false, showSign: true),
+            semanticValue: diff == null
+                ? null
+                : money(diff, currency: currency, showSign: true),
             emptyText: '—',
             valueColor: diff == null
                 ? null
                 : (diff >= 0 ? AppColors.positive : AppColors.negative),
           ),
+          // A difference on anything but an investment or a valuable is money
+          // that came in or went out — file it under a category like any entry
+          // (§4). Absent for a revaluation: a price change files under nothing.
+          if (account != null && !isReval)
+            FieldSpec(
+              icon: Icons.category_rounded,
+              label: l.fieldCategory,
+              value: store.categoryById(_fromRef)?.name,
+              emptyText: l.qaChooseCategory,
+              flashId: 'category',
+              // _pickCategoryInto raises the category bottom sheet; the picker's
+              // own title names the list. Negative → expense, positive (or not
+              // yet typed) → income, chosen at tap time.
+              opensSheet: true,
+              onTap: () => _pickCategoryInto(
+                (diff != null && diff < 0)
+                    ? CategoryType.expense
+                    : CategoryType.income,
+                isFrom: true,
+              ),
+            ),
         ]),
-        FieldGroup(AppLocalizations.of(context).qaGroupOptional.toUpperCase(), [
+        FieldGroup(l.qaGroupOptional.toUpperCase(), [
           _dateField(),
-          FieldSpec(
-            icon: Icons.label_outline_rounded,
-            label: AppLocalizations.of(context).qaReason,
-            value: store.categoryById(_fromRef)?.name,
-            emptyText: AppLocalizations.of(context).qaAdjustment,
-            // _pickCategoryInto raises the category bottom sheet.
-            opensSheet: true,
-            onTap: () => _pickCategoryInto(CategoryType.expense, isFrom: true),
-          ),
           _noteField(),
         ]),
       ],
-      hint: diff == null || diff == 0
-          ? null
-          : HintSpec.parts([
-              AppLocalizations.of(context).qaBooksPrefix,
-              money(diff, currency: _currency, showSign: true),
-              AppLocalizations.of(context).qaBooksSuffix,
-            ]),
-      // A correction is not recurring and cannot be split, so the row is
-      // omitted rather than shown disabled.
+      // The hint banner is gone (§5a): it merely repeated the Difference row, and
+      // its "dated today" wording could contradict the Date row.
+      // The Reason row is gone (§5b): §4's Category row is the real version of
+      // what it pretended to be.
       toggles: const [],
-      saveLabel: AppLocalizations.of(context).qaSaveAdjustment,
+      // Renders nowhere today, but named correctly anyway (§3): expense/income
+      // for a real entry, adjustment for a revaluation.
+      saveLabel: isReval
+          ? l.qaSaveAdjustment
+          : ((diff != null && diff < 0) ? l.qaSaveExpense : l.qaSaveIncome),
       blockers: [
-        Blocker(unmet: _toRef == null, label: AppLocalizations.of(context).qaBlockAccount),
-        Blocker(unmet: _raw.isEmpty, label: AppLocalizations.of(context).qaEnterNewBalance),
+        Blocker(unmet: _toRef == null, label: l.qaBlockAccount),
+        Blocker(unmet: _raw.isEmpty, label: l.qaEnterNewBalance),
         Blocker(
           unmet: _raw.isNotEmpty && diff == 0,
-          label: AppLocalizations.of(context).qaBlockBalanceUnchanged,
+          label: l.qaBlockBalanceUnchanged,
+        ),
+        // Non-revaluation only: a real entry needs a category (§4). Never blocks
+        // a revaluation, which has none.
+        Blocker(
+          unmet: account != null && !isReval && _fromRef == null,
+          label: l.qaBlockCategory,
+          flashId: 'category',
         ),
       ],
       trailing: _editingExtras(),
@@ -1346,6 +1446,10 @@ class _QuickAddScreenState extends State<QuickAddScreen>
         if (alsoSetFrom) _fromRef = a.id;
       }
       _currency = a.currency;
+      // A new revalued account can change its group (revaluation vs not) and its
+      // sign, flipping the difference — drop a category that no longer fits, and
+      // clear any stale one when the account is now a revaluation (§3/§4).
+      if (_type == QuickAddType.rebalance) _reconcileRebalanceCategory(store);
     });
     // A changed source/destination can change the currency pair; keep the rate
     // field in step (spec §2). Harmless for non-transfer types.
@@ -1735,8 +1839,16 @@ class _QuickAddScreenState extends State<QuickAddScreen>
         }
         store.updateTxn(
           editing,
+          // Rebalance edit (§1a): the delta is the new signed balance minus the
+          // baseline *excluding this record* — `balanceOf` still contains the
+          // delta being replaced, so measuring against it double-counts the old
+          // one (a re-save-unchanged would drift the balance). The keypad types a
+          // magnitude; the account's side gives it its sign (§1d). This form is
+          // only ever reached for a revaluation — an edited income/expense opens
+          // its own form — so the type stays a rebalance.
           amount: _type == QuickAddType.rebalance
-              ? _amount - store.balanceOf(_toRef!)
+              ? (store.accountById(_toRef!)!.group.isAsset ? _amount : -_amount) -
+                  _baselineBalance(store, _toRef!)
               : (_type == QuickAddType.transfer ? transferAmount : _amount),
           fromRef: _fromRef,
           toRef: _toRef,
@@ -1762,6 +1874,11 @@ class _QuickAddScreenState extends State<QuickAddScreen>
       Navigator.of(context).pop();
       return;
     }
+
+    // The record type actually written, for the confirmation snackbar (§3): a
+    // rebalance form can create an expense or an income, so "Rebalance saved"
+    // would be a lie. Null for the types whose QuickAddType names their record.
+    TxnType? savedType;
 
     switch (_type) {
       case QuickAddType.expense:
@@ -1806,17 +1923,60 @@ class _QuickAddScreenState extends State<QuickAddScreen>
         _applyRepeatFor(store, t, income: false, transfer: true);
       case QuickAddType.rebalance:
         final asset = store.accountById(_toRef)!;
-        store.addTxn(
-          type: TxnType.rebalance,
-          amount: _amount - store.balanceOf(asset.id),
-          currency: asset.currency,
-          fromRef: asset.id,
-          toRef: asset.id,
-          date: _date,
-          note: _note.text.trim().isEmpty
-              ? AppLocalizations.of(context).qaBalanceAdjustment
-              : _note.text.trim(),
-        );
+        // The delta against the balance *without* this record — on create there
+        // is nothing to exclude, so this is `balanceOf` (§1a). The keypad types a
+        // magnitude; the account's side signs the new balance (§1d).
+        final baseline = _baselineBalance(store, asset.id);
+        final signed = asset.group.isAsset ? _amount : -_amount;
+        final delta = signed - baseline;
+        final note = _note.text.trim().isEmpty
+            ? AppLocalizations.of(context).qaBalanceAdjustment
+            : _note.text.trim();
+        if (_isRevaluation(asset)) {
+          // A price change on an investment or a valuable: unrealised, kept out
+          // of every income/expense metric — a rebalance carrying the signed
+          // delta, the account on both refs (§3).
+          store.addTxn(
+            type: TxnType.rebalance,
+            amount: delta,
+            currency: asset.currency,
+            fromRef: asset.id,
+            toRef: asset.id,
+            date: _date,
+            note: note,
+          );
+          savedType = TxnType.rebalance;
+        } else if (delta >= 0) {
+          // The balance rose: money came in and was never recorded. Booked as
+          // income in its category — identical in shape to the Income form's
+          // output (§3): positive magnitude, fromRef the category, toRef the
+          // account.
+          store.addTxn(
+            type: TxnType.income,
+            amount: delta,
+            currency: asset.currency,
+            fromRef: _fromRef!, // category, guaranteed by the category blocker
+            toRef: asset.id,
+            date: _date,
+            note: note,
+          );
+          savedType = TxnType.income;
+        } else {
+          // The balance fell: money went out and was never recorded. Booked as an
+          // expense — identical in shape to the Expense form's output (§3): a
+          // positive magnitude, fromRef the account, toRef the category — so it
+          // reaches OUT, its category and its budget.
+          store.addTxn(
+            type: TxnType.expense,
+            amount: -delta,
+            currency: asset.currency,
+            fromRef: asset.id,
+            toRef: _fromRef!, // category
+            date: _date,
+            note: note,
+          );
+          savedType = TxnType.expense;
+        }
       case QuickAddType.newBudget:
         // Unreachable: budgets are created on EditBudgetScreen and are
         // intercepted before the sheet ever saves one (§4).
@@ -1859,10 +2019,12 @@ class _QuickAddScreenState extends State<QuickAddScreen>
     }
 
     Navigator.of(context).pop();
+    final l = AppLocalizations.of(context);
+    // Name what was actually created (§3): the rebalance form's own record type
+    // when it differs from the pill, else the QuickAddType's own label.
+    final savedLabel = savedType != null ? savedType.label(l) : _type.label(l);
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-          content: Text(AppLocalizations.of(context)
-              .qaSaved(_type.label(AppLocalizations.of(context))))),
+      SnackBar(content: Text(l.qaSaved(savedLabel))),
     );
   }
 }

@@ -109,12 +109,17 @@ class NumericHero extends HeroSpec {
     required this.raw,
     required this.currency,
     this.onCurrencyTap,
+    this.currencyLocked = false,
   });
 
   final String label;
   final String raw;
   final String currency;
   final VoidCallback? onCurrencyTap;
+
+  /// The chip shows a padlock and does not open the picker (Rebalance §2a) —
+  /// only the rebalance form sets it, because there the unit is the account's.
+  final bool currencyLocked;
 }
 
 class TextHero extends HeroSpec {
@@ -356,6 +361,7 @@ class TransactionFormShell extends StatelessWidget {
           focused: keypadOpen,
           onTap: onHeroTap,
           onCurrencyTap: hero.onCurrencyTap,
+          currencyLocked: hero.currencyLocked,
         ),
       // The task title is one of the six name fields (task 004): a single line,
       // no caption, the glyph a plain-but-tappable icon that picks the task's

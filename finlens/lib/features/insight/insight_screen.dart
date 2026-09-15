@@ -2021,14 +2021,24 @@ class _RevaluationBlock extends StatelessWidget {
     final amtSpoken = money(amountBase.abs(), masked: store.masked);
     final pctPart = pctStr == null ? '' : l.insA11yPercent(pctStr);
     final dateSpoken = dayMonth(t.date, l);
+    // The note (Rebalance §6): shown first in the subtitle, ellipsised when it
+    // does not fit, with the date never dropped. A blank note leaves the row
+    // byte-identical to before.
+    final note = t.note.trim();
+    final baseAfter = '${money(base, masked: store.masked)} → '
+        '${money(after, masked: store.masked)}';
+    final subtitle =
+        note.isEmpty ? '$dateSpoken · $baseAfter' : '$note · $dateSpoken · $baseAfter';
     final sentence = up
         ? l.insA11yRevalUp(nameSpoken, amtSpoken, pctPart, dateSpoken)
         : l.insA11yRevalDown(nameSpoken, amtSpoken, pctPart, dateSpoken);
+    // The spoken sentence gains the note at the end, after the date (§6).
+    final spoken = note.isEmpty ? sentence : '$sentence · $note';
 
     return Semantics(
       container: true,
       button: true,
-      label: sentence,
+      label: spoken,
       child: ExcludeSemantics(
         child: InkWell(
           onTap: acc == null
@@ -2058,8 +2068,7 @@ class _RevaluationBlock extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                           style: AppText.body.copyWith(fontSize: 14)),
                       Text(
-                        '$dateSpoken · ${money(base, masked: store.masked)} → '
-                        '${money(after, masked: store.masked)}',
+                        subtitle,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(

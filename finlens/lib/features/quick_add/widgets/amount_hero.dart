@@ -53,8 +53,13 @@ abstract final class AmountEntry {
 
   /// Splits the display into the part the user actually typed and the decimal
   /// remainder that is only there to hold the column.
-  static ({String typed, String rest}) split(String raw, String currency) {
-    final symbol = currencySymbol(currency);
+  ///
+  /// [withSymbol] prefixes the currency symbol (`$1,000`). It is dropped when a
+  /// currency chip sits beside the number and already names the unit (Rebalance
+  /// §2b): the empty state then reads `0.00`, not `$0.00`.
+  static ({String typed, String rest}) split(String raw, String currency,
+      {bool withSymbol = true}) {
+    final symbol = withSymbol ? currencySymbol(currency) : '';
     if (raw.isEmpty) return (typed: '', rest: '${symbol}0.00');
 
     final dot = raw.indexOf('.');
@@ -103,6 +108,7 @@ class NumericHeroCard extends StatelessWidget {
     required this.focused,
     required this.onTap,
     this.onCurrencyTap,
+    this.currencyLocked = false,
   });
 
   final String label;
@@ -114,6 +120,11 @@ class NumericHeroCard extends StatelessWidget {
   final VoidCallback onTap;
   final VoidCallback? onCurrencyTap;
 
+  /// The chip renders a padlock and does not open the picker — the currency is
+  /// the account's property, not a choice (Rebalance §2a). A locked chip still
+  /// counts as a chip, so the number below it drops its currency token.
+  final bool currencyLocked;
+
   @override
   Widget build(BuildContext context) {
     final s = formScale(context);
@@ -122,13 +133,23 @@ class NumericHeroCard extends StatelessWidget {
     // fits is what renders — no double counting, no guessing from `t`.
     final scaler = MediaQuery.textScalerOf(context);
 
-    final chip = onCurrencyTap == null
+    // A chip is shown when the currency is tappable, or locked (Rebalance §2a).
+    final showChip = onCurrencyTap != null || currencyLocked;
+    final chip = !showChip
         ? null
-        : CurrencyChip(currency: currency, onTap: onCurrencyTap!);
+        : CurrencyChip(
+            currency: currency,
+            onTap: onCurrencyTap ?? () {},
+            locked: currencyLocked,
+          );
+
+    // The unit lives on the chip when there is one, so the number drops its
+    // token (Rebalance §2b); with no chip the number carries it as before.
+    final withSymbol = !showChip;
 
     // The whole amount string, caret aside — the caret is a fixed-width column
     // between the typed part and the dimmed remainder, so add it as a constant.
-    final parts = AmountEntry.split(raw, currency);
+    final parts = AmountEntry.split(raw, currency, withSymbol: withSymbol);
     final amountText = '${parts.typed}${parts.rest}';
     final caretW = focused ? 2 + 2 * s : 0.0;
     double amountWidth(double size) =>
@@ -248,14 +269,28 @@ class NumericHeroCard extends StatelessWidget {
                         (budgetLA - amountFloorW - eps).clamp(0.0, 150 * s);
                   }
 
-                  final amount = _AmountText(
+                  final Widget amountText = _AmountText(
                     raw: raw,
                     currency: currency,
                     accent: accent,
                     accentDim: accentDim,
                     focused: focused,
                     fontSize: chosenSize,
+                    withSymbol: withSymbol,
                   );
+                  // With the token off the number, the chip carries the unit
+                  // visually — but a screen reader must still hear it. Speak the
+                  // amount with its currency, and hide the bare digits beneath
+                  // (Rebalance §2d). With a token present the number already
+                  // names itself, so it is left untouched.
+                  final amount = withSymbol
+                      ? amountText
+                      : Semantics(
+                          label:
+                              money(AmountEntry.value(raw), currency: currency),
+                          excludeSemantics: true,
+                          child: amountText,
+                        );
 
                   final labelWidget = labelMax < 1
                       // Below a legible width the label disappears entirely —
@@ -376,6 +411,7 @@ class _AmountText extends StatefulWidget {
     required this.accentDim,
     required this.focused,
     required this.fontSize,
+    this.withSymbol = true,
   });
 
   final String raw;
@@ -387,6 +423,10 @@ class _AmountText extends StatefulWidget {
   /// Resolved by the card from the space actually available (§2/§3): 17·s·t
   /// when the number fits, shrinking to a 15·s·t floor when it does not.
   final double fontSize;
+
+  /// Matches the card's decision (Rebalance §2b): the currency token is dropped
+  /// from the number when a chip beside it names the unit.
+  final bool withSymbol;
 
   @override
   State<_AmountText> createState() => _AmountTextState();
@@ -408,7 +448,8 @@ class _AmountTextState extends State<_AmountText>
   @override
   Widget build(BuildContext context) {
     final s = formScale(context);
-    final parts = AmountEntry.split(widget.raw, widget.currency);
+    final parts =
+        AmountEntry.split(widget.raw, widget.currency, withSymbol: widget.withSymbol);
     final size = widget.fontSize;
 
     final style = _amountStyle(size);
@@ -467,19 +508,31 @@ class _AmountTextState extends State<_AmountText>
 /// Shared by the numeric hero and [TxnAmountFieldRow] — one chip, two callers,
 /// so a change to either shows up in both.
 class CurrencyChip extends StatelessWidget {
-  const CurrencyChip({super.key, required this.currency, required this.onTap});
+  const CurrencyChip({
+    super.key,
+    required this.currency,
+    required this.onTap,
+    this.locked = false,
+  });
 
   final String currency;
   final VoidCallback onTap;
+
+  /// A locked chip states the unit but cannot change it — a padlock stands
+  /// where the chevron would, and the tap does nothing (Rebalance §2a). Its
+  /// geometry is otherwise the chevron chip's exactly, so widths still match.
+  final bool locked;
 
   @override
   Widget build(BuildContext context) {
     final s = formScale(context);
     return Semantics(
-      button: true,
+      // Locked, it is a label, not a button; either way it names the currency
+      // in words so the token-less number is still announced with its unit.
+      button: !locked,
       label: '$currency · ${AppLocalizations.of(context).eaCurrency}',
       child: GestureDetector(
-        onTap: onTap,
+        onTap: locked ? null : onTap,
         child: Container(
           padding: EdgeInsets.symmetric(horizontal: 10 * s, vertical: 6 * s),
           decoration: BoxDecoration(
@@ -500,7 +553,9 @@ class CurrencyChip extends StatelessWidget {
               ),
               SizedBox(width: 2 * s),
               Icon(
-                Icons.keyboard_arrow_down_rounded,
+                locked
+                    ? Icons.lock_rounded
+                    : Icons.keyboard_arrow_down_rounded,
                 size: 8 * s,
                 color: AppColors.chipText.withValues(alpha: 0.5),
               ),

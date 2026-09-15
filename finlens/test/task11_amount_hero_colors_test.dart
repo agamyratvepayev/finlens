@@ -82,9 +82,11 @@ void main() {
     final dim = spans.where((s) => s.color == _accentDim).toList();
     expect(dim.length, 1, reason: 'only the untyped padding is dim while typing');
     expect(dim.single.text, '.00');
-    // And the typed digits stay bright.
+    // And the typed digits stay bright. The currency token is dropped from the
+    // number now that a chip carries the unit (Rebalance §2b), so the bright
+    // span is the bare grouped figure, no leading '$'.
     expect(spans.where((s) => s.color == _accent).map((s) => s.text),
-        contains(r'$1,000'));
+        contains('1,000'));
   });
 
   testWidgets('a partial decimal dims only the untyped trailing zero',
@@ -107,7 +109,9 @@ void main() {
         await tester.pumpAndSettle();
       }
 
-      final colours = _spans(tester, r'$0.00').map((s) => s.color).toList();
+      // The empty state is now the token-less `0.00` — a chip beside it names
+      // the unit (Rebalance §2b).
+      final colours = _spans(tester, '0.00').map((s) => s.color).toList();
       expect(colours, isNotEmpty);
       expect(colours.every((c) => c == _accentDim), isTrue,
           reason: 'the placeholder is dim (focused=$focused)');

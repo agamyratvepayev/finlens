@@ -57,6 +57,7 @@ String _moneyCustom(
   required bool signless,
   required bool roundUp,
   required bool noDecimals,
+  bool withSymbol = true,
 }) {
   final negative = value < 0;
   var abs = value.abs();
@@ -76,6 +77,9 @@ String _moneyCustom(
   }
 
   final sign = signless ? '' : (negative ? _minus : (showSign ? '+' : ''));
+  // A unit shown elsewhere (a currency chip beside the row) makes the token
+  // redundant; drop it and print the bare number (Rebalance §2c).
+  if (!withSymbol) return '$sign$number';
   // Spacing depends on the token, not the position: a symbol hugs the number, a
   // code is spaced from it (spec §7a).
   final token = def.token;
@@ -143,6 +147,11 @@ String money(
   bool signless = false,
   bool roundUp = false,
   bool noDecimals = false,
+  // Drops the currency token entirely (no symbol, no code) while keeping the
+  // sign, grouping and decimals — for a figure whose unit is already named by a
+  // chip on the same row (Rebalance §2c). Defaults true, so every existing call
+  // site is byte-for-byte unchanged.
+  bool withSymbol = true,
 }) {
   // An omitted currency resolves to the store's base (see [_baseCurrency]);
   // an explicit argument still wins.
@@ -157,10 +166,11 @@ String money(
         masked: masked,
         signless: signless,
         roundUp: roundUp,
-        noDecimals: noDecimals);
+        noDecimals: noDecimals,
+        withSymbol: withSymbol);
   }
 
-  final symbol = currencySymbol(code);
+  final symbol = withSymbol ? currencySymbol(code) : '';
   if (masked) return '$symbol••••';
 
   final negative = value < 0;
