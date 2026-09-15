@@ -218,6 +218,89 @@ class AppLocalizationsTk extends AppLocalizations {
   }
 
   @override
+  String get curRate => 'Kurs';
+
+  @override
+  String get curRateMissing => 'Kurs ýok';
+
+  @override
+  String get curSetRate => 'Kurs belläň';
+
+  @override
+  String get curRateNote => 'Bu üýtgeşme öň ýazylan ýazgylary üýtgetmeýär.';
+
+  @override
+  String curNoRateFor(Object code) {
+    return '$code üçin kurs ýok';
+  }
+
+  @override
+  String get curTotalsHidden => 'Ony öz içine alýan jemler gizlenildi';
+
+  @override
+  String get curEveryTotal => 'Ähli jemler';
+
+  @override
+  String get curToday => 'şu gün';
+
+  @override
+  String get curSectionReporting => 'HASABAT PULY';
+
+  @override
+  String get qaExchangeRate => 'Alyş-çalyş kursy';
+
+  @override
+  String get qaBlockRate => 'Alyş-çalyş kursuny giriziň';
+
+  @override
+  String curRateFromEntry(Object date) {
+    return 'Kurs $date senedäki ýazgyňyzdan alyndy';
+  }
+
+  @override
+  String get curRateManual => 'Bu ýazgy üçin kurs bellenildi';
+
+  @override
+  String get txnRateLabel => 'KURS';
+
+  @override
+  String qaRateDateChanged(Object rate) {
+    return 'Bu sene üçin kurs $rate. Ulanylsynmy?';
+  }
+
+  @override
+  String get qaBlockReceives => 'Gelen möçberi giriziň';
+
+  @override
+  String get qaReceivesPrompt => 'Alnan möçber';
+
+  @override
+  String get budCurrency => 'Býujet puly';
+
+  @override
+  String get budCurrencyChangeTitle => 'Býujet puluny üýtgetmelimi?';
+
+  @override
+  String budCurrencyChangeBody(Object limit, Object code) {
+    return 'Çäk $limit bolup galýar we indi $limit $code manysyny berýär.';
+  }
+
+  @override
+  String get curChangeReportingTitle => 'Hasabat puluny üýtget';
+
+  @override
+  String get curReportingNote =>
+      'Geçmiş sanlar şu bir kurs bilen öwrülýär. Olar gatnaşyklaryny saklaýar, ýöne şol wagtky kurslar boýunça täzeden bahalandyrylmaýar. Býujetler we maksatlar öz pullaryny saklaýar.';
+
+  @override
+  String get curConvertAndSwitch => 'Öwür we üýtget';
+
+  @override
+  String curReportingFromOn(Object from, Object date) {
+    return '$from pulundan, $date';
+  }
+
+  @override
   String get qaBackgroundColour => 'Fon reňki';
 
   @override

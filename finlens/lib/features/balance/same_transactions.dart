@@ -5,7 +5,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/models/models.dart';
 import '../../core/utils/date_range.dart';
-import '../../core/utils/fx.dart';
 import '../../l10n/app_localizations.dart';
 
 /// The composite key a tapped transaction resolves to. Every transaction that
@@ -139,7 +138,7 @@ class SameStats {
     // Rows themselves still print in their own currency; only TOTAL/AVERAGE
     // (which read [total]) are base.
     final total = list.fold<double>(
-        0, (sum, t) => sum + Fx.convert(t.amount, t.currency, base).abs());
+        0, (sum, t) => sum + t.amountBase.abs());
     final count = list.length;
     final newest = list.first.date; // list is newest-first
     final oldest = list.last.date;

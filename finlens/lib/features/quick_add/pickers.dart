@@ -2798,6 +2798,119 @@ Future<bool?> showEditCurrencySheet(BuildContext context, CurrencyDef def) {
   );
 }
 
+/// A single numeric prompt (spec 021b §3 / 021e §1): enter a positive decimal to
+/// [maxDecimals] places. Returns the parsed value, or null on cancel. Refuses
+/// `0`, negatives and empty by keeping Save disabled — the one rate rule every
+/// rate entry in the app shares.
+Future<double?> promptDecimal(
+  BuildContext context, {
+  required String title,
+  double? initial,
+  String? hint,
+  int maxDecimals = 6,
+}) {
+  return showAppSheet<double>(
+    context,
+    title: title,
+    contentSized: true,
+    cancelLabel: AppLocalizations.of(context).actionCancel,
+    builder: (context, controller) => _DecimalPromptForm(
+      controller: controller,
+      initial: initial,
+      hint: hint,
+      maxDecimals: maxDecimals,
+    ),
+  );
+}
+
+class _DecimalPromptForm extends StatefulWidget {
+  const _DecimalPromptForm({
+    required this.controller,
+    required this.maxDecimals,
+    this.initial,
+    this.hint,
+  });
+  final ScrollController controller;
+  final double? initial;
+  final String? hint;
+  final int maxDecimals;
+
+  @override
+  State<_DecimalPromptForm> createState() => _DecimalPromptFormState();
+}
+
+class _DecimalPromptFormState extends State<_DecimalPromptForm> {
+  late final TextEditingController _field;
+
+  @override
+  void initState() {
+    super.initState();
+    _field = TextEditingController(
+        text: widget.initial == null ? '' : formatRate(widget.initial!, maxDecimals: widget.maxDecimals));
+    _field.addListener(() => setState(() {}));
+  }
+
+  @override
+  void dispose() {
+    _field.dispose();
+    super.dispose();
+  }
+
+  double? get _value {
+    final v = double.tryParse(_field.text.trim());
+    if (v == null || v <= 0) return null;
+    return v;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Flexible(
+          child: ListView(
+            controller: widget.controller,
+            shrinkWrap: true,
+            padding: const EdgeInsets.fromLTRB(
+                Insets.gutter, Insets.md, Insets.gutter, Insets.lg),
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.sheetCard,
+                  borderRadius: BorderRadius.circular(11),
+                ),
+                child: TextField(
+                  controller: _field,
+                  autofocus: true,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+                  ],
+                  style: AppText.body.copyWith(fontSize: 18),
+                  cursorColor: AppColors.accentSoft,
+                  decoration: InputDecoration(
+                    border: InputBorder.none,
+                    hintText: widget.hint,
+                    hintStyle: AppText.body
+                        .copyWith(fontSize: 15, color: AppColors.textTertiary),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        _SheetFooter(
+          label: l.actionSave,
+          enabled: _value != null,
+          onPressed: () => Navigator.of(context).pop(_value),
+        ),
+      ],
+    );
+  }
+}
+
 class _AddCurrencyForm extends StatefulWidget {
   const _AddCurrencyForm({required this.controller, this.initial});
   final ScrollController controller;
@@ -2815,6 +2928,10 @@ class _AddCurrencyFormState extends State<_AddCurrencyForm> {
   final _symbol = TextEditingController();
   bool _before = true;
   int _decimals = 2;
+
+  /// A rate the user typed in this sheet (021a §4a), written to the store on
+  /// Save. Null means "no change — keep the stored rate".
+  double? _rateOverride;
 
   bool get _editing => widget.initial != null;
 
@@ -2911,6 +3028,10 @@ class _AddCurrencyFormState extends State<_AddCurrencyForm> {
             padding: const EdgeInsets.fromLTRB(
                 Insets.gutter, Insets.sm, Insets.gutter, Insets.lg),
             children: [
+              // The Rate block, above the format rows (021a §4a): a rate against
+              // the reporting currency, then the "does not change past entries"
+              // note. Absent for the base currency (its rate is 1 by definition).
+              ..._rateBlock(context, l),
               Container(
                 decoration: BoxDecoration(
                   color: AppColors.sheetCard,
@@ -2988,16 +3109,24 @@ class _AddCurrencyFormState extends State<_AddCurrencyForm> {
         ),
         _SheetFooter(
           label: _editing ? l.curSaveButton : l.curAddButton,
-          // In edit mode Save waits for a real change (§4); add mode only needs
-          // a valid new currency.
-          enabled: _editing ? (_valid && _dirty) : _valid,
+          // In edit mode Save waits for a real change (§4) — a rate edit counts;
+          // add mode only needs a valid new currency.
+          enabled: _editing
+              ? ((_valid && _dirty) || _rateOverride != null)
+              : _valid,
           onPressed: () {
             final store = StoreScope.read(context);
+            // Write the rate (021a §4a) first, so it lands whether or not the
+            // definition itself changed. A built-in edited for its rate only is
+            // NOT turned into an override.
+            if (_rateOverride != null &&
+                _rateCode.isNotEmpty &&
+                _rateCode != store.baseCurrency) {
+              store.setRate(_rateCode, _rateOverride!);
+            }
             final def = _def();
             if (_editing) {
-              // Upsert under the same code — for a built-in this *creates* the
-              // override, for a custom currency it replaces it. One per code.
-              store.updateCustomCurrency(def);
+              if (_dirty) store.updateCustomCurrency(def);
               Navigator.of(context).pop(true);
             } else {
               store.addCustomCurrency(def);
@@ -3007,6 +3136,73 @@ class _AddCurrencyFormState extends State<_AddCurrencyForm> {
         ),
       ],
     );
+  }
+
+  /// The code this sheet's rate belongs to — the edited currency, or the code
+  /// being typed in add mode.
+  String get _rateCode => _editing ? widget.initial!.code : _codeUp;
+
+  /// The Rate block (021a §4a) — shown for any currency that is not the base.
+  List<Widget> _rateBlock(BuildContext context, AppLocalizations l) {
+    final store = StoreScope.of(context);
+    final code = _rateCode;
+    if (code.isEmpty || code == store.baseCurrency) return const [];
+    final rate = _rateOverride ?? store.rateFor(code);
+    return [
+      Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+        decoration: BoxDecoration(
+          color: AppColors.sheetCard,
+          borderRadius: BorderRadius.circular(11),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(l.curRate, style: AppText.caption.copyWith(fontSize: 11.5)),
+            const SizedBox(height: 6),
+            InkWell(
+              onTap: () async {
+                final v = await promptDecimal(
+                  context,
+                  title: AppLocalizations.of(context).qaExchangeRate,
+                  initial: rate,
+                  hint: '1 ${store.baseCurrency} = ? $code',
+                );
+                if (v != null) setState(() => _rateOverride = v);
+              },
+              child: Row(
+                children: [
+                  Text('1 ${store.baseCurrency} =',
+                      style: AppText.body.copyWith(fontSize: 15)),
+                  const Spacer(),
+                  if (rate == null)
+                    Text(l.curSetRate,
+                        style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.warning))
+                  else
+                    Text('${formatRate(rate)} $code',
+                        style: AppText.body.copyWith(
+                            fontSize: 15, fontWeight: FontWeight.w600)),
+                  const SizedBox(width: 6),
+                  const Icon(Icons.expand_more_rounded,
+                      size: 18, color: AppColors.textTertiary),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(Insets.xs, Insets.sm, 0, 0),
+        child: Text(l.curRateNote,
+            style: const TextStyle(
+                fontSize: 11, height: 1.45, color: AppColors.textTertiary)),
+      ),
+      const SizedBox(height: Insets.lg),
+    ];
   }
 
   Widget _hair() =>

@@ -53,7 +53,7 @@ void main() {
 
     test('net worth matches the untouched fixture', () {
       expect(buildDevSeedStore().netWorth,
-          closeTo(buildSeedStore().netWorth, 0.01));
+          closeTo(buildSeedStore().netWorth!, 0.01));
     });
   });
 

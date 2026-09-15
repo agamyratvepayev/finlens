@@ -36,7 +36,11 @@ class AppStore extends ChangeNotifier {
     int? idSeq,
     int? tagSchema,
     String? baseCurrency,
+    Map<String, double>? rates,
+    Map<String, DateTime>? rateSetAt,
+    List<BaseCurrencyChange>? baseCurrencyChanges,
   })  : _clock = clock,
+        _baseCurrencyChanges = List.of(baseCurrencyChanges ?? const []),
         _accounts = List.of(accounts),
         _categories = List.of(categories),
         _txns = List.of(txns),
@@ -79,6 +83,34 @@ class AppStore extends ChangeNotifier {
     _syncGoalLatches();
     // Make any restored custom currencies formattable app-wide immediately.
     setCustomCurrencies(_customCurrencies);
+    // Seed the exchange-rate table so a fresh store is never in the missing-rate
+    // state (spec 021a §5). A no-op once rates exist; [loadRates] later replaces
+    // the seed with the user's persisted values.
+    if (rates != null && rates.isNotEmpty) {
+      _rates.addAll(rates);
+      if (rateSetAt != null) _rateSetAt.addAll(rateSetAt);
+    }
+    _seedRatesIfEmpty();
+    _backfillFrozenRates();
+  }
+
+  /// Normalises any transaction that predates per-entry freezing (spec 021b) —
+  /// the seed fixture, and rows restored from a pre-v8 database or backup, whose
+  /// missing `rate_to_base` defaulted to 1 and so mis-froze a foreign entry as
+  /// if it were in the reporting currency. For a foreign entry left at rate 1 we
+  /// freeze it at the currency's current rate and recompute its base value. A
+  /// genuine post-021b entry carries its real (non-1) rate and is untouched; an
+  /// entry already in the reporting currency is correct at rate 1 and skipped.
+  void _backfillFrozenRates() {
+    final base = baseCurrency;
+    for (final t in _txns) {
+      if (t.currency == base) continue;
+      if (t.rateToBase != 1.0) continue;
+      final r = rateFor(t.currency);
+      if (r == null || r == 1.0) continue;
+      t.rateToBase = r;
+      t.amountBase = roundToCurrency(t.amount / r, base);
+    }
   }
 
   /// An empty store — the first-run state before anything has been persisted.
@@ -357,6 +389,18 @@ class AppStore extends ChangeNotifier {
   /// account yet (so the new-account form offers TMT on a Turkmen device).
   String? _deviceLocaleCurrency;
 
+  /// Every reporting-currency switch, oldest first (spec 021e §5). Persisted
+  /// alongside the base currency and carried in the backup `meta`.
+  static const _baseChangesKey = 'base_currency_changes';
+  final List<BaseCurrencyChange> _baseCurrencyChanges;
+  List<BaseCurrencyChange> get snapshotBaseCurrencyChanges =>
+      List.unmodifiable(_baseCurrencyChanges);
+
+  /// The most recent reporting-currency switch, or null — the Currencies
+  /// screen's `REPORTING` subtitle (spec 021e §4b).
+  BaseCurrencyChange? get lastBaseCurrencyChange =>
+      _baseCurrencyChanges.isEmpty ? null : _baseCurrencyChanges.last;
+
   /// The base currency every total is displayed in — the resolved value, never
   /// null. Reads live so a change in Preferences repaints every aggregate
   /// without an app restart (nothing caches it).
@@ -373,13 +417,50 @@ class AppStore extends ChangeNotifier {
     return resolved;
   }
 
-  /// The user's explicit choice (More ▸ Preferences). Stores it and notifies so
-  /// every total recomputes and repaints immediately.
-  void setBaseCurrency(String code) {
-    if (code.isEmpty || code == _baseCurrency) return;
+  /// The user's explicit choice (More ▸ Preferences), now a **migration** rather
+  /// than an assignment (spec 021e §2). Every stored base value is anchored to
+  /// the reporting currency in force when it was entered, so flipping the setting
+  /// must re-express the whole history through one [factor] — how many units of
+  /// [code] one unit of the old base buys — chosen at the moment of the switch:
+  ///
+  ///   - `Txn.amountBase` × factor, re-rounded to [code]'s decimals;
+  ///   - `Txn.rateToBase` ÷ factor;
+  ///   - every rate ÷ factor; the old base joins the table at `1/factor`; the new
+  ///     base leaves it (the base is never in the map);
+  ///   - budgets and goals are **untouched** — they are explicit promises, not
+  ///     reporting artefacts.
+  ///
+  /// [factor] defaults to the target's stored rate; a caller (the confirm sheet)
+  /// may override it. The switch is refused when no positive factor is available.
+  void setBaseCurrency(String code, {double? factor}) {
+    if (code.isEmpty) return;
+    final old = baseCurrency;
+    if (code == old) return;
+    final f = factor ?? rateFor(code);
+    if (f == null || f <= 0) return;
+
+    for (final t in _txns) {
+      t.amountBase = roundToCurrency(t.amountBase * f, code);
+      t.rateToBase = t.rateToBase / f;
+    }
+    final migrated = <String, double>{};
+    _rates.forEach((c, r) => migrated[c] = r / f);
+    migrated[old] = 1 / f; // the old base is a foreign currency now
+    migrated.remove(code); // the new base leaves the map
+    _rates
+      ..clear()
+      ..addAll(migrated);
+    final at = _dayOf(_clock);
+    _rateSetAt[old] = at;
+    _rateSetAt.remove(code);
+
+    _baseCurrencyChanges
+        .add(BaseCurrencyChange(from: old, to: code, factor: f, at: at));
     _baseCurrency = code;
     notifyListeners();
     unawaited(_saveBaseCurrency(code));
+    unawaited(_saveRates());
+    unawaited(_saveBaseChanges());
   }
 
   /// Pure, parameterised resolver — the base-currency analogue of
@@ -455,12 +536,137 @@ class AppStore extends ChangeNotifier {
     // no base is needed. The new-account form seeds from the device locale.
   }
 
+  // ── Exchange rates (spec 021a — rates are data the user owns) ───────────────
+  // How many units of a currency one unit of [baseCurrency] buys — the direction
+  // rates are quoted out loud ("the dollar is 40 lira"). The base is never in the
+  // map; its rate is 1 by definition. A code that is absent has **no rate** —
+  // that is a state, not a zero, and every total that needs it goes quiet rather
+  // than converting at a fabricated 1.0 (§2).
+  //
+  // Persisted the same way [baseCurrency] is — a SharedPreferences JSON blob,
+  // NOT the SQLite snapshot — and carried in the backup `meta`. Seeded on first
+  // run from [Fx.seedRates] so a fresh store is never in the missing-rate state.
+  static const _ratesKey = 'fx_rates';
+  final Map<String, double> _rates = {};
+  final Map<String, DateTime> _rateSetAt = {};
+
+  /// The whole rate table, code → units-per-base. The base is absent (rate 1).
+  Map<String, double> get snapshotRates => Map.unmodifiable(_rates);
+  Map<String, DateTime> get snapshotRateSetAt => Map.unmodifiable(_rateSetAt);
+
+  /// Units of [code] per one unit of [baseCurrency]: `1.0` for the base itself,
+  /// the stored value for a known code, and **null** when the code has no rate
+  /// (the caller must decide what to show — §2).
+  double? rateFor(String code) =>
+      code == baseCurrency ? 1.0 : _rates[code];
+
+  /// When [code]'s rate was last written, or null. The base has no stored date.
+  DateTime? rateSetAt(String code) => _rateSetAt[code];
+
+  /// Sets [code]'s rate against the reporting currency, stamping today. Refuses
+  /// `<= 0` at the store, not only in the UI (§1a): a zero rate silently zeroes
+  /// an account's whole balance. The base is `1` by definition and is never
+  /// stored. Notifies so every silenced total returns immediately.
+  void setRate(String code, double rate) {
+    if (rate <= 0) return;
+    if (code == baseCurrency) return;
+    _rates[code] = rate;
+    _rateSetAt[code] = _dayOf(_clock);
+    notifyListeners();
+    unawaited(_saveRates());
+  }
+
+  /// Seeds the rate table from [Fx.seedRates] when it is empty (first run — §5),
+  /// stamped with the seed date, so the demo data and any test fixture start with
+  /// every used currency rated and never meet the missing-rate warning.
+  void _seedRatesIfEmpty() {
+    if (_rates.isNotEmpty) return;
+    final at = _dayOf(_clock);
+    Fx.seedRates(baseCurrency).forEach((code, r) {
+      _rates[code] = r;
+      _rateSetAt[code] = at;
+    });
+  }
+
   /// base-currency conversion for the store's own aggregates: convert [amount]
-  /// from [currency] into the current [baseCurrency]. A thin instance wrapper so
-  /// [Fx] stays a pure function of its inputs and every call site reads the live
-  /// base (nothing caches it).
-  double _toBase(double amount, String currency) =>
-      Fx.convert(amount, currency, baseCurrency);
+  /// from [currency] into the current [baseCurrency], reading the live rate
+  /// table. **Null when [currency] has no rate** — the caller must decide what to
+  /// show, and `?? 1.0` is exactly the bug 021a removes. Public mirror
+  /// [convertToBase] lets per-row displays and screens reach the same maths.
+  double? _toBase(double amount, String currency) =>
+      Fx.convertWith(amount, rateFor(currency), rateFor(baseCurrency));
+
+  /// Public form of [_toBase] for screens and per-row displays.
+  double? convertToBase(double amount, String currency) =>
+      _toBase(amount, currency);
+
+  /// Convert [amount] from one arbitrary currency to another through the live
+  /// rate table. Null when either currency has no rate.
+  double? convertBetween(double amount, String from, String to) =>
+      Fx.convertWith(amount, rateFor(from), rateFor(to));
+
+  /// [_toBase] with a native fallback for **intermediates** (§2d) — a conversion
+  /// used only to sort, weight, or partition, where a missing rate must degrade
+  /// (the row keeps its native magnitude) rather than crash or silence a headline
+  /// total. Never use this where the figure is shown to the user as a base total.
+  double _toBaseOr(double amount, String currency) =>
+      _toBase(amount, currency) ?? amount;
+
+  /// Codes referenced by an account or transaction (i.e. that a total needs) that
+  /// have no rate — what §4b's warning card names. Empty for a fully-rated store.
+  List<String> missingRateCodes() {
+    final out = <String>[];
+    for (final code in currencyCodesInUse()) {
+      if (rateFor(code) == null) out.add(code);
+    }
+    return out;
+  }
+
+  /// Whether any in-use currency lacks a rate — the cheap guard a screen checks
+  /// before deciding to show a total or the warning.
+  bool get hasMissingRate => missingRateCodes().isNotEmpty;
+
+  /// Convert a reporting-currency figure into [currency] at **today's** rate —
+  /// the inverse of [_toBase], for the budget-currency spend fold (021d §1b) and
+  /// the reporting-currency switch (021e). Null when [currency] has no rate.
+  double? convertFromBase(double baseAmount, String currency) =>
+      Fx.convertWith(baseAmount, rateFor(baseCurrency), rateFor(currency));
+
+  /// The reporting currency at which the marker source of a proposed rate is
+  /// resolved (spec 021b §3a). Where the proposal came from, for the rate row's
+  /// history/manual marker.
+  RateProposal rateProposal(String currency, DateTime date) {
+    if (currency == baseCurrency) {
+      return const RateProposal(rate: 1.0, source: RateProposalSource.base);
+    }
+    // A back-dated entry proposes the nearest earlier entry's frozen rate; an
+    // entry dated today proposes the currency's current stored rate.
+    if (!_sameDay(date, today)) {
+      Txn? best;
+      for (final t in _txns) {
+        if (t.currency != currency) continue;
+        if (t.date.isAfter(date)) continue;
+        if (best == null || t.date.isAfter(best.date)) best = t;
+      }
+      if (best != null) {
+        return RateProposal(
+            rate: best.rateToBase,
+            source: RateProposalSource.earlierEntry,
+            entryDate: best.date);
+      }
+    }
+    return RateProposal(rate: rateFor(currency), source: RateProposalSource.stored);
+  }
+
+  /// The concrete currency a budget's limit and spend are measured in (021d) —
+  /// its own [Budget.currency], or the reporting currency when unset (the
+  /// single-currency default and the migration value).
+  String budgetCurrencyOf(Budget b) =>
+      b.currency.isEmpty ? baseCurrency : b.currency;
+
+  /// The concrete currency a goal's target and progress are measured in (021d).
+  String goalCurrencyOf(Goal g) =>
+      g.currency.isEmpty ? baseCurrency : g.currency;
 
   // ── Ledger view preferences ───────────────────────────────────────────────
   // Whether the Ledger tab reveals each noted row's description line. Unlike the
@@ -513,6 +719,81 @@ class AppStore extends ChangeNotifier {
       await prefs.setString(_baseCurrencyKey, code);
     } catch (_) {
       // No platform / no mock: the in-memory value still stands for this run.
+    }
+  }
+
+  /// Best-effort persistence of the rate table (spec 021a §1a). Mirrors
+  /// [_saveBaseCurrency]: a plugin-less test environment must not throw. Stored
+  /// as one JSON blob `{code: {r, t}}` under [_ratesKey].
+  Future<void> _saveRates() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final blob = <String, Object?>{
+        for (final entry in _rates.entries)
+          entry.key: {
+            'r': entry.value,
+            't': _rateSetAt[entry.key]?.millisecondsSinceEpoch,
+          },
+      };
+      await prefs.setString(_ratesKey, jsonEncode(blob));
+    } catch (_) {
+      // No platform / no mock: the in-memory table still stands for this run.
+    }
+  }
+
+  /// Best-effort persistence of the reporting-currency change log (spec 021e §5).
+  Future<void> _saveBaseChanges() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_baseChangesKey,
+          jsonEncode(_baseCurrencyChanges.map((c) => c.toJson()).toList()));
+    } catch (_) {
+      // No platform / no mock: the in-memory log still stands for this run.
+    }
+  }
+
+  /// Restores the rate table and reporting-currency change log before the first
+  /// frame (called from `main`), replacing the constructor's seed with the
+  /// user's persisted values. When nothing is stored the seed is persisted so
+  /// later launches are stable.
+  Future<void> loadRates() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final stored = prefs.getString(_ratesKey);
+      if (stored != null && stored.isNotEmpty) {
+        final decoded = jsonDecode(stored);
+        if (decoded is Map) {
+          _rates.clear();
+          _rateSetAt.clear();
+          decoded.forEach((code, v) {
+            if (v is Map && v['r'] is num) {
+              _rates[code as String] = (v['r'] as num).toDouble();
+              final t = v['t'];
+              if (t is num) {
+                _rateSetAt[code] =
+                    DateTime.fromMillisecondsSinceEpoch(t.toInt());
+              }
+            }
+          });
+        }
+      } else {
+        // Nothing stored yet (fresh install or upgrade): keep the constructor's
+        // seed and persist it so it is stable across launches.
+        unawaited(_saveRates());
+      }
+      final changes = prefs.getString(_baseChangesKey);
+      if (changes != null && changes.isNotEmpty) {
+        final decoded = jsonDecode(changes);
+        if (decoded is List) {
+          _baseCurrencyChanges
+            ..clear()
+            ..addAll(decoded
+                .whereType<Map>()
+                .map((m) => BaseCurrencyChange.fromJson(m.cast<String, dynamic>())));
+        }
+      }
+    } catch (_) {
+      // Unreadable prefs: the seeded table stands.
     }
   }
 
@@ -1476,8 +1757,17 @@ class AppStore extends ChangeNotifier {
   }
 
   /// Balance converted to the base currency — the only form safe to add up
-  /// across accounts (spec 3.4 FX rule).
-  double balanceInBase(String accountId) => _toBase(
+  /// across accounts (spec 3.4 FX rule). **Null when the account's currency has
+  /// no rate** (021a §2a): a balance that cannot be converted is not a zero.
+  double? balanceInBase(String accountId) => _toBase(
+        balanceOf(accountId),
+        accountById(accountId)?.currency ?? baseCurrency,
+      );
+
+  /// [balanceInBase] with a native fallback (§2d) — for the filter sheet's
+  /// secondary per-group totals, which degrade rather than silence the way the
+  /// headline Balance totals do.
+  double balanceInBaseOr(String accountId) => _toBaseOr(
         balanceOf(accountId),
         accountById(accountId)?.currency ?? baseCurrency,
       );
@@ -1498,15 +1788,24 @@ class AppStore extends ChangeNotifier {
   }
 
   /// [balanceOn] converted to base currency — a goal's `startAmount` for an
-  /// account source.
-  double balanceOnInBase(String accountId, DateTime date) => _toBase(
+  /// account source. Null when the account's currency has no rate.
+  double? balanceOnInBase(String accountId, DateTime date) => _toBase(
         balanceOn(accountId, date),
         accountById(accountId)?.currency ?? baseCurrency,
       );
 
-  double groupTotal(AccountGroup group) => accounts
-      .where((a) => a.group == group)
-      .fold(0.0, (sum, a) => sum + balanceInBase(a.id));
+  /// The group's total, in the reporting currency. **Null when any account in
+  /// it has no rate** (021a §2a) — a total with a piece missing is not the
+  /// total, and skipping the unrated ones is the same lie in a smaller number.
+  double? groupTotal(AccountGroup group) {
+    var sum = 0.0;
+    for (final a in accounts.where((a) => a.group == group)) {
+      final b = balanceInBase(a.id);
+      if (b == null) return null;
+      sum += b;
+    }
+    return sum;
+  }
 
   int groupCount(AccountGroup group) =>
       accounts.where((a) => a.group == group).length;
@@ -1514,15 +1813,35 @@ class AppStore extends ChangeNotifier {
   List<Account> accountsIn(AccountGroup group) =>
       visibleAccounts.where((a) => a.group == group).toList(growable: false);
 
-  double get totalAssets => AccountGroup.assets
-      .fold(0.0, (sum, g) => sum + groupTotal(g));
+  /// Null when any asset account has no rate (021a §2a).
+  double? get totalAssets {
+    var sum = 0.0;
+    for (final g in AccountGroup.assets) {
+      final t = groupTotal(g);
+      if (t == null) return null;
+      sum += t;
+    }
+    return sum;
+  }
 
-  /// Positive magnitude of what is owed.
-  double get totalLiabilities => AccountGroup.liabilities
-      .fold(0.0, (sum, g) => sum + groupTotal(g))
-      .abs();
+  /// Positive magnitude of what is owed. Null when any liability account has no
+  /// rate.
+  double? get totalLiabilities {
+    var sum = 0.0;
+    for (final g in AccountGroup.liabilities) {
+      final t = groupTotal(g);
+      if (t == null) return null;
+      sum += t;
+    }
+    return sum.abs();
+  }
 
-  double get netWorth => totalAssets - totalLiabilities;
+  double? get netWorth {
+    final a = totalAssets;
+    final l = totalLiabilities;
+    if (a == null || l == null) return null;
+    return a - l;
+  }
 
   /// Spendable cash — the green highlight card on Balance (spec 1.1).
   ///
@@ -1533,19 +1852,34 @@ class AppStore extends ChangeNotifier {
   /// for removal once nothing depends on them. Left in place here — deleting a
   /// public getter and a model field is a larger change than the group warrants
   /// and wants its own decision.
-  double get spendable => accounts
-      .where((a) => a.group == AccountGroup.spendable && a.countAsSpendable)
-      .fold(0.0, (sum, a) => sum + balanceInBase(a.id));
+  double? get spendable {
+    var sum = 0.0;
+    for (final a in accounts.where(
+        (a) => a.group == AccountGroup.spendable && a.countAsSpendable)) {
+      final b = balanceInBase(a.id);
+      if (b == null) return null;
+      sum += b;
+    }
+    return sum;
+  }
 
-  /// Liabilities as a share of assets — drives the red segment of the bar.
-  double get liabilityRatio =>
-      totalAssets <= 0 ? 0 : (totalLiabilities / totalAssets).clamp(0.0, 1.0);
+  /// Liabilities as a share of assets — drives the red segment of the bar. A
+  /// missing rate degrades this ratio to 0 (§2d, an intermediate): the headline
+  /// totals beside it already carry the warning.
+  double get liabilityRatio {
+    final a = totalAssets;
+    final l = totalLiabilities;
+    if (a == null || l == null || a <= 0) return 0;
+    return (l / a).clamp(0.0, 1.0);
+  }
 
-  /// Share of total assets held by [group] — the "6.7%" under each row.
+  /// Share of total assets held by [group] — the "6.7%" under each row. Degrades
+  /// to 0 when a rate is missing (§2d).
   double groupShare(AccountGroup group) {
     final base = group.isAsset ? totalAssets : totalLiabilities;
-    if (base <= 0) return 0;
-    return (groupTotal(group).abs() / base).clamp(0.0, 1.0);
+    final gt = groupTotal(group);
+    if (base == null || gt == null || base <= 0) return 0;
+    return (gt.abs() / base).clamp(0.0, 1.0);
   }
 
   /// How much money moved through a group over the comparison window — the
@@ -1557,7 +1891,7 @@ class AppStore extends ChangeNotifier {
       if (t.date.isBefore(since)) continue;
       for (final a in accounts) {
         if (a.group != group) continue;
-        activity += _toBase(_effectOn(t, a.id), a.currency).abs();
+        activity += _toBaseOr(_effectOn(t, a.id), a.currency).abs();
       }
     }
     return activity;
@@ -1574,7 +1908,7 @@ class AppStore extends ChangeNotifier {
     var activity = 0.0;
     for (final t in _txns) {
       if (t.date.isBefore(since)) continue;
-      activity += _toBase(_effectOn(t, accountId), account.currency).abs();
+      activity += _toBaseOr(_effectOn(t, accountId), account.currency).abs();
     }
     return activity;
   }
@@ -1602,14 +1936,16 @@ class AppStore extends ChangeNotifier {
       for (final a in _accounts) {
         // An expense lowers an asset and raises a liability; both shrink net
         // worth, and the sign convention (liabilities negative) handles it.
-        delta += _toBase(_effectOn(t, a.id), a.currency);
+        delta += _toBaseOr(_effectOn(t, a.id), a.currency);
       }
     }
     return delta;
   }
 
   double get netWorthDeltaFraction {
-    final previous = netWorth - netWorthDelta;
+    final nw = netWorth;
+    if (nw == null) return 0;
+    final previous = nw - netWorthDelta;
     if (previous == 0) return 0;
     return netWorthDelta / previous.abs();
   }
@@ -1636,10 +1972,11 @@ class AppStore extends ChangeNotifier {
       .toList(growable: false);
 
   /// Money in for the month — rebalances excluded (spec 6.2 isolation rule).
-  /// Converted through [Fx.toBase] (spec §9): a foreign-currency income row must
-  /// count as its base value, or this figure disagrees with the category budgets
-  /// (which already convert) and the Insight flow identity cannot close.
-  /// Delegates to the windowed twin so the fold — and its conversion — lives once.
+  /// Sums each entry's **frozen** base value (spec 021b §2): what a foreign row
+  /// was worth is decided once, at entry, so correcting a rate today never
+  /// rewrites a past month. Always computable (`amountBase` is never null), so
+  /// unlike the balance side this figure never goes quiet.
+  /// Delegates to the windowed twin so the fold lives once.
   double monthIncome(DateTime month) =>
       incomeInWindow(DateRange(_monthStart(month), _monthEnd(month)));
 
@@ -1647,21 +1984,21 @@ class AppStore extends ChangeNotifier {
       expenseInWindow(DateRange(_monthStart(month), _monthEnd(month)));
 
   /// Range-lens twins of [monthIncome]/[monthExpense] — same fold, windowed, and
-  /// **converted** (spec §9). Aliased by [inflowInWindow]/[outflowInWindow], the
-  /// names Insight reads, which promise conversion in the getter name itself.
+  /// **frozen** (spec 021b §2). Aliased by [inflowInWindow]/[outflowInWindow],
+  /// the names Insight reads.
   double incomeInWindow(DateRange window, {Set<String>? visible}) =>
       txnsInWindow(window)
           .where((t) =>
               t.type == TxnType.income &&
               (visible == null || visible.contains(t.toRef)))
-          .fold(0.0, (sum, t) => sum + _toBase(t.amount, t.currency));
+          .fold(0.0, (sum, t) => sum + t.amountBase);
 
   double expenseInWindow(DateRange window, {Set<String>? visible}) =>
       txnsInWindow(window)
           .where((t) =>
               t.type == TxnType.expense &&
               (visible == null || visible.contains(t.fromRef)))
-          .fold(0.0, (sum, t) => sum + _toBase(t.amount, t.currency));
+          .fold(0.0, (sum, t) => sum + t.amountBase);
 
   /// The set of months (1–12) in [year] that hold at least one transaction —
   /// the Period sheet's has-data dots. One grouped pass per displayed year per
@@ -1872,11 +2209,43 @@ class AppStore extends ChangeNotifier {
   /// windowed spend; account sums windowed expense paid *from* the account. Both
   /// reuse the existing FX-correct folds; no new arithmetic (Hard boundary).
   double budgetSpendOverWindow(Budget b, DateRange window) {
-    if (b.scope == BudgetScope.account) {
-      return expenseInWindow(window, visible: b.targets);
+    final cur = budgetCurrencyOf(b);
+    var sum = 0.0;
+    for (final t in _budgetRows(b, window)) {
+      // Spending in the budget's own currency counts as itself — no conversion,
+      // no rate, no rounding (spec 021d §1b). A ₺8,000 budget must not widen
+      // because the dollar moved. For a single-currency user this is every row.
+      if (t.currency == cur) {
+        sum += t.amount;
+        continue;
+      }
+      // A foreign row is worth what it was worth in the reporting currency
+      // (frozen `amountBase`), re-expressed in the budget's currency at TODAY's
+      // rate — a deliberate approximation (021d §1b): there is no dated rate
+      // table. When the budget's currency has no rate the row cannot convert,
+      // so the reporting value stands in (the card shows the §1d warning).
+      sum += convertFromBase(t.amountBase, cur) ?? t.amountBase;
     }
-    return b.targets.fold(
-        0.0, (sum, id) => sum + spentInCategoryWindow(id, window));
+    return sum;
+  }
+
+  /// Expense rows a budget's spend is measured over — its account's outflows, or
+  /// its categories' expenses.
+  Iterable<Txn> _budgetRows(Budget b, DateRange window) =>
+      txnsInWindow(window).where((t) {
+        if (t.type != TxnType.expense) return false;
+        return b.scope == BudgetScope.account
+            ? b.targets.contains(t.fromRef)
+            : b.targets.contains(t.toRef);
+      });
+
+  /// Whether [b]'s spend figure is silenced (021d §1d): its currency has no rate
+  /// **and** it has at least one foreign row that therefore cannot be converted.
+  /// A budget with no foreign rows computes regardless.
+  bool budgetSpendSilenced(Budget b, DateRange window) {
+    final cur = budgetCurrencyOf(b);
+    if (rateFor(cur) != null) return false;
+    return _budgetRows(b, window).any((t) => t.currency != cur);
   }
 
   /// Spend in the period of [b] containing [on].
@@ -2071,7 +2440,7 @@ class AppStore extends ChangeNotifier {
   /// existing caller is unchanged and an empty filter is bit-identical.
   double netWorthOn(DateTime date, {Set<String>? visible}) => _accounts
       .where((a) => visible == null || visible.contains(a.id))
-      .fold(0.0, (sum, a) => sum + balanceOnInBase(a.id, date));
+      .fold(0.0, (sum, a) => sum + _toBaseOr(balanceOn(a.id, date), a.currency));
 
   /// Net worth change across [window] — the Insight hero. The windowed twin of
   /// [netWorthDelta], which is anchored to the Balance header's ComparePeriod and
@@ -2084,7 +2453,7 @@ class AppStore extends ChangeNotifier {
     for (final t in txnsInWindow(window)) {
       for (final a in _accounts) {
         if (visible != null && !visible.contains(a.id)) continue;
-        delta += _toBase(_effectOn(t, a.id), a.currency);
+        delta += _toBaseOr(_effectOn(t, a.id), a.currency);
       }
     }
     return delta;
@@ -2102,20 +2471,21 @@ class AppStore extends ChangeNotifier {
       for (final a in _accounts) {
         if (a.group != group) continue;
         if (visible != null && !visible.contains(a.id)) continue;
-        delta += _toBase(_effectOn(t, a.id), a.currency);
+        delta += _toBaseOr(_effectOn(t, a.id), a.currency);
       }
     }
     return delta;
   }
 
-  /// Revaluation booked in [window], in base currency — the DEĞER DEĞİŞİMİ block.
-  /// This is the figure income/expense metrics deliberately exclude (spec 6.2).
+  /// Revaluation booked in [window] — the DEĞER DEĞİŞİMİ block. Sums each
+  /// rebalance's frozen base delta (spec 021b §2); the figure income/expense
+  /// metrics deliberately exclude (spec 6.2).
   double revaluedInWindow(DateRange window, {Set<String>? visible}) =>
       txnsInWindow(window)
           .where((t) =>
               t.type == TxnType.rebalance &&
               (visible == null || visible.contains(t.toRef)))
-          .fold(0.0, (sum, t) => sum + _toBase(t.amount, t.currency));
+          .fold(0.0, (sum, t) => sum + t.amountBase);
 
   /// What a window's transfers actually cost: the fee, plus any gap between what
   /// left the source and what landed in the destination once both are converted
@@ -2138,8 +2508,8 @@ class AppStore extends ChangeNotifier {
       bool inSet(Account? a) =>
           a != null && (visible == null || visible.contains(a.id));
       if (!inSet(from) || !inSet(to)) continue;
-      leak -= _toBase(_effectOn(t, from!.id), from.currency);
-      leak -= _toBase(_effectOn(t, to!.id), to.currency);
+      leak -= _toBaseOr(_effectOn(t, from!.id), from.currency);
+      leak -= _toBaseOr(_effectOn(t, to!.id), to.currency);
     }
     return leak;
   }
@@ -2162,7 +2532,7 @@ class AppStore extends ChangeNotifier {
       if (fromV == toV) continue; // both in or both out → not crossing
       final acc = fromV ? from : to;
       if (acc == null) continue;
-      moved += _toBase(_effectOn(t, acc.id), acc.currency);
+      moved += _toBaseOr(_effectOn(t, acc.id), acc.currency);
     }
     return moved;
   }
@@ -2179,13 +2549,11 @@ class AppStore extends ChangeNotifier {
         case TxnType.expense:
           // The account charged is `fromRef`; the row counts when it is visible.
           if (visible != null && !visible.contains(t.fromRef)) break;
-          expense[t.toRef] =
-              (expense[t.toRef] ?? 0) + _toBase(t.amount, t.currency);
+          expense[t.toRef] = (expense[t.toRef] ?? 0) + t.amountBase;
         case TxnType.income:
           // The account credited is `toRef`; the row counts when it is visible.
           if (visible != null && !visible.contains(t.toRef)) break;
-          income[t.fromRef] =
-              (income[t.fromRef] ?? 0) + _toBase(t.amount, t.currency);
+          income[t.fromRef] = (income[t.fromRef] ?? 0) + t.amountBase;
         case TxnType.transfer:
         case TxnType.rebalance:
           break;
@@ -2199,12 +2567,12 @@ class AppStore extends ChangeNotifier {
   double spentInCategoryWindow(String categoryId, DateRange window) =>
       txnsInWindow(window)
           .where((t) => t.type == TxnType.expense && t.toRef == categoryId)
-          .fold(0.0, (sum, t) => sum + _toBase(t.amount, t.currency));
+          .fold(0.0, (sum, t) => sum + t.amountBase);
 
   double earnedInCategoryWindow(String categoryId, DateRange window) =>
       txnsInWindow(window)
           .where((t) => t.type == TxnType.income && t.fromRef == categoryId)
-          .fold(0.0, (sum, t) => sum + _toBase(t.amount, t.currency));
+          .fold(0.0, (sum, t) => sum + t.amountBase);
 
   /// Spent in [window] on expense categories that carry no budget — the windowed
   /// twin of [unbudgetedSpend], for the see-all screen's `Bütçesiz…` strip.
@@ -2238,7 +2606,7 @@ class AppStore extends ChangeNotifier {
               t.type == TxnType.expense &&
               accountById(t.fromRef)?.group == AccountGroup.creditCards &&
               (visible == null || visible.contains(t.fromRef)))
-          .fold(0.0, (sum, t) => sum + _toBase(t.amount, t.currency));
+          .fold(0.0, (sum, t) => sum + t.amountBase);
 
   /// Paid *into* liability accounts in [window] via transfer — the DEBT block's
   /// "paid" figure, a positive magnitude. Uses what actually landed in the
@@ -2251,17 +2619,18 @@ class AppStore extends ChangeNotifier {
       final dest = accountById(t.toRef);
       if (dest == null || !dest.group.isLiability) continue;
       if (visible != null && !visible.contains(dest.id)) continue;
-      paid += _toBase(t.toAmount ?? t.amount, dest.currency);
+      paid += _toBaseOr(t.toAmount ?? t.amount, dest.currency);
     }
     return paid;
   }
 
   /// Total liabilities as they stood at the end of [date] — positive magnitude.
-  /// Built from [balanceOnInBase]; the DEBT block's before/after pair.
+  /// A balance snapshot converted at today's rate, degrading to native on a
+  /// missing rate (§2d); the DEBT block's before/after pair.
   double totalLiabilitiesOn(DateTime date, {Set<String>? visible}) => _accounts
       .where((a) =>
           a.group.isLiability && (visible == null || visible.contains(a.id)))
-      .fold(0.0, (sum, a) => sum + balanceOnInBase(a.id, date))
+      .fold(0.0, (sum, a) => sum + _toBaseOr(balanceOn(a.id, date), a.currency))
       .abs();
 
   /// Total receivables as they stood at the end of [date] — the ALACAĞIN cell.
@@ -2269,7 +2638,7 @@ class AppStore extends ChangeNotifier {
       .where((a) =>
           a.group == AccountGroup.receivables &&
           (visible == null || visible.contains(a.id)))
-      .fold(0.0, (sum, a) => sum + balanceOnInBase(a.id, date));
+      .fold(0.0, (sum, a) => sum + _toBaseOr(balanceOn(a.id, date), a.currency));
 
   /// The window's income/expense, **converted** (spec §9). Insight reads these —
   /// the getter name promises the conversion [incomeInWindow]/[expenseInWindow]
@@ -2321,11 +2690,15 @@ class AppStore extends ChangeNotifier {
     if (g.source.isAccount) {
       final acc = accountById(g.source.id);
       sourceAvailable = acc != null && !acc.archived;
-      start = balanceOnInBase(g.source.id, g.createdAt);
+      // Measured in the account's OWN currency (spec 021d §2b): target, start
+      // and current are all native, so the rate cannot move the bar — a lira
+      // account with a lira target does not slip when the dollar moves. Progress
+      // is the account's real balance, never `balanceInBase`.
+      start = balanceOn(g.source.id, g.createdAt);
       // Frozen: the balance the account actually held on [asOf], not today's.
       current = asOf == null
-          ? balanceInBase(g.source.id)
-          : balanceOnInBase(g.source.id, asOf);
+          ? balanceOf(g.source.id)
+          : balanceOn(g.source.id, asOf);
     } else {
       final cat = categoryById(g.source.id);
       sourceAvailable = cat != null && !cat.archived;
@@ -2524,7 +2897,7 @@ class AppStore extends ChangeNotifier {
   /// The task's expected amount in base currency (§2.1). Converts through the
   /// **linked account's** currency exactly as mark-paid does; an absent account
   /// falls back to the base currency and never crashes.
-  double _taskAmountInBase(Task t) => _toBase(
+  double _taskAmountInBase(Task t) => _toBaseOr(
         t.expectedAmount.abs(),
         accountById(t.linkedAccountId)?.currency ?? baseCurrency,
       );
@@ -2591,14 +2964,21 @@ class AppStore extends ChangeNotifier {
   /// spendable cash, plus horizon inflows, minus horizon and overdue outflows.
   /// The projection is the only figure in Planner that converts currency; the
   /// app-wide FX gap in budgets/insight is out of this spec's scope.
-  double projection(DateRange h) => spendable + comingIn(h) - goingOut(h);
+  double projection(DateRange h) => _spendableOr + comingIn(h) - goingOut(h);
+
+  /// [spendable] with a native fallback for the projection's day-by-day run
+  /// (§2d intermediate): a spendable account whose currency lost its rate keeps
+  /// its native magnitude rather than nulling the whole projection.
+  double get _spendableOr => accounts
+      .where((a) => a.group == AccountGroup.spendable && a.countAsSpendable)
+      .fold(0.0, (sum, a) => sum + _toBaseOr(balanceOf(a.id), a.currency));
 
   /// The first day the running balance goes negative within [h], and by how
   /// much — the highest-value output on the tab (§2.4). Overdue outflows land at
   /// day 0; inflows are applied before outflows on the same day. Only the first
   /// breach is reported.
   ({DateTime day, double amount})? firstShortfall(DateRange h) {
-    var running = spendable - overdueOutAmount;
+    var running = _spendableOr - overdueOutAmount;
     final inRange = tasksInHorizon(h);
     final start = DateTime(h.start.year, h.start.month, h.start.day);
     final end = DateTime(h.end.year, h.end.month, h.end.day);
@@ -2628,7 +3008,7 @@ class AppStore extends ChangeNotifier {
   /// (§1.2), using the same day-by-day run as [firstShortfall].
   Set<DateTime> negativeDays(DateRange h) {
     final out = <DateTime>{};
-    var running = spendable - overdueOutAmount;
+    var running = _spendableOr - overdueOutAmount;
     final inRange = tasksInHorizon(h);
     final start = DateTime(h.start.year, h.start.month, h.start.day);
     final end = DateTime(h.end.year, h.end.month, h.end.day);
@@ -2670,7 +3050,7 @@ class AppStore extends ChangeNotifier {
       .toList(growable: false);
 
   double paymentTotalForTask(String taskId) => paymentsForTask(taskId)
-      .fold(0.0, (s, t) => s + _toBase(t.amount, t.currency));
+      .fold(0.0, (s, t) => s + t.amountBase);
 
   /// Completed / skipped / cancelled events over [period], newest first (§11.5).
   /// Merged from three sources: paid & received transactions (amount and date
@@ -2699,7 +3079,7 @@ class AppStore extends ChangeNotifier {
         txn: t,
         outcome:
             received ? ScheduleOutcome.received : ScheduleOutcome.paid,
-        amountInBase: _toBase(t.amount, t.currency),
+        amountInBase: t.amountBase,
       ));
     }
     // 2 · skipped — every recurring skip, including on paused/archived tasks.
@@ -2742,6 +3122,8 @@ class AppStore extends ChangeNotifier {
     required DateTime date,
     double? exchangeRate,
     double? toAmount,
+    double? rateToBase,
+    double? amountBase,
     double? fee,
     bool feeFromSource = true,
     List<String> tagIds = const [],
@@ -2751,6 +3133,13 @@ class AppStore extends ChangeNotifier {
     String? recurrenceTaskId,
     String? feeTxnId,
   }) {
+    // Freeze the entry's rate against the reporting currency (spec 021b §1). A
+    // caller with an opinion (the Quick Add form) passes both; a caller with none
+    // (the seed, the recurrence materialiser) uses the currency's stored rate at
+    // this moment — falling back to 1 only when nothing is known.
+    final frozenRate = rateToBase ?? rateFor(currency) ?? 1.0;
+    final frozenBase =
+        amountBase ?? roundToCurrency(amount / frozenRate, baseCurrency);
     final txn = Txn(
       id: _nextId('t'),
       type: type,
@@ -2759,6 +3148,8 @@ class AppStore extends ChangeNotifier {
       fromRef: fromRef,
       toRef: toRef,
       date: date,
+      rateToBase: frozenRate,
+      amountBase: frozenBase,
       // Stamp the real recording instant, distinct from the (user-editable)
       // transaction date (spec §5b). Before this, `createdAt` defaulted to
       // `date`, so a misfiled record was indistinguishable from a correct one;
@@ -2793,9 +3184,12 @@ class AppStore extends ChangeNotifier {
   void updateTxn(
     Txn txn, {
     double? amount,
+    String? currency,
     String? fromRef,
     String? toRef,
     DateTime? date,
+    double? rateToBase,
+    double? amountBase,
     List<String>? tagIds,
     String? note,
     double? fee,
@@ -2808,8 +3202,17 @@ class AppStore extends ChangeNotifier {
     bool clearFee = false,
     bool clearFeeLink = false,
   }) {
+    final newAmount = amount ?? txn.amount;
+    // The rate is only replaced when the caller passes one (a currency change or
+    // an explicit re-freeze — spec 021b §3c); otherwise it stays frozen. Changing
+    // the amount recomputes [amountBase] at the STORED rate, never today's.
+    final newRate = rateToBase ?? txn.rateToBase;
     txn
-      ..amount = amount ?? txn.amount
+      ..amount = newAmount
+      ..currency = currency ?? txn.currency
+      ..rateToBase = newRate
+      ..amountBase =
+          amountBase ?? roundToCurrency(newAmount / newRate, baseCurrency)
       ..fromRef = fromRef ?? txn.fromRef
       ..toRef = toRef ?? txn.toRef
       ..date = date ?? txn.date
@@ -2911,6 +3314,21 @@ class AppStore extends ChangeNotifier {
     if (_baseCurrency != null) {
       unawaited(_saveString(_baseCurrencyKey, _baseCurrency!));
     }
+    // Adopt the restored rate table and reporting-currency change log, then
+    // re-seed anything still missing so a pre-021 backup never lands in the
+    // missing-rate state (spec 021a §5). Persist so it survives the relaunch.
+    _rates
+      ..clear()
+      ..addAll(source._rates);
+    _rateSetAt
+      ..clear()
+      ..addAll(source._rateSetAt);
+    _baseCurrencyChanges
+      ..clear()
+      ..addAll(source._baseCurrencyChanges);
+    _seedRatesIfEmpty();
+    unawaited(_saveRates());
+    unawaited(_saveBaseChanges());
     _sameIndex = null;
     _accountIndex = null;
     // A moved balance can newly meet a goal's target; latch any that reached
@@ -3295,6 +3713,15 @@ class AppStore extends ChangeNotifier {
   /// one; on that birth call the rollover/warn moves fold into `created` rather
   /// than logging separately. One save can legitimately emit three rows (limit,
   /// rollover, warn), all carrying the same [today].
+  /// Changes a budget's currency (021d §1e). The limit is **never** converted:
+  /// 8,000 stays 8,000 and now means 8,000 of [code]. The caller confirms with a
+  /// dialog naming both readings before this runs.
+  void changeBudgetCurrency(Budget b, String code) {
+    if (code.isEmpty || code == budgetCurrencyOf(b)) return;
+    b.currency = code;
+    notifyListeners();
+  }
+
   void updateBudget(
     Category category, {
     double? monthlyBudget,
@@ -3321,11 +3748,13 @@ class AppStore extends ChangeNotifier {
     final newWarn = warnThreshold ?? existing.warnThreshold;
 
     if (monthlyBudget != null && monthlyBudget != existing.limit) {
+      // History prints in the budget's own currency (021d §2c-analogue).
+      final bc = existing.currency.isEmpty ? null : existing.currency;
       existing.history.add(BudgetEdit(
         at: today,
         field: 'limit',
-        from: money(existing.limit),
-        to: money(monthlyBudget),
+        from: money(existing.limit, currency: bc),
+        to: money(monthlyBudget, currency: bc),
         // A raised limit is amber; a lowered one is not.
         amber: monthlyBudget > existing.limit,
       ));
@@ -3467,14 +3896,21 @@ class AppStore extends ChangeNotifier {
     bool endsWhenReached = true,
     String note = '',
   }) {
+    // An account-sourced goal is measured in the account's own currency (021d
+    // §2a); a category-sourced one spans accounts, so it uses the reporting
+    // currency (stored as '').
+    final goalCur =
+        source.isAccount ? (accountById(source.id)?.currency ?? '') : '';
+    final moneyCur = goalCur.isEmpty ? null : goalCur;
     final createdTo = targetDate == null
-        ? money(targetAmount)
-        : '${money(targetAmount)} · ${_histDate(targetDate)}';
+        ? money(targetAmount, currency: moneyCur)
+        : '${money(targetAmount, currency: moneyCur)} · ${_histDate(targetDate)}';
     final goal = Goal(
       id: _nextId('g'),
       name: name,
       source: source,
       targetAmount: targetAmount,
+      currency: goalCur,
       targetDate: targetDate,
       endsWhenReached: endsWhenReached,
       note: note,
@@ -3502,11 +3938,13 @@ class AppStore extends ChangeNotifier {
     String? note,
   }) {
     if (targetAmount != null && targetAmount != goal.targetAmount) {
+      // History prints in the goal's own currency (021d §2c).
+      final gc = goal.currency.isEmpty ? null : goal.currency;
       goal.history.add(GoalEdit(
         at: today,
         field: 'target',
-        from: money(goal.targetAmount),
-        to: money(targetAmount),
+        from: money(goal.targetAmount, currency: gc),
+        to: money(targetAmount, currency: gc),
       ));
     }
     final newDate = clearTargetDate ? null : (targetDate ?? goal.targetDate);

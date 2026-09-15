@@ -139,6 +139,7 @@ Map<String, Object?> budgetToMap(Budget b) => {
       'warn_threshold': b.warnThreshold,
       'ended_at': _dt(b.endedAt),
       'archived_at': _dt(b.archivedAt),
+      'currency': b.currency,
       'history': jsonEncode(b.history.map(_budgetEditToJson).toList()),
     };
 
@@ -156,6 +157,7 @@ Budget budgetFromMap(Map<String, Object?> m) => Budget(
       warnThreshold: _d(m['warn_threshold']),
       endedAt: _dtn(m['ended_at']),
       archivedAt: _dtn(m['archived_at']),
+      currency: m['currency'] as String?,
       history: _decodeList(m['history'])
           .map((e) => _budgetEditFromJson(e as Map<String, dynamic>))
           .toList(),
@@ -214,6 +216,8 @@ Map<String, Object?> txnToMap(Txn t) => {
       'date': _dt(t.date),
       'exchange_rate': t.exchangeRate,
       'to_amount': t.toAmount,
+      'rate_to_base': t.rateToBase,
+      'amount_base': t.amountBase,
       'fee': t.fee,
       'fee_from_source': _b(t.feeFromSource),
       'tag_ids': jsonEncode(t.tagIds),
@@ -236,6 +240,10 @@ Txn txnFromMap(Map<String, Object?> m) => Txn(
       date: _dtn(m['date'])!,
       exchangeRate: _dn(m['exchange_rate']),
       toAmount: _dn(m['to_amount']),
+      // Pre-8 rows lack these → null → the model derives the reporting-currency
+      // default (rate 1, base == amount).
+      rateToBase: _dn(m['rate_to_base']),
+      amountBase: _dn(m['amount_base']),
       fee: _dn(m['fee']),
       feeFromSource: _bf(m['fee_from_source']),
       tagIds: _decodeList(m['tag_ids']).map((e) => e as String).toList(),
@@ -281,6 +289,7 @@ Map<String, Object?> goalToMap(Goal g) => {
       'completed_at': _dt(g.completedAt),
       'stopped_at': _dt(g.stoppedAt),
       'created_at': _dt(g.createdAt),
+      'currency': g.currency,
       'history': jsonEncode(g.history.map(_goalEditToJson).toList()),
     };
 
@@ -301,6 +310,7 @@ Goal goalFromMap(Map<String, Object?> m) {
     endsWhenReached: _bf(m['ends_when_reached']),
     status: _enumByName(GoalStatus.values, m['status_name'], GoalStatus.active),
     note: (m['note'] as String?) ?? '',
+    currency: m['currency'] as String?,
     completedAt: _dtn(m['completed_at']),
     stoppedAt: _dtn(m['stopped_at']),
     history: _decodeList(m['history'])

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../../core/models/currency_def.dart';
+import '../../core/models/models.dart' show BaseCurrencyChange;
 import '../../core/store/app_store.dart';
+import '../../core/utils/formatters.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/app_card.dart';
 import '../../shared/widgets/screen_header.dart';
@@ -9,6 +11,7 @@ import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/app_typography.dart';
 import '../quick_add/pickers.dart';
+import 'reporting_currency_sheet.dart';
 
 /// More → Data → Currencies (currency-sheet spec §1). Data you set up once and
 /// later correct, which is exactly what the Categories and Tags screens beside
@@ -41,15 +44,12 @@ class CurrencyManagementScreen extends StatelessWidget {
     final base = store.baseCurrency;
     int accountsFor(String code) => store.accountsUsingCurrency(code).length;
 
-    // IN USE: base ∪ account codes ∪ transaction codes, ordered base-first, then
-    // by account count descending, then by code. Custom currencies in use are
-    // listed here (they no longer split off into a second group), so no
-    // de-duplication is needed — each code appears once.
+    // IN USE: account ∪ transaction codes, **excluding the base** (it lives in
+    // REPORTING now — 021a §3a), ordered by account count descending, then code.
     final inUseCodes = store.currencyCodesInUse()
+        .where((c) => c != base)
+        .toList()
       ..sort((a, b) {
-        if (a == b) return 0;
-        if (a == base) return -1;
-        if (b == base) return 1;
         final byCount = accountsFor(b).compareTo(accountsFor(a));
         if (byCount != 0) return byCount;
         return a.compareTo(b);
@@ -58,11 +58,13 @@ class CurrencyManagementScreen extends StatelessWidget {
 
     // ADDED, NOT USED: custom currencies referenced by nothing (not base, no
     // account, no transaction). The section is absent when empty (§1.3).
-    final inUseSet = inUseCodes.toSet();
+    final inUseSet = {...inUseCodes, base};
     final addedNotUsed = [
       for (final def in store.snapshotCustomCurrencies)
         if (!inUseSet.contains(def.code)) def,
     ];
+
+    final lastChange = store.lastBaseCurrencyChange;
 
     return Scaffold(
       body: SafeArea(
@@ -74,51 +76,32 @@ class CurrencyManagementScreen extends StatelessWidget {
               showBack: true,
               showEye: false,
               showAdd: true,
-              // The existing corner `+` (HeaderCircleButton, accent) opens the
-              // existing add sheet — no second add flow. The store notifies on
-              // create, so this screen rebuilds with the new row in place.
               onAdd: () => showAddCurrencySheet(context),
             ),
             Expanded(
               child: ListView(
                 padding: const EdgeInsets.only(bottom: Insets.xxl),
                 children: [
+                  // REPORTING — the base currency, every total is shown in it
+                  // (021a §3a). Tapping it opens the reporting-currency switch.
+                  SectionLabel(l.curSectionReporting),
+                  AppCard(
+                    child: _CurrencyRow(
+                      def: currencyDef(base),
+                      isReporting: true,
+                      inUse: true,
+                      lastChange: lastChange,
+                      onTap: () => showReportingCurrencySheet(context),
+                    ),
+                  ),
                   if (inUse.isNotEmpty) ...[
                     SectionLabel(l.curSectionInUse),
-                    _CurrencyCard(
-                      defs: inUse,
-                      base: base,
-                      accountsFor: accountsFor,
-                    ),
+                    _CurrencyCard(defs: inUse, base: base, inUse: true),
                   ],
                   if (addedNotUsed.isNotEmpty) ...[
                     SectionLabel(l.curSectionAdded),
-                    _CurrencyCard(
-                      defs: addedNotUsed,
-                      base: base,
-                      accountsFor: accountsFor,
-                    ),
+                    _CurrencyCard(defs: addedNotUsed, base: base, inUse: false),
                   ],
-                  // The screen's most important sentence: somebody arrives here
-                  // looking for exchange rates; this tells them there are none
-                  // before they hunt. Rendered whatever the sections compute to,
-                  // so a store with only the base currency still carries it.
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(
-                      Insets.gutter,
-                      Insets.lg,
-                      Insets.gutter,
-                      0,
-                    ),
-                    child: Text(
-                      l.curDisplayNote,
-                      style: AppText.caption.copyWith(
-                        fontSize: 11.5,
-                        height: 1.4,
-                        color: AppColors.textTertiary,
-                      ),
-                    ),
-                  ),
                 ],
               ),
             ),
@@ -135,12 +118,15 @@ class _CurrencyCard extends StatelessWidget {
   const _CurrencyCard({
     required this.defs,
     required this.base,
-    required this.accountsFor,
+    required this.inUse,
   });
 
   final List<CurrencyDef> defs;
   final String base;
-  final int Function(String) accountsFor;
+
+  /// Whether these rows are in-use currencies (a missing rate shows `Set rate`)
+  /// or merely added-not-used ones (a missing rate shows nothing — 021a §3b).
+  final bool inUse;
 
   @override
   Widget build(BuildContext context) {
@@ -151,8 +137,8 @@ class _CurrencyCard extends StatelessWidget {
             if (i > 0) const RowDivider(indent: 48),
             _CurrencyRow(
               def: defs[i],
-              isBase: defs[i].code == base,
-              accountCount: accountsFor(defs[i].code),
+              inUse: inUse,
+              onTap: () => showEditCurrencySheet(context, defs[i]),
             ),
           ],
         ],
@@ -168,33 +154,47 @@ class _CurrencyCard extends StatelessWidget {
 /// The trailing figure this replaces was `formatCurrencyExample(def, 9850)`, the
 /// add-form's sample. The slot now carries the base marker and a chevron only;
 /// the usage count is the one number, and it moved into the subtitle.
+/// One currency row (021a §3b). The trailing slot carries the rate against the
+/// reporting currency, with the date it was set stacked beneath it; the base
+/// currency's row shows `Every total` there instead, and an in-use currency
+/// with no rate shows `Set rate` in [AppColors.warning].
 class _CurrencyRow extends StatelessWidget {
   const _CurrencyRow({
     required this.def,
-    required this.isBase,
-    required this.accountCount,
+    required this.inUse,
+    required this.onTap,
+    this.isReporting = false,
+    this.lastChange,
   });
 
   final CurrencyDef def;
-  final bool isBase;
-  final int accountCount;
+
+  /// In-use currencies show `Set rate` when unrated; not-in-use ones show
+  /// nothing — the rule is only about what a total needs (021a §3b).
+  final bool inUse;
+
+  /// The base currency's row: shows `Every total` and the last reporting switch.
+  final bool isReporting;
+  final BaseCurrencyChange? lastChange;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final usage = l.curUsageAccounts(accountCount);
-    // Name, code, usage and base state announced as one label (§5); the row's
-    // own descendants are excluded so the reader hears it once, coherently.
+    final store = StoreScope.of(context);
+
+    final subtitle = isReporting && lastChange != null
+        ? '${def.code} · ${l.curReportingFromOn(lastChange!.from, dayMonth(lastChange!.at, l))}'
+        : (isOverriddenBuiltIn(def.code)
+            ? '${def.code} · ${l.curEdited}'
+            : def.code);
+
     return Semantics(
       button: true,
       excludeSemantics: true,
-      label: isBase
-          ? '${def.name}, ${def.code}, $usage, ${l.curBase}'
-          : '${def.name}, ${def.code}, $usage',
+      label: '${def.name}, $subtitle',
       child: InkWell(
-        // Tapping a row opens the edit form — the same sheet the picker's swipe
-        // reaches.
-        onTap: () => showEditCurrencySheet(context, def),
+        onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.symmetric(
             horizontal: Insets.md,
@@ -209,8 +209,6 @@ class _CurrencyRow extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // The name truncates; the CUSTOM label sits outside its flex
-                    // box so it never gives way (§5).
                     Text.rich(
                       TextSpan(children: [
                         TextSpan(
@@ -236,7 +234,7 @@ class _CurrencyRow extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                     Text(
-                      '${def.code} · $usage',
+                      subtitle,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: AppText.caption.copyWith(
@@ -248,10 +246,8 @@ class _CurrencyRow extends StatelessWidget {
                   ],
                 ),
               ),
-              if (isBase) ...[
-                const _BaseBadge(),
-                const SizedBox(width: 5),
-              ],
+              const SizedBox(width: 8),
+              _RateSlot(def: def, inUse: inUse, isReporting: isReporting, store: store),
               const Icon(
                 Icons.chevron_right_rounded,
                 size: 14,
@@ -263,6 +259,81 @@ class _CurrencyRow extends StatelessWidget {
       ),
     );
   }
+}
+
+/// The trailing rate + date (021a §3b).
+class _RateSlot extends StatelessWidget {
+  const _RateSlot({
+    required this.def,
+    required this.inUse,
+    required this.isReporting,
+    required this.store,
+  });
+
+  final CurrencyDef def;
+  final bool inUse;
+  final bool isReporting;
+  final AppStore store;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+
+    if (isReporting) {
+      return Padding(
+        padding: const EdgeInsets.only(right: 2),
+        child: Text(
+          l.curEveryTotal,
+          style: AppText.caption.copyWith(
+              fontSize: 12, color: AppColors.textSecondary),
+        ),
+      );
+    }
+
+    final rate = store.rateFor(def.code);
+    if (rate == null) {
+      // A currency in use with no rate leads the reader to the fix; one not in
+      // use shows nothing — a total does not need it (021a §3b).
+      if (!inUse) return const SizedBox.shrink();
+      return Padding(
+        padding: const EdgeInsets.only(right: 2),
+        child: Text(
+          l.curSetRate,
+          style: const TextStyle(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w600,
+              color: AppColors.warning),
+        ),
+      );
+    }
+
+    final setAt = store.rateSetAt(def.code);
+    final dateLabel = setAt == null
+        ? ''
+        : (_sameDay(setAt, store.today) ? l.curToday : dayMonth(setAt, l));
+    return Padding(
+      padding: const EdgeInsets.only(right: 2),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Text(
+            formatRate(rate),
+            style: AppText.amount.copyWith(
+                fontSize: 14, color: AppColors.textPrimary),
+          ),
+          if (dateLabel.isNotEmpty)
+            Text(
+              dateLabel,
+              style: const TextStyle(fontSize: 11, color: AppColors.textTertiary),
+            ),
+        ],
+      ),
+    );
+  }
+
+  static bool _sameDay(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
 }
 
 /// The currency's own token — `$`, `m`, `TMT` — on a neutral tile. It is the
@@ -292,36 +363,6 @@ class _SymbolTile extends StatelessWidget {
           fontSize: def.token.length > 2 ? 9.5 : 13,
           fontWeight: FontWeight.w600,
           color: AppColors.textPrimary,
-        ),
-      ),
-    );
-  }
-}
-
-/// The `BASE` marker — a pill in accent @ 20 %, the label in [AppColors
-/// .accentLight]. It only **reports**: the base currency is chosen in
-/// More ▸ Preferences and stays chosen there, so tapping it does nothing distinct
-/// from tapping the row.
-class _BaseBadge extends StatelessWidget {
-  const _BaseBadge();
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(
-        color: AppColors.accent.withValues(alpha: 0.20),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Text(
-        l.curBase.toUpperCase(),
-        maxLines: 1,
-        style: const TextStyle(
-          fontSize: 9.5,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 0.4,
-          color: AppColors.accentLight,
         ),
       ),
     );

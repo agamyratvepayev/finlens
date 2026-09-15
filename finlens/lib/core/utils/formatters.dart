@@ -215,6 +215,18 @@ String moneyCompact(double value, {String? currency}) {
   return '$sign$symbol${abs.toStringAsFixed(0)}';
 }
 
+/// An exchange rate for display (spec 021a §1a): stored with 6 decimals, shown
+/// with up to [maxDecimals] (default 4), trailing zeros trimmed — `3.5`, not
+/// `3.500000`; `40.125`, not `40.1250`. Whole rates drop the point entirely.
+String formatRate(double rate, {int maxDecimals = 4}) {
+  var s = rate.toStringAsFixed(maxDecimals);
+  if (s.contains('.')) {
+    s = s.replaceAll(RegExp(r'0+$'), '');
+    s = s.replaceAll(RegExp(r'\.$'), '');
+  }
+  return s;
+}
+
 String percent(double fraction, {int decimals = 1}) =>
     '${(fraction * 100).toStringAsFixed(decimals)}%';
 

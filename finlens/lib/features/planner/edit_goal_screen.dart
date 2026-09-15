@@ -152,7 +152,9 @@ class _EditGoalScreenState extends State<EditGoalScreen> {
     if (_createNewAccount) return 0;
     final s = _isEditing ? _goal!.source : _source;
     if (s == null || s.isCategory) return 0;
-    return _store.balanceOnInBase(s.id, _today);
+    // An account goal is measured in the account's own currency (021d §2b), so
+    // its starting figure is the native balance, not a converted one.
+    return _store.balanceOn(s.id, _today);
   }
 
   /// The pair state, resolved to what is actually usable: a `monthly`/`date`

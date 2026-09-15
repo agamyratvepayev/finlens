@@ -83,7 +83,7 @@ void main() {
       final store = buildSeedStore();
       final h = next30();
       expect(store.projection(h),
-          closeTo(store.spendable + store.comingIn(h) - store.goingOut(h), 0.01));
+          closeTo(store.spendable! + store.comingIn(h) - store.goingOut(h), 0.01));
       // The overdue Gym pay-out is folded into goingOut (§2.1).
       expect(store.goingOut(h), closeTo(3115.98, 0.01));
       expect(store.comingIn(h), closeTo(5200, 0.01));
@@ -105,7 +105,7 @@ void main() {
         store.deleteTask(t);
       }
       final h = ScheduleHorizon.until(today).range(today);
-      expect(store.projection(h), closeTo(store.spendable, 0.01));
+      expect(store.projection(h), closeTo(store.spendable!, 0.01));
     });
   });
 
@@ -211,7 +211,7 @@ void main() {
       final task = store.taskById('k-amex')!;
       final checking = store.balanceOf('a-checking');
       final amex = store.balanceOf('a-amex');
-      final worth = store.netWorth;
+      final worth = store.netWorth!;
 
       final r = store.markTaskPaid(
         task,

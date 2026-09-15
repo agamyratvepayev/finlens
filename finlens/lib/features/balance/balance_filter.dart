@@ -67,10 +67,19 @@ class BalanceFilter {
   bool isGroupVisible(AppStore store, AccountGroup group) =>
       visibleAccounts(store, group).isNotEmpty;
 
-  /// Sums the already-converted base-currency figure the screen uses today.
-  double filteredTotal(AppStore store, AccountGroup group) =>
-      visibleAccounts(store, group)
-          .fold(0.0, (sum, a) => sum + store.balanceInBase(a.id));
+  /// Sums the converted base-currency total for the group's *visible* accounts.
+  /// **Null when any visible account has no rate** (021a §2): the filtered total
+  /// then cannot be computed and the screen shows the missing-rate warning in its
+  /// slot rather than a fabricated number.
+  double? filteredTotal(AppStore store, AccountGroup group) {
+    var sum = 0.0;
+    for (final a in visibleAccounts(store, group)) {
+      final b = store.balanceInBase(a.id);
+      if (b == null) return null;
+      sum += b;
+    }
+    return sum;
+  }
 
   ToggleState toggleState(AppStore store, AccountGroup group) {
     final visible = visibleAccounts(store, group).length;
@@ -97,16 +106,25 @@ class BalanceFilter {
     return total;
   }
 
-  double sectionTotal(AppStore store, {required bool assets}) {
+  /// Null when any visible account in the section has no rate (021a §2).
+  double? sectionTotal(AppStore store, {required bool assets}) {
     final groups = assets ? AccountGroup.assets : AccountGroup.liabilities;
-    return groups
-        .where((g) => isGroupVisible(store, g))
-        .fold(0.0, (sum, g) => sum + filteredTotal(store, g));
+    var sum = 0.0;
+    for (final g in groups.where((g) => isGroupVisible(store, g))) {
+      final t = filteredTotal(store, g);
+      if (t == null) return null;
+      sum += t;
+    }
+    return sum;
   }
 
-  double netWorth(AppStore store) =>
-      sectionTotal(store, assets: true) -
-      sectionTotal(store, assets: false).abs();
+  /// Null when any visible account has no rate (021a §2).
+  double? netWorth(AppStore store) {
+    final a = sectionTotal(store, assets: true);
+    final l = sectionTotal(store, assets: false);
+    if (a == null || l == null) return null;
+    return a - l.abs();
+  }
 
   // ── Transitions ───────────────────────────────────────────────────────────
 

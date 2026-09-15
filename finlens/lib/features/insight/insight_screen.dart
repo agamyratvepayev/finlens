@@ -8,7 +8,6 @@ import '../../core/models/models.dart';
 import '../../core/store/app_store.dart';
 import '../../core/utils/date_range.dart';
 import '../../core/utils/formatters.dart';
-import '../../core/utils/fx.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/amount_text.dart';
 import '../../shared/widgets/app_card.dart';
@@ -2001,12 +2000,16 @@ class _RevaluationBlock extends StatelessWidget {
     final store = report.store;
     final acc = store.accountById(t.toRef);
 
-    final amountBase = Fx.convert(t.amount, t.currency, store.baseCurrency);
-    // The base from the account's balance immediately before the rebalance.
+    // The rebalance's frozen base value (021b) — what it was worth when entered.
+    final amountBase = t.amountBase;
+    // The base from the account's balance immediately before the rebalance,
+    // converted at today's rate; degrades to 0 when the account's currency has
+    // no rate (§2d — this is a secondary reval row, not a headline total).
     final base = acc == null
         ? 0.0
-        : store.balanceOnInBase(
-            acc.id, t.date.subtract(const Duration(days: 1)));
+        : (store.balanceOnInBase(
+                acc.id, t.date.subtract(const Duration(days: 1))) ??
+            0.0);
     final after = base + amountBase;
     // The percentage is the point of the addition: +$800 alone does not say
     // whether that is a good day. Never a divide-by-zero dash (spec §8).

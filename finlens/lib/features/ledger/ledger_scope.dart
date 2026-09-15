@@ -1,7 +1,6 @@
 import '../../core/l10n/enum_labels.dart';
 import '../../core/models/models.dart';
 import '../../core/store/app_store.dart';
-import '../../core/utils/fx.dart';
 import '../../l10n/app_localizations.dart';
 import 'trans_filter.dart';
 
@@ -193,10 +192,6 @@ class LedgerQuery {
     required bool touchesFrom,
     required bool touchesTo,
   }) {
-    final currency = store.accountById(
-          touchesFrom ? t.fromRef : t.toRef,
-        )?.currency ??
-        store.baseCurrency;
 
     switch (t.type) {
       case TxnType.transfer:
@@ -211,7 +206,7 @@ class LedgerQuery {
           kind: internal
               ? FlowKind.internal
               : (leaving ? FlowKind.outflow : FlowKind.inflow),
-          signedAmount: Fx.convert(t.amount, currency, store.baseCurrency).abs(),
+          signedAmount: t.amountBase.abs(),
           counterpartyLine: _transferLine(t, leaving: leaving),
         );
 
@@ -219,7 +214,7 @@ class LedgerQuery {
         return ScopedTxn(
           txn: t,
           kind: FlowKind.outflow,
-          signedAmount: Fx.convert(t.amount, currency, store.baseCurrency).abs(),
+          signedAmount: t.amountBase.abs(),
           counterpartyLine: null,
         );
 
@@ -227,7 +222,7 @@ class LedgerQuery {
         return ScopedTxn(
           txn: t,
           kind: FlowKind.inflow,
-          signedAmount: Fx.convert(t.amount, currency, store.baseCurrency).abs(),
+          signedAmount: t.amountBase.abs(),
           counterpartyLine: null,
         );
 
@@ -236,7 +231,7 @@ class LedgerQuery {
         return ScopedTxn(
           txn: t,
           kind: t.amount >= 0 ? FlowKind.inflow : FlowKind.outflow,
-          signedAmount: Fx.convert(t.amount, currency, store.baseCurrency).abs(),
+          signedAmount: t.amountBase.abs(),
           counterpartyLine: null,
         );
     }
@@ -264,8 +259,10 @@ class LedgerQuery {
 
   double get net => totalIn - totalOut;
 
-  /// The figure under the nav title.
-  double get balance => switch (scope) {
+  /// The figure under the nav title. Null for a group/all-accounts scope whose
+  /// total includes an unrated currency (021a §2) — an account scope is native
+  /// and always known.
+  double? get balance => switch (scope) {
         AllAccountsScope() => store.netWorth,
         GroupScope(:final group) => store.groupTotal(group),
         AccountScope(:final accountId) => store.balanceOf(accountId),

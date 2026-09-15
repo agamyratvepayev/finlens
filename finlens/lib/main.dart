@@ -62,6 +62,7 @@ Future<void> main() async {
   await store.loadLedgerPrefs();
   await store.loadLocale();
   await store.loadBaseCurrency();
+  await store.loadRates();
   // Prime the money formatters' default currency before the first frame, so a
   // bare `money(x)` never paints a dollar and then corrects itself. The
   // baseCurrency getter keeps it in sync thereafter (see AppStore.baseCurrency).

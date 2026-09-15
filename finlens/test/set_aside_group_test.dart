@@ -36,8 +36,8 @@ void main() {
     setUp(() => store = buildSeedStore());
 
     test('a Set aside account is included in totalAssets and net worth', () {
-      final assetsBefore = store.totalAssets;
-      final netBefore = store.netWorth;
+      final assetsBefore = store.totalAssets!;
+      final netBefore = store.netWorth!;
 
       store.addAccount(
         name: 'Vacation Fund',

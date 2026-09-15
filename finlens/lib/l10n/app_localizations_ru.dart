@@ -223,6 +223,89 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
+  String get curRate => 'Курс';
+
+  @override
+  String get curRateMissing => 'Нет курса';
+
+  @override
+  String get curSetRate => 'Задать курс';
+
+  @override
+  String get curRateNote => 'Изменение не затрагивает уже сохранённые записи.';
+
+  @override
+  String curNoRateFor(Object code) {
+    return '$code — нет курса';
+  }
+
+  @override
+  String get curTotalsHidden => 'Итоги с этой валютой скрыты';
+
+  @override
+  String get curEveryTotal => 'Все итоги';
+
+  @override
+  String get curToday => 'сегодня';
+
+  @override
+  String get curSectionReporting => 'ОТЧЁТНАЯ ВАЛЮТА';
+
+  @override
+  String get qaExchangeRate => 'Обменный курс';
+
+  @override
+  String get qaBlockRate => 'Введите обменный курс';
+
+  @override
+  String curRateFromEntry(Object date) {
+    return 'Курс взят из записи от $date';
+  }
+
+  @override
+  String get curRateManual => 'Курс задан для этой записи';
+
+  @override
+  String get txnRateLabel => 'КУРС';
+
+  @override
+  String qaRateDateChanged(Object rate) {
+    return 'Курс на эту дату — $rate. Использовать?';
+  }
+
+  @override
+  String get qaBlockReceives => 'Укажите, сколько поступило';
+
+  @override
+  String get qaReceivesPrompt => 'Полученная сумма';
+
+  @override
+  String get budCurrency => 'Валюта бюджета';
+
+  @override
+  String get budCurrencyChangeTitle => 'Сменить валюту бюджета?';
+
+  @override
+  String budCurrencyChangeBody(Object limit, Object code) {
+    return 'Лимит останется $limit и теперь будет означать $limit $code.';
+  }
+
+  @override
+  String get curChangeReportingTitle => 'Сменить отчётную валюту';
+
+  @override
+  String get curReportingNote =>
+      'Прошлые суммы пересчитываются по одному курсу. Их пропорции сохраняются, но они не переоцениваются по курсам того времени. Бюджеты и цели сохраняют свои валюты.';
+
+  @override
+  String get curConvertAndSwitch => 'Пересчитать и сменить';
+
+  @override
+  String curReportingFromOn(Object from, Object date) {
+    return 'с $from, $date';
+  }
+
+  @override
   String get qaBackgroundColour => 'Цвет фона';
 
   @override

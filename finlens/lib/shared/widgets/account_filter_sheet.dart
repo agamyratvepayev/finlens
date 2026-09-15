@@ -7,6 +7,7 @@ import '../../core/utils/formatters.dart';
 import '../../features/balance/balance_filter.dart';
 import '../../features/balance/balance_order.dart';
 import '../../l10n/app_localizations.dart';
+import 'rate_missing.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_typography.dart';
 import 'amount_text.dart';
@@ -344,11 +345,13 @@ class _FilterSheetState extends State<_FilterSheet> {
     final expanded = _expanded.contains(group);
     final off = state == ToggleState.off;
 
+    final mixedTotal = filter.filteredTotal(store, group);
+    final fullTotal = store.groupTotal(group);
     final subtitle = state == ToggleState.mixed
         ? '$visibleCount of ${accounts.length} · '
-            '${money(filter.filteredTotal(store, group), masked: store.masked)}'
+            '${mixedTotal == null ? l.curRateMissing : money(mixedTotal, masked: store.masked)}'
         : '${l.countAccounts(accounts.length)} · '
-            '${money(store.groupTotal(group), masked: store.masked)}';
+            '${fullTotal == null ? l.curRateMissing : money(fullTotal, masked: store.masked)}';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 7),
@@ -683,14 +686,17 @@ class AccountFilterPreview extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 3),
-                AmountText.balance(
-                  filter.netWorth(store),
-                  style: AppText.groupAmount.copyWith(
-                    fontSize: 19,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textPrimary,
+                if (filter.netWorth(store) == null)
+                  const RateMissingText(fontSize: 16)
+                else
+                  AmountText.balance(
+                    filter.netWorth(store)!,
+                    style: AppText.groupAmount.copyWith(
+                      fontSize: 19,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary,
+                    ),
                   ),
-                ),
               ],
             ),
           ),

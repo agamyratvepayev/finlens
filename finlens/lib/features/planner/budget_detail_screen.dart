@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../../core/models/models.dart';
 import '../../core/store/app_store.dart';
 import '../../core/utils/formatters.dart';
-import '../../core/utils/fx.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/amount_text.dart';
 import '../../shared/widgets/app_card.dart';
@@ -913,7 +912,7 @@ class _TxnMiniRowState extends State<_TxnMiniRow> {
                     ),
                   ),
                   const SizedBox(width: Insets.sm),
-                  AmountText(Fx.convert(txn.amount, txn.currency, store.baseCurrency)),
+                  AmountText(txn.amountBase),
                 ],
               ),
               // The app's one reveal motion — same 180ms easeOut / topLeft as

@@ -637,7 +637,11 @@ class _UntilDateSheetState extends State<_UntilDateSheet> {
         : DateRange(
             _today, DateTime(end.year, end.month, end.day, 23, 59, 59, 999));
     final payments = range == null ? 0 : store.tasksInHorizon(range).length;
-    final projection = range == null ? store.spendable : store.projection(range);
+    // Spendable can be null when a spendable account has no rate; the Schedule
+    // projection is a forecast (§2d intermediate), so it degrades to 0 rather
+    // than silencing — the Balance tab carries the missing-rate warning.
+    final projection =
+        range == null ? (store.spendable ?? 0) : store.projection(range);
     final short = projection < 0;
     final breach = range == null ? null : store.firstShortfall(range);
 

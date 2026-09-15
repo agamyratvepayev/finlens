@@ -10,7 +10,7 @@ import '../../core/models/models.dart';
 import '../../core/store/app_store.dart';
 import '../../core/utils/date_range.dart';
 import '../../core/utils/formatters.dart';
-import '../../core/utils/fx.dart';
+import '../../shared/widgets/rate_missing.dart';
 import '../../core/utils/search_fold.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/destructive_sheet.dart';
@@ -663,22 +663,25 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
             ),
           ),
           const SizedBox(width: 10),
-          Text(
-            money(
-              query.balance,
-              currency: query.currency,
-              signless: true,
-              masked: store.masked,
+          if (query.balance == null)
+            const RateMissingText(fontSize: 18)
+          else
+            Text(
+              money(
+                query.balance!,
+                currency: query.currency,
+                signless: true,
+                masked: store.masked,
+              ),
+              style: const TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w700,
+                letterSpacing: -0.022 * 22,
+                height: 1.15,
+                color: AppColors.textPrimary,
+                fontFeatures: [FontFeature.tabularFigures()],
+              ),
             ),
-            style: const TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w700,
-              letterSpacing: -0.022 * 22,
-              height: 1.15,
-              color: AppColors.textPrimary,
-              fontFeatures: [FontFeature.tabularFigures()],
-            ),
-          ),
         ],
       ),
     );
@@ -1265,11 +1268,15 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
       filter: (a) => !a.hasOpeningReceipt,
     );
     if (target == null || !mounted) return;
-    final converted = Fx.convert(
-      account.startingBalance.abs(),
-      account.currency,
-      target.currency,
-    );
+    // Convert the copied opening balance through the live rates; if either
+    // currency has no rate, fall back to the raw magnitude rather than blocking
+    // the copy (a rare edge — the user can correct it in the opening sheet).
+    final converted = store.convertBetween(
+          account.startingBalance.abs(),
+          account.currency,
+          target.currency,
+        ) ??
+        account.startingBalance.abs();
     store.setOpeningBalance(target, amount: converted, date: store.today);
     if (!mounted) return;
     showOpeningBalanceSheet(context, target.id);

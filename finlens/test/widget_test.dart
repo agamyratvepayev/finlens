@@ -16,7 +16,7 @@ void main() {
 
   test('net worth is assets minus liabilities', () {
     final store = buildSeedStore();
-    expect(store.netWorth, store.totalAssets - store.totalLiabilities);
+    expect(store.netWorth, store.totalAssets! - store.totalLiabilities!);
     expect(store.totalLiabilities, greaterThan(0));
   });
 
@@ -88,7 +88,7 @@ void main() {
     final month = DateTime(2026, 8);
     final income = store.monthIncome(month);
     final expense = store.monthExpense(month);
-    final worth = store.netWorth;
+    final worth = store.netWorth!;
 
     store.addTxn(
       type: TxnType.rebalance,

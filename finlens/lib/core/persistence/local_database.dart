@@ -40,7 +40,7 @@ class LocalDatabase {
   // The bump is one-way and additive: a newer build reads an older file (the new
   // columns simply come back empty/null), while an older build rejects a newer
   // backup. See [_onUpgrade].
-  static const int schemaVersion = 7;
+  static const int schemaVersion = 8;
 
   static const String accountsTable = 'accounts';
   static const String categoriesTable = 'categories';
@@ -165,6 +165,8 @@ class LocalDatabase {
         date INTEGER NOT NULL,
         exchange_rate REAL,
         to_amount REAL,
+        rate_to_base REAL,
+        amount_base REAL,
         fee REAL,
         fee_from_source INTEGER NOT NULL,
         tag_ids TEXT NOT NULL,
@@ -198,6 +200,7 @@ class LocalDatabase {
         completed_at INTEGER,
         stopped_at INTEGER,
         created_at INTEGER NOT NULL,
+        currency TEXT,
         history TEXT NOT NULL
       )''');
     batch.execute('''
@@ -302,6 +305,7 @@ class LocalDatabase {
         warn_threshold REAL NOT NULL,
         ended_at INTEGER,
         archived_at INTEGER,
+        currency TEXT,
         history TEXT NOT NULL
       )''';
 
@@ -346,6 +350,16 @@ class LocalDatabase {
     if (oldVersion < 7) {
       // Transfer-fee spec §4.1 — a transfer joins its fee expense by id.
       await db.execute('ALTER TABLE $txnsTable ADD COLUMN fee_txn_id TEXT');
+    }
+    if (oldVersion < 8) {
+      // Multi-currency (spec 021b/021d): each entry freezes a rate and base
+      // value; budgets and goals gain their own currency. All nullable, so a
+      // pre-8 row reads back null and the model derives the reporting-currency
+      // default (rate 1, base == amount; currency == '').
+      await db.execute('ALTER TABLE $txnsTable ADD COLUMN rate_to_base REAL');
+      await db.execute('ALTER TABLE $txnsTable ADD COLUMN amount_base REAL');
+      await db.execute('ALTER TABLE $budgetsTable ADD COLUMN currency TEXT');
+      await db.execute('ALTER TABLE $goalsTable ADD COLUMN currency TEXT');
     }
   }
 }

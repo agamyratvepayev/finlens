@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import '../models/models.dart';
 import '../store/app_store.dart';
 import 'local_database.dart';
 import 'store_mappers.dart';
@@ -70,6 +71,19 @@ String encodeBackup(AppStore store, {required DateTime exportedAt}) {
       // this change carries no key; the decoder derives it from the oldest
       // account instead.
       'base_currency': store.baseCurrency,
+      // The exchange-rate table and the reporting-currency change log ride along
+      // so a restore reproduces the saved store's totals and history exactly
+      // (spec 021a §5 / 021e §5). A pre-021 backup carries neither; the decoder
+      // then re-seeds rates from the defaults.
+      'fx_rates': {
+        for (final e in store.snapshotRates.entries)
+          e.key: {
+            'r': e.value,
+            't': store.snapshotRateSetAt[e.key]?.millisecondsSinceEpoch,
+          },
+      },
+      'base_currency_changes':
+          store.snapshotBaseCurrencyChanges.map((c) => c.toJson()).toList(),
     },
     'accounts': store.snapshotAccounts.map(accountToMap).toList(),
     'categories': store.snapshotCategories.map(categoryToMap).toList(),
@@ -131,6 +145,31 @@ BackupDocument decodeBackup(String jsonText) {
 
   final since = metaInt('budget_history_since');
 
+  // The exchange-rate table and reporting-currency change log (021a/021e). Both
+  // absent in a pre-021 backup, in which case the store re-seeds rates from the
+  // defaults on construction.
+  final rates = <String, double>{};
+  final rateSetAt = <String, DateTime>{};
+  if (meta is Map && meta['fx_rates'] is Map) {
+    (meta['fx_rates'] as Map).forEach((code, v) {
+      if (v is Map && v['r'] is num) {
+        rates[code as String] = (v['r'] as num).toDouble();
+        final t = v['t'];
+        if (t is num) {
+          rateSetAt[code] = DateTime.fromMillisecondsSinceEpoch(t.toInt());
+        }
+      }
+    });
+  }
+  final baseChanges = <BaseCurrencyChange>[];
+  if (meta is Map && meta['base_currency_changes'] is List) {
+    for (final e in meta['base_currency_changes'] as List) {
+      if (e is Map) {
+        baseChanges.add(BaseCurrencyChange.fromJson(e.cast<String, dynamic>()));
+      }
+    }
+  }
+
   // A pre-v5 backup carries no `budgets` array — budgets still lived on the
   // category rows. Run the same migration the on-device upgrade uses so an older
   // backup restores with every budget intact (budgets-as-object spec §A.4).
@@ -156,6 +195,9 @@ BackupDocument decodeBackup(String jsonText) {
       budgetHistorySince:
           since == null ? null : DateTime.fromMillisecondsSinceEpoch(since),
       baseCurrency: metaString('base_currency'),
+      rates: rates.isEmpty ? null : rates,
+      rateSetAt: rateSetAt.isEmpty ? null : rateSetAt,
+      baseCurrencyChanges: baseChanges.isEmpty ? null : baseChanges,
     );
   } catch (e) {
     // A structurally-valid file whose rows are missing required fields (e.g. a

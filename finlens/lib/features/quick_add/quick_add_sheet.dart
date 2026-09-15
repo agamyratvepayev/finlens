@@ -248,6 +248,14 @@ class _QuickAddScreenState extends State<QuickAddScreen>
   /// hard-coded dollar — a transaction saved before any account is chosen is
   /// stored in the base, not in USD.
   late String _currency;
+
+  /// A rate the user typed for THIS entry (spec 021b §3) against the reporting
+  /// currency, or null to use the proposal (the currency's stored rate today, or
+  /// the nearest earlier entry's rate when back-dated). Reset whenever the
+  /// currency changes, since a rate is meaningless across currencies.
+  double? _entryRateOverride;
+  bool _entryRateManual = false;
+
   String? _fromRef;
   String? _toRef;
   late DateTime _date; // primed from the store's clock in initState
@@ -330,6 +338,11 @@ class _QuickAddScreenState extends State<QuickAddScreen>
           ? AmountEntry.fromDouble(store.balanceOf(source.toRef).abs())
           : AmountEntry.fromDouble(source.amount);
       _currency = source.currency;
+      // Seed the rate row from the entry's own frozen rate (021b §4) so an edit
+      // shows what it froze and a plain amount edit keeps it. A copy re-proposes.
+      if (widget.editing != null && source.currency != store.baseCurrency) {
+        _entryRateOverride = source.rateToBase;
+      }
       _fromRef = source.fromRef;
       _toRef = source.toRef;
       // Spec 2.2 — a copy lands on today; an edit keeps its original date.
@@ -623,9 +636,68 @@ class _QuickAddScreenState extends State<QuickAddScreen>
         currency: _currency,
         onCurrencyTap: () async {
           final c = await pickCurrency(context, _currency);
-          if (c != null && mounted) setState(() => _currency = c);
+          if (c != null && mounted) {
+            setState(() {
+              _currency = c;
+              // A rate is meaningless across currencies — re-propose (021b §3c).
+              _entryRateOverride = null;
+              _entryRateManual = false;
+            });
+          }
         },
       );
+
+  /// The proposal for this entry's rate, given the current currency and date
+  /// (spec 021b §3a). Null when the currency has no stored rate and no earlier
+  /// entry to borrow from — the blocked case (§3b).
+  RateProposal _rateProposal(AppStore store) =>
+      store.rateProposal(_currency, _date);
+
+  /// The effective per-entry rate: the user's override, else the proposal.
+  double? _effectiveEntryRate(AppStore store) =>
+      _entryRateOverride ?? _rateProposal(store).rate;
+
+  /// The rate row (spec 021b §3), last in REQUIRED, present only when this
+  /// entry's currency differs from the reporting currency.
+  FieldSpec _rateField(AppStore store) {
+    final l = AppLocalizations.of(context);
+    final rate = _effectiveEntryRate(store);
+    final proposal = _rateProposal(store);
+    // Marker: the user's own rate reads accent; a rate borrowed from an earlier
+    // back-dated entry reads secondary; today's stored rate is unmarked. The
+    // form kit has no glyph slot, so the state is carried in the value colour.
+    final Color? valueColor = rate == null
+        ? AppColors.warning
+        : (_entryRateManual
+            ? AppColors.accent
+            : (proposal.source == RateProposalSource.earlierEntry
+                ? AppColors.textSecondary
+                : null));
+    return FieldSpec(
+      icon: Icons.currency_exchange_rounded,
+      label: '1 ${store.baseCurrency} =',
+      value: rate == null
+          ? l.curSetRate
+          : '${formatRate(rate)} $_currency',
+      valueColor: valueColor,
+      flashId: 'rate',
+      opensSheet: true,
+      onTap: () async {
+        final v = await promptDecimal(
+          context,
+          title: AppLocalizations.of(context).qaExchangeRate,
+          initial: rate,
+          hint: '1 ${store.baseCurrency} = ? $_currency',
+        );
+        if (v != null && mounted) {
+          setState(() {
+            _entryRateOverride = v;
+            _entryRateManual = true;
+          });
+        }
+      },
+    );
+  }
 
   FieldSpec _dateField({String? label}) {
     final l = AppLocalizations.of(context);
@@ -847,6 +919,8 @@ class _QuickAddScreenState extends State<QuickAddScreen>
             // split, so an unsplit row is byte-identical to before.
             childRows: _splitChildRows(store),
           ),
+          // The 021b rate row — last in REQUIRED, only for a foreign entry.
+          if (_currency != store.baseCurrency) _rateField(store),
         ]),
         FieldGroup(AppLocalizations.of(context).qaGroupOptional.toUpperCase(),
             [_dateField(), _tagField(), _repeatField(), _noteField()]),
@@ -865,6 +939,11 @@ class _QuickAddScreenState extends State<QuickAddScreen>
             unmet: _hasSplit && !_splitBalanced(),
             label: AppLocalizations.of(context).qaBlockSplit,
             flashId: 'to'),
+        Blocker(
+            unmet: _currency != store.baseCurrency &&
+                _effectiveEntryRate(store) == null,
+            label: AppLocalizations.of(context).qaBlockRate,
+            flashId: 'rate'),
       ],
       trailing: _editingExtras(),
     );
@@ -907,6 +986,7 @@ class _QuickAddScreenState extends State<QuickAddScreen>
             onTap: () =>
                 _pickAccountInto(store, isFrom: false, title: AppLocalizations.of(context).qaIncomeAccount),
           ),
+          if (_currency != store.baseCurrency) _rateField(store),
         ]),
         FieldGroup(AppLocalizations.of(context).qaGroupOptional.toUpperCase(),
             [_dateField(), _tagField(), _repeatField(), _noteField()]),
@@ -925,6 +1005,11 @@ class _QuickAddScreenState extends State<QuickAddScreen>
             unmet: _hasSplit && !_splitBalanced(),
             label: AppLocalizations.of(context).qaBlockSplit,
             flashId: 'from'),
+        Blocker(
+            unmet: _currency != store.baseCurrency &&
+                _effectiveEntryRate(store) == null,
+            label: AppLocalizations.of(context).qaBlockRate,
+            flashId: 'rate'),
       ],
       trailing: _editingExtras(),
     );
@@ -1593,7 +1678,12 @@ class _QuickAddScreenState extends State<QuickAddScreen>
 
   double _defaultRate(Account? from, Account? to) {
     if (from == null || to == null) return 1;
-    return Fx.rate(from.currency, to.currency);
+    // Prefill the cross rate from the LIVE editable rate table (spec 021a), not
+    // the legacy hard-coded one, so a transfer's arrival reflects the rates the
+    // user maintains. Falls back to 1 when either currency has no rate (021c
+    // would then let the user type the arrival directly).
+    final store = StoreScope.read(context);
+    return store.convertBetween(1, from.currency, to.currency) ?? 1;
   }
 
   Future<void> _showTypeMenu() async {
@@ -1773,6 +1863,18 @@ class _QuickAddScreenState extends State<QuickAddScreen>
   void _writeExpenseIncome(AppStore store, {required bool income}) {
     final txnType = income ? TxnType.income : TxnType.expense;
     final note = _note.text.trim();
+    // The frozen rate for this entry (spec 021b §1). For a base-currency entry
+    // it is 1; otherwise the effective rate, guaranteed present by the blocker.
+    final rateToBase =
+        _currency == store.baseCurrency ? 1.0 : (_effectiveEntryRate(store) ?? 1.0);
+    // §3b asymmetry: filling a BLANK rate teaches the store the currency's rate
+    // as well as freezing it here — the user has just told the app something it
+    // did not know. Overriding a rate that already exists is local to the entry.
+    if (_currency != store.baseCurrency &&
+        _entryRateOverride != null &&
+        store.rateFor(_currency) == null) {
+      store.setRate(_currency, _entryRateOverride!);
+    }
     if (_hasSplit) {
       final accountId = income ? _toRef! : _fromRef!;
       String? gid;
@@ -1785,6 +1887,7 @@ class _QuickAddScreenState extends State<QuickAddScreen>
           fromRef: income ? line.categoryId! : accountId,
           toRef: income ? accountId : line.categoryId!,
           date: _date,
+          rateToBase: rateToBase,
           tagIds: _tagIds,
           note: note,
           splitGroupId: gid,
@@ -1802,6 +1905,7 @@ class _QuickAddScreenState extends State<QuickAddScreen>
         fromRef: _fromRef!,
         toRef: _toRef!,
         date: _date,
+        rateToBase: rateToBase,
         tagIds: _tagIds,
         note: note,
       );
@@ -2040,6 +2144,16 @@ class _QuickAddScreenState extends State<QuickAddScreen>
           fromRef: _fromRef,
           toRef: _toRef,
           date: _date,
+          // Re-freeze the entry's reporting-currency rate (021b §3c): a currency
+          // or rate change re-freezes; a plain amount edit keeps the stored rate
+          // and updateTxn recomputes amountBase at it. Transfers keep their own
+          // frozen rate (021c owns their re-derivation).
+          currency: _currency,
+          rateToBase: _type == QuickAddType.transfer
+              ? null
+              : (_currency == store.baseCurrency
+                  ? 1.0
+                  : (_effectiveEntryRate(store) ?? editing.rateToBase)),
           tagIds: _tagIds,
           note: _note.text.trim(),
           exchangeRate: newRate,

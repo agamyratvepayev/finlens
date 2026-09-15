@@ -138,8 +138,8 @@ void main() {
       expect(f.isGroupVisible(store, AccountGroup.valuables), isFalse);
 
       // Percentages recompute against the new denominator.
-      final assets = f.sectionTotal(store, assets: true);
-      double pct(AccountGroup g) => f.filteredTotal(store, g) / assets * 100;
+      final assets = f.sectionTotal(store, assets: true)!;
+      double pct(AccountGroup g) => f.filteredTotal(store, g)! / assets * 100;
       expect(pct(AccountGroup.spendable), closeTo(30.6, 0.1));
       expect(pct(AccountGroup.receivables), closeTo(4.4, 0.1));
       expect(pct(AccountGroup.investments), closeTo(65.1, 0.1));

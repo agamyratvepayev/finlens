@@ -7,6 +7,7 @@ import '../../../core/utils/formatters.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/amount_text.dart';
 import '../../../shared/widgets/app_card.dart';
+import '../../../shared/widgets/rate_missing.dart';
 import '../../../theme/app_colors.dart';
 import '../../../theme/app_theme.dart';
 import '../../../theme/app_typography.dart';
@@ -46,7 +47,10 @@ class GroupRow extends StatelessWidget {
   });
 
   final AccountGroup group;
-  final double total;
+
+  /// Null when a visible account in the group has no rate — the amount is then
+  /// replaced by the missing-rate warning (021a §2c).
+  final double? total;
   final int count;
   final double share;
 
@@ -80,7 +84,7 @@ class GroupRow extends StatelessWidget {
             button: true,
             expanded: isOpen,
             label: '${group.label(l)}, $countLabel, '
-                '${money(total, signless: true, masked: masked)}, '
+                '${total == null ? l.curRateMissing : money(total!, signless: true, masked: masked)}, '
                 '${percent(share)} ${group.isAsset ? l.a11yOfAssets : l.a11yOfLiabilities}',
             child: PressZone(
               onTap: onToggle,
@@ -137,16 +141,18 @@ class GroupRow extends StatelessWidget {
               // share this side moved into the subtitle, so the amount is alone
               // on the one right edge it shares with the child rows.
               child: ExcludeSemantics(
-                child: AmountText.balance(
-                  total,
-                  isLiability: group.isLiability,
-                  style: AppText.groupAmount.copyWith(fontSize: 14),
-                  // Colour follows the figure, not the kind (task 011): an asset
-                  // group summing below zero reads negative too.
-                  color: (group.isLiability || total < 0)
-                      ? AppColors.amountGroupNeg
-                      : null,
-                ),
+                child: total == null
+                    ? const RateMissingText(fontSize: 14)
+                    : AmountText.balance(
+                        total!,
+                        isLiability: group.isLiability,
+                        style: AppText.groupAmount.copyWith(fontSize: 14),
+                        // Colour follows the figure, not the kind (task 011): an
+                        // asset group summing below zero reads negative too.
+                        color: (group.isLiability || total! < 0)
+                            ? AppColors.amountGroupNeg
+                            : null,
+                      ),
               ),
             ),
           ),

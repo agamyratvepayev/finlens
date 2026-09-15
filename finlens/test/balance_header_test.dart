@@ -200,7 +200,7 @@ void main() {
 
         // Net worth is asset-side: unsigned while >= 0, signed once it drops
         // below zero (task 011). The hero's `_display` renders exactly this.
-        final nw = store.balanceFilter.netWorth(store);
+        final nw = store.balanceFilter.netWorth(store)!;
         final expected = money(
           nw,
           currency: cur,

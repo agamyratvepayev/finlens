@@ -219,6 +219,89 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
+  String get curRate => 'Kur';
+
+  @override
+  String get curRateMissing => 'Kur yok';
+
+  @override
+  String get curSetRate => 'Kur belirle';
+
+  @override
+  String get curRateNote => 'Bu değişiklik kaydedilmiş girişleri etkilemez.';
+
+  @override
+  String curNoRateFor(Object code) {
+    return '$code için kur yok';
+  }
+
+  @override
+  String get curTotalsHidden => 'Bunu içeren toplamlar gizlendi';
+
+  @override
+  String get curEveryTotal => 'Tüm toplamlar';
+
+  @override
+  String get curToday => 'bugün';
+
+  @override
+  String get curSectionReporting => 'RAPORLAMA';
+
+  @override
+  String get qaExchangeRate => 'Döviz kuru';
+
+  @override
+  String get qaBlockRate => 'Döviz kurunu girin';
+
+  @override
+  String curRateFromEntry(Object date) {
+    return 'Kur, $date tarihli girişinizden alındı';
+  }
+
+  @override
+  String get curRateManual => 'Bu giriş için kur belirlendi';
+
+  @override
+  String get txnRateLabel => 'KUR';
+
+  @override
+  String qaRateDateChanged(Object rate) {
+    return 'Bu tarihteki kur $rate. Kullanılsın mı?';
+  }
+
+  @override
+  String get qaBlockReceives => 'Gelen tutarı girin';
+
+  @override
+  String get qaReceivesPrompt => 'Alınan tutar';
+
+  @override
+  String get budCurrency => 'Bütçe para birimi';
+
+  @override
+  String get budCurrencyChangeTitle => 'Bütçe para birimi değişsin mi?';
+
+  @override
+  String budCurrencyChangeBody(Object limit, Object code) {
+    return 'Limit $limit olarak kalır ve artık $limit $code anlamına gelir.';
+  }
+
+  @override
+  String get curChangeReportingTitle => 'Raporlama para birimini değiştir';
+
+  @override
+  String get curReportingNote =>
+      'Geçmiş rakamlar bu tek kurla dönüştürülür. Oranlarını korurlar ancak o zamanki kurlarla yeniden fiyatlandırılmaz. Bütçeler ve hedefler kendi para birimlerini korur.';
+
+  @override
+  String get curConvertAndSwitch => 'Dönüştür ve değiştir';
+
+  @override
+  String curReportingFromOn(Object from, Object date) {
+    return '$from biriminden, $date';
+  }
+
+  @override
   String get qaBackgroundColour => 'Arka plan rengi';
 
   @override

@@ -130,6 +130,39 @@ class Account {
   }
 }
 
+/// Every reporting-currency switch (spec 021e §5): what it was, what it became,
+/// the single factor applied to the whole history at the moment of the switch,
+/// and when. Kept because a figure that looks wrong a year from now is only
+/// explicable with this row. [factor] is *how many of [to] one unit of [from]
+/// buys* — the number every stored base value was multiplied by.
+class BaseCurrencyChange {
+  const BaseCurrencyChange({
+    required this.from,
+    required this.to,
+    required this.factor,
+    required this.at,
+  });
+
+  final String from;
+  final String to;
+  final double factor;
+  final DateTime at;
+
+  Map<String, Object?> toJson() => {
+        'from': from,
+        'to': to,
+        'factor': factor,
+        'at': at.millisecondsSinceEpoch,
+      };
+
+  static BaseCurrencyChange fromJson(Map<String, dynamic> j) => BaseCurrencyChange(
+        from: j['from'] as String,
+        to: j['to'] as String,
+        factor: (j['factor'] as num).toDouble(),
+        at: DateTime.fromMillisecondsSinceEpoch((j['at'] as num).toInt()),
+      );
+}
+
 /// One recorded change to a budget (budget-detail CHANGES). Written by the store
 /// on every budget write path; never derived, never edited, never deleted. A
 /// deliberate sibling of [GoalEdit], not a shared class: a budget edit has its
@@ -197,6 +230,7 @@ class Budget {
     required this.scope,
     required Set<String> targets,
     required this.limit,
+    String? currency,
     this.period = BudgetPeriod.month,
     this.lengthDays,
     required this.anchor,
@@ -207,6 +241,7 @@ class Budget {
     this.archivedAt,
     List<BudgetEdit>? history,
   })  : targets = {...targets},
+        currency = currency ?? '',
         history = history ?? <BudgetEdit>[];
 
   final String id;
@@ -222,9 +257,16 @@ class Budget {
   /// [BudgetScope.account]).
   Set<String> targets;
 
-  /// In base currency, because spend is summed through `Fx.toBase`
-  /// (spec §A.1 / §C.7).
+  /// The limit, in [currency] (spec 021d §1). It is **never** converted: a
+  /// ₺8,000 budget stays 8,000 whatever the dollar does.
   double limit;
+
+  /// The currency this promise is made in (spec 021d §1a). Spending in it counts
+  /// natively, with no conversion; other currencies convert into it at today's
+  /// rate. Empty string means "the reporting currency" — the live default, used
+  /// by every single-currency user and by budgets created/persisted before this
+  /// field existed. Resolve through `AppStore.budgetCurrencyOf`, never read raw.
+  String currency;
 
   BudgetPeriod period;
 
@@ -358,6 +400,8 @@ class Txn {
     required this.date,
     this.exchangeRate,
     this.toAmount,
+    double? rateToBase,
+    double? amountBase,
     this.fee,
     this.feeFromSource = true,
     this.tagIds = const [],
@@ -368,7 +412,17 @@ class Txn {
     this.splitGroupId,
     this.recurrenceTaskId,
     this.feeTxnId,
-  }) : createdAt = createdAt ?? date;
+  })  : createdAt = createdAt ?? date,
+        // Both fields are conceptually non-nullable (spec 021b §1): every entry
+        // owns a frozen rate and base value. The constructor still accepts them
+        // as optional so pre-021b construction sites keep compiling — an omitted
+        // pair defaults to "already in the reporting currency" (rate 1, base ==
+        // amount). `addTxn`/`updateTxn` and the seed always pass real values.
+        rateToBase = rateToBase ?? 1.0,
+        amountBase = amountBase ??
+            ((rateToBase == null || rateToBase == 0)
+                ? amount
+                : amount / rateToBase);
 
   final String id;
   final TxnType type;
@@ -381,10 +435,32 @@ class Txn {
   String toRef;
 
   DateTime date;
+
+  /// Cross rate of a cross-currency **transfer** only: the *from→to* rate. From
+  /// 021c its provenance inverts — it is *derived* from the entered arrival
+  /// (`toAmount / amount`), no longer the input. Null on every non-transfer
+  /// record and on same-currency transfers. Distinct from [rateToBase]: this
+  /// relates the two accounts, [rateToBase] relates the entry to the reporting
+  /// currency.
   double? exchangeRate;
 
-  /// Destination amount for cross-currency transfers (spec 3.4).
+  /// Destination amount for cross-currency transfers (spec 3.4). From 021c this
+  /// is the number the user types (what actually landed), not a derived figure.
   double? toAmount;
+
+  /// Units of this entry's currency per one unit of the reporting currency, as
+  /// it stood when the entry was made — `1 USD = 40.125 TRY` is stored as
+  /// 40.125 (spec 021b §1). **Frozen:** correcting the currency's rate later
+  /// never touches it. `1` when the entry is already in the reporting currency.
+  double rateToBase;
+
+  /// [amount] in the reporting currency at [rateToBase] (`amount / rateToBase`),
+  /// rounded once — at entry — to the reporting currency's decimals (spec 021b
+  /// §1). Every flow figure sums this field, so a category total and the rows
+  /// inside it agree to the cent. Deriving it per read would round each row and
+  /// then the sum diverge.
+  double amountBase;
+
   double? fee;
   bool feeFromSource;
 
@@ -528,6 +604,7 @@ class Goal {
     required this.source,
     required this.targetAmount,
     required this.createdAt,
+    String? currency,
     this.targetDate,
     this.endsWhenReached = true,
     this.status = GoalStatus.active,
@@ -535,7 +612,8 @@ class Goal {
     this.completedAt,
     this.stoppedAt,
     List<GoalEdit>? history,
-  }) : history = history ?? <GoalEdit>[];
+  })  : currency = currency ?? '',
+        history = history ?? <GoalEdit>[];
 
   final String id;
   String name;
@@ -547,6 +625,15 @@ class Goal {
   /// The balance or income total to reach. A liability source defaults this to
   /// zero (§3).
   double targetAmount;
+
+  /// The currency [targetAmount] is in (spec 021d §2a). An account-sourced goal
+  /// inherits the account's — progress is that account's *native* balance, so
+  /// measuring the target in any other currency would let the rate move the bar
+  /// when nothing was saved. A category-sourced goal spans accounts, so it uses
+  /// the reporting currency. Empty string means "the reporting currency" (the
+  /// live default and the migration value); resolve through
+  /// `AppStore.goalCurrencyOf`. Set at creation and locked with [source].
+  final String currency;
   DateTime? targetDate;
 
   /// §4 — when true, the goal latches to "reached" the moment `current` first

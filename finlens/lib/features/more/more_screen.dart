@@ -19,6 +19,7 @@ import '../../theme/app_theme.dart';
 import '../../theme/app_typography.dart';
 import '../planner/archive_screen.dart';
 import '../quick_add/pickers.dart';
+import 'reporting_currency_sheet.dart';
 import 'accounts_management_screen.dart';
 import 'category_management_screen.dart';
 import 'currency_management_screen.dart';
@@ -133,17 +134,13 @@ void _pickLanguage(BuildContext context, AppStore store) {
   );
 }
 
-/// Opens the existing currency picker to choose the base currency (spec §12),
-/// then stores the choice. The picker sheet itself is unchanged; only its title
-/// differs (a dedicated key, not the edit-account one). A cancelled pick is a
-/// no-op; a choice repaints every total via [AppStore.setBaseCurrency].
+/// Opens the reporting-currency switch (spec 021e §4a). Switching is now a
+/// migration, not an assignment — it re-expresses the whole history through one
+/// factor — so it must confirm first, stating the factor and its consequences,
+/// before anything changes. The confirmation owns the currency pick and the
+/// factor; a cancel changes nothing at all.
 Future<void> _pickBaseCurrency(BuildContext context, AppStore store) async {
-  final code = await pickCurrency(
-    context,
-    store.baseCurrency,
-    title: AppLocalizations.of(context).moreBaseCurrencyTitle,
-  );
-  if (code != null) store.setBaseCurrency(code);
+  await showReportingCurrencySheet(context);
 }
 
 /// Dump: serialise the whole store and hand the bytes to the system "Save"

@@ -222,6 +222,90 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get curRate => 'Rate';
+
+  @override
+  String get curRateMissing => 'Rate missing';
+
+  @override
+  String get curSetRate => 'Set rate';
+
+  @override
+  String get curRateNote =>
+      'Changing this does not change entries you already saved.';
+
+  @override
+  String curNoRateFor(Object code) {
+    return '$code has no rate';
+  }
+
+  @override
+  String get curTotalsHidden => 'Totals that include it are hidden';
+
+  @override
+  String get curEveryTotal => 'Every total';
+
+  @override
+  String get curToday => 'today';
+
+  @override
+  String get curSectionReporting => 'REPORTING';
+
+  @override
+  String get qaExchangeRate => 'Exchange rate';
+
+  @override
+  String get qaBlockRate => 'Enter the exchange rate';
+
+  @override
+  String curRateFromEntry(Object date) {
+    return 'Rate taken from your entry on $date';
+  }
+
+  @override
+  String get curRateManual => 'Rate set for this entry';
+
+  @override
+  String get txnRateLabel => 'RATE';
+
+  @override
+  String qaRateDateChanged(Object rate) {
+    return 'The rate for this date is $rate. Use it?';
+  }
+
+  @override
+  String get qaBlockReceives => 'Enter what arrived';
+
+  @override
+  String get qaReceivesPrompt => 'Amount received';
+
+  @override
+  String get budCurrency => 'Budget currency';
+
+  @override
+  String get budCurrencyChangeTitle => 'Change budget currency?';
+
+  @override
+  String budCurrencyChangeBody(Object limit, Object code) {
+    return 'The limit stays $limit and will now mean $limit $code.';
+  }
+
+  @override
+  String get curChangeReportingTitle => 'Change reporting currency';
+
+  @override
+  String get curReportingNote =>
+      'Past figures are converted with this one rate. They keep their proportions but are not re-priced at the rates of the time. Budgets and goals keep their own currencies.';
+
+  @override
+  String get curConvertAndSwitch => 'Convert and switch';
+
+  @override
+  String curReportingFromOn(Object from, Object date) {
+    return 'from $from on $date';
+  }
+
+  @override
   String get qaBackgroundColour => 'Background colour';
 
   @override

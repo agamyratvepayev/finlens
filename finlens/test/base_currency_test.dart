@@ -148,7 +148,7 @@ void main() {
       ]);
       // Oldest account is USD, so the base starts there.
       expect(store.baseCurrency, 'USD');
-      final usdNet = store.netWorth; // 100 + 100·0.286 = 128.6
+      final usdNet = store.netWorth!; // 100 + 100·0.286 = 128.6
 
       var notified = 0;
       store.addListener(() => notified++);
@@ -156,7 +156,7 @@ void main() {
       store.setBaseCurrency('TMT');
       expect(notified, greaterThan(0));
       expect(store.baseCurrency, 'TMT');
-      final tmtNet = store.netWorth; // 100/0.286 + 100 ≈ 449.65
+      final tmtNet = store.netWorth!; // 100/0.286 + 100 ≈ 449.65
       expect(tmtNet, isNot(closeTo(usdNet, 0.01)));
       expect(tmtNet, closeTo(100 / 0.286 + 100, 0.01));
     });

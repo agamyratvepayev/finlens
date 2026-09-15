@@ -76,7 +76,7 @@ void main() {
     // The liabilities total (computed from the store so the figure never goes
     // stale here) is red on its header.
     final liabStr =
-        money(store.balanceFilter.sectionTotal(store, assets: false).abs());
+        money(store.balanceFilter.sectionTotal(store, assets: false)!.abs());
     final liabs = find.text(liabStr);
     expect(liabs, findsOneWidget);
     expect(tester.widget<Text>(liabs).style!.color, AppColors.negative);

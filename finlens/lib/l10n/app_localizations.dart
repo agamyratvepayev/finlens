@@ -468,6 +468,150 @@ abstract class AppLocalizations {
   /// **'No currency matches \"{query}\".'**
   String curNoMatch(Object query);
 
+  /// No description provided for @curRate.
+  ///
+  /// In en, this message translates to:
+  /// **'Rate'**
+  String get curRate;
+
+  /// No description provided for @curRateMissing.
+  ///
+  /// In en, this message translates to:
+  /// **'Rate missing'**
+  String get curRateMissing;
+
+  /// No description provided for @curSetRate.
+  ///
+  /// In en, this message translates to:
+  /// **'Set rate'**
+  String get curSetRate;
+
+  /// No description provided for @curRateNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Changing this does not change entries you already saved.'**
+  String get curRateNote;
+
+  /// No description provided for @curNoRateFor.
+  ///
+  /// In en, this message translates to:
+  /// **'{code} has no rate'**
+  String curNoRateFor(Object code);
+
+  /// No description provided for @curTotalsHidden.
+  ///
+  /// In en, this message translates to:
+  /// **'Totals that include it are hidden'**
+  String get curTotalsHidden;
+
+  /// No description provided for @curEveryTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'Every total'**
+  String get curEveryTotal;
+
+  /// No description provided for @curToday.
+  ///
+  /// In en, this message translates to:
+  /// **'today'**
+  String get curToday;
+
+  /// No description provided for @curSectionReporting.
+  ///
+  /// In en, this message translates to:
+  /// **'REPORTING'**
+  String get curSectionReporting;
+
+  /// No description provided for @qaExchangeRate.
+  ///
+  /// In en, this message translates to:
+  /// **'Exchange rate'**
+  String get qaExchangeRate;
+
+  /// No description provided for @qaBlockRate.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the exchange rate'**
+  String get qaBlockRate;
+
+  /// No description provided for @curRateFromEntry.
+  ///
+  /// In en, this message translates to:
+  /// **'Rate taken from your entry on {date}'**
+  String curRateFromEntry(Object date);
+
+  /// No description provided for @curRateManual.
+  ///
+  /// In en, this message translates to:
+  /// **'Rate set for this entry'**
+  String get curRateManual;
+
+  /// No description provided for @txnRateLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'RATE'**
+  String get txnRateLabel;
+
+  /// No description provided for @qaRateDateChanged.
+  ///
+  /// In en, this message translates to:
+  /// **'The rate for this date is {rate}. Use it?'**
+  String qaRateDateChanged(Object rate);
+
+  /// No description provided for @qaBlockReceives.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter what arrived'**
+  String get qaBlockReceives;
+
+  /// No description provided for @qaReceivesPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Amount received'**
+  String get qaReceivesPrompt;
+
+  /// No description provided for @budCurrency.
+  ///
+  /// In en, this message translates to:
+  /// **'Budget currency'**
+  String get budCurrency;
+
+  /// No description provided for @budCurrencyChangeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Change budget currency?'**
+  String get budCurrencyChangeTitle;
+
+  /// No description provided for @budCurrencyChangeBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The limit stays {limit} and will now mean {limit} {code}.'**
+  String budCurrencyChangeBody(Object limit, Object code);
+
+  /// No description provided for @curChangeReportingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Change reporting currency'**
+  String get curChangeReportingTitle;
+
+  /// No description provided for @curReportingNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Past figures are converted with this one rate. They keep their proportions but are not re-priced at the rates of the time. Budgets and goals keep their own currencies.'**
+  String get curReportingNote;
+
+  /// No description provided for @curConvertAndSwitch.
+  ///
+  /// In en, this message translates to:
+  /// **'Convert and switch'**
+  String get curConvertAndSwitch;
+
+  /// No description provided for @curReportingFromOn.
+  ///
+  /// In en, this message translates to:
+  /// **'from {from} on {date}'**
+  String curReportingFromOn(Object from, Object date);
+
   /// No description provided for @qaBackgroundColour.
   ///
   /// In en, this message translates to:

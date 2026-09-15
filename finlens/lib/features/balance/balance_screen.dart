@@ -8,6 +8,7 @@ import '../../core/store/app_store.dart';
 import '../../core/utils/formatters.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/amount_text.dart';
+import '../../shared/widgets/rate_missing.dart';
 import '../../shared/widgets/screen_header.dart';
 import '../../shared/widgets/section_header.dart';
 import '../../shared/widgets/undo_bar.dart';
@@ -413,11 +414,21 @@ class _BalanceScreenState extends State<BalanceScreen> {
                           if (showRatio) ...[
                             const SizedBox(height: 8),
                             _RatioBar(
-                              assets: filter.sectionTotal(store, assets: true),
-                              liabilities: filter
-                                  .sectionTotal(store, assets: false)
-                                  .abs(),
+                              assets:
+                                  filter.sectionTotal(store, assets: true) ?? 0,
+                              liabilities:
+                                  (filter.sectionTotal(store, assets: false) ??
+                                          0)
+                                      .abs(),
                             ),
+                          ],
+                          // A silenced total means at least one in-use currency
+                          // has no rate; the card names it and leads to the fix
+                          // (021a §4b). It rides under the hero, in the number's
+                          // own card region.
+                          if (store.hasMissingRate) ...[
+                            const SizedBox(height: 8),
+                            RateMissingCard(codes: store.missingRateCodes()),
                           ],
                         ],
                         // All-filtered keeps a reduced tool row — filter and
@@ -559,6 +570,7 @@ class _BalanceScreenState extends State<BalanceScreen> {
         display: _display(store, amount,
             isLiability: _section == BalanceSection.liabilities),
         color: color,
+        isWarning: amount == null,
         measured: measured,
         asOf: asOf,
         tools: tools,
@@ -574,7 +586,10 @@ class _BalanceScreenState extends State<BalanceScreen> {
   /// negative sum that agrees with its kind and stays unsigned, while a negative
   /// net worth (or a below-zero assets total) contradicts its kind and prints
   /// its minus (task 011).
-  String _display(AppStore store, double value, {bool isLiability = false}) {
+  String _display(AppStore store, double? value, {bool isLiability = false}) {
+    // A silenced total (a visible account with no rate) takes the warning word
+    // in the number's slot (021a §2c).
+    if (value == null) return AppLocalizations.of(context).curRateMissing;
     final contradicts = isLiability ? value > 0 : value < 0;
     return money(
       value,
@@ -1098,10 +1113,9 @@ class _BalanceScreenState extends State<BalanceScreen> {
     // stale figure.
     final filter = store.balanceFilter;
     final filteredTotal = filter.filteredTotal(store, group);
-    final sectionTotal = filter
-        .sectionTotal(store, assets: group.isAsset)
+    final sectionTotal = (filter.sectionTotal(store, assets: group.isAsset) ?? 0)
         .abs();
-    final share = sectionTotal == 0
+    final share = (sectionTotal == 0 || filteredTotal == null)
         ? 0.0
         : (filteredTotal.abs() / sectionTotal).clamp(0.0, 1.0);
 
@@ -1279,14 +1293,14 @@ class _BalanceScreenState extends State<BalanceScreen> {
       (a, b) => switch (store.balanceSort) {
         AccountSort.valueDesc =>
           store
-              .balanceInBase(b.id)
+              .balanceInBaseOr(b.id)
               .abs()
-              .compareTo(store.balanceInBase(a.id).abs()),
+              .compareTo(store.balanceInBaseOr(a.id).abs()),
         AccountSort.valueAsc =>
           store
-              .balanceInBase(a.id)
+              .balanceInBaseOr(a.id)
               .abs()
-              .compareTo(store.balanceInBase(b.id).abs()),
+              .compareTo(store.balanceInBaseOr(b.id).abs()),
         AccountSort.nameAsc => a.name.compareTo(b.name),
         AccountSort.activity =>
           store.accountActivity(b.id).compareTo(store.accountActivity(a.id)),
@@ -1433,11 +1447,16 @@ class _BalanceAmountRow extends StatelessWidget {
     required this.measured,
     required this.asOf,
     required this.tools,
+    this.isWarning = false,
   });
 
   /// The current section's amount, already formatted (never reformatted here).
   final String display;
   final Color? color;
+
+  /// True when [display] is the missing-rate warning word (021a §2c) — coloured
+  /// [AppColors.warning] rather than the amount's own colour.
+  final bool isWarning;
 
   /// All three pages' formatted totals; the font size is solved from the widest
   /// so it does not jump on a section swipe.
@@ -1460,7 +1479,7 @@ class _BalanceAmountRow extends StatelessWidget {
       display,
       maxLines: 1,
       softWrap: false,
-      style: _amountStyle(step.fontSize, color),
+      style: _amountStyle(step.fontSize, isWarning ? AppColors.warning : color),
     );
 
     final left = asOf == null
@@ -1622,7 +1641,10 @@ class _ListSectionHeader extends StatelessWidget {
   const _ListSectionHeader(this.label, this.total, {required this.assets});
 
   final String label;
-  final double total;
+
+  /// Null when a visible account in the section has no rate — the total is then
+  /// replaced by the missing-rate warning (021a §2c).
+  final double? total;
 
   /// Colours the total — green for assets, red for liabilities. With the bar's
   /// duplicate label row gone, this header is the section total's only home.
@@ -1630,6 +1652,7 @@ class _ListSectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = total;
     return Padding(
       padding: const EdgeInsets.fromLTRB(Insets.gutter, 14, Insets.gutter, 6),
       child: Row(
@@ -1639,15 +1662,18 @@ class _ListSectionHeader extends StatelessWidget {
           // yields first at narrow widths, so the total always keeps its full
           // width.
           const Spacer(),
-          AmountText.balance(
-            total,
-            // The liabilities section total is the raw (negative) sum; flagging
-            // it liability-side keeps it unsigned, and lets an asset section that
-            // has gone below zero show its minus (task 011).
-            isLiability: !assets,
-            style: AppText.sectionTotal,
-            color: assets ? AppColors.positive : AppColors.negative,
-          ),
+          if (t == null)
+            const RateMissingText(fontSize: 14)
+          else
+            AmountText.balance(
+              t,
+              // The liabilities section total is the raw (negative) sum; flagging
+              // it liability-side keeps it unsigned, and lets an asset section
+              // that has gone below zero show its minus (task 011).
+              isLiability: !assets,
+              style: AppText.sectionTotal,
+              color: assets ? AppColors.positive : AppColors.negative,
+            ),
         ],
       ),
     );
