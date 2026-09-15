@@ -5,17 +5,20 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:finlens/features/quick_add/widgets/amount_hero.dart';
 import 'package:finlens/theme/app_theme.dart';
 
-// Task 11 — "the pale decimals never turn white".
+// Task 11 — the pale span, as Task 008 §2 redefines it.
 //
 // `flutter test` hangs on the dev machine, so this file is written, not run
 // here. Verify with `flutter analyze` and run it yourself:
 //   flutter test test/task11_amount_hero_colors_test.dart
 //
-// The rule (spec §0), for every amount the user types:
-//   • nothing typed (raw empty)            → the whole placeholder is dim
-//   • typing (focused, raw non-empty)      → typed bright, untyped padding dim
-//   • done (unfocused, raw non-empty)      → everything bright, no dim part
+// Task 008 §2 removed the padded `.00`: the field shows only the digits typed,
+// so the dim `rest` is now *only* the empty field's placeholder. The rule, for
+// every amount the user types:
+//   • nothing typed (raw empty)            → the whole placeholder `$0` is dim
+//   • typing (focused, raw non-empty)      → all bright, no dim span at all
+//   • done (unfocused, raw non-empty)      → all bright, no dim span at all
 //
+// USD is a symbol currency, so the number keeps its '$' beside the chip (§1).
 // These drive `NumericHeroCard` directly with two sentinel colours so the
 // bright accent and the dim accent are unmistakable in the rendered spans.
 
@@ -74,29 +77,30 @@ void main() {
     expect(colours, contains(_accent));
   });
 
-  testWidgets('focused with a typed value carries exactly one dim span, '
-      'and it is the padding', (tester) async {
+  testWidgets('focused with a typed value carries NO dim span — no padding '
+      'exists to dim (Task 008 §2)', (tester) async {
     await _pumpFocused(tester, _host(raw: '1000', focused: true));
 
     final spans = _spans(tester, '1,000');
-    final dim = spans.where((s) => s.color == _accentDim).toList();
-    expect(dim.length, 1, reason: 'only the untyped padding is dim while typing');
-    expect(dim.single.text, '.00');
-    // And the typed digits stay bright. The currency token is dropped from the
-    // number now that a chip carries the unit (Rebalance §2b), so the bright
-    // span is the bare grouped figure, no leading '$'.
+    expect(spans.where((s) => s.color == _accentDim), isEmpty,
+        reason: 'only the digits typed are shown, and they are all bright');
+    // USD keeps its '$' on the number beside the chip (§1): the bright span is
+    // the full figure with its symbol.
     expect(spans.where((s) => s.color == _accent).map((s) => s.text),
-        contains('1,000'));
+        contains(r'$1,000'));
+    // And the padded '.00' is gone entirely.
+    expect(spans.map((s) => s.text).join(), isNot(contains('.00')));
   });
 
-  testWidgets('a partial decimal dims only the untyped trailing zero',
+  testWidgets('a partial decimal shows exactly what was typed and nothing dim',
       (tester) async {
     await _pumpFocused(tester, _host(raw: '1000.5', focused: true));
 
     final spans = _spans(tester, '1,000.5');
-    final dim = spans.where((s) => s.color == _accentDim).toList();
-    expect(dim.length, 1);
-    expect(dim.single.text, '0', reason: 'the trailing pad zero is not typed yet');
+    expect(spans.where((s) => s.color == _accentDim), isEmpty,
+        reason: 'no trailing pad zero — §2 shows only the typed decimal');
+    expect(spans.map((s) => s.text).join(), contains(r'$1,000.5'));
+    expect(spans.map((s) => s.text).join(), isNot(contains('1,000.50')));
   });
 
   testWidgets('an empty field is all dim — focused and unfocused alike',
@@ -109,13 +113,16 @@ void main() {
         await tester.pumpAndSettle();
       }
 
-      // The empty state is now the token-less `0.00` — a chip beside it names
-      // the unit (Rebalance §2b).
-      final colours = _spans(tester, '0.00').map((s) => s.color).toList();
+      // The empty placeholder is now `$0` — USD keeps its symbol (§1), and there
+      // are no decimals to pad (§2). The whole placeholder is dim.
+      final colours = _spans(tester, r'$0').map((s) => s.color).toList();
       expect(colours, isNotEmpty);
       expect(colours.every((c) => c == _accentDim), isTrue,
           reason: 'the placeholder is dim (focused=$focused)');
       expect(colours, isNot(contains(_accent)));
+      // No padded decimals in the placeholder either.
+      expect(_spans(tester, r'$0').map((s) => s.text).join(),
+          isNot(contains('.00')));
     }
   });
 }

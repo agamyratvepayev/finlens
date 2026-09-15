@@ -51,27 +51,57 @@ abstract final class AmountEntry {
     return buf.toString();
   }
 
-  /// Splits the display into the part the user actually typed and the decimal
-  /// remainder that is only there to hold the column.
+  /// The typed amount, with the currency's **symbol** in the position that
+  /// currency defines — and nothing at all when it has none, because then the
+  /// chip beside the field is already showing its code and repeating it here
+  /// costs four characters on the tightest line in the app (§1).
   ///
-  /// [withSymbol] prefixes the currency symbol (`$1,000`). It is dropped when a
-  /// currency chip sits beside the number and already names the unit (Rebalance
-  /// §2b): the empty state then reads `0.00`, not `$0.00`.
-  static ({String typed, String rest}) split(String raw, String currency,
-      {bool withSymbol = true}) {
-    final symbol = withSymbol ? currencySymbol(currency) : '';
-    if (raw.isEmpty) return (typed: '', rest: '${symbol}0.00');
+  /// [hasChip] is false only where the field is rendered without a currency
+  /// control; there a code-only currency still shows its code (spaced), since
+  /// nothing else states the unit. A currency that has a symbol always shows
+  /// the symbol, chip or no chip.
+  ///
+  /// `rest` is now only the empty field's placeholder `0` (painted dim). Once a
+  /// digit is typed the whole number lives in `typed` and `rest` is empty — no
+  /// decimal places appear before the digits that fill them (§2). The tuple
+  /// shape is kept so the caret still sits between the two spans.
+  static ({String typed, String rest}) split(
+    String raw,
+    String currency, {
+    bool hasChip = true,
+  }) {
+    final def = currencyDef(currency);
+    // The unit against the number: a symbol flush on its own side; nothing when
+    // the currency is code-only and a chip already names it; otherwise the code,
+    // spaced, so a bare number never lacks a unit.
+    final String pre;
+    final String post;
+    if (def.tokenIsSymbol) {
+      // A symbol sits flush against the number on both sides — the app's law
+      // (CurrencyDef: `m9,850` / `9,850m`, and _moneyCustom). §1 says "flush"
+      // too; its `2,000.50 ₼` example carries a stray space we do not follow.
+      pre = def.symbolBefore ? def.symbol! : '';
+      post = def.symbolBefore ? '' : def.symbol!;
+    } else if (hasChip) {
+      pre = '';
+      post = '';
+    } else {
+      pre = '$currency ';
+      post = '';
+    }
+
+    // Empty: the whole placeholder is the dim `rest` — `$0`, `0₼`, `0` (§1/§2).
+    if (raw.isEmpty) return (typed: '', rest: '${pre}0$post');
 
     final dot = raw.indexOf('.');
     final whole = dot < 0 ? raw : raw.substring(0, dot);
     final decimals = dot < 0 ? '' : raw.substring(dot + 1);
     final grouped = _group(whole.isEmpty ? '0' : whole);
 
-    final typed = dot < 0
-        ? '$symbol$grouped'
-        : '$symbol$grouped.$decimals';
-    final rest = dot < 0 ? '.00' : '0' * (2 - decimals.length);
-    return (typed: typed, rest: rest);
+    // Only what was typed: a trailing dot and a lone decimal survive verbatim
+    // (`2,000.`, `2,000.5`); nothing is padded to two places (§2).
+    final body = dot < 0 ? grouped : '$grouped.$decimals';
+    return (typed: '$pre$body$post', rest: '');
   }
 
   /// The typed/untyped split **without a currency token**, for rows that carry
@@ -143,13 +173,14 @@ class NumericHeroCard extends StatelessWidget {
             locked: currencyLocked,
           );
 
-    // The unit lives on the chip when there is one, so the number drops its
-    // token (Rebalance §2b); with no chip the number carries it as before.
-    final withSymbol = !showChip;
+    // The number carries its currency's symbol when it has one, either side
+    // (§1); a code-only currency shows nothing here because the chip beside it
+    // already names the unit. With no chip the number carries the code instead.
+    final hasChip = chip != null;
 
     // The whole amount string, caret aside — the caret is a fixed-width column
     // between the typed part and the dimmed remainder, so add it as a constant.
-    final parts = AmountEntry.split(raw, currency, withSymbol: withSymbol);
+    final parts = AmountEntry.split(raw, currency, hasChip: hasChip);
     final amountText = '${parts.typed}${parts.rest}';
     final caretW = focused ? 2 + 2 * s : 0.0;
     double amountWidth(double size) =>
@@ -276,21 +307,22 @@ class NumericHeroCard extends StatelessWidget {
                     accentDim: accentDim,
                     focused: focused,
                     fontSize: chosenSize,
-                    withSymbol: withSymbol,
+                    hasChip: hasChip,
                   );
-                  // With the token off the number, the chip carries the unit
-                  // visually — but a screen reader must still hear it. Speak the
-                  // amount with its currency, and hide the bare digits beneath
-                  // (Rebalance §2d). With a token present the number already
-                  // names itself, so it is left untouched.
-                  final amount = withSymbol
-                      ? amountText
-                      : Semantics(
+                  // The number may now carry no visible token at all (a code-only
+                  // currency), or only a bare symbol — neither names the currency
+                  // in words. Whenever a chip is present, speak the amount with
+                  // its currency and hide the bare digits beneath (§1.2); the chip
+                  // itself also names the unit. A chipless number carries the code
+                  // and needs no help.
+                  final amount = hasChip
+                      ? Semantics(
                           label:
                               money(AmountEntry.value(raw), currency: currency),
                           excludeSemantics: true,
                           child: amountText,
-                        );
+                        )
+                      : amountText;
 
                   final labelWidget = labelMax < 1
                       // Below a legible width the label disappears entirely —
@@ -315,7 +347,9 @@ class NumericHeroCard extends StatelessWidget {
                     SizedBox(
                       width: iconW,
                       child: Icon(
-                        Icons.attach_money_rounded,
+                        // Currency-neutral: the symbol now lives in the number,
+                        // so the slot no longer claims a dollar (§3).
+                        Icons.payments_rounded,
                         size: 18 * s,
                         color: focused ? accent : AppColors.formDim2,
                       ),
@@ -411,7 +445,7 @@ class _AmountText extends StatefulWidget {
     required this.accentDim,
     required this.focused,
     required this.fontSize,
-    this.withSymbol = true,
+    this.hasChip = true,
   });
 
   final String raw;
@@ -424,9 +458,10 @@ class _AmountText extends StatefulWidget {
   /// when the number fits, shrinking to a 15·s·t floor when it does not.
   final double fontSize;
 
-  /// Matches the card's decision (Rebalance §2b): the currency token is dropped
-  /// from the number when a chip beside it names the unit.
-  final bool withSymbol;
+  /// Matches the card's decision (§1): a code-only currency drops its token from
+  /// the number when a chip beside it names the unit; a symbol currency keeps
+  /// its symbol regardless.
+  final bool hasChip;
 
   @override
   State<_AmountText> createState() => _AmountTextState();
@@ -449,19 +484,16 @@ class _AmountTextState extends State<_AmountText>
   Widget build(BuildContext context) {
     final s = formScale(context);
     final parts =
-        AmountEntry.split(widget.raw, widget.currency, withSymbol: widget.withSymbol);
+        AmountEntry.split(widget.raw, widget.currency, hasChip: widget.hasChip);
     final size = widget.fontSize;
 
     final style = _amountStyle(size);
 
-    // Pale means "you have not typed this yet". The typed digits are always
-    // bright; the untyped decimal padding (`rest`) is dim only while the keypad
-    // is still writing here — once the amount is done (a non-empty value, no
-    // focus) it joins the number at full accent. An empty field is all
+    // The pale span is now only the empty field's placeholder `0`: no decimals
+    // are shown before the digits that fill them (§2), so once anything is typed
+    // `rest` is empty and the whole number is bright. An empty field is all
     // placeholder, so it stays dim whether focused or not.
-    final restColor = (widget.raw.isNotEmpty && !widget.focused)
-        ? widget.accent
-        : widget.accentDim;
+    final restColor = widget.accentDim;
 
     return Text.rich(
       TextSpan(

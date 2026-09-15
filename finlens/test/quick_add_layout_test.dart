@@ -156,12 +156,18 @@ void main() {
     await tester.pumpWidget(_app(buildSeedStore(), QuickAddType.expense));
     await tester.pump(const Duration(milliseconds: 350));
 
-    // The amount is a Text.rich so the typed digits and the untyped decimals
-    // can carry different colours, and the blinking caret is a WidgetSpan
-    // between them — so match on a substring rather than the whole string.
+    // The amount is a Text.rich so the placeholder and the blinking caret
+    // (a WidgetSpan) can be separate spans — so match on a substring. Task 008
+    // §2: the empty state shows only `$0`, never a padded `.00`; USD keeps its
+    // symbol on the number (§1).
+    expect(
+      find.textContaining(r'$0', findRichText: true),
+      findsOneWidget,
+    );
     expect(
       find.textContaining('0.00', findRichText: true),
-      findsOneWidget,
+      findsNothing,
+      reason: 'no decimals appear before the digits that fill them',
     );
   });
 }

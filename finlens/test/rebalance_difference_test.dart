@@ -274,20 +274,25 @@ void main() {
     expect(find.text('Currency'), findsOneWidget);
   });
 
-  testWidgets('the hero number carries no currency token while a chip is shown; '
-      'Current and Difference carry none either', (tester) async {
+  testWidgets('the hero number keeps its currency symbol beside the chip; '
+      'Current and Difference carry no token', (tester) async {
     await tester.pumpWidget(_app(buildSeedStore(), fixedTo: 'a-utilities'));
     await _settle(tester);
     await _typeDigits(tester, '1350');
 
-    // The hero's number has no "$".
+    // Task 008 §1: a symbol currency ('a-utilities' is USD) keeps its symbol on
+    // the number even with a chip beside it — the code lives on the chip, the
+    // symbol on the digits. So the hero DOES carry a '$'.
     final hero = tester.renderObject<RenderParagraph>(
         find.descendant(
             of: find.byType(NumericHeroCard),
             matching: find.textContaining('1,350', findRichText: true)));
-    expect((hero.text.toPlainText()).contains(r'$'), isFalse);
+    expect((hero.text.toPlainText()).contains(r'$'), isTrue);
+    // …but never the code: the chip already states it, so the number does not.
+    expect((hero.text.toPlainText()).contains('USD'), isFalse);
 
-    // Current (−800) and Difference (−550) are token-less too — no '$', no code.
+    // Current (−800) and Difference (−550) are token-less — no '$', no code —
+    // exactly as today; Task 008 leaves read amounts untouched (§1.1).
     final figures = tester
         .widgetList<Text>(find.byType(Text))
         .map((t) => t.data ?? '')

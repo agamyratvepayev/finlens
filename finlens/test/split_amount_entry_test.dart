@@ -150,10 +150,11 @@ void main() {
       for (final k in '2555686'.split('')) {
         raw = AmountEntry.press(raw, k);
       }
-      // $2,555,686.00 — not $25,556.86.
+      // $2,555,686 — not $25,556.86. Task 008 §2: only the digits typed, so no
+      // padded '.00'; USD is a symbol currency, so the '$' stays on the number.
       expect(AmountEntry.value(raw), 2555686.0);
       final parts = AmountEntry.split(raw, 'USD');
-      expect('${parts.typed}${parts.rest}', r'$2,555,686.00');
+      expect('${parts.typed}${parts.rest}', r'$2,555,686');
     });
 
     test('the decimal key and the two-decimal cap behave identically', () {
