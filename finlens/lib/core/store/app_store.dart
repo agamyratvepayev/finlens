@@ -2989,6 +2989,19 @@ class AppStore extends ChangeNotifier {
   double balanceWithout(String accountId, Txn txn) =>
       balanceOf(accountId) - _effectOn(txn, accountId);
 
+  /// The balance [accountId] would hold if [prospective] were saved, with
+  /// [replacing] — the entry being edited — taken out first. Writes nothing
+  /// (task 011).
+  ///
+  /// This exists so a form can ask "what would happen" without re-deriving the
+  /// ledger rules: [_effectOn] stays the one place they live.
+  double balanceIfSaved(String accountId, Txn prospective, {Txn? replacing}) {
+    final base = replacing == null
+        ? balanceOf(accountId)
+        : balanceWithout(accountId, replacing);
+    return base + _effectOn(prospective, accountId);
+  }
+
   double categorySpendWithout(String categoryId, Txn txn) {
     final current = spentInCategory(categoryId, DateTime(txn.date.year, txn.date.month));
     if (txn.type == TxnType.expense && txn.toRef == categoryId) {

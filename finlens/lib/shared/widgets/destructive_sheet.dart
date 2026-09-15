@@ -24,6 +24,11 @@ Future<bool> showDestructiveConfirm(
   required List<ImpactLine> impact,
   String? confirmLabel,
   String? cancelLabel,
+  /// The confirm button's fill. Defaults to [AppColors.negative], which is
+  /// right for every deletion. The overdraft warning (task 011) passes the
+  /// accent: it confirms a true entry, not a loss, and red there would promise
+  /// a destruction that is not happening.
+  Color? confirmColor,
 }) async {
   final result = await showModalBottomSheet<bool>(
     context: context,
@@ -92,7 +97,7 @@ Future<bool> showDestructiveConfirm(
             FilledButton(
               onPressed: () => Navigator.of(context).pop(true),
               style: FilledButton.styleFrom(
-                backgroundColor: AppColors.negative,
+                backgroundColor: confirmColor ?? AppColors.negative,
                 foregroundColor: Colors.white,
                 minimumSize: const Size.fromHeight(50),
                 shape: RoundedRectangleBorder(

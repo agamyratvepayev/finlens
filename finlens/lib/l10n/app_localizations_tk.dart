@@ -2739,6 +2739,21 @@ class AppLocalizationsTk extends AppLocalizations {
   String get qaBalanceAdjustment => 'Balans düzedişi';
 
   @override
+  String qaOverdrawTitle(Object account) {
+    return '$account minusa düşer';
+  }
+
+  @override
+  String get qaOverdrawMessage =>
+      'Ýazgy şonda-da ýazylýar. Diňe hasabyň balansy noldan aşak düşer.';
+
+  @override
+  String get qaOverdrawConfirm => 'Şonda-da sakla';
+
+  @override
+  String get qaOverdrawCancel => 'Yza dön';
+
+  @override
   String get qaRecurring => 'Gaýtalanýan';
 
   @override

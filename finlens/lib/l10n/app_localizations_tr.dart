@@ -2738,6 +2738,21 @@ class AppLocalizationsTr extends AppLocalizations {
   String get qaBalanceAdjustment => 'Bakiye düzeltmesi';
 
   @override
+  String qaOverdrawTitle(Object account) {
+    return '$account eksiye düşecek';
+  }
+
+  @override
+  String get qaOverdrawMessage =>
+      'Kayıt yine de tutulur. Yalnızca hesabın bakiyesi sıfırın altına iner.';
+
+  @override
+  String get qaOverdrawConfirm => 'Yine de kaydet';
+
+  @override
+  String get qaOverdrawCancel => 'Geri dön';
+
+  @override
   String get qaRecurring => 'Yinelenen';
 
   @override

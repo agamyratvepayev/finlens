@@ -183,7 +183,7 @@ void main() {
       (2000, 'USD', 390),
       (1248300, 'USD', 390),
       (20000000000, 'USD', 390),
-      (-20000000000, 'USD', 390), // balances are unsigned → magnitude renders
+      (-20000000000, 'USD', 390), // net worth below zero → signed (task 011)
       (200000000000, 'USD', 320),
       (20000000000, 'TMT', 320), // the wide, non-USD case
     ];
@@ -198,10 +198,13 @@ void main() {
 
         expect(tester.takeException(), isNull);
 
+        // Net worth is asset-side: unsigned while >= 0, signed once it drops
+        // below zero (task 011). The hero's `_display` renders exactly this.
+        final nw = store.balanceFilter.netWorth(store);
         final expected = money(
-          store.balanceFilter.netWorth(store),
+          nw,
           currency: cur,
-          signless: true,
+          signless: nw >= 0,
         );
         final widget = _amountWidget(tester);
         expect(

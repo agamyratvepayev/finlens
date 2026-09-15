@@ -2751,6 +2751,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get qaBalanceAdjustment => 'Balance adjustment';
 
   @override
+  String qaOverdrawTitle(Object account) {
+    return 'This overdraws $account';
+  }
+
+  @override
+  String get qaOverdrawMessage =>
+      'The entry is still recorded. The account simply goes below zero.';
+
+  @override
+  String get qaOverdrawConfirm => 'Save anyway';
+
+  @override
+  String get qaOverdrawCancel => 'Go back';
+
+  @override
   String get qaRecurring => 'Recurring';
 
   @override

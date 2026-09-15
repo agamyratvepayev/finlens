@@ -524,13 +524,14 @@ class _BalanceScreenState extends State<BalanceScreen> {
 
     // The three pages' totals are all computable here, so the font size is
     // solved from the widest of them and never jumps when the user swipes
-    // between sections. (Balances render unsigned per the app's rule, so the
-    // magnitudes drive width; the spec's minus-sign width case does not apply —
-    // see the report.)
+    // between sections. Each is measured through [_display] with its own kind,
+    // so a minus on a below-zero net worth or assets total (task 011) is part of
+    // the width the ladder solves and can never overflow.
     final measured = <String>[
       _display(store, filter.netWorth(store)),
       _display(store, filter.sectionTotal(store, assets: true)),
-      _display(store, filter.sectionTotal(store, assets: false)),
+      _display(store, filter.sectionTotal(store, assets: false),
+          isLiability: true),
     ];
 
     // The tools act on the list. When the current section has nothing to act on
@@ -553,7 +554,10 @@ class _BalanceScreenState extends State<BalanceScreen> {
       key: const ValueKey('amount'),
       alignment: Alignment.centerLeft,
       child: _BalanceAmountRow(
-        display: _display(store, amount),
+        // Only the LIABILITIES section shows a liability-kind figure; net worth
+        // and the assets total are asset-side and print a minus when negative.
+        display: _display(store, amount,
+            isLiability: _section == BalanceSection.liabilities),
         color: color,
         measured: measured,
         asOf: asOf,
@@ -563,14 +567,23 @@ class _BalanceScreenState extends State<BalanceScreen> {
   }
 
   /// The amount string exactly as [AmountText.balance] would render it (same
-  /// `money()` call), so the width the ladder measures matches what paints —
-  /// masking included.
-  String _display(AppStore store, double value) => money(
-        value,
-        currency: store.baseCurrency,
-        signless: true,
-        masked: store.masked,
-      );
+  /// `money()` call and same sign rule), so the width the ladder measures
+  /// matches what paints — masking included.
+  ///
+  /// [isLiability] mirrors the widget's flag: the liabilities section total is a
+  /// negative sum that agrees with its kind and stays unsigned, while a negative
+  /// net worth (or a below-zero assets total) contradicts its kind and prints
+  /// its minus (task 011).
+  String _display(AppStore store, double value, {bool isLiability = false}) {
+    final contradicts = isLiability ? value > 0 : value < 0;
+    return money(
+      value,
+      currency: store.baseCurrency,
+      signless: !contradicts,
+      showSign: contradicts && isLiability,
+      masked: store.masked,
+    );
+  }
 
   /// The four tools, same icons / actions / active semantics as before; only
   /// their size (via the ladder) and the filter button's active look change.
@@ -1628,6 +1641,10 @@ class _ListSectionHeader extends StatelessWidget {
           const Spacer(),
           AmountText.balance(
             total,
+            // The liabilities section total is the raw (negative) sum; flagging
+            // it liability-side keeps it unsigned, and lets an asset section that
+            // has gone below zero show its minus (task 011).
+            isLiability: !assets,
             style: AppText.sectionTotal,
             color: assets ? AppColors.positive : AppColors.negative,
           ),

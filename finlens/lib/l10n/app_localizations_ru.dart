@@ -2804,6 +2804,21 @@ class AppLocalizationsRu extends AppLocalizations {
   String get qaBalanceAdjustment => 'Корректировка баланса';
 
   @override
+  String qaOverdrawTitle(Object account) {
+    return 'Счёт $account уйдёт в минус';
+  }
+
+  @override
+  String get qaOverdrawMessage =>
+      'Запись всё равно сохранится. Просто баланс счёта станет отрицательным.';
+
+  @override
+  String get qaOverdrawConfirm => 'Всё равно сохранить';
+
+  @override
+  String get qaOverdrawCancel => 'Назад';
+
+  @override
   String get qaRecurring => 'Повторяющаяся';
 
   @override

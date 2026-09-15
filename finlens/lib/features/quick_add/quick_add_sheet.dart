@@ -8,6 +8,7 @@ import '../../core/store/app_store.dart';
 import '../../core/utils/formatters.dart';
 import '../../core/utils/fx.dart';
 import '../../l10n/app_localizations.dart';
+import '../../shared/widgets/destructive_sheet.dart';
 import '../../shared/widgets/txn_row.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
@@ -80,6 +81,116 @@ Future<void> startNewBudgetFlow(BuildContext context) {
   return Navigator.of(context, rootNavigator: true).push(
     MaterialPageRoute(builder: (_) => const EditBudgetScreen()),
   );
+}
+
+/// The single throwaway [Txn] that represents what a save of the given form
+/// state would do to its source account — the input to the overdraft warning
+/// (task 011 §3.2). Never stored; a pure function so the warning and its parity
+/// test share one definition and cannot drift.
+///
+/// A split expense keeps one source account and one total, so the source's
+/// effect is the same whether or not the entry is split — one expense Txn for
+/// the whole [amount] models it. A transfer folds its fee back in with
+/// `feeFromSource`, because the real write drains the source by the net *and* a
+/// separate fee expense; the draft's single effect must equal their sum. A
+/// rebalance mirrors the branch `_save` will take (revaluation / income /
+/// expense), landing the source on the same figure the write will. Returns null
+/// for the creation types that write no transaction.
+@visibleForTesting
+Txn? buildDraftTxn(
+  AppStore store, {
+  required QuickAddType type,
+  required double amount,
+  String? fromRef,
+  String? toRef,
+  required String currency,
+  required DateTime date,
+  double? feeAmount,
+  Txn? editing,
+}) {
+  switch (type) {
+    case QuickAddType.expense:
+      return Txn(
+        id: '',
+        type: TxnType.expense,
+        amount: amount,
+        currency: currency,
+        fromRef: fromRef ?? '',
+        toRef: toRef ?? '',
+        date: date,
+      );
+    case QuickAddType.income:
+      return Txn(
+        id: '',
+        type: TxnType.income,
+        amount: amount,
+        currency: currency,
+        fromRef: fromRef ?? '',
+        toRef: toRef ?? '',
+        date: date,
+      );
+    case QuickAddType.transfer:
+      final feeAmt = feeAmount ?? 0;
+      final net = amount - feeAmt;
+      return Txn(
+        id: '',
+        type: TxnType.transfer,
+        amount: net,
+        fee: feeAmt > 0 ? feeAmt : null,
+        feeFromSource: true,
+        currency: currency,
+        fromRef: fromRef ?? '',
+        toRef: toRef ?? '',
+        date: date,
+      );
+    case QuickAddType.rebalance:
+      final asset = store.accountById(toRef);
+      if (asset == null) return null;
+      // Baseline: balanceOf on create, balanceOf minus the edited record on edit
+      // (Rebalance §1a) — the same rule `_baselineBalance` uses.
+      final baseline = editing == null
+          ? store.balanceOf(asset.id)
+          : store.balanceOf(asset.id) - store.effectOfTxnOn(editing, asset.id);
+      final signed = asset.group.isAsset ? amount : -amount;
+      final delta = signed - baseline;
+      final isReval = asset.group == AccountGroup.investments ||
+          asset.group == AccountGroup.valuables;
+      if (isReval) {
+        return Txn(
+          id: '',
+          type: TxnType.rebalance,
+          amount: delta,
+          currency: asset.currency,
+          fromRef: asset.id,
+          toRef: asset.id,
+          date: date,
+        );
+      }
+      if (delta >= 0) {
+        return Txn(
+          id: '',
+          type: TxnType.income,
+          amount: delta,
+          currency: asset.currency,
+          fromRef: fromRef ?? '',
+          toRef: asset.id,
+          date: date,
+        );
+      }
+      return Txn(
+        id: '',
+        type: TxnType.expense,
+        amount: -delta,
+        currency: asset.currency,
+        fromRef: asset.id,
+        toRef: fromRef ?? '',
+        date: date,
+      );
+    case QuickAddType.newBudget:
+    case QuickAddType.newGoal:
+    case QuickAddType.newTask:
+      return null;
+  }
 }
 
 class QuickAddScreen extends StatefulWidget {
@@ -1759,7 +1870,45 @@ class _QuickAddScreenState extends State<QuickAddScreen>
     );
   }
 
-  void _save(AppStore store) {
+  /// The entry `_save` is about to write, built once so the overdraft warning in
+  /// §3.3 asks about the same figures the write uses (task 011). Delegates to the
+  /// pure [buildDraftTxn] so the draft and its parity test share one definition.
+  Txn? _draftTxn(AppStore store) => buildDraftTxn(
+        store,
+        type: _type,
+        amount: _amount,
+        fromRef: _fromRef,
+        toRef: _toRef,
+        currency: _currency,
+        date: _date,
+        feeAmount: _feeAmount,
+        editing: widget.editing,
+      );
+
+  /// Asset accounts this save would push further below zero (task 011 §3.3).
+  /// Three conditions, and the third matters as much as the first two:
+  ///
+  ///  * the account is an asset — a card going further into debt is what a card
+  ///    is for, and warning there would be noise;
+  ///  * the result is below zero;
+  ///  * the result is *lower* than before. Without this, every later edit to an
+  ///    already-overdrawn account warns again, including the entry that is
+  ///    paying it back.
+  List<Account> _wouldOverdraw(AppStore store, Txn draft, {Txn? replacing}) {
+    final result = <Account>[];
+    for (final ref in {draft.fromRef, draft.toRef}) {
+      final account = store.accountById(ref);
+      if (account == null || !account.isAsset) continue;
+      final before = replacing == null
+          ? store.balanceOf(account.id)
+          : store.balanceWithout(account.id, replacing);
+      final after = store.balanceIfSaved(account.id, draft, replacing: replacing);
+      if (after < 0 && after < before) result.add(account);
+    }
+    return result;
+  }
+
+  Future<void> _save(AppStore store) async {
     // §3 — validate on tap: name the first missing field, flash it, do not save.
     final blocker = _config(store).firstUnmet;
     if (blocker != null) {
@@ -1770,6 +1919,44 @@ class _QuickAddScreenState extends State<QuickAddScreen>
       }
       return;
     }
+
+    // Overdraft warning (task 011 §3): after the form is complete, before any
+    // write. It warns, never blocks — the entry is true and is recorded either
+    // way. Runs for both create and edit; the edited record is taken out first.
+    final draft = _draftTxn(store);
+    if (draft != null) {
+      final l = AppLocalizations.of(context);
+      final overdrawn =
+          _wouldOverdraw(store, draft, replacing: widget.editing);
+      for (final account in overdrawn) {
+        final before = widget.editing == null
+            ? store.balanceOf(account.id)
+            : store.balanceWithout(account.id, widget.editing!);
+        final after = store.balanceIfSaved(account.id, draft,
+            replacing: widget.editing);
+        final ok = await showDestructiveConfirm(
+          context,
+          title: l.qaOverdrawTitle(account.name),
+          message: l.qaOverdrawMessage,
+          impact: [
+            ImpactLine.lost(
+              '${account.name} ${money(before, currency: account.currency)} '
+              '→ ${money(after, currency: account.currency)}',
+            ),
+          ],
+          confirmLabel: l.qaOverdrawConfirm,
+          cancelLabel: l.qaOverdrawCancel,
+          // Saving is not destructive here — the entry is true and the app is
+          // recording it. Red would say "this deletes something".
+          confirmColor: AppColors.accent,
+        );
+        if (!ok) return;
+        if (!mounted) return;
+      }
+    }
+    // The confirm sheet is the only await above; guard once more so every
+    // `context` use in the write paths below is provably after a mounted check.
+    if (!mounted) return;
 
     final income = _type == QuickAddType.income;
 

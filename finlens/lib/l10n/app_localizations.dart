@@ -4270,6 +4270,30 @@ abstract class AppLocalizations {
   /// **'Balance adjustment'**
   String get qaBalanceAdjustment;
 
+  /// No description provided for @qaOverdrawTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'This overdraws {account}'**
+  String qaOverdrawTitle(Object account);
+
+  /// No description provided for @qaOverdrawMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'The entry is still recorded. The account simply goes below zero.'**
+  String get qaOverdrawMessage;
+
+  /// No description provided for @qaOverdrawConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Save anyway'**
+  String get qaOverdrawConfirm;
+
+  /// No description provided for @qaOverdrawCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Go back'**
+  String get qaOverdrawCancel;
+
   /// No description provided for @qaRecurring.
   ///
   /// In en, this message translates to:

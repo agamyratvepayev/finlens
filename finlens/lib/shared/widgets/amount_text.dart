@@ -18,9 +18,22 @@ class AmountText extends StatelessWidget {
     this.forceDecimals = false,
     this.maskable = true,
     this.signless = false,
+    this.isLiability = false,
   });
 
-  /// A balance: never signed. Colour carries asset vs liability instead.
+  /// A balance. Unsigned while its sign agrees with its account's kind, signed
+  /// the moment it contradicts it (task 011).
+  ///
+  /// The old rule was "never signed — colour carries asset vs liability". Colour
+  /// carries the account's *kind*; it never carried the figure's *sign*, and it
+  /// has no shade for an asset that has gone below zero. Such a row printed the
+  /// same pixels as one holding the same amount in credit.
+  ///
+  /// [isLiability] defaults to false, which is also the safe default: an
+  /// asset-side figure — an asset account, an asset group, net worth, a goal
+  /// balance — shows its minus when it has one. Only the call sites that render
+  /// something owed pass true, and those already compute the flag for their
+  /// colour.
   const AmountText.balance(
     this.value, {
     super.key,
@@ -29,6 +42,7 @@ class AmountText extends StatelessWidget {
     this.color,
     this.forceDecimals = false,
     this.maskable = true,
+    this.isLiability = false,
   })  : showSign = false,
         signless = true;
 
@@ -46,18 +60,32 @@ class AmountText extends StatelessWidget {
   final bool maskable;
   final bool signless;
 
+  /// Whether [value] is a liability-side figure — something owed. Defaults to
+  /// false (asset-side). Only meaningful when [signless] is set (the `.balance`
+  /// constructor): it decides which sign agrees with the account's kind. The
+  /// default constructor never sets [signless], so this has no effect there.
+  final bool isLiability;
+
   @override
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
     final masked = maskable && store.masked;
+    // The sign is redundant exactly while it agrees with the kind: a positive
+    // asset, a negative liability. Otherwise it is the only thing that says the
+    // balance is not what the account is for.
+    final contradicts = isLiability ? value > 0 : value < 0;
+    final signlessNow = signless && !contradicts;
+    // A negative value already prints its − once signless is off; showSign is
+    // needed only to force a + on a liability that has gone into credit.
+    final showSignNow = showSign || (contradicts && isLiability);
     return Text(
       money(
         value,
         currency: currency ?? store.baseCurrency,
-        showSign: showSign,
+        showSign: showSignNow,
         forceDecimals: forceDecimals,
         masked: masked,
-        signless: signless,
+        signless: signlessNow,
       ),
       style: (style ?? AppText.amount).copyWith(color: color),
     );

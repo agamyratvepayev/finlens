@@ -139,8 +139,13 @@ class GroupRow extends StatelessWidget {
               child: ExcludeSemantics(
                 child: AmountText.balance(
                   total,
+                  isLiability: group.isLiability,
                   style: AppText.groupAmount.copyWith(fontSize: 14),
-                  color: group.isLiability ? AppColors.amountGroupNeg : null,
+                  // Colour follows the figure, not the kind (task 011): an asset
+                  // group summing below zero reads negative too.
+                  color: (group.isLiability || total < 0)
+                      ? AppColors.amountGroupNeg
+                      : null,
                 ),
               ),
             ),
@@ -273,8 +278,12 @@ class AccountRow extends StatelessWidget {
       child: AmountText.balance(
         balance,
         currency: account.currency,
+        isLiability: account.isLiability,
         style: AppText.childAmount.copyWith(fontSize: 13),
-        color: account.isLiability
+        // Colour follows the figure, not the kind (task 011): an asset account
+        // gone below zero reads negative, not the quiet secondary of a positive
+        // balance.
+        color: (account.isLiability || balance < 0)
             ? AppColors.amountChildNeg
             : AppColors.textSecondary,
       ),
