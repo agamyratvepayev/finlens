@@ -1877,6 +1877,145 @@ class AppLocalizationsEn extends AppLocalizations {
   String get bdRemoveBudget => 'Remove budget';
 
   @override
+  String get bgLimit => 'Limit';
+
+  @override
+  String get bgScopeCategory => 'Category';
+
+  @override
+  String get bgTargets => 'Categories';
+
+  @override
+  String get bgAccountScope => 'Account';
+
+  @override
+  String get bgAccountsScope => 'Accounts';
+
+  @override
+  String get bgTagScope => 'Tag';
+
+  @override
+  String get bgTagsScope => 'Tags';
+
+  @override
+  String get bgEvery => 'Every';
+
+  @override
+  String get bgDates => 'Dates';
+
+  @override
+  String get bgPeriodMonth => 'Every month';
+
+  @override
+  String get bgPeriodWeek => 'Every week';
+
+  @override
+  String get bgPeriodDays => 'Every … days';
+
+  @override
+  String get bgPeriodOnce => 'Once';
+
+  @override
+  String get bgPeriodOnceHint =>
+      'A trip, a project — it ends and does not reset';
+
+  @override
+  String get bgEvMonth => 'month';
+
+  @override
+  String bgEvWeekFrom(Object weekday) {
+    return '7 days · from $weekday';
+  }
+
+  @override
+  String bgEvDays(int count) {
+    return '$count days';
+  }
+
+  @override
+  String get bgEvOnce => 'once';
+
+  @override
+  String get bgSuffixWeekly => 'weekly';
+
+  @override
+  String bgSuffixEveryDays(int count) {
+    return 'every $count days';
+  }
+
+  @override
+  String bgOverlapNote(Object name) {
+    return '$name already has its own budget. Both will count it.';
+  }
+
+  @override
+  String get bgScopeSwitchTitle => 'Change what this budget covers?';
+
+  @override
+  String get bgScopeSwitchMsg =>
+      'A budget has one scope. Switching tabs clears your current selection.';
+
+  @override
+  String get bgScopeSwitchConfirm => 'Clear and switch';
+
+  @override
+  String get bgDaysHint => '2–365';
+
+  @override
+  String plBudgetsOther(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count more run on their own clock',
+      one: '$count more runs on its own clock',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get plSectionByCategory => 'BY CATEGORY';
+
+  @override
+  String get plSectionByAccount => 'BY ACCOUNT';
+
+  @override
+  String get plSectionByOccasion => 'BY OCCASION';
+
+  @override
+  String bdResetsOn(Object weekday) {
+    return 'resets $weekday';
+  }
+
+  @override
+  String bdEndsOn(Object date) {
+    return 'ends $date';
+  }
+
+  @override
+  String bdDaysToGo(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count days to go',
+      one: '$count day to go',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String bdUnder(Object amount) {
+    return '$amount under';
+  }
+
+  @override
+  String bdOver(Object amount) {
+    return '$amount over';
+  }
+
+  @override
+  String get txnCountedIn => 'COUNTED IN';
+
+  @override
   String ebAverage(Object average, Object suggestion) {
     return 'You average $average. Try $suggestion?';
   }

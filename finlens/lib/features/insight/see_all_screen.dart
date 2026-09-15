@@ -189,7 +189,7 @@ class SeeAllScreen extends StatelessWidget {
     var bestAmount = 0.0;
     for (final c in store.categories.where((c) =>
         c.type == CategoryType.expense &&
-        store.monthlyBudgetForCategory(c.id) == null)) {
+        store.budgetsForCategory(c.id).isEmpty)) {
       final spent = store.spentInCategoryWindow(c.id, window);
       if (spent > bestAmount) {
         bestAmount = spent;
@@ -231,7 +231,11 @@ class _Row extends StatelessWidget {
     String? sub;
     Color subColor = AppColors.textTertiary;
     if (!income && cat != null) {
-      final limit = store.effectiveLimitOf(cat!);
+      // The narrowest lens on this category (spec §4b) — any period, so a
+      // weekly-only category now shows its weekly limit here instead of reading
+      // as unbudgeted.
+      final pb = store.primaryBudgetForCategory(cat!.id);
+      final limit = pb == null ? null : store.budgetEffectiveLimit(pb, store.today);
       if (limit == null) {
         sub = l.insNoBudget;
         subColor = AppColors.textQuaternary;

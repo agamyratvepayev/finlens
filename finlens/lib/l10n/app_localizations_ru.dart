@@ -1923,6 +1923,149 @@ class AppLocalizationsRu extends AppLocalizations {
   String get bdRemoveBudget => 'Удалить бюджет';
 
   @override
+  String get bgLimit => 'Лимит';
+
+  @override
+  String get bgScopeCategory => 'Категория';
+
+  @override
+  String get bgTargets => 'Категории';
+
+  @override
+  String get bgAccountScope => 'Счёт';
+
+  @override
+  String get bgAccountsScope => 'Счета';
+
+  @override
+  String get bgTagScope => 'Метка';
+
+  @override
+  String get bgTagsScope => 'Метки';
+
+  @override
+  String get bgEvery => 'Период';
+
+  @override
+  String get bgDates => 'Даты';
+
+  @override
+  String get bgPeriodMonth => 'Каждый месяц';
+
+  @override
+  String get bgPeriodWeek => 'Каждую неделю';
+
+  @override
+  String get bgPeriodDays => 'Каждые … дней';
+
+  @override
+  String get bgPeriodOnce => 'Один раз';
+
+  @override
+  String get bgPeriodOnceHint =>
+      'Поездка, проект — заканчивается и не повторяется';
+
+  @override
+  String get bgEvMonth => 'месяц';
+
+  @override
+  String bgEvWeekFrom(Object weekday) {
+    return '7 дней · с $weekday';
+  }
+
+  @override
+  String bgEvDays(int count) {
+    return '$count дней';
+  }
+
+  @override
+  String get bgEvOnce => 'один раз';
+
+  @override
+  String get bgSuffixWeekly => 'еженедельно';
+
+  @override
+  String bgSuffixEveryDays(int count) {
+    return 'каждые $count дней';
+  }
+
+  @override
+  String bgOverlapNote(Object name) {
+    return 'У «$name» уже есть свой бюджет. Оба будут учитывать эту трату.';
+  }
+
+  @override
+  String get bgScopeSwitchTitle => 'Изменить, что охватывает бюджет?';
+
+  @override
+  String get bgScopeSwitchMsg =>
+      'У бюджета одна область. Переключение вкладки очистит текущий выбор.';
+
+  @override
+  String get bgScopeSwitchConfirm => 'Очистить и переключить';
+
+  @override
+  String get bgDaysHint => '2–365';
+
+  @override
+  String plBudgetsOther(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'ещё $count со своими циклами',
+      many: 'ещё $count со своими циклами',
+      few: 'ещё $count со своими циклами',
+      one: 'ещё $count со своим циклом',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get plSectionByCategory => 'ПО КАТЕГОРИЯМ';
+
+  @override
+  String get plSectionByAccount => 'ПО СЧЕТАМ';
+
+  @override
+  String get plSectionByOccasion => 'ПО СЛУЧАЮ';
+
+  @override
+  String bdResetsOn(Object weekday) {
+    return 'сбрасывается в $weekday';
+  }
+
+  @override
+  String bdEndsOn(Object date) {
+    return 'заканчивается $date';
+  }
+
+  @override
+  String bdDaysToGo(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'осталось $count дней',
+      many: 'осталось $count дней',
+      few: 'осталось $count дня',
+      one: 'остался $count день',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String bdUnder(Object amount) {
+    return '$amount сэкономлено';
+  }
+
+  @override
+  String bdOver(Object amount) {
+    return '$amount перерасход';
+  }
+
+  @override
+  String get txnCountedIn => 'УЧТЕНО В';
+
+  @override
   String ebAverage(Object average, Object suggestion) {
     return 'В среднем $average. Попробуйте $suggestion?';
   }

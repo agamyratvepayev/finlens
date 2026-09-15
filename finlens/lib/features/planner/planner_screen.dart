@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/l10n/enum_labels.dart';
 import '../../core/models/models.dart';
 import '../../core/store/app_store.dart';
+import '../../core/utils/date_range.dart';
 import '../../core/utils/formatters.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/amount_text.dart';
@@ -93,7 +94,9 @@ class _PlannerScreenState extends State<PlannerScreen> {
   /// control and the panel below it derive from one condition and cannot disagree
   /// (a month above a "no budgets" panel is exactly that disagreement).
   bool _budgetsEmpty(AppStore store) =>
-      store.budgetedCategories.isEmpty &&
+      store.activeBudgetsByScope(BudgetScope.categories, _month).isEmpty &&
+      store.activeBudgetsByScope(BudgetScope.account, _month).isEmpty &&
+      store.activeBudgetsByScope(BudgetScope.tag, _month).isEmpty &&
       store.unbudgetedSpendingCategories(_month).isEmpty;
 
   /// Whether the current tab shows its first-run empty state — the exact test
@@ -573,6 +576,18 @@ class _BudgetSummary extends StatelessWidget {
               ],
             ],
           ),
+          // The hero sums monthly, reporting-currency category budgets; anything
+          // on its own clock — weekly, one-off, foreign — is not prorated in but
+          // counted here so the total declares its scope (spec §4c).
+          if (store.budgetsOffMonthHero > 0) ...[
+            const SizedBox(height: 4),
+            Text(
+              l.plBudgetsOther(store.budgetsOffMonthHero),
+              style: AppText.caption
+                  .copyWith(fontSize: 11.5, color: AppColors.textTertiary),
+              maxLines: 2,
+            ),
+          ],
         ],
       ),
     );
@@ -585,49 +600,69 @@ class _BudgetsTab extends StatelessWidget {
   final AppStore store;
   final DateTime month;
 
+  /// Empty when nothing is budgeted in any scope and nothing is uncovered (spec
+  /// §5). The month control and this branch derive from one condition so a month
+  /// above a "no budgets" panel can never appear.
+  bool _isEmpty(AppStore store) =>
+      store.activeBudgetsByScope(BudgetScope.categories, month).isEmpty &&
+      store.activeBudgetsByScope(BudgetScope.account, month).isEmpty &&
+      store.activeBudgetsByScope(BudgetScope.tag, month).isEmpty &&
+      store.unbudgetedSpendingCategories(month).isEmpty;
+
   @override
   Widget build(BuildContext context) {
-    final budgets = store.budgetedCategories;
+    final l = AppLocalizations.of(context);
     final unbudgeted = store.unbudgetedSpendingCategories(month);
 
     // No pill — the header + is the only way in, named by the hint line (§4.1).
     // The block centres itself in the space below the tabs (§4.5).
-    if (budgets.isEmpty && unbudgeted.isEmpty) {
+    if (_isEmpty(store)) {
       return const PlannerEmptyState(tab: PlannerEmptyTab.budgets);
     }
 
-    // Over-limit categories first, then the rest in their existing order.
-    bool over(Category c) =>
-        store.spentInCategory(c.id, month) > (store.effectiveLimitOf(c) ?? 0);
-    final ordered = [...budgets.where(over), ...budgets.where((c) => !over(c))];
+    final cats = store.activeBudgetsByScope(BudgetScope.categories, month);
+    final accts = store.activeBudgetsByScope(BudgetScope.account, month);
+    final tags = store.activeBudgetsByScope(BudgetScope.tag, month);
+    final nonEmpty =
+        [cats, accts, tags].where((x) => x.isNotEmpty).length;
+    // A single-scope user keeps exactly the header they had before: the
+    // categories-only case shows "BUDGETED" with its spent / total, and no
+    // scope headers appear until a second scope is in use (spec §5a).
+    final showScopeHeaders = nonEmpty > 1;
 
-    final totalLabelStyle = AppText.label.copyWith(
-      color: AppColors.textSecondary,
-    );
+    final totalLabelStyle =
+        AppText.label.copyWith(color: AppColors.textSecondary);
 
     return ListView(
       padding: const EdgeInsets.only(bottom: Insets.xxl),
       children: [
-        if (budgets.isNotEmpty) ...[
-          SectionLabel(
-            AppLocalizations.of(context).plBudgeted,
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                AmountText(store.budgetedSpend(month), style: totalLabelStyle),
-                Text(' / ', style: totalLabelStyle),
-                AmountText(store.totalBudget, style: totalLabelStyle),
-              ],
+        if (cats.isNotEmpty) ...[
+          if (showScopeHeaders)
+            SectionLabel(l.plSectionByCategory)
+          else
+            SectionLabel(
+              l.plBudgeted,
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  AmountText(store.budgetedSpend(month), style: totalLabelStyle),
+                  Text(' / ', style: totalLabelStyle),
+                  AmountText(store.totalBudget, style: totalLabelStyle),
+                ],
+              ),
             ),
-          ),
-          // Each budgeted category is its own card (spec §1), the way the Goals
-          // tab next door renders a goal — separate AppCards at radius 14, 8pt
-          // apart, no dividers anywhere. A budget is a standing commitment with
-          // its own limit, history and detail screen, so it gets a goal's
-          // standing, not a ledger row's. Each _BudgetRow carries its own gutter
-          // padding and the 8pt inter-card gap, so the ordered list drops in raw.
-          for (final c in ordered)
-            _BudgetRow(store: store, category: c, month: month),
+          for (final b in cats)
+            _BudgetCard(store: store, budget: b, month: month),
+        ],
+        if (accts.isNotEmpty) ...[
+          SectionLabel(l.plSectionByAccount),
+          for (final b in accts)
+            _BudgetCard(store: store, budget: b, month: month),
+        ],
+        if (tags.isNotEmpty) ...[
+          SectionLabel(l.plSectionByOccasion),
+          for (final b in tags)
+            _BudgetCard(store: store, budget: b, month: month),
         ],
         if (unbudgeted.isNotEmpty)
           _NoBudgetSection(store: store, month: month, categories: unbudgeted),
@@ -636,178 +671,242 @@ class _BudgetsTab extends StatelessWidget {
   }
 }
 
-class _BudgetRow extends StatelessWidget {
-  const _BudgetRow({
-    required this.store,
-    required this.category,
-    required this.month,
-  });
+/// One budget's card on the Budgets tab — any scope, any period (spec §5).
+/// Line one names the budget (with a period suffix for a non-monthly one) and
+/// its spent figure; line two is the bar and the limit; line three is the
+/// budget's own clock — days-to-go, "resets Monday", "ends 22 Aug" — or, for a
+/// finished one-off, its verdict and the dates it ran. Figures render in the
+/// budget's own currency (spec 021d). A finished one-off is dimmed and stays in
+/// the list until the reader removes it from the detail menu (spec §5c).
+class _BudgetCard extends StatelessWidget {
+  const _BudgetCard(
+      {required this.store, required this.budget, required this.month});
 
   final AppStore store;
-  final Category category;
+  final Budget budget;
   final DateTime month;
+
+  void _open(BuildContext context) {
+    final b = budget;
+    final monthlyCategory = b.scope == BudgetScope.categories &&
+        b.period == BudgetPeriod.month &&
+        b.repeats &&
+        b.targets.length == 1;
+    Navigator.of(context, rootNavigator: true).push(
+      MaterialPageRoute(
+        builder: (_) => monthlyCategory
+            ? BudgetDetailScreen(categoryId: b.targets.first, month: month)
+            : EditBudgetScreen(budgetId: b.id),
+      ),
+    );
+  }
+
+  ({IconData icon, Color color}) _tile() {
+    final b = budget;
+    switch (b.scope) {
+      case BudgetScope.categories:
+        final c =
+            b.targets.length == 1 ? store.categoryById(b.targets.first) : null;
+        return (
+          icon: c?.icon ?? Icons.category_rounded,
+          color: c?.color ?? AppColors.accent,
+        );
+      case BudgetScope.account:
+        final a =
+            b.targets.length == 1 ? store.accountById(b.targets.first) : null;
+        return (
+          icon: a?.displayIcon ?? Icons.account_balance_wallet_rounded,
+          color: a?.color ?? AppColors.accent,
+        );
+      case BudgetScope.tag:
+        return (icon: Icons.sell_rounded, color: AppColors.tagDot);
+    }
+  }
+
+  String? _periodSuffix(AppLocalizations l) {
+    final b = budget;
+    if (!b.repeats || b.period == BudgetPeriod.month) return null;
+    if (b.lengthDays == 7) return l.bgSuffixWeekly;
+    return l.bgSuffixEveryDays(b.lengthDays ?? 30);
+  }
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final spent = store.spentInCategory(category.id, month);
-    final limit = store.effectiveLimitOf(category) ?? 0;
-    final ratio = limit <= 0 ? 0.0 : spent / limit;
+    final b = budget;
+    final today = store.today;
+    final ref = b.period == BudgetPeriod.month ? month : today;
+    final window = store.budgetWindow(b, ref);
+    final containsToday =
+        !today.isBefore(window.start) && !today.isAfter(window.end);
 
-    // <80% green, 80вЂ“100% amber, >100% red вЂ” against effectiveLimit, byte
-    // identical thresholds to before (spec В§4). Colour states the fact; the
-    // glyph names the one state geometry can't; the marker gives context.
+    final spent = store.budgetSpend(b, ref);
+    final limit = store.budgetEffectiveLimit(b, ref);
+    final ratio = limit <= 0 ? 0.0 : spent / limit;
     final over = ratio > 1;
-    final warn = !over && ratio >= store.warnThresholdOf(category);
+    final warn = !over && ratio >= b.warnThreshold;
     final color = over
         ? AppColors.negative
         : (warn ? AppColors.warning : AppColors.positive);
-    final isCurrent = store.isCurrentMonth(month);
+    // Finished in the everyday sense: a one-off whose end has passed. Its
+    // endedAt is set at creation, so Budget.isFinished is true from birth — the
+    // dimmed, verdict state is the end being in the past (spec §5c).
+    final finished =
+        !b.repeats && b.endedAt != null && today.isAfter(b.endedAt!);
 
-    // One sentence per row for the screen reader (spec В§4): near-limit has no
-    // glyph, only colour + bar length, so the state must survive in semantics.
-    // Masked amounts make fragmented per-widget semantics unreadable, so the
-    // whole row reads as a single composed label.
-    final spentStr = money(spent, masked: store.masked);
-    final limitStr = money(limit, masked: store.masked);
-    final semantics = over
-        ? l.plSemRowOver(category.name, spentStr, limitStr)
-        : warn
-        ? l.plSemRowNear(category.name, spentStr, limitStr)
-        : l.plSemRowNormal(category.name, spentStr, limitStr);
+    final curArg = b.currency.isEmpty ? null : b.currency;
+    final spentStr = money(spent, currency: curArg, masked: store.masked);
+    final limitStr = money(limit, currency: curArg, masked: store.masked);
 
-    return Padding(
-      // Own gutter padding + the 8pt inter-card gap (spec §1), exactly the
-      // goal card's outer margin so the two tabs share a rhythm.
-      padding: const EdgeInsets.fromLTRB(Insets.gutter, 0, Insets.gutter, 8),
-      child: Semantics(
-        container: true,
-        button: true,
-        label: semantics,
-        child: ExcludeSemantics(
-          // AppCard is shared, so its 14pt radius (down from Radii.card) is
-          // passed in here, matching a goal card; a fuller radius reads too
-          // round on a one-row card.
-          child: AppCard(
-            radius: 14,
-            child: InkWell(
-              borderRadius: BorderRadius.circular(14),
-              // A tap opens the budget detail ("where did this go?"), never the
-              // editor — a stray tap must not land on financial editing (spec §6).
-              onTap: () => Navigator.of(context, rootNavigator: true).push(
-                MaterialPageRoute(
-                  builder: (_) =>
-                      BudgetDetailScreen(categoryId: category.id, month: month),
-                ),
-              ),
-              // 8 top / 11 bottom / 12 sides. The bottom is 11, not the goal
-              // card's 8: its last element is a 3pt bar over 8pt of air, ours is
-              // a line of text whose descenders reach its box floor, so it needs
-              // the extra 3pt to sit level beside a goal card at 56.5 (spec §3).
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(12, 8, 12, 11),
-                child: Row(
+    final tile = _tile();
+    final suffix = _periodSuffix(l);
+
+    // Pace as the fraction of the window elapsed — generic across any period,
+    // shown only while the window contains today.
+    final windowSpan = window.end.difference(window.start).inDays;
+    final pace = containsToday && !finished
+        ? (today.difference(window.start).inDays /
+                (windowSpan == 0 ? 1 : windowSpan))
+            .clamp(0.0, 1.0)
+        : null;
+
+    final clock = _clockLine(l, window, containsToday);
+
+    final card = AppCard(
+      radius: 14,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: () => _open(context),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 11),
+          child: Row(
+            children: [
+              IconTile(tile.icon, color: tile.color, size: 30),
+              const SizedBox(width: Insets.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    IconTile(category.icon, color: category.color, size: 30),
-                    const SizedBox(width: Insets.md),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          // Line one: name, then the over-budget glyph, then the
-                          // spent figure right-aligned so the figures form a
-                          // column down the list. Explicit 1.15 line height
-                          // matches the name to the amount box (spec §3).
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  category.name,
-                                  style: AppText.rowTitle.copyWith(
-                                    height: 1.15,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              // The one glyph: a red triangle, only over budget.
-                              // Near-limit's signal is the bar's length; it needs
-                              // none, and a second glyph would clutter the list
-                              // (spec §4).
-                              if (over)
-                                const Padding(
-                                  padding: EdgeInsets.only(left: 5),
-                                  child: Icon(
-                                    Icons.warning_amber_rounded,
-                                    size: 15,
-                                    color: AppColors.negative,
-                                  ),
-                                ),
-                              const SizedBox(width: Insets.sm),
-                              // White, not tinted: green here would read as money
-                              // in, and the bar below already carries the three
-                              // states (spec §4). Prints the spent magnitude; the
-                              // effectiveLimit sits under it on line two.
-                              AmountText(
-                                spent,
-                                style: AppText.amount.copyWith(height: 1.15),
-                              ),
-                            ],
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            b.name,
+                            style: AppText.rowTitle.copyWith(height: 1.15),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          const SizedBox(height: 7),
-                          // Line two: the bar takes the width, the limit sits
-                          // right-aligned directly under the spent figure — no
-                          // "/" or "of", the shared right edge carries the
-                          // relation (spec §2). The bar loses the limit's width
-                          // plus this 10pt gap and is fine: a fill is
-                          // proportional to whatever track it gets.
-                          Row(
-                            children: [
-                              Expanded(
-                                // 4pt so the fill reads clear of the pace marker;
-                                // the same unlabelled marker as the summary bar.
-                                child: ProgressBar(
-                                  value: ratio,
-                                  color: color,
-                                  height: 4,
-                                  paceMarker: isCurrent
-                                      ? store.monthProgressFor(month)
-                                      : null,
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              // The goal card's denominator style: 11.5pt in
-                              // textTertiary, its 1.15 height sets the line-two
-                              // box (13.2) the bar centres in.
-                              Text(
-                                limitStr,
-                                style: AppText.rowSubtitle.copyWith(
-                                  fontSize: 11.5,
-                                  height: 1.15,
-                                  color: AppColors.textTertiary,
-                                ),
-                              ),
-                            ],
+                        ),
+                        if (suffix != null) ...[
+                          const SizedBox(width: 5),
+                          Text(
+                            '· $suffix',
+                            style: AppText.caption.copyWith(
+                                fontSize: 11.5, color: AppColors.textTertiary),
                           ),
                         ],
-                      ),
+                        if (over && !finished)
+                          const Padding(
+                            padding: EdgeInsets.only(left: 5),
+                            child: Icon(Icons.warning_amber_rounded,
+                                size: 15, color: AppColors.negative),
+                          ),
+                        const Spacer(),
+                        const SizedBox(width: Insets.sm),
+                        Text(spentStr,
+                            style: AppText.amount.copyWith(height: 1.15)),
+                      ],
                     ),
+                    const SizedBox(height: 7),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ProgressBar(
+                            value: ratio,
+                            color: color,
+                            height: 4,
+                            paceMarker: pace,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Text(
+                          limitStr,
+                          style: AppText.rowSubtitle.copyWith(
+                            fontSize: 11.5,
+                            height: 1.15,
+                            color: AppColors.textTertiary,
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (clock != null) ...[
+                      const SizedBox(height: 4),
+                      clock,
+                    ],
                   ],
                 ),
               ),
-            ),
+            ],
           ),
         ),
       ),
     );
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(Insets.gutter, 0, Insets.gutter, 8),
+      child: finished ? Opacity(opacity: 0.55, child: card) : card,
+    );
+  }
+
+  /// The card's third line: the budget's own clock, or a finished one-off's
+  /// verdict + the dates it ran (spec §5b/§5c). Null when there is nothing to
+  /// say (a repeating budget shown on a month that is not its current period).
+  Widget? _clockLine(
+      AppLocalizations l, DateRange window, bool containsToday) {
+    final b = budget;
+    final today = store.today;
+    final curArg = b.currency.isEmpty ? null : b.currency;
+    final caption =
+        AppText.caption.copyWith(fontSize: 11.5, color: AppColors.textTertiary);
+
+    if (!b.repeats) {
+      final end = b.endedAt ?? window.end;
+      final range = '${dayMonth(b.anchor, l)} – ${dayMonth(end, l)}';
+      final past = b.endedAt != null && today.isAfter(b.endedAt!);
+      if (past) {
+        final spent = store.budgetSpend(b, today);
+        final delta = b.limit - spent;
+        final under = delta >= 0;
+        final amount =
+            money(delta.abs(), currency: curArg, masked: store.masked);
+        return Row(
+          children: [
+            Flexible(
+              child: Text(
+                under ? l.bdUnder(amount) : l.bdOver(amount),
+                style: caption.copyWith(
+                    color: under ? AppColors.positive : AppColors.negative),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            Text(' · $range', style: caption),
+          ],
+        );
+      }
+      return Text(l.bdEndsOn(dayMonth(end, l)), style: caption);
+    }
+
+    if (!containsToday) return null;
+    final endDay = DateTime(window.end.year, window.end.month, window.end.day);
+    if (b.lengthDays == 7 && b.period == BudgetPeriod.days) {
+      return Text(l.bdResetsOn(weekdayLong(b.anchor, l)), style: caption);
+    }
+    final left = endDay.difference(today).inDays + 1;
+    return Text(l.bdDaysToGo(left < 1 ? 1 : left), style: caption);
   }
 }
 
-/// Spec В§5 вЂ” expense categories with spending but no budget this month, amount
-/// descending. Rendered only when non-empty: a category with nothing spent has
-/// nothing uncovered. Collapsed by default, so it is noticed afresh each month
-/// (next month's uncovered categories differ). The header carries the count and
-/// total; the tap reveals *which* categories and the `Set` action.
 class _NoBudgetSection extends StatefulWidget {
   const _NoBudgetSection({
     required this.store,

@@ -2146,6 +2146,78 @@ class AppStore extends ChangeNotifier {
     return null;
   }
 
+  /// A one-off whose end has passed. Its `endedAt` is set at creation (it is the
+  /// window's close), so [Budget.isFinished] is true from birth; "finished" in
+  /// the everyday sense — done, dimmed on the tab — is this: the end is in the
+  /// past. A repeating budget is never past.
+  bool _isPastOnce(Budget b) =>
+      !b.repeats && b.endedAt != null && today.isAfter(b.endedAt!);
+
+  /// Still running today: not archived, and not a finished one-off (spec §4a).
+  /// This is the "is it live?" test the budgeted/hero seams ask.
+  bool _isRunning(Budget b) => !b.isArchived && !_isPastOnce(b);
+
+  /// When a budget was created — the first history entry ('created'), falling
+  /// back to the anchor for a budget that predates history. The tiebreaker for
+  /// "the most recently created" in [primaryBudgetForCategory].
+  DateTime _budgetCreatedAt(Budget b) =>
+      b.history.isNotEmpty ? b.history.first.at : b.anchor;
+
+  /// Every active category-scope budget that lists [categoryId] — **any** period,
+  /// repeating or one-off (spec §4a). A category is "budgeted" exactly when this
+  /// is non-empty; that is the test the unbudgeted seams now ask, replacing
+  /// "has a monthly budget". Callers that must name one budget use
+  /// [primaryBudgetForCategory].
+  List<Budget> budgetsForCategory(String categoryId) => _budgets
+      .where((b) =>
+          b.scope == BudgetScope.categories &&
+          _isRunning(b) &&
+          b.targets.contains(categoryId))
+      .toList(growable: false);
+
+  /// The one budget to show beside a category when only one fits — Insight's
+  /// row, Quick Add's candidate list, the category screens (spec §4b). A category
+  /// may sit in several lenses; this picks the one that is most about *it*:
+  ///   1. active category-scope budgets containing [categoryId];
+  ///   2. prefer a budget whose only target is this category;
+  ///   3. then the shorter period (a week is more specific than a month);
+  ///   4. then the most recently created.
+  /// Callers that can show several use [budgetsForCategory] instead.
+  Budget? primaryBudgetForCategory(String categoryId) {
+    final claims = budgetsForCategory(categoryId);
+    if (claims.isEmpty) return null;
+    int span(Budget b) =>
+        b.period == BudgetPeriod.month ? 30 : (b.lengthDays ?? 30);
+    claims.sort((a, b) {
+      // 1/2 — a single-target lens is more "about" this category than a shared one.
+      final byTargets = (a.targets.length == 1 ? 0 : 1)
+          .compareTo(b.targets.length == 1 ? 0 : 1);
+      if (byTargets != 0) return byTargets;
+      // 3 — the shorter period is the more specific one.
+      final bySpan = span(a).compareTo(span(b));
+      if (bySpan != 0) return bySpan;
+      // 4 — newest first.
+      return _budgetCreatedAt(b).compareTo(_budgetCreatedAt(a));
+    });
+    return claims.first;
+  }
+
+  /// Every active budget whose window contains [t] and whose scope claims it —
+  /// the same test the spend folds apply, so this list and the figures on the
+  /// Budgets tab can never disagree (spec §6). Expenses only; empty for any other
+  /// type. The COUNTED IN card reads exactly this.
+  List<Budget> budgetsCounting(Txn t) {
+    if (t.type != TxnType.expense) return const <Budget>[];
+    return _budgets.where((b) {
+      // Not archived; a finished one-off still counted its own historical rows,
+      // so the window (which only spans its dates) is what scopes it, not "live".
+      if (b.isArchived) return false;
+      if (!_budgetClaims(b, t)) return false;
+      final w = budgetWindow(b, t.date);
+      return !t.date.isBefore(w.start) && !t.date.isAfter(w.end);
+    }).toList(growable: false);
+  }
+
   /// The period of [b] containing [on], or the last one if [b] has ended
   /// (spec §A.2). `month` walks whole calendar months from [Budget.anchor]'s
   /// day-of-month (so the 13th yields 13 Aug – 12 Sep and its length is read
@@ -2229,15 +2301,27 @@ class AppStore extends ChangeNotifier {
     return sum;
   }
 
-  /// Expense rows a budget's spend is measured over — its account's outflows, or
-  /// its categories' expenses.
+  /// Expense rows a budget's spend is measured over — its account's outflows, its
+  /// categories' expenses, or (021d/022) its tagged expenses.
   Iterable<Txn> _budgetRows(Budget b, DateRange window) =>
-      txnsInWindow(window).where((t) {
-        if (t.type != TxnType.expense) return false;
-        return b.scope == BudgetScope.account
-            ? b.targets.contains(t.fromRef)
-            : b.targets.contains(t.toRef);
-      });
+      txnsInWindow(window).where((t) => _budgetClaims(b, t));
+
+  /// Whether [b]'s scope claims [t] — the one predicate every spend fold and
+  /// [budgetsCounting] share, so a budget's figures and the "counted in" card can
+  /// never disagree (spec §6). Scope only; the window/active tests live at the
+  /// call sites. An expense tagged with two of a tag budget's tags matches once
+  /// (`any`), never twice (spec §1d).
+  bool _budgetClaims(Budget b, Txn t) {
+    if (t.type != TxnType.expense) return false;
+    switch (b.scope) {
+      case BudgetScope.account:
+        return b.targets.contains(t.fromRef);
+      case BudgetScope.tag:
+        return t.tagIds.any(b.targets.contains);
+      case BudgetScope.categories:
+        return b.targets.contains(t.toRef);
+    }
+  }
 
   /// Whether [b]'s spend figure is silenced (021d §1d): its currency has no rate
   /// **and** it has at least one foreign row that therefore cannot be converted.
@@ -2337,24 +2421,70 @@ class AppStore extends ChangeNotifier {
       .where((t) => t.fromRef == categoryId || t.toRef == categoryId)
       .length;
 
-  /// Sum of every active monthly category budget's effective limit (rollover
-  /// included). No month argument because a limit is the same every month — only
-  /// spend varies. Planner's headline divides against this.
+  /// Whether [b] is summed into the month hero (spec §4c): a monthly, repeating
+  /// **category** budget, still running, measured in the reporting currency. A
+  /// weekly limit is not prorated into a month and a foreign-currency limit is
+  /// not converted into it — either would be inventing money — so both sit
+  /// outside the total and are counted by [budgetsOffMonthHero] instead.
+  bool _countsInMonthHero(Budget b) =>
+      _isMonthlyCategoryBudget(b) &&
+      _isRunning(b) &&
+      budgetCurrencyOf(b) == baseCurrency;
+
+  /// Sum of every month-hero budget's effective limit (rollover included). No
+  /// month argument because a limit is the same every month — only spend varies.
+  /// Planner's headline divides against this.
   double get totalBudget => _budgets
-      .where((b) => _isMonthlyCategoryBudget(b) && !b.isArchived && !b.isFinished)
+      .where(_countsInMonthHero)
       .fold(0.0, (sum, b) => sum + budgetEffectiveLimit(b, _period));
+
+  /// Active budgets the month hero does **not** sum — non-monthly, one-off, or
+  /// (021d) foreign-currency (spec §4c). The hero's caption counts these as
+  /// "N more run on their own clock"; a finished one-off still counts (it stays
+  /// on the tab, dimmed). Archived budgets are excluded — they have left the tab.
+  int get budgetsOffMonthHero =>
+      _budgets.where((b) => !b.isArchived && !_countsInMonthHero(b)).length;
+
+  /// Every active budget, grouped for the Budgets tab's three sections (spec §5a),
+  /// each already ordered over-limit-first within its section. A finished one-off
+  /// stays in its section, dimmed (spec §5c); an archived one is gone.
+  List<Budget> activeBudgetsByScope(BudgetScope scope, DateTime month) {
+    final list = _budgets
+        .where((b) => b.scope == scope && !b.isArchived)
+        .toList();
+    bool over(Budget b) {
+      final limit = budgetEffectiveLimit(b, month);
+      return limit > 0 && budgetSpend(b, month) > limit;
+    }
+    list.sort((a, b) {
+      final byOver = (over(a) ? 0 : 1).compareTo(over(b) ? 0 : 1);
+      if (byOver != 0) return byOver;
+      // Finished one-offs settle below running budgets in the same section.
+      final byFinished =
+          (a.isFinished ? 1 : 0).compareTo(b.isFinished ? 1 : 0);
+      if (byFinished != 0) return byFinished;
+      return _budgetCreatedAt(b).compareTo(_budgetCreatedAt(a));
+    });
+    return list;
+  }
 
   /// Spent against budgeted categories in [month]. Planner passes its own month
   /// here — it no longer reads the global [period].
   double budgetedSpend(DateTime month) => budgetedCategories
       .fold(0.0, (sum, c) => sum + spentInCategory(c.id, month));
 
+  /// Whether [categoryId] has no active category budget of **any** period — the
+  /// test "unbudgeted" now asks (spec §4a). A category with a weekly limit is
+  /// budgeted, so it is not unbudgeted, even though the month hero does not sum
+  /// its weekly budget.
+  bool _categoryUnbudgeted(String categoryId) =>
+      budgetsForCategory(categoryId).isEmpty;
+
   /// Spent in [month] on expense categories that carry **no** budget — the
   /// spend the old "left to spend" figure ignored (spec 5.1: Eating out et al.).
   double unbudgetedSpend(DateTime month) => categories
       .where((c) =>
-          c.type == CategoryType.expense &&
-          monthlyBudgetForCategory(c.id) == null)
+          c.type == CategoryType.expense && _categoryUnbudgeted(c.id))
       .fold(0.0, (sum, c) => sum + spentInCategory(c.id, month));
 
   /// The headline figure: budget minus *budgeted* spend. Unbudgeted spend sits
@@ -2372,7 +2502,7 @@ class AppStore extends ChangeNotifier {
     final rows = categories
         .where((c) =>
             c.type == CategoryType.expense &&
-            monthlyBudgetForCategory(c.id) == null &&
+            _categoryUnbudgeted(c.id) &&
             spentInCategory(c.id, month) > 0)
         .toList();
     rows.sort((a, b) =>
@@ -2578,8 +2708,7 @@ class AppStore extends ChangeNotifier {
   /// twin of [unbudgetedSpend], for the see-all screen's `Bütçesiz…` strip.
   double unbudgetedSpendWindow(DateRange window) => categories
       .where((c) =>
-          c.type == CategoryType.expense &&
-          monthlyBudgetForCategory(c.id) == null)
+          c.type == CategoryType.expense && _categoryUnbudgeted(c.id))
       .fold(0.0, (sum, c) => sum + spentInCategoryWindow(c.id, window));
 
   /// Every rebalance in [window], newest first — the rows of the revaluation
@@ -3706,6 +3835,117 @@ class AppStore extends ChangeNotifier {
     );
   }
 
+  /// Create a budget of any scope and period (budgets-as-object §A / spec 022).
+  /// [rollover] is forced off on a non-repeating ('once') budget — there is no
+  /// next period to carry into (spec §2b). Seeds one `created` history entry,
+  /// printed in the budget's own currency. The full-scope path the reworked
+  /// New-budget form calls; [updateBudget]/[_newMonthlyCategoryBudget] stay the
+  /// monthly-single-category path Task 005 and the migration use.
+  Budget addBudget({
+    required BudgetScope scope,
+    required Set<String> targets,
+    required String name,
+    required double limit,
+    required BudgetPeriod period,
+    required DateTime anchor,
+    required bool repeats,
+    String? currency,
+    int? lengthDays,
+    bool rollover = false,
+    double warnThreshold = 0.8,
+    DateTime? endedAt,
+  }) {
+    final cur = (currency == null || currency.isEmpty) ? null : currency;
+    final rolls = repeats && rollover;
+    final b = Budget(
+      id: _nextId('b'),
+      name: name,
+      scope: scope,
+      targets: targets,
+      limit: limit,
+      currency: cur,
+      period: period,
+      lengthDays: lengthDays,
+      anchor: anchor,
+      repeats: repeats,
+      rollover: rolls,
+      warnThreshold: warnThreshold,
+      endedAt: endedAt,
+      history: [
+        BudgetEdit(
+          at: today,
+          field: 'created',
+          from: rolls ? 'on' : 'off',
+          to: money(limit, currency: cur),
+        ),
+      ],
+    );
+    _budgets.add(b);
+    notifyListeners();
+    return b;
+  }
+
+  /// Edit the amount-side fields of any budget in place (spec 022 §3). Scope,
+  /// targets and period are fixed after creation — changing them would detach the
+  /// budget from its spend history — so they are not editable here. Logs the same
+  /// `limit`/`rollover`/`warn` rows [updateBudget] does, in the budget's own
+  /// currency, only for fields that actually moved.
+  void updateBudgetGeneral(
+    Budget b, {
+    String? name,
+    double? limit,
+    bool? rollover,
+    double? warnThreshold,
+  }) {
+    final bc = b.currency.isEmpty ? null : b.currency;
+    if (limit != null && limit != b.limit) {
+      b.history.add(BudgetEdit(
+        at: today,
+        field: 'limit',
+        from: money(b.limit, currency: bc),
+        to: money(limit, currency: bc),
+        amber: limit > b.limit,
+      ));
+    }
+    // Rollover is meaningless on a non-repeating budget (spec §2b); ignore it.
+    if (rollover != null && b.repeats && rollover != b.rollover) {
+      b.history.add(BudgetEdit(
+        at: today,
+        field: 'rollover',
+        from: b.rollover ? 'on' : 'off',
+        to: rollover ? 'on' : 'off',
+      ));
+    }
+    if (warnThreshold != null && warnThreshold != b.warnThreshold) {
+      b.history.add(BudgetEdit(
+        at: today,
+        field: 'warn',
+        from: percent(b.warnThreshold, decimals: 0),
+        to: percent(warnThreshold, decimals: 0),
+      ));
+    }
+    b
+      ..name = (name == null || name.isEmpty) ? b.name : name
+      ..limit = limit ?? b.limit
+      ..rollover = b.repeats ? (rollover ?? b.rollover) : false
+      ..warnThreshold = warnThreshold ?? b.warnThreshold;
+    notifyListeners();
+  }
+
+  /// Archive any budget (spec §5c/§C.5) — it leaves the Budgets tab. Used to
+  /// remove a finished one-off the reader is done with, from the detail menu.
+  void archiveBudget(Budget b) {
+    if (b.isArchived) return;
+    b.history.add(BudgetEdit(
+      at: today,
+      field: 'removed',
+      from: '',
+      to: money(b.limit, currency: b.currency.isEmpty ? null : b.currency),
+    ));
+    b.archivedAt = today;
+    notifyListeners();
+  }
+
   /// Every budget-field change is logged to [Category.budgetHistory] — but only
   /// a *real* change: this method writes `x ?? category.x`, so a save that
   /// touched nothing must append nothing. Compare before assigning. A null→value
@@ -3874,7 +4114,7 @@ class AppStore extends ChangeNotifier {
   /// caller can never delete history by passing the wrong id.
   bool deleteCategory(Category category) {
     if (txnCountForCategory(category.id) > 0) return false;
-    if (monthlyBudgetForCategory(category.id) != null) return false;
+    if (budgetsForCategory(category.id).isNotEmpty) return false;
     _categories.removeWhere((c) => c.id == category.id);
     notifyListeners();
     return true;

@@ -12,6 +12,8 @@ import '../../shared/widgets/txn_row.dart' show confirmDeleteTxn;
 import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/app_typography.dart';
+import '../planner/budget_detail_screen.dart';
+import '../planner/edit_budget_screen.dart';
 import '../quick_add/quick_add_sheet.dart';
 import 'same_transactions.dart';
 import 'widgets/same_range_sheet.dart';
@@ -89,6 +91,7 @@ class _SameTransactionsScreenState extends State<SameTransactionsScreen> {
                   // then the list (spec §2/§3).
                   _header(info, origin),
                   ?_detailCard(context, store, origin),
+                  ?_countedInCard(context, store, origin),
                   _rangeHeader(context, store, key),
                   _summaryCard(stats),
                   if (all.isEmpty)
@@ -363,6 +366,83 @@ class _SameTransactionsScreenState extends State<SameTransactionsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: rows,
+      ),
+    );
+  }
+
+  /// COUNTED IN — every active budget whose window contains this expense and
+  /// whose scope claims it (spec §6). The same predicate the spend folds use, so
+  /// the chips can never disagree with the figures on the Budgets tab. Chips in
+  /// the app's pill shape, wrapping to as many lines as needed; each opens that
+  /// budget. Expenses only, and only when at least one budget counts them.
+  Widget? _countedInCard(BuildContext context, AppStore store, Txn origin) {
+    final budgets = store.budgetsCounting(origin);
+    if (budgets.isEmpty) return null;
+    final l = AppLocalizations.of(context);
+    return Container(
+      margin: const EdgeInsets.fromLTRB(Insets.md, 0, Insets.md, Insets.sm),
+      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(13),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(l.txnCountedIn, style: AppText.label),
+          const SizedBox(height: Insets.sm),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final b in budgets) _budgetChip(context, store, l, b, origin),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _budgetChip(
+      BuildContext context, AppStore store, AppLocalizations l, Budget b, Txn origin) {
+    String? suffix;
+    if (b.repeats && b.period == BudgetPeriod.days) {
+      suffix = b.lengthDays == 7
+          ? l.bgSuffixWeekly
+          : l.bgSuffixEveryDays(b.lengthDays ?? 30);
+    }
+    final label = suffix == null ? b.name : '${b.name} · $suffix';
+    return InkWell(
+      onTap: () => _openBudget(context, b, origin.date),
+      borderRadius: BorderRadius.circular(Radii.pill),
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.chipBg,
+          borderRadius: BorderRadius.circular(Radii.pill),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 7),
+        child: Text(
+          label,
+          style: const TextStyle(color: AppColors.chipText, fontSize: 13.5),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ),
+    );
+  }
+
+  void _openBudget(BuildContext context, Budget b, DateTime date) {
+    final monthlyCategory = b.scope == BudgetScope.categories &&
+        b.period == BudgetPeriod.month &&
+        b.repeats &&
+        b.targets.length == 1;
+    Navigator.of(context, rootNavigator: true).push(
+      MaterialPageRoute(
+        builder: (_) => monthlyCategory
+            ? BudgetDetailScreen(
+                categoryId: b.targets.first,
+                month: DateTime(date.year, date.month))
+            : EditBudgetScreen(budgetId: b.id),
       ),
     );
   }

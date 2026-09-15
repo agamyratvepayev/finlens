@@ -1168,6 +1168,384 @@ class _BudgetCategoryPickerBody extends StatelessWidget {
   }
 }
 
+/// What a budget covers, chosen in one tabbed, multi-select sheet (spec 022 §1).
+/// Three tabs — Categories, Accounts, Tags — each listing what the store has.
+/// Selection is multi within a tab and **exclusive across tabs** (a budget has
+/// one scope), so switching tabs with a selection made confirms before clearing.
+/// Overlap with another budget is announced, never blocked (spec §1c). Returns
+/// the chosen scope + target ids, or null if dismissed.
+Future<({BudgetScope scope, Set<String> targets})?> pickBudgetTargets(
+  BuildContext context, {
+  BudgetScope initialScope = BudgetScope.categories,
+  Set<String> initialTargets = const {},
+}) {
+  return showModalBottomSheet<({BudgetScope scope, Set<String> targets})>(
+    context: context,
+    backgroundColor: Colors.transparent,
+    isScrollControlled: true,
+    builder: (_) => _BudgetTargetsSheet(
+      initialScope: initialScope,
+      initialTargets: initialTargets,
+    ),
+  );
+}
+
+class _BudgetTargetsSheet extends StatefulWidget {
+  const _BudgetTargetsSheet(
+      {required this.initialScope, required this.initialTargets});
+
+  final BudgetScope initialScope;
+  final Set<String> initialTargets;
+
+  @override
+  State<_BudgetTargetsSheet> createState() => _BudgetTargetsSheetState();
+}
+
+class _BudgetTargetsSheetState extends State<_BudgetTargetsSheet> {
+  late BudgetScope _scope = widget.initialScope;
+  late final Set<String> _selected = {...widget.initialTargets};
+
+  static const _scopes = [
+    BudgetScope.categories,
+    BudgetScope.account,
+    BudgetScope.tag,
+  ];
+
+  String _tabLabel(AppLocalizations l, BudgetScope s) => switch (s) {
+        BudgetScope.categories => l.bgTargets,
+        BudgetScope.account => l.bgAccountsScope,
+        BudgetScope.tag => l.bgTagsScope,
+      };
+
+  Future<void> _switchTo(BudgetScope s) async {
+    if (s == _scope) return;
+    if (_selected.isNotEmpty) {
+      final l = AppLocalizations.of(context);
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          backgroundColor: AppColors.surfaceAlt,
+          title: Text(l.bgScopeSwitchTitle, style: AppText.rowTitle),
+          content: Text(l.bgScopeSwitchMsg,
+              style: AppText.body.copyWith(fontSize: 13.5)),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              style: TextButton.styleFrom(
+                  foregroundColor: AppColors.textSecondary),
+              child: Text(l.actionCancel),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              style:
+                  TextButton.styleFrom(foregroundColor: AppColors.accentLight),
+              child: Text(l.bgScopeSwitchConfirm),
+            ),
+          ],
+        ),
+      );
+      if (ok != true) return;
+      _selected.clear();
+    }
+    if (mounted) setState(() => _scope = s);
+  }
+
+  void _toggle(String id) => setState(() {
+        if (!_selected.remove(id)) _selected.add(id);
+      });
+
+  /// The first already-budgeted selection, for the overlap note (spec §1c). A
+  /// target already claimed by any *other* active budget — categories check every
+  /// active category budget, accounts every active account budget, and so on.
+  String? _overlapName(AppStore store) {
+    for (final id in _selected) {
+      final claimed = store.budgets.any((b) =>
+          !b.isArchived &&
+          !b.isFinished &&
+          b.scope == _scope &&
+          b.targets.contains(id));
+      if (claimed) return _targetName(store, id);
+    }
+    return null;
+  }
+
+  String _targetName(AppStore store, String id) => switch (_scope) {
+        BudgetScope.categories => store.categoryById(id)?.name ?? id,
+        BudgetScope.account => store.accountById(id)?.name ?? id,
+        BudgetScope.tag => store.tagById(id)?.name ?? id,
+      };
+
+  @override
+  Widget build(BuildContext context) {
+    final store = StoreScope.of(context);
+    final l = AppLocalizations.of(context);
+    final overlap = _overlapName(store);
+
+    return SafeArea(
+      top: false,
+      child: Container(
+        decoration: const BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(Radii.sheet)),
+        ),
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.82,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: Insets.sm),
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceHigh,
+                  borderRadius: BorderRadius.circular(Radii.pill),
+                ),
+              ),
+            ),
+            // Title + Done.
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                  Insets.gutter, Insets.sm, Insets.sm, Insets.sm),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(l.bgTargets,
+                        style: AppText.title.copyWith(fontSize: 19)),
+                  ),
+                  // + New category — reuses the create sheet, but adds the result
+                  // to the multi-selection rather than popping the picker (spec
+                  // §1b). Only on the Categories tab.
+                  if (_scope == BudgetScope.categories)
+                    Semantics(
+                      button: true,
+                      label: l.qaNewCategory,
+                      excludeSemantics: true,
+                      child: InkWell(
+                        onTap: () async {
+                          final created = await showNewCategorySheet(context,
+                              type: CategoryType.expense);
+                          if (created != null && mounted) {
+                            setState(() => _selected.add(created.id));
+                          }
+                        },
+                        borderRadius: BorderRadius.circular(8),
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(minHeight: 44),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 4, vertical: 10),
+                            child: Text('+ ${l.qaNewShort}',
+                                style: const TextStyle(
+                                  fontSize: 14.5,
+                                  fontWeight: FontWeight.w500,
+                                  color: AppColors.accentLight,
+                                )),
+                          ),
+                        ),
+                      ),
+                    ),
+                  TextButton(
+                    onPressed: _selected.isEmpty
+                        ? null
+                        : () => Navigator.of(context)
+                            .pop((scope: _scope, targets: {..._selected})),
+                    style: TextButton.styleFrom(
+                        foregroundColor: AppColors.accentLight),
+                    child: Text(l.actionDone),
+                  ),
+                ],
+              ),
+            ),
+            // Three tabs.
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: Insets.gutter),
+              child: Row(
+                children: [
+                  for (final s in _scopes)
+                    Expanded(
+                      child: _ScopeTab(
+                        label: _tabLabel(l, s),
+                        selected: s == _scope,
+                        onTap: () => _switchTo(s),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: Insets.sm),
+            Flexible(child: _tabBody(store, l)),
+            if (overlap != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                    Insets.gutter, Insets.sm, Insets.gutter, Insets.sm),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(Icons.info_outline_rounded,
+                        size: 15, color: AppColors.warning),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        l.bgOverlapNote(overlap),
+                        style: AppText.caption.copyWith(
+                            color: AppColors.warning, fontSize: 12),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            const SizedBox(height: Insets.sm),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _tabBody(AppStore store, AppLocalizations l) {
+    switch (_scope) {
+      case BudgetScope.categories:
+        final cats = store.categories
+            .where((c) => c.type == CategoryType.expense && !c.archived)
+            .toList();
+        return _rows([
+          for (final c in cats)
+            (id: c.id, icon: c.icon, color: c.color, name: c.name, sub: null),
+        ]);
+      case BudgetScope.account:
+        final accounts = store.visibleAccounts;
+        return _rows([
+          for (final a in accounts)
+            (
+              id: a.id,
+              icon: a.displayIcon,
+              color: a.color,
+              name: a.name,
+              sub: null
+            ),
+        ]);
+      case BudgetScope.tag:
+        final counts = store.tagUsageCounts();
+        final tags = store.activeTags;
+        return _rows([
+          for (final t in tags)
+            (
+              id: t.id,
+              icon: Icons.sell_rounded,
+              color: AppColors.tagDot,
+              name: '#${t.name}',
+              sub: '${counts[t.id] ?? 0}'
+            ),
+        ]);
+    }
+  }
+
+  Widget _rows(
+      List<({String id, IconData icon, Color color, String name, String? sub})>
+          items) {
+    if (items.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(Insets.xl),
+          child: Text(AppLocalizations.of(context).eaNotSet,
+              style: AppText.caption.copyWith(color: AppColors.textSecondary)),
+        ),
+      );
+    }
+    return ListView.builder(
+      shrinkWrap: true,
+      padding: const EdgeInsets.symmetric(horizontal: Insets.gutter),
+      itemCount: items.length,
+      itemBuilder: (context, i) {
+        final it = items[i];
+        final on = _selected.contains(it.id);
+        return Semantics(
+          button: true,
+          selected: on,
+          child: InkWell(
+            onTap: () => _toggle(it.id),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 48),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: Insets.xs),
+                child: Row(
+                  children: [
+                    IconTile(it.icon, color: it.color, size: 30),
+                    const SizedBox(width: Insets.md),
+                    Expanded(
+                      child: Text(it.name,
+                          style: AppText.rowTitle
+                              .copyWith(fontWeight: FontWeight.w500),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis),
+                    ),
+                    if (it.sub != null) ...[
+                      Text(it.sub!,
+                          style: AppText.caption
+                              .copyWith(color: AppColors.textTertiary)),
+                      const SizedBox(width: Insets.sm),
+                    ],
+                    Icon(
+                      on
+                          ? Icons.check_circle_rounded
+                          : Icons.radio_button_unchecked_rounded,
+                      size: 20,
+                      color: on ? AppColors.accentLight : AppColors.formChevron,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _ScopeTab extends StatelessWidget {
+  const _ScopeTab(
+      {required this.label, required this.selected, required this.onTap});
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(Radii.sm),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: Insets.sm),
+        child: Column(
+          children: [
+            Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: AppText.body.copyWith(
+                fontSize: 14,
+                fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+                color:
+                    selected ? AppColors.textPrimary : AppColors.textSecondary,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Container(
+              height: 2,
+              color: selected ? AppColors.accentLight : Colors.transparent,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 Widget _pickRow(
   BuildContext context, {
   required IconData icon,

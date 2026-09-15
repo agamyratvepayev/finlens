@@ -351,7 +351,9 @@ class CategoryDetailScreen extends StatelessWidget {
 
   Widget _budgetBridge(BuildContext context, AppStore store, AppLocalizations l,
       Category category, double spent) {
-    final limit = store.effectiveLimitOf(category);
+    // The narrowest lens on this category (spec §4b), any period.
+    final pb = store.primaryBudgetForCategory(category.id);
+    final limit = pb == null ? null : store.budgetEffectiveLimit(pb, store.today);
     void openEditor() => Navigator.of(context, rootNavigator: true).push(
           MaterialPageRoute(
             builder: (_) => EditBudgetScreen(categoryId: category.id),
@@ -388,7 +390,7 @@ class CategoryDetailScreen extends StatelessWidget {
     final remainder = limit - spent;
     final color = over
         ? AppColors.negative
-        : (ratio >= store.warnThresholdOf(category)
+        : (ratio >= (pb?.warnThreshold ?? 0.8)
             ? AppColors.warning
             : AppColors.positive);
 

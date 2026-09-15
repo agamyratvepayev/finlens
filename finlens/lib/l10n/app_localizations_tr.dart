@@ -1864,6 +1864,144 @@ class AppLocalizationsTr extends AppLocalizations {
   String get bdRemoveBudget => 'Bütçeyi kaldır';
 
   @override
+  String get bgLimit => 'Limit';
+
+  @override
+  String get bgScopeCategory => 'Kategori';
+
+  @override
+  String get bgTargets => 'Kategoriler';
+
+  @override
+  String get bgAccountScope => 'Hesap';
+
+  @override
+  String get bgAccountsScope => 'Hesaplar';
+
+  @override
+  String get bgTagScope => 'Etiket';
+
+  @override
+  String get bgTagsScope => 'Etiketler';
+
+  @override
+  String get bgEvery => 'Dönem';
+
+  @override
+  String get bgDates => 'Tarihler';
+
+  @override
+  String get bgPeriodMonth => 'Her ay';
+
+  @override
+  String get bgPeriodWeek => 'Her hafta';
+
+  @override
+  String get bgPeriodDays => 'Her … günde';
+
+  @override
+  String get bgPeriodOnce => 'Bir kez';
+
+  @override
+  String get bgPeriodOnceHint => 'Bir gezi, bir proje — biter ve sıfırlanmaz';
+
+  @override
+  String get bgEvMonth => 'ay';
+
+  @override
+  String bgEvWeekFrom(Object weekday) {
+    return '7 gün · $weekday gününden';
+  }
+
+  @override
+  String bgEvDays(int count) {
+    return '$count gün';
+  }
+
+  @override
+  String get bgEvOnce => 'bir kez';
+
+  @override
+  String get bgSuffixWeekly => 'haftalık';
+
+  @override
+  String bgSuffixEveryDays(int count) {
+    return 'her $count günde';
+  }
+
+  @override
+  String bgOverlapNote(Object name) {
+    return '$name için zaten bir bütçe var. İkisi de bunu sayacak.';
+  }
+
+  @override
+  String get bgScopeSwitchTitle => 'Bu bütçenin kapsamı değişsin mi?';
+
+  @override
+  String get bgScopeSwitchMsg =>
+      'Bir bütçenin tek bir kapsamı olur. Sekmeyi değiştirmek mevcut seçimini temizler.';
+
+  @override
+  String get bgScopeSwitchConfirm => 'Temizle ve değiştir';
+
+  @override
+  String get bgDaysHint => '2–365';
+
+  @override
+  String plBudgetsOther(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count tanesi kendi takviminde çalışıyor',
+      one: '$count tanesi kendi takviminde çalışıyor',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get plSectionByCategory => 'KATEGORİYE GÖRE';
+
+  @override
+  String get plSectionByAccount => 'HESABA GÖRE';
+
+  @override
+  String get plSectionByOccasion => 'DURUMA GÖRE';
+
+  @override
+  String bdResetsOn(Object weekday) {
+    return '$weekday sıfırlanır';
+  }
+
+  @override
+  String bdEndsOn(Object date) {
+    return '$date biter';
+  }
+
+  @override
+  String bdDaysToGo(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count gün kaldı',
+      one: '$count gün kaldı',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String bdUnder(Object amount) {
+    return '$amount altında';
+  }
+
+  @override
+  String bdOver(Object amount) {
+    return '$amount üstünde';
+  }
+
+  @override
+  String get txnCountedIn => 'SAYILDIĞI YER';
+
+  @override
   String ebAverage(Object average, Object suggestion) {
     return 'Ortalama $average. $suggestion deneyin mi?';
   }

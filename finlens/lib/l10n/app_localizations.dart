@@ -2866,6 +2866,216 @@ abstract class AppLocalizations {
   /// **'Remove budget'**
   String get bdRemoveBudget;
 
+  /// No description provided for @bgLimit.
+  ///
+  /// In en, this message translates to:
+  /// **'Limit'**
+  String get bgLimit;
+
+  /// No description provided for @bgScopeCategory.
+  ///
+  /// In en, this message translates to:
+  /// **'Category'**
+  String get bgScopeCategory;
+
+  /// No description provided for @bgTargets.
+  ///
+  /// In en, this message translates to:
+  /// **'Categories'**
+  String get bgTargets;
+
+  /// No description provided for @bgAccountScope.
+  ///
+  /// In en, this message translates to:
+  /// **'Account'**
+  String get bgAccountScope;
+
+  /// No description provided for @bgAccountsScope.
+  ///
+  /// In en, this message translates to:
+  /// **'Accounts'**
+  String get bgAccountsScope;
+
+  /// No description provided for @bgTagScope.
+  ///
+  /// In en, this message translates to:
+  /// **'Tag'**
+  String get bgTagScope;
+
+  /// No description provided for @bgTagsScope.
+  ///
+  /// In en, this message translates to:
+  /// **'Tags'**
+  String get bgTagsScope;
+
+  /// No description provided for @bgEvery.
+  ///
+  /// In en, this message translates to:
+  /// **'Every'**
+  String get bgEvery;
+
+  /// No description provided for @bgDates.
+  ///
+  /// In en, this message translates to:
+  /// **'Dates'**
+  String get bgDates;
+
+  /// No description provided for @bgPeriodMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Every month'**
+  String get bgPeriodMonth;
+
+  /// No description provided for @bgPeriodWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'Every week'**
+  String get bgPeriodWeek;
+
+  /// No description provided for @bgPeriodDays.
+  ///
+  /// In en, this message translates to:
+  /// **'Every … days'**
+  String get bgPeriodDays;
+
+  /// No description provided for @bgPeriodOnce.
+  ///
+  /// In en, this message translates to:
+  /// **'Once'**
+  String get bgPeriodOnce;
+
+  /// No description provided for @bgPeriodOnceHint.
+  ///
+  /// In en, this message translates to:
+  /// **'A trip, a project — it ends and does not reset'**
+  String get bgPeriodOnceHint;
+
+  /// No description provided for @bgEvMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'month'**
+  String get bgEvMonth;
+
+  /// No description provided for @bgEvWeekFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'7 days · from {weekday}'**
+  String bgEvWeekFrom(Object weekday);
+
+  /// No description provided for @bgEvDays.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} days'**
+  String bgEvDays(int count);
+
+  /// No description provided for @bgEvOnce.
+  ///
+  /// In en, this message translates to:
+  /// **'once'**
+  String get bgEvOnce;
+
+  /// No description provided for @bgSuffixWeekly.
+  ///
+  /// In en, this message translates to:
+  /// **'weekly'**
+  String get bgSuffixWeekly;
+
+  /// No description provided for @bgSuffixEveryDays.
+  ///
+  /// In en, this message translates to:
+  /// **'every {count} days'**
+  String bgSuffixEveryDays(int count);
+
+  /// No description provided for @bgOverlapNote.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} already has its own budget. Both will count it.'**
+  String bgOverlapNote(Object name);
+
+  /// No description provided for @bgScopeSwitchTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Change what this budget covers?'**
+  String get bgScopeSwitchTitle;
+
+  /// No description provided for @bgScopeSwitchMsg.
+  ///
+  /// In en, this message translates to:
+  /// **'A budget has one scope. Switching tabs clears your current selection.'**
+  String get bgScopeSwitchMsg;
+
+  /// No description provided for @bgScopeSwitchConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear and switch'**
+  String get bgScopeSwitchConfirm;
+
+  /// No description provided for @bgDaysHint.
+  ///
+  /// In en, this message translates to:
+  /// **'2–365'**
+  String get bgDaysHint;
+
+  /// No description provided for @plBudgetsOther.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{{count} more runs on its own clock} other{{count} more run on their own clock}}'**
+  String plBudgetsOther(int count);
+
+  /// No description provided for @plSectionByCategory.
+  ///
+  /// In en, this message translates to:
+  /// **'BY CATEGORY'**
+  String get plSectionByCategory;
+
+  /// No description provided for @plSectionByAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'BY ACCOUNT'**
+  String get plSectionByAccount;
+
+  /// No description provided for @plSectionByOccasion.
+  ///
+  /// In en, this message translates to:
+  /// **'BY OCCASION'**
+  String get plSectionByOccasion;
+
+  /// No description provided for @bdResetsOn.
+  ///
+  /// In en, this message translates to:
+  /// **'resets {weekday}'**
+  String bdResetsOn(Object weekday);
+
+  /// No description provided for @bdEndsOn.
+  ///
+  /// In en, this message translates to:
+  /// **'ends {date}'**
+  String bdEndsOn(Object date);
+
+  /// No description provided for @bdDaysToGo.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{{count} day to go} other{{count} days to go}}'**
+  String bdDaysToGo(int count);
+
+  /// No description provided for @bdUnder.
+  ///
+  /// In en, this message translates to:
+  /// **'{amount} under'**
+  String bdUnder(Object amount);
+
+  /// No description provided for @bdOver.
+  ///
+  /// In en, this message translates to:
+  /// **'{amount} over'**
+  String bdOver(Object amount);
+
+  /// No description provided for @txnCountedIn.
+  ///
+  /// In en, this message translates to:
+  /// **'COUNTED IN'**
+  String get txnCountedIn;
+
   /// No description provided for @ebAverage.
   ///
   /// In en, this message translates to:
