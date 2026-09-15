@@ -69,6 +69,16 @@ bool splitBalanced(double total, List<SplitLine> lines) {
   return splitRemaining(total, lines).abs() < kMoneyEpsilon;
 }
 
+/// Every category held by a line other than [exceptIndex]. A split is a set:
+/// two lines on one category are one line with a wrong number (spec §1c). A
+/// line with no category contributes nothing. Top-level and pure so it can be
+/// unit-tested without a sheet.
+Set<String> splitUsedCategoryIds(List<SplitLine> lines, {int? exceptIndex}) => {
+      for (var i = 0; i < lines.length; i++)
+        if (i != exceptIndex && lines[i].categoryId != null)
+          lines[i].categoryId!,
+    };
+
 /// Opens the split editor. Returns the applied lines (Done) or null (Cancel —
 /// no change). Done is only reachable when the split is balanced, so a non-null
 /// result always holds ≥2 valid lines (spec §9).
@@ -143,6 +153,31 @@ class _SplitSheetState extends State<_SplitSheet> {
   /// Keys per line, so the active line can be scrolled into view.
   final Map<int, GlobalKey> _lineKeys = {};
   GlobalKey _keyFor(int i) => _lineKeys.putIfAbsent(i, () => GlobalKey());
+
+  @override
+  void initState() {
+    super.initState();
+    // A fresh split is one line with no number on it yet: open on it so the
+    // first digit lands where the user came to type, rather than making them
+    // tap the row first (spec §2). A re-opened split arrives as its ≥2
+    // already-filled lines — there the first thing to do is read them, so it
+    // lands in list mode.
+    //
+    // Spec §2 keys this on `widget.initial.isEmpty`, but the production caller
+    // seeds the transaction's own category into a *non-empty* one-line, blank-
+    // amount initial (`[SplitLine(categoryId: currentCategory)]`), never an
+    // empty list — so emptiness never separates fresh from re-opened here. The
+    // shape does, and this predicate is a superset of §2's imagined case:
+    // `widget.initial.isEmpty` also yields exactly one blank line.
+    if (_lines.length == 1 && _lines.first.isBlank) _active = 0;
+  }
+
+  /// This split's used categories, delegating to the pure [splitUsedCategoryIds]
+  /// (spec §1c). Pass no [exceptIndex] when adding a new line; pass the edited
+  /// line's index when re-picking, so its own category stays visible *and*
+  /// selectable.
+  Set<String> _usedCategoryIds({int? exceptIndex}) =>
+      splitUsedCategoryIds(_lines, exceptIndex: exceptIndex);
 
   /// `AmountEntry.fromDouble` returns '' for zero, which would render an
   /// assigned zero as unassigned. An assigned zero is '0'.
@@ -263,9 +298,17 @@ class _SplitSheetState extends State<_SplitSheet> {
                 ),
               ),
               _statusRow(remaining, masked),
-              if (_entryMode)
-                NumericKeypad(onKey: _onKey, onBackspace: _onBackspace)
-              else ...[
+              // Done is the sheet's commit: it does not leave the screen just
+              // because the keypad arrived (spec §3). It sits above the keypad,
+              // against the status row it depends on. Split evenly stays list-
+              // mode only — it acts on every line, so it cannot be pressed while
+              // one is being typed into, and there is no room for it over the
+              // keypad (spec §6).
+              if (_entryMode) ...[
+                _doneButton(),
+                const SizedBox(height: 8),
+                NumericKeypad(onKey: _onKey, onBackspace: _onBackspace),
+              ] else ...[
                 _splitEvenlyButton(),
                 _doneButton(),
                 const SizedBox(height: 10),
@@ -449,8 +492,13 @@ class _SplitSheetState extends State<_SplitSheet> {
               child: GestureDetector(
                 behavior: HitTestBehavior.opaque,
                 onTap: () async {
-                  final c =
-                      await pickCategory(context, type: widget.categoryType);
+                  final c = await pickCategory(context,
+                      type: widget.categoryType,
+                      // This line's own category shows as selected and stays
+                      // selectable; the *other* lines' categories are dimmed out
+                      // (spec §1c), so re-picking the same one is a no-op.
+                      selectedId: line.categoryId,
+                      usedIds: _usedCategoryIds(exceptIndex: index));
                   if (c != null && mounted) {
                     setState(() => line.categoryId = c.id);
                   }
@@ -545,7 +593,10 @@ class _SplitSheetState extends State<_SplitSheet> {
   /// A line you just created has no amount and you are about to type one, so
   /// picking the category leaves it active with the keypad open (spec §2).
   Future<void> _addLine() async {
-    final c = await pickCategory(context, type: widget.categoryType);
+    // The categories the existing lines already hold are dimmed and unselectable
+    // (spec §1c): a new line can only be a category not yet in the split.
+    final c = await pickCategory(context,
+        type: widget.categoryType, usedIds: _usedCategoryIds());
     if (c == null || !mounted) return;
     setState(() {
       _lines.add(SplitLine(categoryId: c.id));

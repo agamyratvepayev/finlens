@@ -614,6 +614,11 @@ Future<Category?> pickCategory(
   required CategoryType type,
   String? title,
   String? selectedId,
+  /// Categories already taken elsewhere in the caller's set — rendered as
+  /// chosen but dimmed, and not selectable. The Split sheet passes the
+  /// categories its *other* lines hold: a split is a set, so one category
+  /// cannot appear on two lines (spec §1a). Every other caller omits it.
+  Set<String> usedIds = const {},
 }) {
   final l = AppLocalizations.of(context);
   return showAppSheet<Category>(
@@ -638,7 +643,10 @@ Future<Category?> pickCategory(
       ),
     ],
     builder: (context, controller) => _CategoryPickerBody(
-        controller: controller, type: type, selectedId: selectedId),
+        controller: controller,
+        type: type,
+        selectedId: selectedId,
+        usedIds: usedIds),
   );
 }
 
@@ -647,6 +655,7 @@ class _CategoryPickerBody extends StatefulWidget {
     required this.controller,
     required this.type,
     this.selectedId,
+    this.usedIds = const {},
   });
 
   final ScrollController controller;
@@ -654,6 +663,10 @@ class _CategoryPickerBody extends StatefulWidget {
 
   /// The transaction's current category, highlighted in the grid when supplied.
   final String? selectedId;
+
+  /// Categories taken by the caller's other lines: shown chosen-but-dimmed and
+  /// not selectable (spec §1a).
+  final Set<String> usedIds;
 
   @override
   State<_CategoryPickerBody> createState() => _CategoryPickerBodyState();
@@ -746,7 +759,9 @@ class _CategoryPickerBodyState extends State<_CategoryPickerBody> {
                 width: tile,
                 child: CategoryCell(
                   category: c,
-                  selected: c.id == widget.selectedId,
+                  selected: c.id == widget.selectedId ||
+                      widget.usedIds.contains(c.id),
+                  enabled: !widget.usedIds.contains(c.id),
                   tileSize: tile,
                   reserveTwoLines: true,
                   onTap: () => Navigator.of(context).pop(c),

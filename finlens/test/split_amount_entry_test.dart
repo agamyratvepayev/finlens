@@ -219,7 +219,8 @@ void main() {
     expect(find.text('Assign the rest'), findsNothing);
   });
 
-  testWidgets('entry mode shows the keypad and neither button', (tester) async {
+  testWidgets('entry mode shows the keypad and Done, but not Split evenly',
+      (tester) async {
     await _open(tester, total: 100, initial: [
       _line('c1', 50),
       _line('c2', 50),
@@ -229,9 +230,12 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(NumericKeypad), findsOneWidget);
+    // Re-baselined (spec §3): Done is the commit and does not leave the screen
+    // when the keypad arrives — it just goes dim while the sum is unsettled.
+    expect(find.text('Done'), findsOneWidget);
+    // Split evenly still leaves: it acts on every line, so it belongs to list
+    // mode and has no room over the keypad (spec §6).
     expect(find.text('Split evenly'), findsNothing);
-    expect(find.text('Done'), findsNothing,
-        reason: 'you cannot be finished while a number is half-typed');
   });
 
   testWidgets('switching lines keeps the keypad open', (tester) async {

@@ -306,7 +306,10 @@ void main() {
   group('removing lines (§5/§11)', () {
     testWidgets('the last remaining line cannot be removed', (tester) async {
       _portrait(tester);
-      await _openSheet(tester, total: 200, initial: [SplitLine(categoryId: 'c1')]);
+      // A *filled* single line so the sheet stays in list mode: a lone blank
+      // line is a fresh split and opens active (spec §2), and an active line
+      // hides its ✕ — so there would be no close button to inspect at all.
+      await _openSheet(tester, total: 200, initial: [_line('c1', 200)]);
       final remove = tester.widget<IconButton>(
           find.widgetWithIcon(IconButton, Icons.close_rounded));
       expect(remove.onPressed, isNull);

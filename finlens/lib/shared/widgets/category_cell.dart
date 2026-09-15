@@ -4,6 +4,10 @@ import '../../core/models/models.dart';
 import '../../l10n/app_localizations.dart';
 import '../../theme/app_colors.dart';
 
+/// How far a chosen-but-unavailable [CategoryCell] is dimmed: enough to read as
+/// "not selectable now" while keeping the `selected` fill legible (spec §1b).
+const double _kDisabledOpacity = 0.4;
+
 /// One category tile: a colour-tinted square above a two-line, centred label.
 /// Shared by the Quick Add category picker grid (54 pt, `reserveTwoLines: true`)
 /// and the More > Categories management grid (its original 46 pt, variable
@@ -21,6 +25,7 @@ class CategoryCell extends StatelessWidget {
     required this.category,
     required this.selected,
     required this.onTap,
+    this.enabled = true,
     this.tileSize = 46,
     this.reserveTwoLines = false,
   });
@@ -28,6 +33,13 @@ class CategoryCell extends StatelessWidget {
   final Category category;
   final bool selected;
   final VoidCallback onTap;
+
+  /// False renders the cell as chosen-but-unavailable: the `selected` fill at
+  /// [_kDisabledOpacity], no tap, `enabled: false` to assistive tech. The Split
+  /// sheet uses it for a category another line already holds — a dim on the
+  /// existing "chosen" fill, not a second glyph. Defaults true, so every other
+  /// grid is byte-for-byte unchanged (the `selected` grids never pass it).
+  final bool enabled;
 
   /// Fixed tile edge in pt — 46 for the More grid, 54 for the picker (spec §2).
   /// The glyph is ~half the tile; on narrower devices the *gaps* shrink, never
@@ -74,12 +86,20 @@ class CategoryCell extends StatelessWidget {
 
     return Semantics(
       button: true,
+      // Only the disabled cell announces an enabled state; an enabled cell keeps
+      // exactly the semantics it had before this field existed (spec §1b — the
+      // other grids are unchanged).
+      enabled: enabled ? null : false,
       selected: selected,
       label: category.name,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        child: Column(
+        // A used category is shown, not offered: the tap is a no-op so re-picking
+        // it can't add a duplicate line (spec §1b).
+        onTap: enabled ? onTap : null,
+        child: Opacity(
+          opacity: enabled ? 1 : _kDisabledOpacity,
+          child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
@@ -112,6 +132,7 @@ class CategoryCell extends StatelessWidget {
             else
               label,
           ],
+          ),
         ),
       ),
     );

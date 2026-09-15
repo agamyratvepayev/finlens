@@ -45,11 +45,18 @@ AppStore _store() => AppStore(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)),
           startingBalance: 500000,
         ),
       ],
+      // Eight distinct categories: a split is a set now (spec §1), so an
+      // N-line split needs N distinct categories to pick — the old three (cycled
+      // mod 3) could not build the eight-line case any more.
       categories: [
         _cat('c1', 'Grocery', const Color(0xFF34C759)),
         _cat('c2', 'Shopping', const Color(0xFF5E5CE6)),
         _cat('c3', 'Taxi', const Color(0xFFFF9F0A)),
-        _cat('c4', 'A very long category name indeed', const Color(0xFFFF375F)),
+        _cat('c4', 'Dining', const Color(0xFFFF375F)),
+        _cat('c5', 'Fuel', const Color(0xFF64D2FF)),
+        _cat('c6', 'Rent', const Color(0xFFBF5AF2)),
+        _cat('c7', 'Utilities', const Color(0xFFFFD60A)),
+        _cat('c8', 'Coffee', const Color(0xFFFF6482)),
       ],
       txns: const <Txn>[],
       goals: const <Goal>[],
@@ -99,6 +106,19 @@ Future<AppStore> _pumpForm(
   return store;
 }
 
+/// Distinct category names, in pick order. A split is a set (spec §1), so line
+/// `i` takes the `i`-th name and no name repeats.
+const _catNames = <String>[
+  'Grocery',
+  'Shopping',
+  'Taxi',
+  'Dining',
+  'Fuel',
+  'Rent',
+  'Utilities',
+  'Coffee',
+];
+
 /// Drives the real form into a split: type an amount, pick a category, open the
 /// editor and apply an even split across [n] lines.
 Future<void> _applySplit(WidgetTester tester, int n) async {
@@ -127,7 +147,8 @@ Future<void> _applySplit(WidgetTester tester, int n) async {
     await tester.tap(find.text(l.ssAddLine));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
-    await tester.tap(find.text(['Grocery', 'Shopping', 'Taxi'][i % 3]).last);
+    // A category not yet in the split — the used ones are dimmed and inert now.
+    await tester.tap(find.text(_catNames[i]).last);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
   }
