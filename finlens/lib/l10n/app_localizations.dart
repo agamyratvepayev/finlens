@@ -1978,6 +1978,66 @@ abstract class AppLocalizations {
   /// **'Adjust filter'**
   String get balAdjustFilter;
 
+  /// No description provided for @balNoDebtsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No debts'**
+  String get balNoDebtsTitle;
+
+  /// No description provided for @balNoDebtsMsg.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing to pay off right now.'**
+  String get balNoDebtsMsg;
+
+  /// No description provided for @balNoDebtsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a card or loan with {plus} above'**
+  String balNoDebtsHint(String plus);
+
+  /// No description provided for @balNoDebtsHintA11y.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a card or loan with the add button above'**
+  String get balNoDebtsHintA11y;
+
+  /// No description provided for @balNoAssetsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing here yet'**
+  String get balNoAssetsTitle;
+
+  /// No description provided for @balNoAssetsMsg.
+  ///
+  /// In en, this message translates to:
+  /// **'Cash, bank, savings and valuables live in this section.'**
+  String get balNoAssetsMsg;
+
+  /// No description provided for @balNoAssetsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Add an account with {plus} above'**
+  String balNoAssetsHint(String plus);
+
+  /// No description provided for @balNoAssetsHintA11y.
+  ///
+  /// In en, this message translates to:
+  /// **'Add an account with the add button above'**
+  String get balNoAssetsHintA11y;
+
+  /// No description provided for @balAllHiddenTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'All hidden by the filter'**
+  String get balAllHiddenTitle;
+
+  /// No description provided for @balAllHiddenMsg.
+  ///
+  /// In en, this message translates to:
+  /// **'{n, plural, one{{n} account in this section is hidden.} other{{n} accounts in this section are hidden.}}'**
+  String balAllHiddenMsg(int n);
+
   /// No description provided for @balSortTooltip.
   ///
   /// In en, this message translates to:
@@ -2001,12 +2061,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Filter categories'**
   String get balFilterCategories;
-
-  /// No description provided for @balNoVisibleCategories.
-  ///
-  /// In en, this message translates to:
-  /// **'No visible categories'**
-  String get balNoVisibleCategories;
 
   /// No description provided for @balSeeAll.
   ///

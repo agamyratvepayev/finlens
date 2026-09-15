@@ -1300,6 +1300,50 @@ class AppLocalizationsEn extends AppLocalizations {
   String get balAdjustFilter => 'Adjust filter';
 
   @override
+  String get balNoDebtsTitle => 'No debts';
+
+  @override
+  String get balNoDebtsMsg => 'Nothing to pay off right now.';
+
+  @override
+  String balNoDebtsHint(String plus) {
+    return 'Add a card or loan with $plus above';
+  }
+
+  @override
+  String get balNoDebtsHintA11y =>
+      'Add a card or loan with the add button above';
+
+  @override
+  String get balNoAssetsTitle => 'Nothing here yet';
+
+  @override
+  String get balNoAssetsMsg =>
+      'Cash, bank, savings and valuables live in this section.';
+
+  @override
+  String balNoAssetsHint(String plus) {
+    return 'Add an account with $plus above';
+  }
+
+  @override
+  String get balNoAssetsHintA11y => 'Add an account with the add button above';
+
+  @override
+  String get balAllHiddenTitle => 'All hidden by the filter';
+
+  @override
+  String balAllHiddenMsg(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n accounts in this section are hidden.',
+      one: '$n account in this section is hidden.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get balSortTooltip => 'Sort';
 
   @override
@@ -1310,9 +1354,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get balFilterCategories => 'Filter categories';
-
-  @override
-  String get balNoVisibleCategories => 'No visible categories';
 
   @override
   String balSeeAll(int count) {

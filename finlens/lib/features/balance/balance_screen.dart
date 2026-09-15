@@ -38,6 +38,12 @@ extension BalanceSectionL10n on BalanceSection {
   };
 }
 
+/// Why the visible list is empty. The two non-trivial causes are different
+/// screens: [noAccounts] is a fact about the user's money ("you have no debts"),
+/// [allFiltered] a fact about their filter ("everything here is hidden"). One is
+/// good news, the other a state to escape. [none] means the list has rows.
+enum SectionEmptyCause { none, noAccounts, allFiltered }
+
 /// Spec 1.1 — Balance.
 ///
 /// The header answers "what am I worth" in 106px, including the tool cluster;
@@ -152,6 +158,15 @@ class _BalanceScreenState extends State<BalanceScreen> {
     // first run.
     final hasAccounts = AccountGroup.values.any((g) => store.groupCount(g) > 0);
 
+    // Why the *current section's* list is empty, computed once and handed to
+    // both the header and the body — one definition of empty, the way
+    // hasAccounts already is. Meaningful only when hasAccounts; the first run
+    // keeps its own branch below and never consults it.
+    final cause = hasAccounts ? _emptyCause(store) : SectionEmptyCause.none;
+    // The block that fills the body when the section is empty, or null when the
+    // list has rows (see [_emptyPane]).
+    final pane = hasAccounts ? _emptyPane(store, cause) : null;
+
     return SafeArea(
       bottom: false,
       child: Stack(
@@ -176,21 +191,136 @@ class _BalanceScreenState extends State<BalanceScreen> {
             HorizontalSectionSwipe(
               onNext: () => _stepSection(1),
               onPrevious: () => _stepSection(-1),
-              child: Column(
+              child: Stack(
+                fit: StackFit.expand,
                 children: [
-                  _header(store, hasAccounts),
-                  Expanded(child: _list(store, hasAccounts)),
+                  // Inside the swipe, not behind it. HorizontalSectionSwipe is
+                  // HitTestBehavior.opaque, so a sibling pane would be
+                  // unreachable — the "Adjust filter" button would render and do
+                  // nothing. As a descendant the pane is hit-tested first, and
+                  // the drag recognizer still wins the arena for horizontal
+                  // gestures, so swiping out of an empty section keeps working.
+                  //
+                  // Positioned.fill, not a child of the Column: the block is
+                  // centred against the *whole body*, so its icon lands on the
+                  // same y as the Ledger's and the Planner's however tall this
+                  // screen's header is.
+                  if (pane != null) Positioned.fill(child: pane),
+                  Column(
+                    children: [
+                      _header(
+                        store,
+                        hasAccounts,
+                        showHero: pane == null,
+                        cause: cause,
+                      ),
+                      // The pane owns the body. A childless SizedBox hit-tests
+                      // nothing, so the pane behind it stays tappable and
+                      // scrollable.
+                      Expanded(
+                        child: pane == null
+                            ? _list(store, hasAccounts)
+                            : const SizedBox.expand(),
+                      ),
+                    ],
+                  ),
                 ],
               ),
             )
           else
             Column(
               children: [
-                _header(store, hasAccounts),
+                _header(
+                  store,
+                  hasAccounts,
+                  showHero: true,
+                  cause: SectionEmptyCause.none,
+                ),
                 const Expanded(child: SizedBox.expand()),
               ],
             ),
         ],
+      ),
+    );
+  }
+
+  /// Why the current section's list is empty. A live query has its own empty
+  /// screen ([_noResults]) and is not a section state; leave it to the list.
+  SectionEmptyCause _emptyCause(AppStore store) {
+    if (_query.isNotEmpty) return SectionEmptyCause.none;
+    if (_groupsFor(store, AccountGroup.assets).isNotEmpty ||
+        _groupsFor(store, AccountGroup.liabilities).isNotEmpty) {
+      return SectionEmptyCause.none;
+    }
+    // Nothing visible. Does the section own any account at all?
+    return _visibleGroups.any((g) => store.groupCount(g) > 0)
+        ? SectionEmptyCause.allFiltered
+        : SectionEmptyCause.noAccounts;
+  }
+
+  /// The block that fills the body, or null when the list has rows. The first
+  /// run keeps its own path in [build] and never reaches here. While a search is
+  /// open the list owns the empty path ([_noResults] or rows), so no pane shows.
+  Widget? _emptyPane(AppStore store, SectionEmptyCause cause) {
+    if (_searching) return null;
+    return switch (cause) {
+      SectionEmptyCause.none => null,
+      SectionEmptyCause.noAccounts => _sectionEmptyPane(),
+      SectionEmptyCause.allFiltered => _allFilteredPane(store),
+    };
+  }
+
+  /// The section owns no account of its kind. Not a failure and not a first run:
+  /// the other section has rows, and the header above still names where the user
+  /// is. The copy names the *section*, never the app.
+  Widget _sectionEmptyPane() {
+    // NET WORTH always owns some non-empty group when hasAccounts is true, so it
+    // can only ever be [allFiltered], never here.
+    assert(_section != BalanceSection.all);
+    final l = AppLocalizations.of(context);
+    // A NUL the localized string can never contain, swapped in for `{plus}` —
+    // same convention as [_firstRunPane].
+    final sentinel = String.fromCharCode(0);
+    final debts = _section == BalanceSection.liabilities;
+    return FirstRunBlock(
+      icon: debts
+          ? Icons.credit_card_off_rounded
+          : Icons.account_balance_wallet_rounded,
+      // Owing nothing is good news, not a gap to fill: the liabilities copy
+      // states a fact, the assets copy invites. The same sentence would be wrong
+      // for both.
+      title: debts ? l.balNoDebtsTitle : l.balNoAssetsTitle,
+      message: debts ? l.balNoDebtsMsg : l.balNoAssetsMsg,
+      action: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: buildFirstRunHint(
+          debts ? l.balNoDebtsHint(sentinel) : l.balNoAssetsHint(sentinel),
+          sentinel,
+          semanticsLabel: debts ? l.balNoDebtsHintA11y : l.balNoAssetsHintA11y,
+        ),
+      ),
+    );
+  }
+
+  /// The section owns accounts and the filter hides every one. The only state of
+  /// the three with a way out, so it is the only one with a button.
+  Widget _allFilteredPane(AppStore store) {
+    final l = AppLocalizations.of(context);
+    var hidden = 0;
+    for (final g in _visibleGroups) {
+      hidden += store.accountsIn(g).length;
+    }
+    return FirstRunBlock(
+      icon: Icons.filter_alt_rounded,
+      title: l.balAllHiddenTitle,
+      message: l.balAllHiddenMsg(hidden),
+      action: TextButton(
+        onPressed: () => showBalanceFilterSheet(context),
+        style: TextButton.styleFrom(
+          foregroundColor: AppColors.accent,
+          minimumSize: const Size(0, 36),
+        ),
+        child: Text(l.balAdjustFilter),
       ),
     );
   }
@@ -200,9 +330,20 @@ class _BalanceScreenState extends State<BalanceScreen> {
   /// Header: row 1 (label + dots + controls), then the hero amount sharing one
   /// row with the four tools. On NET WORTH the slim ratio bar still follows.
   /// Pinned — only the list scrolls.
-  Widget _header(AppStore store, bool hasAccounts) {
+  Widget _header(
+    AppStore store,
+    bool hasAccounts, {
+    required bool showHero,
+    required SectionEmptyCause cause,
+  }) {
     final filter = store.balanceFilter;
     final showRatio = _section == BalanceSection.all && !_searching;
+    // An empty section keeps only its filter/search tools, and only when the
+    // filter is the way out of it (all-filtered). Nothing to sort or collapse
+    // with no rows; the section-empty state carries no tool row at all. During
+    // search the field owns the row, so the reduced row stands down.
+    final showReducedTools =
+        !_searching && cause == SectionEmptyCause.allFiltered;
 
     // Height is not hard-coded: the ratio bar shows only on the All section,
     // the "as of" line appears only for a past date, and searching swaps the
@@ -244,25 +385,46 @@ class _BalanceScreenState extends State<BalanceScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
+                        // Row 1 survives in every state: the label and dots say
+                        // where you are and where you can go, the date and the
+                        // eye are controls the other two sections share (removing
+                        // them for one section alone would make them flicker as
+                        // the user swipes), and the + is the app's only create
+                        // affordance.
                         SizedBox(
                           height: HeaderCircleButton.diameter,
                           child: _headerRow1(store),
                         ),
-                        const SizedBox(height: 8),
-                        // The amount and the four tools now share one row (see
-                        // [_amountRow]); the delta badge and the count line are
-                        // gone. Searching swaps this whole row for the field.
-                        _headerRow2(store),
-                        // The ratio bar is unchanged — same NET-WORTH-only
-                        // condition, same widget, same gap. Out of scope here.
-                        if (showRatio) ...[
+                        // The hero + tools row and the ratio bar belong to a
+                        // section with something to report. An empty section
+                        // drops both: there is no figure when there is nothing to
+                        // total (§1). Searching keeps showHero true so the field
+                        // still swaps in here.
+                        if (showHero) ...[
                           const SizedBox(height: 8),
-                          _RatioBar(
-                            assets: filter.sectionTotal(store, assets: true),
-                            liabilities: filter
-                                .sectionTotal(store, assets: false)
-                                .abs(),
-                          ),
+                          // The amount and the four tools share one row (see
+                          // [_amountRow]); the delta badge and the count line are
+                          // gone. Searching swaps this whole row for the field.
+                          _headerRow2(store),
+                          // The ratio bar reports a split between two figures.
+                          // With neither on screen it has nothing to divide, so
+                          // it rides with the hero — same NET-WORTH-only
+                          // condition, same widget, same gap.
+                          if (showRatio) ...[
+                            const SizedBox(height: 8),
+                            _RatioBar(
+                              assets: filter.sectionTotal(store, assets: true),
+                              liabilities: filter
+                                  .sectionTotal(store, assets: false)
+                                  .abs(),
+                            ),
+                          ],
+                        ],
+                        // All-filtered keeps a reduced tool row — filter and
+                        // search only — because the filter is the way out of it.
+                        if (showReducedTools) ...[
+                          const SizedBox(height: 8),
+                          _reducedToolRow(store),
                         ],
                       ],
                     )
@@ -348,12 +510,15 @@ class _BalanceScreenState extends State<BalanceScreen> {
     // Every headline figure is the *filtered* one — hiding Valuables has to
     // move Net Worth, not just drop a row. The store getters stay unfiltered so
     // no other tab is affected; the filtering lives here.
+    final liabTotal = filter.sectionTotal(store, assets: false);
     final (amount, color) = switch (_section) {
       BalanceSection.all => (filter.netWorth(store), null),
       BalanceSection.assets => (filter.sectionTotal(store, assets: true), null),
       BalanceSection.liabilities => (
-        filter.sectionTotal(store, assets: false),
-        AppColors.negative,
+        liabTotal,
+        // Colour is good/bad, not a section badge: nothing owed is not an alarm,
+        // so a paid-off card summing to exactly zero renders neutral, not red.
+        liabTotal == 0 ? null : AppColors.negative,
       ),
     };
 
@@ -452,6 +617,32 @@ class _BalanceScreenState extends State<BalanceScreen> {
         semanticLabel: l.actionSearch,
       ),
     ];
+  }
+
+  /// The all-filtered state's standalone tool row: filter and search only, drawn
+  /// without the hero (there is no figure). The two buttons are lifted verbatim
+  /// from [_buildTools] — indices 2 (filter) and 3 (search) — so their icons,
+  /// actions, active states and styling are byte-identical to the populated row,
+  /// only the sort and collapse tools are dropped (nothing to sort or collapse).
+  Widget _reducedToolRow(AppStore store) {
+    final all = _buildTools(store);
+    final tools = <_HeaderTool>[all[2], all[3]];
+    return Align(
+      alignment: Alignment.centerRight,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (var i = 0; i < tools.length; i++) ...[
+            if (i > 0) const SizedBox(width: _kToolGap),
+            _ToolButton(
+              tool: tools[i],
+              size: _kTool,
+              radius: _kToolRadius,
+            ),
+          ],
+        ],
+      ),
+    );
   }
 
   Widget _searchField() {
@@ -668,26 +859,21 @@ class _BalanceScreenState extends State<BalanceScreen> {
 
     if (assets.isEmpty && liabilities.isEmpty) {
       if (_query.isNotEmpty) return _noResults();
-      // No accounts at all is the "add your first account" case; accounts that
-      // exist but are all filtered out fall through to per-section empty rows.
-      // hasAccounts is the same test the header uses — one definition of empty.
+      // No accounts at all is the "add your first account" case. A section that
+      // owns accounts but has them all filtered out is handled by the empty pane
+      // behind the header (see [build] / [_allFilteredPane]), so it never
+      // reaches here with rows to draw — the list simply stands down.
       if (!hasAccounts) return _firstRunPane();
+      return const SizedBox.expand();
     }
 
     // Section headers only show on All: on a filtered section the total already
     // sits in the header 60px above, and it must appear in exactly one place.
     final showHeaders = _section == BalanceSection.all;
 
-    // A section renders (header + rows, or the "all hidden" notice) whenever it
-    // has visible groups OR it has accounts that the filter has hidden. A truly
-    // empty section (no accounts) stays absent, as before.
-    bool sectionHasAccounts(List<AccountGroup> section) =>
-        !_searching && section.any((g) => store.groupCount(g) > 0);
-    final assetsHasContent =
-        assets.isNotEmpty || sectionHasAccounts(AccountGroup.assets);
-    final liabsHasContent =
-        liabilities.isNotEmpty || sectionHasAccounts(AccountGroup.liabilities);
-
+    // A section renders only when it has visible groups. A section whose groups
+    // are all hidden (or that owns no account) drops out entirely — the whole
+    // list being empty is the empty pane's job, not a per-section notice.
     // A plain scroll view rather than a ListView: the reorderable groups are
     // non-scrolling columns nested inside it, and the list is small enough that
     // laziness buys nothing.
@@ -697,14 +883,14 @@ class _BalanceScreenState extends State<BalanceScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (_section != BalanceSection.liabilities && assetsHasContent)
+          if (_section != BalanceSection.liabilities && assets.isNotEmpty)
             _sectionBlock(
               store,
               assets: true,
               groups: assets,
               showHeader: showHeaders,
             ),
-          if (_section != BalanceSection.assets && liabsHasContent)
+          if (_section != BalanceSection.assets && liabilities.isNotEmpty)
             _sectionBlock(
               store,
               assets: false,
@@ -745,35 +931,13 @@ class _BalanceScreenState extends State<BalanceScreen> {
               assets: assets,
             ),
           ),
-        if (groups.isEmpty)
-          _filteredAwayRow()
-        else
-          for (final g in groups) _categoryBlock(store, g),
+        // Callers only build a section block for a section with visible groups,
+        // so this always renders rows. An all-hidden section is the empty pane's
+        // job (see [_allFilteredPane]), never a per-section $0 notice here.
+        for (final g in groups) _categoryBlock(store, g),
       ],
     );
   }
-
-  /// Shown when a section's accounts are all filtered out — never a $0 group
-  /// row. Offers the one way back: reopen the filter sheet.
-  Widget _filteredAwayRow() => Padding(
-    padding: const EdgeInsets.symmetric(vertical: Insets.xl),
-    child: Column(
-      children: [
-        Text(
-          AppLocalizations.of(context).balNoVisibleCategories,
-          style: AppText.body.copyWith(color: AppColors.textTertiary),
-        ),
-        TextButton(
-          onPressed: () => showBalanceFilterSheet(context),
-          style: TextButton.styleFrom(
-            foregroundColor: AppColors.accent,
-            minimumSize: const Size(0, 36),
-          ),
-          child: Text(AppLocalizations.of(context).balAdjustFilter),
-        ),
-      ],
-    ),
-  );
 
   Widget _noResults() => Padding(
     padding: const EdgeInsets.only(top: 72),

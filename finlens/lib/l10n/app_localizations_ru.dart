@@ -1330,6 +1330,52 @@ class AppLocalizationsRu extends AppLocalizations {
   String get balAdjustFilter => 'Настроить фильтр';
 
   @override
+  String get balNoDebtsTitle => 'Долгов нет';
+
+  @override
+  String get balNoDebtsMsg => 'Сейчас нечего погашать.';
+
+  @override
+  String balNoDebtsHint(String plus) {
+    return 'Добавьте карту или кредит с помощью $plus наверху';
+  }
+
+  @override
+  String get balNoDebtsHintA11y =>
+      'Добавьте карту или кредит кнопкой добавления наверху';
+
+  @override
+  String get balNoAssetsTitle => 'Здесь пока пусто';
+
+  @override
+  String get balNoAssetsMsg =>
+      'Наличные, банк, накопления и ценности находятся в этом разделе.';
+
+  @override
+  String balNoAssetsHint(String plus) {
+    return 'Добавьте счёт с помощью $plus наверху';
+  }
+
+  @override
+  String get balNoAssetsHintA11y => 'Добавьте счёт кнопкой добавления наверху';
+
+  @override
+  String get balAllHiddenTitle => 'Всё скрыто фильтром';
+
+  @override
+  String balAllHiddenMsg(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: '$n счёта в этом разделе скрыты.',
+      many: '$n счетов в этом разделе скрыты.',
+      few: '$n счёта в этом разделе скрыты.',
+      one: '$n счёт в этом разделе скрыт.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get balSortTooltip => 'Сортировка';
 
   @override
@@ -1341,9 +1387,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get balFilterCategories => 'Фильтр категорий';
-
-  @override
-  String get balNoVisibleCategories => 'Нет видимых категорий';
 
   @override
   String balSeeAll(int count) {

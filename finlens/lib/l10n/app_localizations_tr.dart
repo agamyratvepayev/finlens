@@ -1292,6 +1292,49 @@ class AppLocalizationsTr extends AppLocalizations {
   String get balAdjustFilter => 'Filtreyi ayarla';
 
   @override
+  String get balNoDebtsTitle => 'Borç yok';
+
+  @override
+  String get balNoDebtsMsg => 'Şu an ödenecek bir şey yok.';
+
+  @override
+  String balNoDebtsHint(String plus) {
+    return 'Yukarıdaki $plus ile kart veya kredi ekleyin';
+  }
+
+  @override
+  String get balNoDebtsHintA11y =>
+      'Yukarıdaki ekle düğmesiyle kart veya kredi ekleyin';
+
+  @override
+  String get balNoAssetsTitle => 'Burada henüz bir şey yok';
+
+  @override
+  String get balNoAssetsMsg =>
+      'Nakit, banka, birikim ve değerli varlıklar bu bölümde yer alır.';
+
+  @override
+  String balNoAssetsHint(String plus) {
+    return 'Yukarıdaki $plus ile hesap ekleyin';
+  }
+
+  @override
+  String get balNoAssetsHintA11y => 'Yukarıdaki ekle düğmesiyle hesap ekleyin';
+
+  @override
+  String get balAllHiddenTitle => 'Hepsi filtreyle gizli';
+
+  @override
+  String balAllHiddenMsg(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: 'Bu bölümdeki $n hesap gizli.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get balSortTooltip => 'Sırala';
 
   @override
@@ -1302,9 +1345,6 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get balFilterCategories => 'Kategorileri filtrele';
-
-  @override
-  String get balNoVisibleCategories => 'Görünür kategori yok';
 
   @override
   String balSeeAll(int count) {

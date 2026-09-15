@@ -215,8 +215,9 @@ void main() {
     expect(find.text('Start with what you have'), findsOneWidget);
   });
 
-  testWidgets('accounts all hidden by a filter still render the full header',
-      (tester) async {
+  testWidgets(
+      'accounts all hidden by a filter show the all-hidden block, a reduced '
+      'tool row and no hero', (tester) async {
     final store = oneAccountStore();
     // Hide the only group: accounts exist, so this is a filtered empty, not a
     // first run.
@@ -226,13 +227,26 @@ void main() {
     await tester.pumpWidget(FinLensApp(store: store));
     await tester.pumpAndSettle();
 
-    // Full header: the tools are the only way back.
-    expect(find.byIcon(Icons.swap_vert_rounded), findsOneWidget);
-    // Not the first-run empty state.
+    // Not the first-run empty state, and no hero figure — there is nothing to
+    // total, so no fabricated $0 stands in for it.
     expect(find.text('Start with what you have'), findsNothing);
     expect(find.text('—'), findsNothing);
-    // The filtered-away notice offers the way out.
-    expect(find.text('No visible categories'), findsOneWidget);
+    expect(find.text('\$0'), findsNothing);
+
+    // The all-hidden block replaces the old "No visible categories" notice.
+    expect(find.text('No visible categories'), findsNothing);
+    expect(find.text('All hidden by the filter'), findsOneWidget);
+    expect(find.text('1 account in this section is hidden.'), findsOneWidget);
+    // Its button is the one way back.
+    expect(find.widgetWithText(TextButton, 'Adjust filter'), findsOneWidget);
+
+    // Reduced tool row: filter (active) and search only — nothing to sort or
+    // collapse with no rows.
+    expect(find.byIcon(Icons.filter_alt_rounded), findsOneWidget);
+    expect(find.byIcon(Icons.search_rounded), findsOneWidget);
+    expect(find.byIcon(Icons.swap_vert_rounded), findsNothing);
+    expect(find.byIcon(Icons.unfold_more_rounded), findsNothing);
+    expect(find.byIcon(Icons.unfold_less_rounded), findsNothing);
   });
 
   testWidgets('two accounts summing to zero show \$0 and the full header — '

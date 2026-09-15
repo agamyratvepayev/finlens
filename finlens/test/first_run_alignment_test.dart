@@ -327,6 +327,12 @@ void main() {
       pair(l.plNoGoalsYet, l.plNoGoalsMsg),
       pair(l.plNothingScheduled, l.plNothingSchedMsg),
       pair(l.insEmptyNoAccountsTitle, l.insEmptyNoAccountsBody),
+      // task 009 — the three section-empty blocks share the same line, so the
+      // shared figure must clear their pairs too (§4.1). Measured with a
+      // two-digit count so the floor survives the widest plausible number.
+      pair(l.balNoDebtsTitle, l.balNoDebtsMsg),
+      pair(l.balNoAssetsTitle, l.balNoAssetsMsg),
+      pair(l.balAllHiddenTitle, l.balAllHiddenMsg(99)),
     ]) {
       expect(shared, greaterThanOrEqualTo(p - 0.01));
     }

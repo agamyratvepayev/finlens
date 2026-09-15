@@ -1292,6 +1292,50 @@ class AppLocalizationsTk extends AppLocalizations {
   String get balAdjustFilter => 'Süzgüji sazla';
 
   @override
+  String get balNoDebtsTitle => 'Bergi ýok';
+
+  @override
+  String get balNoDebtsMsg => 'Häzir tölemeli zat ýok.';
+
+  @override
+  String balNoDebtsHint(String plus) {
+    return 'Ýokardaky $plus bilen karta ýa-da karz goşuň';
+  }
+
+  @override
+  String get balNoDebtsHintA11y =>
+      'Ýokardaky goşmak düwmesi bilen karta ýa-da karz goşuň';
+
+  @override
+  String get balNoAssetsTitle => 'Bu ýerde entek hiç zat ýok';
+
+  @override
+  String get balNoAssetsMsg =>
+      'Nagt, bank, tygşytlar we gymmatlyklar şu bölümde ýerleşýär.';
+
+  @override
+  String balNoAssetsHint(String plus) {
+    return 'Ýokardaky $plus bilen hasap goşuň';
+  }
+
+  @override
+  String get balNoAssetsHintA11y =>
+      'Ýokardaky goşmak düwmesi bilen hasap goşuň';
+
+  @override
+  String get balAllHiddenTitle => 'Hemmesi süzgüç bilen gizlenen';
+
+  @override
+  String balAllHiddenMsg(int n) {
+    String _temp0 = intl.Intl.pluralLogic(
+      n,
+      locale: localeName,
+      other: 'Bu bölümdäki $n hasap gizli.',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get balSortTooltip => 'Tertiple';
 
   @override
@@ -1302,9 +1346,6 @@ class AppLocalizationsTk extends AppLocalizations {
 
   @override
   String get balFilterCategories => 'Kategoriýalary süz';
-
-  @override
-  String get balNoVisibleCategories => 'Görünýän kategoriýa ýok';
 
   @override
   String balSeeAll(int count) {
