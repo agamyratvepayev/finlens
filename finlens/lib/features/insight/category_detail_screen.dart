@@ -11,9 +11,11 @@ import '../../shared/widgets/app_card.dart';
 import '../../shared/widgets/screen_header.dart';
 import '../../shared/widgets/section_header.dart';
 import '../../shared/widgets/swipe_actions.dart';
+import '../../shared/widgets/txn_row.dart' show confirmDeleteTxn;
 import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/app_typography.dart';
+import '../balance/same_transactions_screen.dart';
 import '../planner/edit_budget_screen.dart';
 import '../quick_add/quick_add_sheet.dart';
 import 'insight_filter.dart';
@@ -493,10 +495,11 @@ class CategoryDetailScreen extends StatelessWidget {
   }
 }
 
-/// A live transaction row: tap opens the editor, swipe exposes edit and copy
-/// (spec §6.6). Kept local rather than reusing `LedgerTxnRow`, whose API is
-/// bound to the scoped ledger's `ScopedTxn`/day-grouping state — reported per
-/// §6.6.
+/// A live transaction row: a tap reveals (pushes the read-only
+/// [SameTransactionsScreen]), the swipe strip acts (Edit · Copy · Delete) —
+/// matching every other transaction row in the app (task 008). Kept local
+/// rather than reusing `LedgerTxnRow`, whose API is bound to the scoped ledger's
+/// `ScopedTxn`/day-grouping state — reported per §6.6.
 class _MovementRow extends StatelessWidget {
   const _MovementRow({
     required this.txn,
@@ -539,16 +542,41 @@ class _MovementRow extends StatelessWidget {
           color: AppColors.info,
           onTap: () => showQuickAdd(context, copyOf: txn),
         ),
+        // With Edit behind the swipe (a tap now only reveals), a strip without
+        // Delete would leave this screen unable to delete at all. Confirmation,
+        // not an undo bar: the read-only screen this row now opens uses
+        // confirmDeleteTxn, and so does every other caller but one (task 008 §3).
+        SwipeActionItem(
+          icon: Icons.delete_rounded,
+          label: l.actionDelete,
+          color: AppColors.negative,
+          onTap: () async {
+            final ok = await confirmDeleteTxn(context, txn);
+            if (ok && context.mounted) StoreScope.read(context).deleteTxn(txn);
+          },
+        ),
       ],
       child: InkWell(
         onTap: () {
           // If another row's swipe strip is open, the first tap only dismisses
-          // it — it never opens the editor from under the user.
+          // it — it never navigates out from under the user.
           if (anySwipeRowOpen) {
             closeOpenSwipeRow();
             return;
           }
-          showQuickAdd(context, editing: txn);
+          // A tap reveals; a swipe acts. The same read-only screen the Ledger
+          // and the scoped ledger already push, so one transaction has one
+          // detail view however it was reached (task 008 §2). Editing is the
+          // swipe strip's job now.
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => SameTransactionsScreen(
+                originTxnId: txn.id,
+                // The category the user came from is the way back.
+                backLabel: category.name,
+              ),
+            ),
+          );
         },
         child: Semantics(
           button: true,
@@ -765,12 +793,18 @@ class _DashedTop extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(builder: (context, c) {
       const dash = 4.0, gap = 3.0;
-      final count = (c.maxWidth / (dash + gap)).ceil();
+      // Fit whole dash-cells inside the width, with gaps *between* dashes only.
+      // The old code rounded the count *up* (`ceil`) and appended a trailing
+      // gap, so the Row summed to `count × (dash+gap)` — up to ~7pt past its
+      // column — which is what painted the RIGHT-OVERFLOWED band on this screen
+      // (task 008 §4: the culprit was this dashed top, not the value label).
+      final fit = ((c.maxWidth + gap) / (dash + gap)).floor();
+      final count = fit < 1 ? 1 : fit;
       return Row(
         children: [
           for (var i = 0; i < count; i++) ...[
+            if (i > 0) const SizedBox(width: gap),
             Container(width: dash, height: 2, color: color),
-            const SizedBox(width: gap),
           ],
         ],
       );
