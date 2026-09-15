@@ -1356,7 +1356,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get eaHideFromBalance => 'Hide from Balance';
 
   @override
-  String get eaHideDesc => 'Stays in your totals, disappears from the lists';
+  String get eaHideDesc => 'Kept in totals, hidden from lists';
 
   @override
   String get eaRemoveThisAccount => 'Remove this account';

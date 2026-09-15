@@ -73,12 +73,16 @@ class FormRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dim = !enabled || locked;
+    // A subtitle is the only child that can be a sentence. When one is present
+    // the row tightens the air inside its line boxes (§5b) and caps the sentence
+    // at two lines (§5a); a single-line row keeps today's metrics byte-for-byte.
+    final hasSub = subtitle != null;
     return InkWell(
       onTap: enabled && !locked ? onTap : null,
       child: Padding(
-        padding: const EdgeInsets.symmetric(
+        padding: EdgeInsets.symmetric(
           horizontal: Insets.md,
-          vertical: Insets.md,
+          vertical: hasSub ? 9 : Insets.md,
         ),
         child: Row(
           children: [
@@ -104,6 +108,10 @@ class FormRow extends StatelessWidget {
                           label,
                           style: AppText.body.copyWith(
                             fontSize: 14.5,
+                            // Tighten the label's line box only when a subtitle
+                            // sits under it; `null` keeps AppText.body's 1.35 for
+                            // a lone label, so single-line rows do not move (§5b).
+                            height: hasSub ? 1.2 : null,
                             color: dim
                                 ? AppColors.textSecondary
                                 : AppColors.textPrimary,
@@ -124,10 +132,15 @@ class FormRow extends StatelessWidget {
                     ],
                   ),
                   if (subtitle != null) ...[
-                    const SizedBox(height: 3),
+                    const SizedBox(height: 1),
                     Text(
                       subtitle!,
-                      style: AppText.caption.copyWith(fontSize: 11.5),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppText.caption.copyWith(
+                        fontSize: 11.5,
+                        height: 1.15,
+                      ),
                     ),
                   ],
                 ],
@@ -282,10 +295,18 @@ class TextFieldRow extends StatelessWidget {
 /// The one name input (task 004).
 ///
 /// A name is not one of a thing's attributes — it is the thing's title — so it
-/// looks the same in all six places the app asks for one: a single 48 pt line,
-/// no caption (the hint *is* the label), and a leading glyph that either sits
+/// looks the same in all six places the app asks for one: a single line, no
+/// caption (the hint *is* the label), and a leading glyph that either sits
 /// there quietly, opens the icon picker, or (for the two task titles) is a
 /// plain-but-tappable glyph in the icon column.
+///
+/// Its height is **not** a constant (§2): it takes [verticalPadding] from the
+/// rows it sits beside, so it matches them at every text scale. In the editors
+/// that is `Insets.md` — the same value `FormRow` uses — and [fixedHeight] stays
+/// null, so the height is intrinsic and tracks its neighbours. Quick Add's
+/// neighbour is a hard `48 * s` `TxnFieldRow`, and the creation sheets carry a
+/// 44 pt glyph tile that must not float in a taller box, so those two hosts pass
+/// [fixedHeight] instead.
 ///
 /// This is deliberately **not** [TextFieldRow], which also draws amounts, limits
 /// and notes, where the caption is the only thing that says what the value means.
@@ -306,7 +327,9 @@ class NameField extends StatefulWidget {
     this.radius = 12,
     this.scale = 1.0,
     this.textScale = 1.0,
-    this.padding = 12.0,
+    this.horizontalPadding = Insets.md,
+    this.verticalPadding = Insets.md,
+    this.fixedHeight,
     this.iconColumn = 24.0,
     this.iconGap = 12.0,
   })  : assert(leadingIcon == null || leadingTile == null,
@@ -355,7 +378,19 @@ class NameField extends StatefulWidget {
   /// beside it — the *design* is identical, the grid it sits on is the host's.
   final double scale;
   final double textScale;
-  final double padding;
+  final double horizontalPadding;
+
+  /// Vertical padding around the single line, applied **only when the row is
+  /// intrinsic** ([fixedHeight] null). Defaults to `Insets.md`, matching
+  /// `FormRow`, so an editor name row is as tall as the value rows beside it.
+  final double verticalPadding;
+
+  /// When set, the row is exactly this tall and [verticalPadding] is ignored —
+  /// the hosts whose neighbours are a fixed height (Quick Add's `48 * s`
+  /// `TxnFieldRow`) or that carry the 44 pt glyph tile (the creation sheets).
+  /// Null in the editors, where the height follows the neighbours' padding (§2).
+  final double? fixedHeight;
+
   final double iconColumn;
   final double iconGap;
 
@@ -395,7 +430,10 @@ class _NameFieldState extends State<NameField> {
         behavior: HitTestBehavior.opaque,
         onTap: _focus,
         child: Container(
-          height: 48 * s,
+          // Null in the editors: the row shrink-wraps its single line plus the
+          // padding below, matching the value rows beside it (§2). Set in Quick
+          // Add and the creation sheets, whose neighbours or glyph tile fix it.
+          height: widget.fixedHeight,
           decoration: BoxDecoration(
             color: widget.surface,
             borderRadius: BorderRadius.circular(widget.radius * s),
@@ -406,7 +444,13 @@ class _NameFieldState extends State<NameField> {
               color: _node.hasFocus ? AppColors.accent : Colors.transparent,
             ),
           ),
-          padding: EdgeInsets.symmetric(horizontal: widget.padding * s),
+          padding: EdgeInsets.symmetric(
+            horizontal: widget.horizontalPadding * s,
+            // Intrinsic rows carry their own vertical padding; a fixed-height row
+            // centres its line in the given box instead.
+            vertical:
+                widget.fixedHeight == null ? widget.verticalPadding * s : 0,
+          ),
           child: Row(
             children: [
               ..._leading(s),
@@ -711,6 +755,9 @@ class DestructiveRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Same two-line shape as [FormRow] (§5): tighten and cap only when the
+    // subtitle is present; a lone red label keeps today's metrics byte-for-byte.
+    final hasSub = subtitle != null;
     return AppCard(
       margin: const EdgeInsets.fromLTRB(
         Insets.gutter,
@@ -722,9 +769,9 @@ class DestructiveRow extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(Radii.card),
         child: Padding(
-          padding: const EdgeInsets.symmetric(
+          padding: EdgeInsets.symmetric(
             horizontal: Insets.md,
-            vertical: Insets.md,
+            vertical: hasSub ? 9 : Insets.md,
           ),
           child: Row(
             children: [
@@ -736,15 +783,21 @@ class DestructiveRow extends StatelessWidget {
                       label,
                       style: AppText.body.copyWith(
                         fontSize: 14.5,
+                        height: hasSub ? 1.2 : null,
                         color: AppColors.negative,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
                     if (subtitle != null) ...[
-                      const SizedBox(height: 3),
+                      const SizedBox(height: 1),
                       Text(
                         subtitle!,
-                        style: AppText.caption.copyWith(fontSize: 11.5),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppText.caption.copyWith(
+                          fontSize: 11.5,
+                          height: 1.15,
+                        ),
                       ),
                     ],
                   ],

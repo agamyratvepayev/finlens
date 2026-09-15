@@ -2083,7 +2083,7 @@ abstract class AppLocalizations {
   /// No description provided for @eaHideDesc.
   ///
   /// In en, this message translates to:
-  /// **'Stays in your totals, disappears from the lists'**
+  /// **'Kept in totals, hidden from lists'**
   String get eaHideDesc;
 
   /// No description provided for @eaRemoveThisAccount.

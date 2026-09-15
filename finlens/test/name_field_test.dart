@@ -23,8 +23,12 @@ import 'package:finlens/theme/app_theme.dart';
 // run the file yourself:  flutter test test/name_field_test.dart
 //
 // The six call sites: goal name, task title (edit), account name, category name,
-// New account, New category, task title (create). Every one is a 48pt NameField:
-// no caption, hint-as-label, focus border, built-in clear.
+// New account, New category, task title (create). Every one is a NameField: no
+// caption, hint-as-label, focus border, built-in clear. Its height is NOT a
+// constant (§2): in the four editors it is intrinsic — the same Insets.md padding
+// the value rows beside it use, so it tracks them at every text scale rather than
+// pinning 48. Quick Add's create-task hero (fixed neighbours) and the two
+// creation sheets (a 44pt glyph tile) still pin `48`.
 
 void main() {
   Widget wrap(AppStore store, Widget child, {double scale = 1.0}) => StoreScope(
@@ -129,7 +133,10 @@ void main() {
     await t.pumpWidget(wrap(AppStore.empty(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32))), const EditGoalScreen()));
     expect(find.byType(NameField), findsOneWidget);
     expect(find.text('Goal name'), findsNothing);
-    expect(t.getSize(find.byType(NameField)).height, closeTo(48, 0.5));
+    // Intrinsic now (§2): shorter than the old pinned 48, but a real line tall.
+    final h = t.getSize(find.byType(NameField)).height;
+    expect(h, lessThan(48));
+    expect(h, greaterThan(40));
   });
 
   testWidgets('edit task: one NameField, no "Task title" caption', (t) async {
@@ -138,7 +145,9 @@ void main() {
     await t.pump();
     expect(find.byType(NameField), findsOneWidget);
     expect(find.text('Task title'), findsNothing);
-    expect(t.getSize(find.byType(NameField)).height, closeTo(48, 0.5));
+    final h = t.getSize(find.byType(NameField)).height;
+    expect(h, lessThan(48));
+    expect(h, greaterThan(40));
   });
 
   testWidgets('account editor: one NameField, no "Account name"/"Name" caption',
@@ -150,7 +159,9 @@ void main() {
     expect(find.byType(NameField), findsOneWidget);
     // "Name" (eaName) is now only a semantics label, never visible text.
     expect(find.text('Account name'), findsNothing);
-    expect(t.getSize(find.byType(NameField)).height, closeTo(48, 0.5));
+    final h = t.getSize(find.byType(NameField)).height;
+    expect(h, lessThan(48));
+    expect(h, greaterThan(40));
   });
 
   testWidgets('category editor: one NameField, no "Category name" caption',
@@ -161,7 +172,9 @@ void main() {
     await t.pump();
     expect(find.byType(NameField), findsOneWidget);
     expect(find.text('Category name'), findsNothing);
-    expect(t.getSize(find.byType(NameField)).height, closeTo(48, 0.5));
+    final h = t.getSize(find.byType(NameField)).height;
+    expect(h, lessThan(48));
+    expect(h, greaterThan(40));
   });
 
   testWidgets('New account sheet: captionless NameField with a glyph tile',
@@ -428,6 +441,13 @@ void main() {
       expect(editable.focusNode.hasFocus, isTrue);
     });
 
+    testWidgets('the create-task hero pins 48·s, unlike the editors (§2)',
+        (t) async {
+      // openTask uses a 390pt phone, where formScale is 1.0 → exactly 48.
+      await openTask(t, oneAccount());
+      expect(t.getSize(find.byType(NameField)).height, closeTo(48, 1.0));
+    });
+
     testWidgets('an untouched task saves Icons.arrow_circle_up_rounded (§5a)',
         (t) async {
       final store = oneAccount();
@@ -551,5 +571,81 @@ void main() {
     ));
     await t.pump();
     expect(find.byIcon(Icons.local_florist_rounded), findsWidgets);
+  });
+
+  // ── §2 · the editor name row tracks the value row beside it ─────────────────
+
+  testWidgets(
+      'account name height tracks the Group row across widths and text scales',
+      (t) async {
+    for (final w in [390.0, 360.0, 320.0]) {
+      for (final scale in [1.0, 1.3]) {
+        final s = accountStore();
+        phone(t, w: w);
+        await t.pumpWidget(
+            wrap(s, EditAccountScreen(accountId: firstAccountId(s)), scale: scale));
+        await t.pump();
+
+        final name = t.getSize(find.byType(NameField)).height;
+        // The first single-line value row below the name card.
+        final group = t
+            .getSize(find.ancestor(
+                of: find.text('Group'), matching: find.byType(FormRow)))
+            .height;
+
+        // Close, but not identical: the name row carries a 1pt focus border
+        // (≈2px of height) the value rows do not, and its line is 17pt vs the
+        // label's 14.5pt. The point is they *track* — both grow with the scale,
+        // and the name never pins the old 48 (§2). Report the residual.
+        expect((name - group).abs(), lessThan(4),
+            reason: 'w=$w scale=$scale name=$name group=$group');
+        expect(name, lessThan(52 * scale),
+            reason: 'intrinsic, not a pinned 48·scale');
+      }
+    }
+  });
+
+  // ── §5 · two-line rows are capped and tightened; single-line rows do not move ─
+
+  const longSub =
+      'one two three four five six seven eight nine ten eleven twelve '
+      'thirteen fourteen fifteen sixteen seventeen eighteen nineteen twenty';
+
+  Widget bare(Widget child) => MaterialApp(
+        theme: AppTheme.dark,
+        home: Scaffold(body: Center(child: child)),
+      );
+
+  testWidgets('§5a a long FormRow subtitle is capped at two ellipsised lines',
+      (t) async {
+    phone(t);
+    await t.pumpWidget(bare(const FormRow(label: 'Row', subtitle: longSub)));
+    final sub = t.widget<Text>(find.text(longSub));
+    expect(sub.maxLines, 2);
+    expect(sub.overflow, TextOverflow.ellipsis);
+  });
+
+  testWidgets('§5a DestructiveRow caps its subtitle the same way', (t) async {
+    phone(t);
+    await t.pumpWidget(
+        bare(DestructiveRow(label: 'Delete', subtitle: longSub, onTap: () {})));
+    final sub = t.widget<Text>(find.text(longSub));
+    expect(sub.maxLines, 2);
+    expect(sub.overflow, TextOverflow.ellipsis);
+  });
+
+  testWidgets('§5b a one-line-subtitle FormRow tightens to ~49.6pt', (t) async {
+    phone(t);
+    await t.pumpWidget(bare(const FormRow(label: 'Row', subtitle: 'Short note')));
+    // 9+9 padding · 14.5×1.2 label · 1 gap · 11.5×1.15 subtitle = 49.6.
+    expect(t.getSize(find.byType(FormRow)).height, closeTo(49.6, 1.2));
+  });
+
+  testWidgets('§5b a single-line FormRow keeps its old ~43.6pt metrics',
+      (t) async {
+    phone(t);
+    await t.pumpWidget(bare(const FormRow(label: 'Row')));
+    // Insets.md padding (12+12) · 14.5×1.35 body line = 43.6; unchanged (§5b).
+    expect(t.getSize(find.byType(FormRow)).height, closeTo(43.6, 0.6));
   });
 }

@@ -470,7 +470,7 @@
   "eaPaymentDue": "Payment due",
   "eaNotSet": "Not set",
   "eaHideFromBalance": "Hide from Balance",
-  "eaHideDesc": "Stays in your totals, disappears from the lists",
+  "eaHideDesc": "Kept in totals, hidden from lists",
   "eaRemoveThisAccount": "Remove this account",
   "eaRemovePermanent": "Permanently deletes this account",
   "eaRemoveHasHistory": "Has history — it will be archived, not erased",

@@ -1471,7 +1471,10 @@ class _NewCategoryFormState extends State<_NewCategoryForm> {
   }
 
   Widget _nameRow(AppLocalizations l) {
-    // One 48pt name line (task 004): the glyph tile leads, the hint is the label.
+    // One name line (task 004): the glyph tile leads, the hint is the label. The
+    // tile is a 44 pt hit target, so the row pins that height rather than growing
+    // intrinsically — the editors, whose neighbours are shorter value rows, do
+    // not (§2).
     return NameField(
       controller: _name,
       focusNode: _nameFocus,
@@ -1480,6 +1483,7 @@ class _NewCategoryFormState extends State<_NewCategoryForm> {
       semanticsLabel: l.qaCategoryName,
       surface: AppColors.sheetCard,
       radius: 11,
+      fixedHeight: 48,
       leadingTile: NameGlyphTile(
         color: _color,
         onTap: _openIconPicker,
@@ -1889,7 +1893,10 @@ class _NewAccountFormState extends State<_NewAccountForm> {
       );
 
   Widget _nameRow(AppLocalizations l) {
-    // One 48pt name line (task 004): the glyph tile leads, the hint is the label.
+    // One name line (task 004): the glyph tile leads, the hint is the label. The
+    // tile is a 44 pt hit target, so the row pins that height rather than growing
+    // intrinsically — the editors, whose neighbours are shorter value rows, do
+    // not (§2).
     return NameField(
       controller: _name,
       focusNode: _nameFocus,
@@ -1898,6 +1905,7 @@ class _NewAccountFormState extends State<_NewAccountForm> {
       semanticsLabel: l.qaAccountName,
       surface: AppColors.sheetCard,
       radius: 11,
+      fixedHeight: 48,
       leadingTile: NameGlyphTile(
         color: _glyphColor,
         onTap: _openIconPicker,

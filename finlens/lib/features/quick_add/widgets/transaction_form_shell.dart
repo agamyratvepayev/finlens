@@ -357,9 +357,11 @@ class TransactionFormShell extends StatelessWidget {
           onTap: onHeroTap,
           onCurrencyTap: hero.onCurrencyTap,
         ),
-      // The task title is one of the six name fields (task 004): a single 48pt
-      // line, no caption, the glyph a plain-but-tappable icon that picks the
-      // task's icon. It keeps the Quick Add grid via the form scalers and margin.
+      // The task title is one of the six name fields (task 004): a single line,
+      // no caption, the glyph a plain-but-tappable icon that picks the task's
+      // icon. Its neighbours are the fixed `48 * s` `TxnFieldRow`s, so unlike the
+      // editors it pins that height (§2). It keeps the Quick Add grid via the
+      // form scalers and margin.
       TextHero() => Padding(
           padding: const EdgeInsets.symmetric(horizontal: kFormMargin),
           child: NameField(
@@ -374,7 +376,8 @@ class TransactionFormShell extends StatelessWidget {
             radius: 14,
             scale: formScale(context),
             textScale: formTextScale(context),
-            padding: kRowPadding,
+            fixedHeight: 48 * formScale(context),
+            horizontalPadding: kRowPadding,
             iconColumn: kIconColumn,
             iconGap: kIconGap,
           ),
