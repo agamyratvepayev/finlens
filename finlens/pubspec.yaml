@@ -1,5 +1,5 @@
 name: finlens
-description: "A new Flutter project."
+description: "FinLens — a dark-mode personal-finance app for Turkmenistan: track accounts, budgets, and goals in manat (TMT)."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -64,6 +64,11 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
 
+  # Generates the launcher icons for every platform from a single source PNG
+  # (see the flutter_launcher_icons: block below). Dev-only: it runs at build
+  # time and ships nothing into the app bundle.
+  flutter_launcher_icons: ^0.14.4
+
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 
@@ -108,3 +113,22 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+# Launcher-icon generation (dev tooling, not shipped as an app asset).
+# Source art lives in assets/icon/ and is intentionally NOT listed under
+# flutter: assets: — it belongs to the build, not the bundle.
+flutter_launcher_icons:
+  image_path: "assets/icon/finlens_icon.png"
+  remove_alpha_ios: true
+
+  android: true
+  adaptive_icon_background: "#5E5CDE"
+  adaptive_icon_foreground: "assets/icon/finlens_icon_foreground.png"
+
+  ios: true
+
+  web:
+    generate: true
+    image_path: "assets/icon/finlens_icon.png"
+    background_color: "#5E5CDE"
+    theme_color: "#5E5CDE"
