@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:finlens/core/models/models.dart';
@@ -63,13 +62,6 @@ Widget _hostSheet(AppStore store, void Function(BuildContext) onTap) =>
 void main() {
   setUp(() {
     SharedPreferences.setMockInitialValues(<String, Object>{});
-    PackageInfo.setMockInitialValues(
-      appName: 'FinLens',
-      packageName: 'finlens',
-      version: '1.0.0',
-      buildNumber: '1',
-      buildSignature: '',
-    );
   });
 
   testWidgets('DATA card is four rows in the §1 order', (tester) async {

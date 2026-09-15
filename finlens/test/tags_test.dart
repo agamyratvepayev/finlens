@@ -296,7 +296,7 @@ void main() {
         );
 
     testWidgets(
-        'empty state uses its own strings, not tagsTitle / tagArchiveFootnote',
+        'empty state uses its own strings, not tagsTitle / the archive hint',
         (tester) async {
       final store = _store(); // no tags, no txns
       final l = await AppLocalizations.delegate.load(const Locale('en'));
@@ -305,10 +305,10 @@ void main() {
 
       expect(find.text(l.tagsEmptyTitle), findsOneWidget);
       expect(find.text(l.tagsEmptyMsg), findsOneWidget);
-      // The old borrowed strings are gone from the empty state: the footnote
-      // isn't anywhere on the screen (the header still shows tagsTitle, so we
-      // assert on the footnote, which only ever lived in the body).
-      expect(find.text(l.tagArchiveFootnote), findsNothing);
+      // The archive restore hint (task 010, all that survives of the old
+      // footnote) renders only when archived tags exist — a zero-tag store has
+      // none, so it must be absent from the empty state.
+      expect(find.text(l.tagArchiveRestoreHint), findsNothing);
     });
 
     testWidgets('§5 regression: a tag can be created from a zero-tag store',
@@ -359,6 +359,36 @@ void main() {
       expect(find.text(l.tagSectionInUse), findsOneWidget);
       expect(find.text(l.tagSectionArchived), findsOneWidget);
       expect(find.text('New'), findsOneWidget);
+    });
+
+    testWidgets(
+        'the restore hint renders under the archived chips, and only that one '
+        'sentence survives (task 010)', (tester) async {
+      final store = _store(
+        tags: [_tag('fun', name: 'fun', archived: true, used: 3)],
+      );
+      final l = await AppLocalizations.delegate.load(const Locale('en'));
+      await tester.pumpWidget(tagsApp(store));
+      await tester.pumpAndSettle();
+
+      expect(find.text(l.tagArchiveRestoreHint), findsOneWidget);
+      // The two narrating sentences of the old footnote are gone.
+      expect(find.textContaining('stay searchable'), findsNothing);
+    });
+
+    testWidgets(
+        'tapping an archived chip opens the edit sheet — the only route back '
+        'the hint names (task 010)', (tester) async {
+      final store = _store(
+        tags: [_tag('fun', name: 'fun', archived: true, used: 3)],
+      );
+      final l = await AppLocalizations.delegate.load(const Locale('en'));
+      await tester.pumpWidget(tagsApp(store));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.textContaining('fun', findRichText: true));
+      await tester.pumpAndSettle();
+      expect(find.text(l.tagEditTitle), findsOneWidget);
     });
   });
 }

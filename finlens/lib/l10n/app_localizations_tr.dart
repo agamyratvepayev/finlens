@@ -692,11 +692,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String get restoreInvalidMsg => 'Bu dosya geçerli bir FinLens yedeği değil';
 
   @override
-  String moreVersion(String version, String build) {
-    return '$version ($build)';
-  }
-
-  @override
   String get moreAddAccount => 'Hesap ekle';
 
   @override
@@ -721,10 +716,6 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get catSectionArchived => 'Arşivlenmiş';
-
-  @override
-  String get catArchiveFootnote =>
-      'Arşivlenen kategoriler geçmiş işlemlerinde kalır. Sadece yeni bir şey kaydederken görünmezler.';
 
   @override
   String get catTypeLocked =>
@@ -2156,10 +2147,6 @@ class AppLocalizationsTr extends AppLocalizations {
       'Ulaştığınız veya vazgeçtiğiniz hedefler ve kaldırdığınız bütçeler burada saklanır.';
 
   @override
-  String get arFootnote =>
-      'Arşivlenen öğeler Planlayıcı\'da görünmez ve toplamlarınızı etkilemez. Geçmiş işlemleri Defter\'de kalır.';
-
-  @override
   String get arGroupFinished => 'Tamamlandı';
 
   @override
@@ -2313,9 +2300,6 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get ldgFirstRunHintA11y => 'Yukarıdaki ekle düğmesiyle başla';
-
-  @override
-  String get ldgRestoreFromBackup => 'Yedekten geri yükle';
 
   @override
   String get ldgAddEntry => 'Kayıt ekle';
@@ -3859,8 +3843,8 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
-  String get tagArchiveFootnote =>
-      'Arşivlenen etiketler işlemlerinde kalır ve aranabilir olmayı sürdürür. Yalnızca yeni bir şey etiketlerken görünmezler. Geri getirmek için birine dokun.';
+  String get tagArchiveRestoreHint =>
+      'Arşivlenmiş bir etikete dokunarak geri getirin.';
 
   @override
   String get tagActionArchive => 'Archive';

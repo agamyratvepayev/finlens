@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:finlens/core/models/models.dart';
@@ -159,7 +158,7 @@ void main() {
   });
 
   testWidgets(
-      'empty store: the restore line renders and is gone once a transaction exists',
+      'empty store: the first run carries no restore line (task 010 removed it)',
       (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1.0;
@@ -169,18 +168,10 @@ void main() {
     await tester.pumpWidget(_app(store));
     await tester.pump();
 
-    expect(find.text('Restore from a backup'), findsOneWidget);
-
-    store.addTxn(
-      type: TxnType.income,
-      amount: 10,
-      currency: 'USD',
-      fromRef: 'x',
-      toRef: 'y',
-      date: currentMonth,
-    );
-    await tester.pump();
-
+    // The first-run block still stands (icon + title + message + hint), but the
+    // restore line that used to sit above the tab bar is gone — More → DATA →
+    // Restore is now the single entry point to the flow.
+    expect(find.byType(EmptyState), findsOneWidget);
     expect(find.text('Restore from a backup'), findsNothing);
   });
 
@@ -392,40 +383,10 @@ void main() {
     expect(find.textContaining('before', findRichText: true), findsOneWidget);
   });
 
-  // ── Restore line behaviour (§5) ─────────────────────────────────────────────
-
-  testWidgets(
-      'tapping the restore line opens the picker; a cancelled pick leaves the '
-      'screen unchanged', (tester) async {
-    tester.view.physicalSize = const Size(390, 844);
-    tester.view.devicePixelRatio = 1.0;
-    addTearDown(tester.view.reset);
-
-    // Fake the picker at the method-channel boundary: returning null is a
-    // cancelled pick, so runRestoreFlow must be a no-op.
-    var pickerOpened = false;
-    const channel = MethodChannel('miguelruivo.flutter.plugins.filepicker');
-    tester.binding.defaultBinaryMessenger
-        .setMockMethodCallHandler(channel, (call) async {
-      pickerOpened = true;
-      return null;
-    });
-    addTearDown(() => tester.binding.defaultBinaryMessenger
-        .setMockMethodCallHandler(channel, null));
-
-    final store = _emptyStore();
-    await tester.pumpWidget(_app(store));
-    await tester.pump();
-
-    await tester.tap(find.text('Restore from a backup'));
-    await tester.pumpAndSettle();
-
-    expect(pickerOpened, isTrue);
-    // Cancelled → nothing changed: still the first-run screen.
-    expect(find.byType(EmptyState), findsOneWidget);
-    expect(find.text('Every transaction lives here'), findsOneWidget);
-    expect(tester.takeException(), isNull);
-  });
+  // ── loadFrom replaces the first-run screen ──────────────────────────────────
+  // (Task 010 removed the Ledger's own restore line; the flow is now reached
+  // only from More → DATA → Restore. What still matters here is that the Ledger
+  // reacts to a loadFrom — whatever screen triggered it — by leaving first run.)
 
   testWidgets(
       'after loadFrom the first-run screen is replaced by the populated one, '

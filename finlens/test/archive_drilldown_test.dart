@@ -43,6 +43,19 @@ void main() {
     expect(find.widgetWithText(TextButton, 'Archive'), findsOneWidget);
   });
 
+  testWidgets('no footnote renders, and every row keeps its Restore (task 010)',
+      (tester) async {
+    bigScreen(tester);
+    await tester.pumpWidget(wrap(buildSeedStore(), const ArchiveScreen()));
+    await tester.pumpAndSettle();
+
+    // The consequences paragraph is gone — nothing is lost, because each row
+    // carries a visible Restore. Garden (a removed budget) is the seed's one
+    // Restore affordance.
+    expect(find.textContaining("don't affect your totals"), findsNothing);
+    expect(find.text('Restore'), findsOneWidget);
+  });
+
   testWidgets('tapping an abandoned goal opens it with STOPPED ON / GOT TO',
       (tester) async {
     bigScreen(tester);

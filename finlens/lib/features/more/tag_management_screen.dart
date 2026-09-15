@@ -121,15 +121,19 @@ class TagManagementScreen extends StatelessWidget {
                                 onTap: () => _showEditTag(context, store, t),
                               ),
                           ]),
-                        ],
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(
-                              Insets.gutter, Insets.md, Insets.gutter, 0),
-                          child: Text(
-                            l.tagArchiveFootnote,
-                            style: AppText.caption.copyWith(fontSize: 12.5),
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(
+                                Insets.gutter, Insets.sm, Insets.gutter, 0),
+                            child: Text(
+                              // All that survives of the footnote (task 010): the
+                              // two sentences that narrated the state are gone;
+                              // this one names a gesture that has no visual cue at
+                              // all, and deleting it would hide the only way back.
+                              l.tagArchiveRestoreHint,
+                              style: AppText.caption.copyWith(fontSize: 12.5),
+                            ),
                           ),
-                        ),
+                        ],
                       ],
                     ),
             ),

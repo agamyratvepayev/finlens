@@ -38,6 +38,19 @@ void main() {
     expect(find.text('Groceries'), findsOneWidget);
   });
 
+  testWidgets('no archive footnote renders (task 010)', (tester) async {
+    phone(tester);
+    await tester.pumpWidget(
+        wrap(buildSeedStore(), const CategoryManagementScreen()));
+    await tester.pumpAndSettle();
+
+    // The paragraph that used to render for every user — even one who has never
+    // archived a category — is gone. The ARCHIVED section (45 % opacity when it
+    // exists) is the only "archived" signal now.
+    expect(
+        find.textContaining('stay on their past transactions'), findsNothing);
+  });
+
   testWidgets('expense section truncates at 8 with a one-way +N more (§2.3)',
       (tester) async {
     phone(tester);

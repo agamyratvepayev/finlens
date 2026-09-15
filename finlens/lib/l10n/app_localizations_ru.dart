@@ -709,11 +709,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get restoreInvalidMsg => 'Файл не является резервной копией FinLens';
 
   @override
-  String moreVersion(String version, String build) {
-    return '$version ($build)';
-  }
-
-  @override
   String get moreAddAccount => 'Добавить счёт';
 
   @override
@@ -738,10 +733,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get catSectionArchived => 'Архив';
-
-  @override
-  String get catArchiveFootnote =>
-      'Архивные категории остаются в прошлых операциях. Они просто не появляются, когда вы записываете что-то новое.';
 
   @override
   String get catTypeLocked =>
@@ -2215,10 +2206,6 @@ class AppLocalizationsRu extends AppLocalizations {
       'Достигнутые и заброшенные цели, а также удалённые бюджеты хранятся здесь.';
 
   @override
-  String get arFootnote =>
-      'Архивные элементы не показываются в Планировщике и не влияют на итоги. Их прошлые операции остаются в журнале.';
-
-  @override
   String get arGroupFinished => 'Завершено';
 
   @override
@@ -2376,9 +2363,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get ldgFirstRunHintA11y => 'Начните с кнопки добавления наверху';
-
-  @override
-  String get ldgRestoreFromBackup => 'Восстановить из резервной копии';
 
   @override
   String get ldgAddEntry => 'Добавить запись';
@@ -3948,8 +3932,8 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String get tagArchiveFootnote =>
-      'Архивные метки остаются на своих операциях и доступны для поиска. Они просто не появляются, когда вы отмечаете что-то новое. Нажмите на метку, чтобы вернуть её.';
+  String get tagArchiveRestoreHint =>
+      'Нажмите на архивный тег, чтобы вернуть его.';
 
   @override
   String get tagActionArchive => 'Archive';

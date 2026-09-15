@@ -10,7 +10,6 @@ import '../../core/utils/formatters.dart';
 import '../../core/utils/fx.dart';
 import '../../core/utils/search_fold.dart';
 import '../../l10n/app_localizations.dart';
-import '../../shared/restore_flow.dart';
 import '../../shared/widgets/amount_text.dart';
 import '../../shared/widgets/app_card.dart';
 import '../../shared/widgets/screen_header.dart';
@@ -362,7 +361,13 @@ class _LedgerScreenState extends State<LedgerScreen> {
                           );
                         },
                       )
-                    : _firstRun(store),
+                    // First run: the centred block is laid against the whole
+                    // body by the Stack in [build], and this slot is a
+                    // hit-transparent spacer over it so the block takes the taps
+                    // and the scroll. It held the restore line until task 010;
+                    // More → DATA → Restore is now the single entry point to
+                    // runRestoreFlow.
+                    : const SizedBox.expand(),
               ),
             ],
           ),
@@ -527,7 +532,8 @@ class _LedgerScreenState extends State<LedgerScreen> {
   }
 
   Widget _empty(AppStore store, {required bool searching}) {
-    // First run is handled ahead of the list entirely (§1/§3 — [_firstRun]), so
+    // First run is handled ahead of the list entirely (§1/§3 — the Stack in
+    // [build] lays [_firstRunBlock] over a spacer), so
     // this method only ever runs on a store that *has* recorded something: the
     // branches below are the empty-search, empty-filter and empty-month states.
     if (searching) {
@@ -596,22 +602,6 @@ class _LedgerScreenState extends State<LedgerScreen> {
 
   // ── First run (spec §2–§5) ──────────────────────────────────────────────────
 
-  /// The first-run overlay drawn over [_firstRunBlock] (§1): a hit-transparent
-  /// spacer, so the centred block behind takes the taps and the scroll, and the
-  /// quiet restore line pinned above the tab bar — still on top, still tappable.
-  /// The block is no longer sized against this column's leftover height; it is
-  /// laid against the whole body by the Stack in [build], so its icon lands on
-  /// the same y as Balance's and the Planner's rather than being pushed up by
-  /// the restore line.
-  Widget _firstRun(AppStore store) {
-    return Column(
-      children: [
-        const Expanded(child: SizedBox.expand()),
-        _restoreLine(store),
-      ],
-    );
-  }
-
   /// The centred first-run block: icon on a backdrop, title, message, and the
   /// muted line that names the unlabelled + — "Start with + above", the glyph a
   /// real accent echoing the button (§2–§4). The line sits in the reserved
@@ -631,39 +621,6 @@ class _LedgerScreenState extends State<LedgerScreen> {
         child: buildFirstRunHint(l.ldgFirstRunHint(sentinel), sentinel,
             semanticsLabel: l.ldgFirstRunHintA11y),
       ),
-    );
-  }
-
-  /// The quiet "Restore from a backup" line pinned above the tab bar (§5): the
-  /// one screen a restoring user actually lands on. It runs the real shared
-  /// restore flow (picker → confirm → load), not a signpost to More.
-  Widget _restoreLine(AppStore store) {
-    final l = AppLocalizations.of(context);
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Semantics(
-          button: true,
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: () => runRestoreFlow(context, store),
-            child: Container(
-              alignment: Alignment.center,
-              constraints: const BoxConstraints(minHeight: 44),
-              padding: const EdgeInsets.symmetric(horizontal: Insets.gutter),
-              child: Text(
-                l.ldgRestoreFromBackup,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 11.5,
-                  color: AppColors.textTertiary,
-                ),
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(height: Insets.md),
-      ],
     );
   }
 

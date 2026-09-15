@@ -9,9 +9,10 @@ import '../l10n/app_localizations.dart';
 import 'widgets/destructive_sheet.dart';
 
 /// The Restore-from-backup flow: pick a `.json`, validate it, confirm the
-/// destructive replace, then [AppStore.loadFrom] it. Shared by More › DATA and
-/// the Ledger's first-run screen — two entry points, one flow, so they cannot
-/// drift into disagreeing about what a bad file does.
+/// destructive replace, then [AppStore.loadFrom] it. Entered from More › DATA ›
+/// Restore — its single call site since task 010 removed the Ledger's first-run
+/// restore line. Kept as one shared function so any future second entry point
+/// cannot drift into disagreeing about what a bad file does.
 ///
 /// [AppStore.loadFrom] fires `notifyListeners`, so the attached persister writes
 /// the restored data to SQLite on its own — nothing here touches the database.

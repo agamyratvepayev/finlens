@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -379,41 +378,6 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets(
-    'the Ledger restore line is tappable through the first-run Stack',
-    (tester) async {
-      tester.view.physicalSize = const Size(390, 844);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.reset);
-
-      var pickerOpened = false;
-      const channel = MethodChannel('miguelruivo.flutter.plugins.filepicker');
-      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(channel, (
-        call,
-      ) async {
-        pickerOpened = true;
-        return null;
-      });
-      addTearDown(
-        () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
-          channel,
-          null,
-        ),
-      );
-
-      await tester.pumpWidget(host(emptyStore(), const LedgerScreen()));
-      await tester.pumpAndSettle();
-
-      final l = l10nOf(tester, LedgerScreen);
-      await tester.tap(find.text(l.ldgRestoreFromBackup));
-      await tester.pumpAndSettle();
-      expect(
-        pickerOpened,
-        isTrue,
-        reason: 'the restore line, pinned over the block, must take the tap',
-      );
-    },
-  );
 
   // Re-baselined: the Insight signpost is gone. The fourth row names what
   // fills the screen, and Insight creates nothing — it reads what the other

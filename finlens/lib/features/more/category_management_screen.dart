@@ -7,7 +7,6 @@ import '../../shared/widgets/category_cell.dart';
 import '../../shared/widgets/screen_header.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
-import '../../theme/app_typography.dart';
 import '../quick_add/pickers.dart';
 import 'edit_category_screen.dart';
 
@@ -77,14 +76,6 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen> {
                           cats: archived,
                           createType: null),
                     ),
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(
-                        Insets.gutter, Insets.md, Insets.gutter, 0),
-                    child: Text(
-                      l.catArchiveFootnote,
-                      style: AppText.caption.copyWith(fontSize: 12.5),
-                    ),
-                  ),
                 ],
               ),
             ),

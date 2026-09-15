@@ -694,11 +694,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get restoreInvalidMsg => 'That file isn\'t a valid FinLens backup';
 
   @override
-  String moreVersion(String version, String build) {
-    return '$version ($build)';
-  }
-
-  @override
   String get moreAddAccount => 'Add an account';
 
   @override
@@ -723,10 +718,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get catSectionArchived => 'Archived';
-
-  @override
-  String get catArchiveFootnote =>
-      'Archived categories stay on their past transactions. They just don\'t appear when you record something new.';
 
   @override
   String get catTypeLocked =>
@@ -2168,10 +2159,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Goals you reach or give up on, and budgets you remove, are kept here.';
 
   @override
-  String get arFootnote =>
-      'Archived items don\'t appear in Planner and don\'t affect your totals. Their past transactions stay in Ledger.';
-
-  @override
   String get arGroupFinished => 'Finished';
 
   @override
@@ -2325,9 +2312,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get ldgFirstRunHintA11y => 'Start with the add button above';
-
-  @override
-  String get ldgRestoreFromBackup => 'Restore from a backup';
 
   @override
   String get ldgAddEntry => 'Add an entry';
@@ -3870,8 +3854,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get tagArchiveFootnote =>
-      'Archived tags stay on their transactions and stay searchable. They just don\'t appear when you tag something new. Tap one to bring it back.';
+  String get tagArchiveRestoreHint => 'Tap an archived tag to bring it back.';
 
   @override
   String get tagActionArchive => 'Archive';

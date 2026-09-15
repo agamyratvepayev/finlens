@@ -86,12 +86,6 @@ class ArchiveScreen extends StatelessWidget {
                       children: [
                         if (reached.isNotEmpty || gaveUp.isNotEmpty)
                           _GoalPerformanceCard(reached: reached, gaveUp: gaveUp),
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(Insets.gutter, 0,
-                              Insets.gutter, Insets.md),
-                          child: Text(l.arFootnote,
-                              style: AppText.caption.copyWith(fontSize: 12.5)),
-                        ),
 
                         // FINISHED — read-only, amount + chevron.
                         if (finished > 0) ...[

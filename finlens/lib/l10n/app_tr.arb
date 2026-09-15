@@ -212,7 +212,6 @@
   "catSectionExpense": "Gider",
   "catSectionIncome": "Gelir",
   "catSectionArchived": "Arşivlenmiş",
-  "catArchiveFootnote": "Arşivlenen kategoriler geçmiş işlemlerinde kalır. Sadece yeni bir şey kaydederken görünmezler.",
   "catTypeLocked": "Bunu değiştirmek buraya kaydedilmiş her işlemi ters çevirir",
   "catArchiveThis": "Kategoriyi arşivle",
   "catArchiveMsg": "{count, plural, one{Buraya {count} işlem kaydedilmiş, bu yüzden silinmek yerine arşivlenir} other{Buraya {count} işlem kaydedilmiş, bu yüzden silinmek yerine arşivlenir}}",
@@ -228,7 +227,7 @@
   "tagDeleteThis": "Etiketi sil",
   "tagDeleteMsg": "Henüz hiçbir şey onu taşımıyor, bu yüzden tamamen kaldırılabilir",
   "tagRestoreThis": "Etiketi geri yükle",
-  "tagArchiveFootnote": "Arşivlenen etiketler işlemlerinde kalır ve aranabilir olmayı sürdürür. Yalnızca yeni bir şey etiketlerken görünmezler. Geri getirmek için birine dokun.",
+  "tagArchiveRestoreHint": "Arşivlenmiş bir etikete dokunarak geri getirin.",
   "tagsEmptyTitle": "Henüz etiket yok",
   "tagsEmptyMsg": "Kategorinin üstüne eklenen ikinci bir etiket.",
 
@@ -576,7 +575,6 @@
 
   "arEmpty": "Arşiv boş",
   "arEmptyMsg": "Ulaştığınız veya vazgeçtiğiniz hedefler ve kaldırdığınız bütçeler burada saklanır.",
-  "arFootnote": "Arşivlenen öğeler Planlayıcı'da görünmez ve toplamlarınızı etkilemez. Geçmiş işlemleri Defter'de kalır.",
   "arGroupFinished": "Tamamlandı",
   "arGroupUnfinished": "Tamamlanmadı",
   "arGroupCanComeBack": "Geri gelebilir",
@@ -618,7 +616,6 @@
   "ldgNothingRecordedInMonth": "{month} ayında kayıt yok",
   "ldgFirstRunHint": "{plus} ile başla",
   "ldgFirstRunHintA11y": "Yukarıdaki ekle düğmesiyle başla",
-  "ldgRestoreFromBackup": "Yedekten geri yükle",
   "ldgAddEntry": "Kayıt ekle",
   "ldgCategories": "Kategoriler",
   "ldgAccounts": "Hesaplar",

@@ -1134,12 +1134,6 @@ abstract class AppLocalizations {
   /// **'That file isn\'t a valid FinLens backup'**
   String get restoreInvalidMsg;
 
-  /// No description provided for @moreVersion.
-  ///
-  /// In en, this message translates to:
-  /// **'{version} ({build})'**
-  String moreVersion(String version, String build);
-
   /// No description provided for @moreAddAccount.
   ///
   /// In en, this message translates to:
@@ -1187,12 +1181,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Archived'**
   String get catSectionArchived;
-
-  /// No description provided for @catArchiveFootnote.
-  ///
-  /// In en, this message translates to:
-  /// **'Archived categories stay on their past transactions. They just don\'t appear when you record something new.'**
-  String get catArchiveFootnote;
 
   /// No description provided for @catTypeLocked.
   ///
@@ -3298,12 +3286,6 @@ abstract class AppLocalizations {
   /// **'Goals you reach or give up on, and budgets you remove, are kept here.'**
   String get arEmptyMsg;
 
-  /// No description provided for @arFootnote.
-  ///
-  /// In en, this message translates to:
-  /// **'Archived items don\'t appear in Planner and don\'t affect your totals. Their past transactions stay in Ledger.'**
-  String get arFootnote;
-
   /// No description provided for @arGroupFinished.
   ///
   /// In en, this message translates to:
@@ -3537,12 +3519,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Start with the add button above'**
   String get ldgFirstRunHintA11y;
-
-  /// No description provided for @ldgRestoreFromBackup.
-  ///
-  /// In en, this message translates to:
-  /// **'Restore from a backup'**
-  String get ldgRestoreFromBackup;
 
   /// No description provided for @ldgAddEntry.
   ///
@@ -6034,11 +6010,11 @@ abstract class AppLocalizations {
   /// **'{count, plural, one{{count} transaction · last {date}} other{{count} transactions · last {date}}}'**
   String tagUsageLine(int count, Object date);
 
-  /// No description provided for @tagArchiveFootnote.
+  /// No description provided for @tagArchiveRestoreHint.
   ///
   /// In en, this message translates to:
-  /// **'Archived tags stay on their transactions and stay searchable. They just don\'t appear when you tag something new. Tap one to bring it back.'**
-  String get tagArchiveFootnote;
+  /// **'Tap an archived tag to bring it back.'**
+  String get tagArchiveRestoreHint;
 
   /// No description provided for @tagActionArchive.
   ///

@@ -691,11 +691,6 @@ class AppLocalizationsTk extends AppLocalizations {
   String get restoreInvalidMsg => 'Bu faýl dogry FinLens nusgasy däl';
 
   @override
-  String moreVersion(String version, String build) {
-    return '$version ($build)';
-  }
-
-  @override
   String get moreAddAccount => 'Hasap goş';
 
   @override
@@ -720,10 +715,6 @@ class AppLocalizationsTk extends AppLocalizations {
 
   @override
   String get catSectionArchived => 'Arhiwlenen';
-
-  @override
-  String get catArchiveFootnote =>
-      'Arhiwlenen kategoriýalar geçmiş amallarynda galýar. Diňe täze bir zat ýazanyňyzda görünmeýär.';
 
   @override
   String get catTypeLocked =>
@@ -2157,10 +2148,6 @@ class AppLocalizationsTk extends AppLocalizations {
       'Ýeten ýa-da ýüz öwren maksatlaryňyz we aýran býujetleriňiz şu ýerde saklanýar.';
 
   @override
-  String get arFootnote =>
-      'Arhiwlenen elementler Meýilnamada görünmeýär we jemleriňize täsir etmeýär. Geçmiş amallary Hasapda galýar.';
-
-  @override
   String get arGroupFinished => 'Tamamlandy';
 
   @override
@@ -2314,9 +2301,6 @@ class AppLocalizationsTk extends AppLocalizations {
 
   @override
   String get ldgFirstRunHintA11y => 'Ýokardaky goşmak düwmesi bilen başlaň';
-
-  @override
-  String get ldgRestoreFromBackup => 'Ätiýaçlyk nusgadan dikeltmek';
 
   @override
   String get ldgAddEntry => 'Ýazgy goş';
@@ -3863,8 +3847,7 @@ class AppLocalizationsTk extends AppLocalizations {
   }
 
   @override
-  String get tagArchiveFootnote =>
-      'Arhiwlenen bellikler amallarynda galýar we gözlegde tapylýar. Diňe täze bir zady bellände görünmeýär. Yzyna getirmek üçin birine bas.';
+  String get tagArchiveRestoreHint => 'Arhiwlenen bellige degip yzyna getiriň.';
 
   @override
   String get tagActionArchive => 'Archive';

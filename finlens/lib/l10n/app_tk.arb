@@ -212,7 +212,6 @@
   "catSectionExpense": "Çykdajy",
   "catSectionIncome": "Girdeji",
   "catSectionArchived": "Arhiwlenen",
-  "catArchiveFootnote": "Arhiwlenen kategoriýalar geçmiş amallarynda galýar. Diňe täze bir zat ýazanyňyzda görünmeýär.",
   "catTypeLocked": "Muny üýtgetmek bu ýere ýazylan ähli amaly tersine öwrer",
   "catArchiveThis": "Kategoriýany arhiwle",
   "catArchiveMsg": "{count, plural, one{Bu ýere {count} amal ýazylan, şonuň üçin pozulman arhiwlenýär} other{Bu ýere {count} amal ýazylan, şonuň üçin pozulman arhiwlenýär}}",
@@ -228,7 +227,7 @@
   "tagDeleteThis": "Belligi poz",
   "tagDeleteMsg": "Ony entek hiç zat götermeýär, şonuň üçin doly aýrylyp bilner",
   "tagRestoreThis": "Belligi dikelt",
-  "tagArchiveFootnote": "Arhiwlenen bellikler amallarynda galýar we gözlegde tapylýar. Diňe täze bir zady bellände görünmeýär. Yzyna getirmek üçin birine bas.",
+  "tagArchiveRestoreHint": "Arhiwlenen bellige degip yzyna getiriň.",
   "tagsEmptyTitle": "Entek bellik ýok",
   "tagsEmptyMsg": "Kategoriýanyň üstündäki ikinji bellik.",
 
@@ -576,7 +575,6 @@
 
   "arEmpty": "Arhiw boş",
   "arEmptyMsg": "Ýeten ýa-da ýüz öwren maksatlaryňyz we aýran býujetleriňiz şu ýerde saklanýar.",
-  "arFootnote": "Arhiwlenen elementler Meýilnamada görünmeýär we jemleriňize täsir etmeýär. Geçmiş amallary Hasapda galýar.",
   "arGroupFinished": "Tamamlandy",
   "arGroupUnfinished": "Tamamlanmadyk",
   "arGroupCanComeBack": "Yzyna gelip biler",
@@ -618,7 +616,6 @@
   "ldgNothingRecordedInMonth": "{month} aýynda hiç zat ýazylmady",
   "ldgFirstRunHint": "Ýokardaky {plus} bilen başlaň",
   "ldgFirstRunHintA11y": "Ýokardaky goşmak düwmesi bilen başlaň",
-  "ldgRestoreFromBackup": "Ätiýaçlyk nusgadan dikeltmek",
   "ldgAddEntry": "Ýazgy goş",
   "ldgCategories": "Kategoriýalar",
   "ldgAccounts": "Hasaplar",

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:package_info_plus/package_info_plus.dart';
 
 import 'package:finlens/core/data/seed_data.dart';
 import 'package:finlens/core/models/models.dart';
@@ -22,18 +21,6 @@ import 'package:finlens/theme/app_theme.dart';
 /// run there; verify by running this file yourself.
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
-
-  setUpAll(() {
-    // The footer reads PackageInfo; without a mock the platform channel is
-    // absent under the test binding.
-    PackageInfo.setMockInitialValues(
-      appName: 'FinLens',
-      packageName: 'tech.codehammer.finlens',
-      version: '1.0.0',
-      buildNumber: '1',
-      buildSignature: '',
-    );
-  });
 
   Widget app(
     AppStore store, {
@@ -227,23 +214,6 @@ void main() {
       // The long dialog-title strings never appear on a row.
       expect(find.text(l.moreBackup), findsNothing); // "Back up data"
       expect(find.text(l.moreRestore), findsNothing); // "Restore data"
-    });
-  });
-
-  // ── §4 — the version footer is pinned, not scrolled ──────────────────────────
-  group('version footer', () {
-    testWidgets('is a sibling of the list, not inside it', (tester) async {
-      final store = buildSeedStore();
-      await tester.pumpWidget(app(store));
-      await tester.pump(const Duration(milliseconds: 300));
-
-      final version = find.textContaining('FinLens');
-      expect(version, findsOneWidget);
-      // It renders, but never as a descendant of the scrollable list.
-      expect(
-        find.descendant(of: find.byType(ListView), matching: version),
-        findsNothing,
-      );
     });
   });
 

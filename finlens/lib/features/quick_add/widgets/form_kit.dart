@@ -721,31 +721,15 @@ class FormAction extends StatelessWidget {
     );
     return Padding(
       padding: EdgeInsets.fromLTRB(kFormMargin, 16 * s, kFormMargin, 0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Semantics(
-            button: true,
-            enabled: on,
-            label: spec.label,
-            // The reason travels with the button's semantics so a screen reader
-            // hears why it is unavailable (spec §7 / §12).
-            value: on ? null : spec.disabledReason,
-            child: Opacity(opacity: on ? 1 : 0.35, child: button),
-          ),
-          if (!on && spec.disabledReason != null)
-            Padding(
-              padding: EdgeInsets.only(top: 7 * s, left: 2 * s),
-              child: Text(
-                spec.disabledReason!,
-                style: TextStyle(
-                  fontSize: 12 * s * formTextScale(context),
-                  height: 1.3,
-                  color: AppColors.formDim2,
-                ),
-              ),
-            ),
-        ],
+      child: Semantics(
+        button: true,
+        enabled: on,
+        label: spec.label,
+        // The reason stays in the semantics and leaves the screen (task 010):
+        // the 35% opacity says "not yet" to a sighted user and has no audible
+        // twin, so this is the only place a screen-reader user can hear it.
+        value: on ? null : spec.disabledReason,
+        child: Opacity(opacity: on ? 1 : 0.35, child: button),
       ),
     );
   }

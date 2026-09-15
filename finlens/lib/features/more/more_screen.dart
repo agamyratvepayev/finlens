@@ -3,7 +3,6 @@ import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../core/persistence/backup_codec.dart';
 import '../../core/store/app_store.dart';
@@ -344,10 +343,6 @@ class MoreScreen extends StatelessWidget {
               ],
             ),
           ),
-          // Pinned (§4): the footer leaves the scrollable list and sits above the
-          // bottom nav, so on a screen whose cards end halfway down it no longer
-          // hangs under the last card with a screen of black beneath it.
-          const _VersionFooter(),
         ],
       ),
     );
@@ -680,56 +675,6 @@ class _MaskRow extends StatelessWidget {
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-/// The footer: the real version and build, read once from the pubspec via
-/// [PackageInfo]. A line of text, not a row — no card, no chevron, no tap
-/// target. "FinLens" is the product name (a proper noun), not a localised
-/// string; only the version/build come from [l.moreVersion].
-///
-/// Stateful, and the future is resolved once in [initState] (§4): a
-/// FutureBuilder over a future rebuilt every `build` would re-fetch on each mask
-/// toggle. While it is unresolved the line renders a single space so it already
-/// occupies exactly one line's height — when the real text arrives it swaps in
-/// place with no layout shift, and the space grows with the text scale just as
-/// the text would.
-class _VersionFooter extends StatefulWidget {
-  const _VersionFooter();
-
-  @override
-  State<_VersionFooter> createState() => _VersionFooterState();
-}
-
-class _VersionFooterState extends State<_VersionFooter> {
-  late final Future<PackageInfo> _info = PackageInfo.fromPlatform();
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    return Padding(
-      padding: const EdgeInsets.only(top: Insets.md, bottom: Insets.lg),
-      child: Center(
-        child: FutureBuilder<PackageInfo>(
-          future: _info,
-          builder: (context, snap) {
-            final info = snap.data;
-            final text = info == null
-                ? ''
-                : 'FinLens ${l.moreVersion(info.version, info.buildNumber)}';
-            // A space (not '') reserves one line's height so nothing shifts when
-            // the real string resolves.
-            return Text(
-              text.isEmpty ? ' ' : text,
-              style: AppText.caption.copyWith(
-                fontSize: 11.5,
-                color: AppColors.textTertiary,
-              ),
-            );
-          },
         ),
       ),
     );

@@ -78,17 +78,49 @@ void main() {
     expect(store.txns, isEmpty);
   });
 
-  testWidgets('Split action is disabled and states its reason (§7)',
-      (tester) async {
+  testWidgets(
+      'Split is disabled, prints no reason on screen, but keeps it in semantics '
+      '(task 010)', (tester) async {
     await _pump(tester, _store());
-    // The full-width Split action names what it does and, with no amount,
-    // states why it is unavailable.
+    // The full-width Split action names what it does…
     expect(find.text('Split into several categories'), findsOneWidget);
-    expect(find.text('Enter an amount first.'), findsOneWidget);
+    // …but with no amount the reason no longer prints beneath it: the 35 %
+    // opacity is the only visible "not yet".
+    expect(find.text('Enter an amount first.'), findsNothing);
+    // The reason still travels with the button's semantics for a screen reader.
+    expect(
+      find.byWidgetPredicate((w) =>
+          w is Semantics && w.properties.value == 'Enter an amount first.'),
+      findsOneWidget,
+    );
     // Tapping the disabled action opens nothing.
     await tester.tap(find.text('Split into several categories'));
     await tester.pumpAndSettle();
     expect(find.widgetWithText(FilledButton, 'Done'), findsNothing);
+  });
+
+  testWidgets(
+      'typing the first digit does not shift the Split button, and clears the '
+      'reason from semantics (task 010)', (tester) async {
+    await _pump(tester, _store());
+    final before =
+        tester.getTopLeft(find.text('Split into several categories')).dy;
+
+    // Enter the first digit the user opened the form to type — before task 010
+    // this inserted/removed a whole reason line and the form jumped ~19 pt.
+    await tester.tap(find.text('5'));
+    await tester.pump();
+
+    final after =
+        tester.getTopLeft(find.text('Split into several categories')).dy;
+    expect((after - before).abs(), lessThan(0.5));
+
+    // Enabled now → the reason is no longer carried anywhere.
+    expect(
+      find.byWidgetPredicate((w) =>
+          w is Semantics && w.properties.value == 'Enter an amount first.'),
+      findsNothing,
+    );
   });
 
   testWidgets('setting a repeat creates one transaction and one Planner rule',
