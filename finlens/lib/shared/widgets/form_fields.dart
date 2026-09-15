@@ -46,10 +46,16 @@ class FormRow extends StatelessWidget {
     this.opensSheet = false,
     this.enabled = true,
     this.locked = false,
+    this.labelBadge,
   });
 
   final IconData? icon;
   final String label;
+
+  /// An optional tag rendered immediately after the label, outside its flexible
+  /// box so it never truncates (the currency picker's `CUSTOM` marker). Null for
+  /// every other row.
+  final Widget? labelBadge;
   final String? subtitle;
   final String? value;
   final Color? valueColor;
@@ -129,6 +135,7 @@ class FormRow extends StatelessWidget {
                             color: AppColors.textTertiary,
                           ),
                         ),
+                      ?labelBadge,
                     ],
                   ),
                   if (subtitle != null) ...[

@@ -170,6 +170,12 @@ class AppLocalizationsTr extends AppLocalizations {
   String get curEdited => 'Düzenlendi';
 
   @override
+  String get curEdit => 'Düzenle';
+
+  @override
+  String get curCustom => 'Özel';
+
+  @override
   String get curCodeLocked =>
       'Kod değiştirilemez — hesaplar ve işlemler onu kullanıyor.';
 

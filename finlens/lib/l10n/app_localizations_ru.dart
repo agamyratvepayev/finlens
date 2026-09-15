@@ -171,6 +171,12 @@ class AppLocalizationsRu extends AppLocalizations {
   String get curEdited => 'Изменена';
 
   @override
+  String get curEdit => 'Изменить';
+
+  @override
+  String get curCustom => 'Своя';
+
+  @override
   String get curCodeLocked =>
       'Код изменить нельзя — на него ссылаются счета и операции.';
 

@@ -173,6 +173,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get curEdited => 'Edited';
 
   @override
+  String get curEdit => 'Edit';
+
+  @override
+  String get curCustom => 'Custom';
+
+  @override
   String get curCodeLocked =>
       'The code can’t change — accounts and transactions name it.';
 

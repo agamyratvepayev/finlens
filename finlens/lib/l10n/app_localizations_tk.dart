@@ -169,6 +169,12 @@ class AppLocalizationsTk extends AppLocalizations {
   String get curEdited => 'Üýtgedildi';
 
   @override
+  String get curEdit => 'Üýtget';
+
+  @override
+  String get curCustom => 'Öz';
+
+  @override
   String get curCodeLocked =>
       'Kody üýtgedip bolmaýar — hasaplar we amallar oňa salgylanýar.';
 

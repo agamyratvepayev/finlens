@@ -396,6 +396,18 @@ abstract class AppLocalizations {
   /// **'Edited'**
   String get curEdited;
 
+  /// No description provided for @curEdit.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit'**
+  String get curEdit;
+
+  /// No description provided for @curCustom.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom'**
+  String get curCustom;
+
   /// No description provided for @curCodeLocked.
   ///
   /// In en, this message translates to:

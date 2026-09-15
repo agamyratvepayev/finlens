@@ -59,6 +59,8 @@
   "curSectionInUse": "KULLANIMDA",
   "curSectionAdded": "SİZİN EKLEDİKLERİNİZ",
   "curEdited": "Düzenlendi",
+  "curEdit": "Düzenle",
+  "curCustom": "Özel",
   "curCodeLocked": "Kod değiştirilemez — hesaplar ve işlemler onu kullanıyor.",
   "curDecimals": "Ondalık basamak",
   "curPreview": "Önizleme",

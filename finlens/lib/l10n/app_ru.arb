@@ -59,6 +59,8 @@
   "curSectionInUse": "ИСПОЛЬЗУЮТСЯ",
   "curSectionAdded": "ДОБАВЛЕНЫ ВАМИ",
   "curEdited": "Изменена",
+  "curEdit": "Изменить",
+  "curCustom": "Своя",
   "curCodeLocked": "Код изменить нельзя — на него ссылаются счета и операции.",
   "curDecimals": "Знаков после запятой",
   "curPreview": "Предпросмотр",

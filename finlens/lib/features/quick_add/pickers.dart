@@ -16,6 +16,7 @@ import '../../shared/widgets/category_cell.dart';
 import '../../shared/widgets/destructive_sheet.dart';
 import '../../shared/widgets/form_fields.dart';
 import '../../shared/widgets/screen_header.dart' show SegmentedPicker;
+import '../../shared/widgets/swipe_actions.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/app_typography.dart';
@@ -40,6 +41,16 @@ Future<T?> showAppSheet<T>(
   required String title,
   required Widget Function(BuildContext, ScrollController) builder,
   double initialSize = 0.7,
+  // Caps how far the sheet may be dragged, as a screen fraction. Null keeps the
+  // computed ceiling (window − status bar − 44pt barrier). A caller-supplied cap
+  // only ever *lowers* that ceiling, never past the barrier rule. Only the
+  // currency picker (§1) passes it today.
+  double? maxSize,
+  // When non-null the draggable sheet snaps to these fractions instead of
+  // resting anywhere. Sanitised to (0.4, maxSize] before use. Only the currency
+  // picker passes it (§1: snaps between its half-height and full-height); every
+  // other sheet stays free-dragging.
+  List<double>? snapSizes,
   List<Widget> actions = const [],
   // Optional dismissal guard (spec §5.2). When supplied it runs on Cancel,
   // scrim tap, system back, and swipe-down alike; returning false keeps the
@@ -68,16 +79,20 @@ Future<T?> showAppSheet<T>(
     builder: (context) {
       final media = MediaQuery.of(context);
       // Leave ≥44pt of barrier tappable below the status bar at full extent.
-      final maxSize =
+      final computedMax =
           ((media.size.height - media.padding.top - 44) / media.size.height)
               .clamp(0.5, 0.94);
-      final initial = initialSize > maxSize ? maxSize : initialSize;
+      // A caller cap can only pull the ceiling down, never above the barrier rule.
+      final resolvedMax =
+          maxSize == null ? computedMax : math.min(maxSize, computedMax);
+      final initial = initialSize > resolvedMax ? resolvedMax : initialSize;
       return _AppSheetBody(
         title: title,
         actions: actions,
         builder: builder,
         initialSize: initial,
-        maxSize: maxSize,
+        maxSize: resolvedMax,
+        snapSizes: snapSizes,
         onDismiss: onDismiss,
         cancelLabel: cancelLabel,
         contentSized: contentSized,
@@ -98,6 +113,7 @@ class _AppSheetBody extends StatefulWidget {
     required this.builder,
     required this.initialSize,
     required this.maxSize,
+    this.snapSizes,
     this.onDismiss,
     this.cancelLabel,
     this.contentSized = false,
@@ -108,6 +124,7 @@ class _AppSheetBody extends StatefulWidget {
   final Widget Function(BuildContext, ScrollController) builder;
   final double initialSize;
   final double maxSize;
+  final List<double>? snapSizes;
   final Future<bool> Function()? onDismiss;
   final String? cancelLabel;
   final bool contentSized;
@@ -117,6 +134,10 @@ class _AppSheetBody extends StatefulWidget {
 }
 
 class _AppSheetBodyState extends State<_AppSheetBody> {
+  /// Owned on the draggable path (every non-`contentSized` sheet). A guarded
+  /// sheet drives it to intercept the swipe-down close; the currency picker
+  /// drives it to grow itself when search takes focus (§1.1). Exposed to the
+  /// body through [_SheetDragScope].
   DraggableScrollableController? _dragController;
 
   /// Owned only on the content-sized path (spec §4), where there is no
@@ -144,8 +165,27 @@ class _AppSheetBodyState extends State<_AppSheetBody> {
   @override
   void initState() {
     super.initState();
-    if (_guarded) _dragController = DraggableScrollableController();
+    // The draggable path always owns a controller now (guarded sheets need it to
+    // intercept the close; the currency picker needs it to grow on search focus).
+    if (!widget.contentSized) _dragController = DraggableScrollableController();
     if (widget.contentSized) _contentController = ScrollController();
+  }
+
+  /// Snap points sanitised into (0.4, maxSize], sorted and de-duplicated — a
+  /// caller may pass a max above the barrier-clamped ceiling (0.95 vs a computed
+  /// 0.94), and DraggableScrollableSheet asserts every snap sits within bounds.
+  List<double>? get _snapSizes {
+    final raw = widget.snapSizes;
+    if (raw == null) return null;
+    final out = <double>{};
+    for (final s in raw) {
+      final c = s.clamp(0.0, widget.maxSize);
+      if (c > 0.4 && c <= widget.maxSize) {
+        out.add(double.parse(c.toStringAsFixed(4)));
+      }
+    }
+    if (out.isEmpty) return null;
+    return out.toList()..sort();
   }
 
   @override
@@ -274,28 +314,40 @@ class _AppSheetBodyState extends State<_AppSheetBody> {
     // child sizes are fractions of whatever height the sheet is given, so
     // shrinking that height reserves the bar's room without touching the
     // fraction defaults or the 44pt barrier rule.
+    final snaps = _snapSizes;
     final sheetBody = DraggableScrollableSheet(
       controller: _dragController,
       initialChildSize: widget.initialSize,
       minChildSize: 0.4,
       maxChildSize: widget.maxSize,
       expand: false,
+      // Snap between the caller's sizes when asked (currency picker §1); free
+      // dragging everywhere else.
+      snap: snaps != null,
+      snapSizes: snaps,
       // Guarded sheets intercept the min-extent close in the notification
       // listener below so it can route through the discard confirmation.
       shouldCloseOnMinExtent: !_guarded,
       builder: (context, controller) {
-        Widget sheet = Container(
-          clipBehavior: Clip.antiAlias,
-          decoration: const BoxDecoration(
-            color: AppColors.surfaceAlt,
-            borderRadius:
-                BorderRadius.vertical(top: Radius.circular(Radii.sheet)),
-          ),
-          child: Column(
-            children: [
-              ..._chrome(),
-              Expanded(child: widget.builder(context, controller)),
-            ],
+        // Expose the drag controller to the body so a body can grow the sheet
+        // itself (§1.1). Sits above the builder's subtree so [_SheetDragScope
+        // .maybeOf] resolves from inside it.
+        Widget sheet = _SheetDragScope(
+          controller: _dragController!,
+          expandedSize: widget.maxSize,
+          child: Container(
+            clipBehavior: Clip.antiAlias,
+            decoration: const BoxDecoration(
+              color: AppColors.surfaceAlt,
+              borderRadius:
+                  BorderRadius.vertical(top: Radius.circular(Radii.sheet)),
+            ),
+            child: Column(
+              children: [
+                ..._chrome(),
+                Expanded(child: widget.builder(context, controller)),
+              ],
+            ),
           ),
         );
 
@@ -327,6 +379,29 @@ class _AppSheetBodyState extends State<_AppSheetBody> {
       child: sheetBody,
     );
   }
+}
+
+/// Hands a sheet's [DraggableScrollableController] (and its full-height target)
+/// down to the body, so a body can grow the sheet programmatically — the
+/// currency picker's search field does this on focus (§1.1). Present only on the
+/// draggable path; a `contentSized` sheet has no such controller and
+/// [maybeOf] returns null, which every body treats as "cannot grow, stay put".
+class _SheetDragScope extends InheritedWidget {
+  const _SheetDragScope({
+    required this.controller,
+    required this.expandedSize,
+    required super.child,
+  });
+
+  final DraggableScrollableController controller;
+  final double expandedSize;
+
+  static _SheetDragScope? maybeOf(BuildContext context) =>
+      context.dependOnInheritedWidgetOfExactType<_SheetDragScope>();
+
+  @override
+  bool updateShouldNotify(_SheetDragScope old) =>
+      controller != old.controller || expandedSize != old.expandedSize;
 }
 
 /// The muted header Cancel affordance (spec §5): a text button — never the
@@ -1206,10 +1281,19 @@ class _HeaderCreateAction<T> extends StatelessWidget {
 }
 
 class _SearchBar extends StatefulWidget {
-  const _SearchBar({required this.hint, required this.onChanged});
+  const _SearchBar({
+    required this.hint,
+    required this.onChanged,
+    this.onFocusChange,
+  });
 
   final String hint;
   final ValueChanged<String> onChanged;
+
+  /// Fired when the field gains or loses focus. Only the currency picker passes
+  /// it — to grow its half-height sheet when search begins (§1.1); the account
+  /// and category pickers omit it and are unaffected.
+  final ValueChanged<bool>? onFocusChange;
 
   @override
   State<_SearchBar> createState() => _SearchBarState();
@@ -1220,8 +1304,23 @@ class _SearchBarState extends State<_SearchBar> {
   // parent still learns of every change through [widget.onChanged].
   final _controller = TextEditingController();
 
+  /// Present only when a caller listens for focus; drives [_SearchBar
+  /// .onFocusChange] so the currency sheet can grow on focus (§1.1).
+  late final FocusNode? _focusNode =
+      widget.onFocusChange == null ? null : FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    _focusNode?.addListener(_onFocus);
+  }
+
+  void _onFocus() => widget.onFocusChange?.call(_focusNode!.hasFocus);
+
   @override
   void dispose() {
+    _focusNode?.removeListener(_onFocus);
+    _focusNode?.dispose();
     _controller.dispose();
     super.dispose();
   }
@@ -1261,6 +1360,7 @@ class _SearchBarState extends State<_SearchBar> {
             Expanded(
               child: TextField(
                 controller: _controller,
+                focusNode: _focusNode,
                 onChanged: widget.onChanged,
                 style: AppText.body,
                 cursorColor: AppColors.accentSoft,
@@ -2355,13 +2455,26 @@ Future<int?> _showDayPicker(BuildContext context, int? current) {
 Future<String?> pickCurrency(BuildContext context, String current,
     {String? title}) {
   final l = AppLocalizations.of(context);
+  // §1: this sheet lists ~150 currencies, so "size to the content" resolved to
+  // "the ceiling" and it opened near-full over whatever the user was reading. It
+  // opts back out of `contentSized` (the rule the twelve short-content siblings
+  // keep) and opens at half height instead, draggable up to full.
+  //
+  // 0.5 is a floor, not a cap: at a large text scale the pinned chrome (grabber,
+  // title, + Add, Cancel, search) needs more than half a small screen, so the
+  // opening fraction grows with the text scale rather than clipping its header
+  // (§1 / §5). 100% → 0.5, 130% → 0.65.
+  final scale = MediaQuery.textScalerOf(context).scale(1.0);
+  final initial = (0.5 * scale).clamp(0.5, 0.95).toDouble();
   return showAppSheet<String>(
     context,
     // Existing callers (edit account) pass nothing and keep the generic
     // "Currency" title; the base-currency flow (spec §12) passes its own so the
     // sheet's rows/behaviour are otherwise unchanged.
     title: title ?? l.eaCurrency,
-    contentSized: true,
+    initialSize: initial,
+    maxSize: 0.95,
+    snapSizes: [initial, 0.95],
     cancelLabel: l.actionCancel,
     actions: [
       _HeaderCreateAction<String>(
@@ -2386,6 +2499,52 @@ class _CurrencyPickerBody extends StatefulWidget {
 
 class _CurrencyPickerBodyState extends State<_CurrencyPickerBody> {
   String _query = '';
+
+  /// Focusing search grows the sheet toward full height (§1.1). It does not
+  /// shrink back when the query clears — a sheet that resized on every keystroke
+  /// would be worse than one that is simply tall.
+  void _onSearchFocusChanged(bool hasFocus) {
+    if (!hasFocus) return;
+    final scope = _SheetDragScope.maybeOf(context);
+    final c = scope?.controller;
+    if (c == null || !c.isAttached) return;
+    final target = scope!.expandedSize;
+    if (c.size >= target - 0.001) return;
+    c.animateTo(target, duration: Durations.short4, curve: Curves.easeOut);
+  }
+
+  /// Whether a delete action should be offered for [def]: only a currency the
+  /// user added, and only while nothing references it. In-use ⇒ Edit only; the
+  /// action is absent, never a disabled button behind a swipe (§3).
+  bool _showsDelete(AppStore store, CurrencyDef def) =>
+      def.custom &&
+      !(store.currencyInUse(def.code) || store.baseCurrency == def.code);
+
+  Future<void> _openEdit(CurrencyDef def) async {
+    closeOpenSwipeRow();
+    await showEditCurrencySheet(context, def);
+    // The store notifies on save/delete/reset, so this body rebuilds through its
+    // StoreScope.of subscription; no manual refresh needed.
+  }
+
+  Future<void> _confirmDelete(CurrencyDef def) async {
+    closeOpenSwipeRow();
+    if (!mounted) return;
+    final l = AppLocalizations.of(context);
+    final store = StoreScope.read(context);
+    // Delete only surfaces for an unused custom currency, so the block guard the
+    // edit sheet carries cannot trigger here — a plain destructive confirm, the
+    // app's standard pattern, is enough.
+    final ok = await showDestructiveConfirm(
+      context,
+      title: l.curDeleteTitle(def.name),
+      message: l.curDeleteMsg,
+      impact: [ImpactLine.kept(l.curDeleteImpact)],
+      confirmLabel: l.curDeleteButton,
+    );
+    if (!ok) return;
+    store.removeCustomCurrency(def.code);
+  }
 
   /// The full catalog: user-defined currencies first (so a custom code shadows a
   /// built-in of the same code), then the built-ins, de-duplicated by code and
@@ -2428,6 +2587,7 @@ class _CurrencyPickerBodyState extends State<_CurrencyPickerBody> {
         _SearchBar(
           hint: l.curSearch,
           onChanged: (v) => setState(() => _query = v),
+          onFocusChange: _onSearchFocusChanged,
         ),
         const SizedBox(height: Insets.md),
         Flexible(
@@ -2464,7 +2624,11 @@ class _CurrencyPickerBodyState extends State<_CurrencyPickerBody> {
   }
 
   Widget _currencyCard(List<CurrencyDef> defs, BuildContext context) {
+    final store = StoreScope.of(context);
     return AppCard(
+      // The swipe action strip paints to the row's edge; clip it to the card's
+      // rounded corners (AppCard exposes this exactly for swipe rows).
+      clipBehavior: Clip.antiAlias,
       child: Column(
         children: [
           for (var i = 0; i < defs.length; i++) ...[
@@ -2473,6 +2637,10 @@ class _CurrencyPickerBodyState extends State<_CurrencyPickerBody> {
               def: defs[i],
               selected: defs[i].code == widget.current,
               onTap: () => Navigator.of(context).pop(defs[i].code),
+              onEdit: () => _openEdit(defs[i]),
+              onDelete: _showsDelete(store, defs[i])
+                  ? () => _confirmDelete(defs[i])
+                  : null,
             ),
           ],
         ],
@@ -2498,27 +2666,95 @@ class _CurrencyGroupLabel extends StatelessWidget {
 }
 
 class _CurrencyRow extends StatelessWidget {
-  const _CurrencyRow(
-      {required this.def, required this.selected, required this.onTap});
+  const _CurrencyRow({
+    required this.def,
+    required this.selected,
+    required this.onTap,
+    required this.onEdit,
+    this.onDelete,
+  });
 
   final CurrencyDef def;
   final bool selected;
   final VoidCallback onTap;
 
+  /// Swipe-to-Edit — every row has it (§3). The tap still selects; the swipe is
+  /// the deliberate gesture that reaches the display settings.
+  final VoidCallback onEdit;
+
+  /// Swipe-to-Delete — present only for an unused custom currency (§3); null
+  /// leaves the row a single Edit action rather than a disabled Delete.
+  final VoidCallback? onDelete;
+
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     // Code + name (spec §6), with the symbol as a muted trailing hint so the
-    // token the user will see is visible before they commit.
-    return FormRow(
+    // token the user will see is visible before they commit. A user-added
+    // currency carries a CUSTOM tag after its code — the only thing on the row
+    // that explains why it swipes to two actions and its neighbour to one (§3.1).
+    final row = FormRow(
       label: def.code,
       subtitle: def.name,
       value: def.tokenIsSymbol ? def.symbol : null,
       valueColor: AppColors.textTertiary,
       onTap: onTap,
+      labelBadge: def.custom ? const _CustomBadge() : null,
       trailing: selected
           ? const Icon(Icons.check_rounded,
               size: 18, color: AppColors.accentSoft)
           : null,
+    );
+
+    final actions = <SwipeActionItem>[
+      SwipeActionItem(
+        icon: Icons.edit_outlined,
+        label: l.curEdit,
+        color: AppColors.accent,
+        onTap: onEdit,
+      ),
+      if (onDelete != null)
+        SwipeActionItem(
+          icon: Icons.delete_outline,
+          label: l.actionDelete,
+          color: AppColors.negative,
+          onTap: onDelete!,
+        ),
+    ];
+
+    // A swipe-only action is unreachable to a screen reader; expose each as a
+    // custom action so it is announced and invokable without the gesture (§5).
+    return Semantics(
+      customSemanticsActions: <CustomSemanticsAction, VoidCallback>{
+        CustomSemanticsAction(label: l.curEdit): onEdit,
+        CustomSemanticsAction(label: l.actionDelete): ?onDelete,
+      },
+      child: SwipeActions(actions: actions, child: row),
+    );
+  }
+}
+
+/// The `CUSTOM` tag after a user-added currency's code (§3.1) — 10pt in
+/// [AppColors.accentLight] (#A5A3FF, the spec's colour, already a token). It sits
+/// outside the code's flexible box so it never truncates; the name (the row's
+/// subtitle) is what gives way at 320pt.
+class _CustomBadge extends StatelessWidget {
+  const _CustomBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 6),
+      child: Text(
+        AppLocalizations.of(context).curCustom.toUpperCase(),
+        maxLines: 1,
+        style: const TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.4,
+          color: AppColors.accentLight,
+        ),
+      ),
     );
   }
 }
@@ -2581,6 +2817,32 @@ class _AddCurrencyFormState extends State<_AddCurrencyForm> {
   int _decimals = 2;
 
   bool get _editing => widget.initial != null;
+
+  /// A standard currency's code AND name are ISO facts, not preferences (§4), so
+  /// both are read-only when editing one; only symbol, position and decimals —
+  /// how *this app* prints it — stay editable. "Standard" means a built-in
+  /// exists for the code, which stays true after the user overrides its
+  /// symbol/decimals (that override is itself `custom`), so the predicate keys
+  /// off the built-in catalogue, not the def's flag. A currency the user
+  /// invented has no built-in behind it, so all five fields stay theirs.
+  ///
+  /// The code is locked in *every* edit mode regardless (custom included): it is
+  /// stored as a bare string on every account and transaction, so a rename would
+  /// orphan them — decided separately from this fact/preference split.
+  bool get _factsLocked =>
+      _editing && builtInCurrencyDef(widget.initial!.code) != null;
+
+  /// Save is offered only once something actually changed (§4). Add mode is
+  /// always dirty — there is a new currency to create.
+  bool get _dirty {
+    final i = widget.initial;
+    if (i == null) return true;
+    final iSym = (i.symbol != null && i.symbol!.isNotEmpty) ? i.symbol! : '';
+    return _name.text.trim() != i.name ||
+        _symbol.text.trim() != iSym ||
+        _before != i.symbolBefore ||
+        _decimals != i.decimals;
+  }
 
   @override
   void initState() {
@@ -2726,7 +2988,9 @@ class _AddCurrencyFormState extends State<_AddCurrencyForm> {
         ),
         _SheetFooter(
           label: _editing ? l.curSaveButton : l.curAddButton,
-          enabled: _valid,
+          // In edit mode Save waits for a real change (§4); add mode only needs
+          // a valid new currency.
+          enabled: _editing ? (_valid && _dirty) : _valid,
           onPressed: () {
             final store = StoreScope.read(context);
             final def = _def();
@@ -2774,7 +3038,11 @@ class _AddCurrencyFormState extends State<_AddCurrencyForm> {
       // different code, delete and re-add.
       locked: _editing,
     );
-    final name = _miniField(label: l.curName, controller: _name);
+    // A standard currency's name is an ISO fact — read-only, with the same
+    // padlock treatment the code uses (§4). A custom currency's name is the
+    // user's, so it stays editable.
+    final name =
+        _miniField(label: l.curName, controller: _name, locked: _factsLocked);
     if (split) {
       return Column(children: [code, _hair(), name]);
     }

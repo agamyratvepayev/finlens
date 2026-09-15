@@ -62,6 +62,8 @@
   "curSectionInUse": "IN USE",
   "curSectionAdded": "ADDED BY YOU",
   "curEdited": "Edited",
+  "curEdit": "Edit",
+  "curCustom": "Custom",
   "curCodeLocked": "The code can’t change — accounts and transactions name it.",
   "curDecimals": "Decimal places",
   "curPreview": "Preview",

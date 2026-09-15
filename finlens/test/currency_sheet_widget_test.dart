@@ -234,7 +234,11 @@ void main() {
 
     // The code is locked: padlock, read-only, and typing changes nothing.
     expect(code.readOnly, isTrue, reason: 'a rename would orphan every row');
-    expect(find.byIcon(Icons.lock_rounded), findsOneWidget);
+    // Two padlocks now: a standard currency's code AND name are ISO facts, both
+    // read-only (currency-sheet spec §4). The name field is the second.
+    expect(find.byIcon(Icons.lock_rounded), findsNWidgets(2));
+    final name = tester.widget<TextField>(find.byType(TextField).at(1));
+    expect(name.readOnly, isTrue, reason: 'a standard name is a locked ISO fact');
 
     await tester.enterText(find.byType(TextField).first, 'ZZZ');
     await tester.pumpAndSettle();
