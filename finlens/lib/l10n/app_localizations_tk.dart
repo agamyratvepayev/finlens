@@ -163,7 +163,25 @@ class AppLocalizationsTk extends AppLocalizations {
   String get curSectionInUse => 'ULANYLÝAR';
 
   @override
-  String get curSectionAdded => 'SIZIŇ GOŞANLARYŇYZ';
+  String get curSectionAdded => 'GOŞULDY, ULANYLMAÝAR';
+
+  @override
+  String get curBase => 'Esasy';
+
+  @override
+  String curUsageAccounts(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count hasap',
+      zero: 'hasap ýok',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get curDisplayNote =>
+      'Nyşan, ýerleşiş we ondalyk sanlar — görkeziş sazlamalary. Bu programmada hiç ýerde alyş-çalyş kursy ulanylmaýar.';
 
   @override
   String get curEdited => 'Üýtgedildi';

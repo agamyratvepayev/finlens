@@ -238,8 +238,8 @@ void main() {
   });
 
   // ── The list: once, never twice (§1) ───────────────────────────────────────
-  test('a custom currency that is also in use is listed once, under ADDED BY '
-      'YOU', () {
+  test('a custom currency in use is listed under IN USE, not ADDED, NOT USED',
+      () {
     final store = emptyStore();
     store.addCustomCurrency(
         const CurrencyDef(code: 'ZZZ', name: 'Zed', custom: true));
@@ -250,20 +250,40 @@ void main() {
       startingBalance: 10,
     );
 
-    // The screen's own de-duplication: IN USE drops codes that have an override.
-    final customCodes = {for (final c in store.snapshotCustomCurrencies) c.code};
-    final inUse = store
-        .currencyCodesInUse()
-        .where((c) => !customCodes.contains(c))
-        .toList();
+    // The screen's section split (currency-sheet spec §1.3): IN USE lists every
+    // referenced code, custom ones included; ADDED, NOT USED holds only the
+    // customs nothing references. A custom-in-use belongs to IN USE, once.
+    final inUseCodes = store.currencyCodesInUse().toSet();
+    final addedNotUsed = [
+      for (final c in store.snapshotCustomCurrencies)
+        if (!inUseCodes.contains(c.code)) c,
+    ];
 
-    expect(store.currencyCodesInUse(), contains('ZZZ'),
-        reason: 'it really is in use');
-    expect(inUse, isNot(contains('ZZZ')),
-        reason: 'but IN USE must not list it a second time');
-    expect(customCodes, contains('ZZZ'));
-    // And the More ▸ Data count matches what the screen renders.
-    expect(store.currencyRowCount, inUse.length + customCodes.length);
+    expect(inUseCodes, contains('ZZZ'),
+        reason: 'in use ⇒ it appears under IN USE');
+    expect(addedNotUsed.any((c) => c.code == 'ZZZ'), isFalse,
+        reason: 'and never in the unused group');
+    // The More ▸ Data count is the union of the two sections, each code once.
+    final customCodes = {for (final c in store.snapshotCustomCurrencies) c.code};
+    final inUseNonCustom =
+        inUseCodes.where((c) => !customCodes.contains(c)).length;
+    expect(store.currencyRowCount, inUseNonCustom + customCodes.length);
+  });
+
+  test('an unused custom currency lands in ADDED, NOT USED', () {
+    final store = emptyStore();
+    store.addCustomCurrency(
+        const CurrencyDef(code: 'ZZZ', name: 'Zed', custom: true));
+
+    final inUseCodes = store.currencyCodesInUse().toSet();
+    final addedNotUsed = [
+      for (final c in store.snapshotCustomCurrencies)
+        if (!inUseCodes.contains(c.code)) c,
+    ];
+
+    expect(inUseCodes, isNot(contains('ZZZ')),
+        reason: 'referenced by nothing, so not IN USE');
+    expect(addedNotUsed.any((c) => c.code == 'ZZZ'), isTrue);
   });
 
   test('the base currency is always in use even with an empty store', () {

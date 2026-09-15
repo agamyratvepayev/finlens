@@ -3071,8 +3071,14 @@ class AppStore extends ChangeNotifier {
       accountsUsingCurrency(code).isNotEmpty || txnCountForCurrency(code) > 0;
 
   /// How many rows the currency screen lists — the More ▸ Data count (spec §1).
-  /// Custom currencies are counted once, under ADDED BY YOU, even when they are
-  /// also in use, so this matches what the screen shows rather than exceeding it.
+  ///
+  /// The screen's two sections are IN USE (every referenced code, custom ones
+  /// included) and ADDED, NOT USED (custom codes nothing references). Their union
+  /// is `currencyCodesInUse ∪ custom codes`, each code once, which is exactly
+  /// what this counts: the in-use codes that are *not* custom, plus every custom
+  /// code (whether in use — counted in IN USE — or not — counted in ADDED, NOT
+  /// USED). So it matches the rows rendered without double-counting a custom
+  /// currency that is also in use.
   int get currencyRowCount {
     final customCodes = {for (final c in _customCurrencies) c.code};
     final inUse =

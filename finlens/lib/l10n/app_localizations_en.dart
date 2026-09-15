@@ -167,7 +167,26 @@ class AppLocalizationsEn extends AppLocalizations {
   String get curSectionInUse => 'IN USE';
 
   @override
-  String get curSectionAdded => 'ADDED BY YOU';
+  String get curSectionAdded => 'ADDED, NOT USED';
+
+  @override
+  String get curBase => 'Base';
+
+  @override
+  String curUsageAccounts(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count accounts',
+      one: '1 account',
+      zero: 'no accounts',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get curDisplayNote =>
+      'Symbol, position and decimals are display settings. No exchange rate is applied anywhere in this app.';
 
   @override
   String get curEdited => 'Edited';

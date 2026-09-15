@@ -165,7 +165,28 @@ class AppLocalizationsRu extends AppLocalizations {
   String get curSectionInUse => 'ИСПОЛЬЗУЮТСЯ';
 
   @override
-  String get curSectionAdded => 'ДОБАВЛЕНЫ ВАМИ';
+  String get curSectionAdded => 'ДОБАВЛЕНЫ, НЕ ИСПОЛЬЗУЮТСЯ';
+
+  @override
+  String get curBase => 'Базовая';
+
+  @override
+  String curUsageAccounts(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count счёта',
+      many: '$count счетов',
+      few: '$count счёта',
+      one: '$count счёт',
+      zero: 'нет счетов',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get curDisplayNote =>
+      'Символ, позиция и число знаков — настройки отображения. Курс валют нигде в приложении не применяется.';
 
   @override
   String get curEdited => 'Изменена';

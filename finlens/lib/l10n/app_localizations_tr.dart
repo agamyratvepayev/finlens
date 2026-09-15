@@ -164,7 +164,25 @@ class AppLocalizationsTr extends AppLocalizations {
   String get curSectionInUse => 'KULLANIMDA';
 
   @override
-  String get curSectionAdded => 'SİZİN EKLEDİKLERİNİZ';
+  String get curSectionAdded => 'EKLENDİ, KULLANILMIYOR';
+
+  @override
+  String get curBase => 'Ana';
+
+  @override
+  String curUsageAccounts(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count hesap',
+      zero: 'hesap yok',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get curDisplayNote =>
+      'Sembol, konum ve ondalık basamaklar görüntüleme ayarlarıdır. Bu uygulamada hiçbir yerde döviz kuru uygulanmaz.';
 
   @override
   String get curEdited => 'Düzenlendi';

@@ -387,8 +387,26 @@ abstract class AppLocalizations {
   /// No description provided for @curSectionAdded.
   ///
   /// In en, this message translates to:
-  /// **'ADDED BY YOU'**
+  /// **'ADDED, NOT USED'**
   String get curSectionAdded;
+
+  /// No description provided for @curBase.
+  ///
+  /// In en, this message translates to:
+  /// **'Base'**
+  String get curBase;
+
+  /// No description provided for @curUsageAccounts.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{no accounts} =1{1 account} other{{count} accounts}}'**
+  String curUsageAccounts(int count);
+
+  /// No description provided for @curDisplayNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Symbol, position and decimals are display settings. No exchange rate is applied anywhere in this app.'**
+  String get curDisplayNote;
 
   /// No description provided for @curEdited.
   ///
