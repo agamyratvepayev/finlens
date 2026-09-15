@@ -2575,10 +2575,54 @@ class AppLocalizationsTk extends AppLocalizations {
   String get qaRate => 'Kurs';
 
   @override
-  String get qaReceives => 'Alýar';
+  String get qaFee => 'Töleg';
 
   @override
-  String get qaFee => 'Töleg';
+  String get trRemove => 'Aýyr';
+
+  @override
+  String get trBlockRate => 'Alyş-çalyş kursuny giriziň';
+
+  @override
+  String get trBlockFeeTooBig => 'Töleg mukdardan az bolmaly';
+
+  @override
+  String get trBlockFeeCategory => 'Töleg üçin kategoriýa saýlaň';
+
+  @override
+  String trLeaves(Object account) {
+    return '$account çykyşy';
+  }
+
+  @override
+  String trArrives(Object account) {
+    return '$account girişi';
+  }
+
+  @override
+  String trCapFee(Object gross, Object fee) {
+    return '$gross, $fee töleg aýrylýar';
+  }
+
+  @override
+  String trCapFeeAndRate(Object net, Object fee, Object rate) {
+    return '$net, $fee töleg soň, $rate kursda';
+  }
+
+  @override
+  String trCapRate(Object rate) {
+    return '$rate kursda';
+  }
+
+  @override
+  String trFeeBookedFull(Object account, Object category) {
+    return 'Töleg $account hasabyndan $category kategoriýasy boýunça çykdajy hökmünde ýazylýar.';
+  }
+
+  @override
+  String trFeeBookedAccount(Object account) {
+    return 'Töleg $account hasabyndan çykdajy hökmünde ýazylýar.';
+  }
 
   @override
   String get qaAccount => 'Hasap';
@@ -2630,9 +2674,6 @@ class AppLocalizationsTk extends AppLocalizations {
 
   @override
   String get qaTaskPlaceholder => 'Näme etmeli?';
-
-  @override
-  String get qaExchangeRate => 'Alyş-çalyş kursy';
 
   @override
   String qaFxRate(Object from, Object to) {

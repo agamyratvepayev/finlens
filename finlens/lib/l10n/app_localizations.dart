@@ -4012,17 +4012,77 @@ abstract class AppLocalizations {
   /// **'Rate'**
   String get qaRate;
 
-  /// No description provided for @qaReceives.
-  ///
-  /// In en, this message translates to:
-  /// **'Receives'**
-  String get qaReceives;
-
   /// No description provided for @qaFee.
   ///
   /// In en, this message translates to:
   /// **'Fee'**
   String get qaFee;
+
+  /// No description provided for @trRemove.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove'**
+  String get trRemove;
+
+  /// No description provided for @trBlockRate.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter an exchange rate'**
+  String get trBlockRate;
+
+  /// No description provided for @trBlockFeeTooBig.
+  ///
+  /// In en, this message translates to:
+  /// **'Fee must be less than the amount'**
+  String get trBlockFeeTooBig;
+
+  /// No description provided for @trBlockFeeCategory.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a category for the fee'**
+  String get trBlockFeeCategory;
+
+  /// No description provided for @trLeaves.
+  ///
+  /// In en, this message translates to:
+  /// **'Leaves {account}'**
+  String trLeaves(Object account);
+
+  /// No description provided for @trArrives.
+  ///
+  /// In en, this message translates to:
+  /// **'Arrives {account}'**
+  String trArrives(Object account);
+
+  /// No description provided for @trCapFee.
+  ///
+  /// In en, this message translates to:
+  /// **'{gross} less {fee} fee'**
+  String trCapFee(Object gross, Object fee);
+
+  /// No description provided for @trCapFeeAndRate.
+  ///
+  /// In en, this message translates to:
+  /// **'{net} after {fee} fee, at {rate}'**
+  String trCapFeeAndRate(Object net, Object fee, Object rate);
+
+  /// No description provided for @trCapRate.
+  ///
+  /// In en, this message translates to:
+  /// **'at {rate}'**
+  String trCapRate(Object rate);
+
+  /// No description provided for @trFeeBookedFull.
+  ///
+  /// In en, this message translates to:
+  /// **'The fee is booked as an expense from {account} under {category}.'**
+  String trFeeBookedFull(Object account, Object category);
+
+  /// No description provided for @trFeeBookedAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'The fee is booked as an expense from {account}.'**
+  String trFeeBookedAccount(Object account);
 
   /// No description provided for @qaAccount.
   ///
@@ -4125,12 +4185,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'What needs doing?'**
   String get qaTaskPlaceholder;
-
-  /// No description provided for @qaExchangeRate.
-  ///
-  /// In en, this message translates to:
-  /// **'Exchange rate'**
-  String get qaExchangeRate;
 
   /// No description provided for @qaFxRate.
   ///

@@ -85,6 +85,16 @@ String _moneyCustom(
       : '$sign$number$gap$token';
 }
 
+/// Rounds [value] to [code]'s minor-unit precision — the per-currency decimal
+/// count from [CurrencyDef] (0 for JPY/KRW, 2 for USD/EUR, 3 for the Gulf
+/// dinars). The single rounding rule the Transfer-fee summary's arriving figure
+/// uses; there is no other currency-precision function in the app, and this adds
+/// no second one. Storage (`Txn.toAmount`) keeps the raw product, as before.
+double roundToCurrency(double value, String code) {
+  final factor = _pow10(currencyDef(code).decimals);
+  return (value * factor).roundToDouble() / factor;
+}
+
 int _pow10(int n) {
   var r = 1;
   for (var i = 0; i < n; i++) {

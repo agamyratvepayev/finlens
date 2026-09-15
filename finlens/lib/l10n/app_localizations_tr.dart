@@ -2575,10 +2575,54 @@ class AppLocalizationsTr extends AppLocalizations {
   String get qaRate => 'Kur';
 
   @override
-  String get qaReceives => 'Alır';
+  String get qaFee => 'Ücret';
 
   @override
-  String get qaFee => 'Ücret';
+  String get trRemove => 'Kaldır';
+
+  @override
+  String get trBlockRate => 'Bir döviz kuru girin';
+
+  @override
+  String get trBlockFeeTooBig => 'Ücret tutardan küçük olmalı';
+
+  @override
+  String get trBlockFeeCategory => 'Ücret için bir kategori seçin';
+
+  @override
+  String trLeaves(Object account) {
+    return '$account çıkışı';
+  }
+
+  @override
+  String trArrives(Object account) {
+    return '$account girişi';
+  }
+
+  @override
+  String trCapFee(Object gross, Object fee) {
+    return '$gross eksi $fee ücret';
+  }
+
+  @override
+  String trCapFeeAndRate(Object net, Object fee, Object rate) {
+    return '$net, $fee ücret sonrası, $rate';
+  }
+
+  @override
+  String trCapRate(Object rate) {
+    return '$rate kurundan';
+  }
+
+  @override
+  String trFeeBookedFull(Object account, Object category) {
+    return 'Ücret, $account hesabından $category kategorisinde gider olarak işlenir.';
+  }
+
+  @override
+  String trFeeBookedAccount(Object account) {
+    return 'Ücret, $account hesabından gider olarak işlenir.';
+  }
 
   @override
   String get qaAccount => 'Hesap';
@@ -2630,9 +2674,6 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get qaTaskPlaceholder => 'Ne yapılması gerekiyor?';
-
-  @override
-  String get qaExchangeRate => 'Döviz kuru';
 
   @override
   String qaFxRate(Object from, Object to) {

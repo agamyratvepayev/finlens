@@ -2586,10 +2586,54 @@ class AppLocalizationsEn extends AppLocalizations {
   String get qaRate => 'Rate';
 
   @override
-  String get qaReceives => 'Receives';
+  String get qaFee => 'Fee';
 
   @override
-  String get qaFee => 'Fee';
+  String get trRemove => 'Remove';
+
+  @override
+  String get trBlockRate => 'Enter an exchange rate';
+
+  @override
+  String get trBlockFeeTooBig => 'Fee must be less than the amount';
+
+  @override
+  String get trBlockFeeCategory => 'Choose a category for the fee';
+
+  @override
+  String trLeaves(Object account) {
+    return 'Leaves $account';
+  }
+
+  @override
+  String trArrives(Object account) {
+    return 'Arrives $account';
+  }
+
+  @override
+  String trCapFee(Object gross, Object fee) {
+    return '$gross less $fee fee';
+  }
+
+  @override
+  String trCapFeeAndRate(Object net, Object fee, Object rate) {
+    return '$net after $fee fee, at $rate';
+  }
+
+  @override
+  String trCapRate(Object rate) {
+    return 'at $rate';
+  }
+
+  @override
+  String trFeeBookedFull(Object account, Object category) {
+    return 'The fee is booked as an expense from $account under $category.';
+  }
+
+  @override
+  String trFeeBookedAccount(Object account) {
+    return 'The fee is booked as an expense from $account.';
+  }
 
   @override
   String get qaAccount => 'Account';
@@ -2641,9 +2685,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get qaTaskPlaceholder => 'What needs doing?';
-
-  @override
-  String get qaExchangeRate => 'Exchange rate';
 
   @override
   String qaFxRate(Object from, Object to) {

@@ -2749,6 +2749,7 @@ class AppStore extends ChangeNotifier {
     String? goalId,
     String? splitGroupId,
     String? recurrenceTaskId,
+    String? feeTxnId,
   }) {
     final txn = Txn(
       id: _nextId('t'),
@@ -2773,6 +2774,7 @@ class AppStore extends ChangeNotifier {
       goalId: goalId,
       splitGroupId: splitGroupId,
       recurrenceTaskId: recurrenceTaskId,
+      feeTxnId: feeTxnId,
     );
     _txns.add(txn);
     // Every tag this transaction carries was just used (§1 — lastUsedAt).
@@ -2800,8 +2802,11 @@ class AppStore extends ChangeNotifier {
     double? toAmount,
     double? exchangeRate,
     String? recurrenceTaskId,
+    String? feeTxnId,
     bool clearRecurrence = false,
     bool clearExchange = false,
+    bool clearFee = false,
+    bool clearFeeLink = false,
   }) {
     txn
       ..amount = amount ?? txn.amount
@@ -2810,7 +2815,14 @@ class AppStore extends ChangeNotifier {
       ..date = date ?? txn.date
       ..tagIds = tagIds ?? txn.tagIds
       ..note = note ?? txn.note
-      ..fee = fee ?? txn.fee
+      // [clearFee] nulls the legacy on-transfer fee amount outright (a null
+      // argument means "keep"); the Transfer-fee spec moves the fee to a linked
+      // expense, so a rewritten transfer must carry no fee amount of its own.
+      // [clearFeeLink] independently nulls the join to that expense — the two
+      // are separate because an edited transfer clears its legacy amount while
+      // still pointing at (or newly creating) its fee expense.
+      ..fee = clearFee ? null : (fee ?? txn.fee)
+      ..feeTxnId = clearFeeLink ? null : (feeTxnId ?? txn.feeTxnId)
       // [clearExchange] wins over the `?? keep` fallback so an edit that turns a
       // cross-currency transfer into a same-currency one can null both FX fields
       // (mirroring [clearRecurrence]). Without it there is no way to erase a
@@ -2833,7 +2845,11 @@ class AppStore extends ChangeNotifier {
   }
 
   void deleteTxn(Txn txn) {
-    _txns.removeWhere((t) => t.id == txn.id);
+    // A transfer's fee is a joined expense (Transfer-fee spec §4.1): deleting the
+    // transfer deletes its fee, so no orphan cost survives. The fee record itself
+    // carries no [Txn.feeTxnId], so this never recurses.
+    final feeId = txn.feeTxnId;
+    _txns.removeWhere((t) => t.id == txn.id || (feeId != null && t.id == feeId));
     _sameIndex = null;
     _accountIndex = null;
     // A moved balance can newly meet a goal's target; latch any that reached

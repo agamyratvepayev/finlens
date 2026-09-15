@@ -17,6 +17,7 @@ import '../planner/edit_goal_screen.dart';
 import 'date_time_sheet.dart';
 import 'icon_picker_sheet.dart';
 import 'pickers.dart';
+import 'transfer_math.dart';
 import 'type_menu.dart';
 import 'tag_picker_sheet.dart';
 import 'split_sheet.dart';
@@ -25,6 +26,7 @@ import 'transaction_repeat_sheet.dart';
 import 'widgets/amount_hero.dart';
 import 'widgets/form_kit.dart';
 import 'widgets/transaction_form_shell.dart';
+import 'widgets/transfer_sections.dart';
 
 export 'pickers.dart' show showNewAccountSheet, showNewCategorySheet;
 
@@ -148,8 +150,21 @@ class _QuickAddScreenState extends State<QuickAddScreen>
   /// sits at the top and never needs it.
   final _amountRowKey = GlobalKey();
 
-  // Transfer
-  double? _rateOverride;
+  // Transfer — the rate and the fee amount are typed in their rows (Transfer-fee
+  // spec §2/§3), not on a modal. The controllers own the live text; the summary
+  // recomputes on every keystroke that parses.
+  final _rateController = TextEditingController();
+  final _rateFocus = FocusNode();
+  final _feeController = TextEditingController();
+  final _feeFocus = FocusNode();
+
+  /// The category the fee expense is booked against (Transfer-fee spec §3.2).
+  String? _feeCategoryId;
+
+  /// The currency pair the rate field currently holds a value for. When From/To
+  /// change to a new pair the field is re-defaulted; a rate from a pair that is
+  /// no longer selected is not remembered (spec §2).
+  String? _ratePairKey;
 
   // Toggles, shared across types that use them.
   RepeatFrequency _repeatFreq = RepeatFrequency.none;
@@ -204,7 +219,18 @@ class _QuickAddScreenState extends State<QuickAddScreen>
       _tagIds = List.of(source.tagIds);
       _note.text = source.note;
       _hasFee = (source.fee ?? 0) > 0;
-      _rateOverride = source.exchangeRate;
+      if (source.type == TxnType.transfer) {
+        if (source.exchangeRate != null) {
+          _rateController.text = source.exchangeRate!.toStringAsFixed(4);
+        }
+        // A legacy transfer that stored its fee on the record itself: surface it
+        // so an edit forward-migrates it into a linked expense on Save. The
+        // linked-expense case (the new model) is loaded once the store is
+        // reachable, in didChangeDependencies.
+        if ((source.fee ?? 0) > 0) {
+          _feeController.text = _plainNumber(source.fee!);
+        }
+      }
     } else {
       _date = today;
       _type = widget.initialType;
@@ -225,6 +251,11 @@ class _QuickAddScreenState extends State<QuickAddScreen>
     // keypad closes. The row's own tap path closes it too; this is the
     // backstop for focus arriving any other way.
     _noteFocus.addListener(_onNoteFocus);
+    // The rate and fee amount are inline text fields on the transfer form; like
+    // the note, gaining focus closes the numeric keypad so the keypad and the
+    // system keyboard are never up together.
+    _rateFocus.addListener(_onInlineFieldFocus);
+    _feeFocus.addListener(_onInlineFieldFocus);
     // The title now shares a form with the keypad (the task's inline amount,
     // task 007): however the title gains focus, the keypad closes too. Before
     // this change only the note needed the backstop, because the title only ever
@@ -244,6 +275,17 @@ class _QuickAddScreenState extends State<QuickAddScreen>
     }
   }
 
+  void _onInlineFieldFocus() {
+    if ((_rateFocus.hasFocus || _feeFocus.hasFocus) && _keypadOpen) {
+      setState(() => _keypadOpen = false);
+    }
+  }
+
+  /// An editable, plain string for a stored amount: no thousands grouping, no
+  /// trailing `.0` on a whole number (`5`, not `5.0`; `5.5` stays `5.5`).
+  static String _plainNumber(double v) =>
+      v == v.roundToDouble() ? v.toInt().toString() : v.toString();
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -257,6 +299,10 @@ class _QuickAddScreenState extends State<QuickAddScreen>
       final fixedId = widget.fixedFromAccountId ?? widget.fixedToAccountId;
       final fixed = fixedId != null ? store.accountById(fixedId) : null;
       _currency = fixed?.currency ?? store.baseCurrency;
+      // Prime the rate for any pre-filled accounts (a scoped Quick Add, or both
+      // sides fixed) so the summary computes without a manual re-pick. A new
+      // transfer with no accounts clears to empty (spec §2).
+      if (_type == QuickAddType.transfer) _syncTransferRateField();
     }
     // Editing a saved transaction loads its repeat rule and, for a split, the
     // whole group (spec §1/§2). Done once, and here rather than initState so
@@ -291,6 +337,30 @@ class _QuickAddScreenState extends State<QuickAddScreen>
         ];
       }
     }
+    if (src.type == TxnType.transfer) {
+      // The new model keeps the fee in a linked expense (§4): load its amount
+      // and category so the FEE section shows what will be re-saved.
+      final feeId = src.feeTxnId;
+      if (feeId != null) {
+        final fee = store.txnById(feeId);
+        if (fee != null) {
+          _hasFee = true;
+          _feeController.text = _plainNumber(fee.amount);
+          _feeCategoryId = fee.toRef;
+          // The transfer stores the NET; the Amount field is the GROSS. Rebuild
+          // it as net + fee so the hero shows what left the source, and Save's
+          // `gross − fee` recovers the same net rather than deducting twice.
+          _raw = AmountEntry.fromDouble(src.amount + fee.amount);
+        }
+      }
+      // Mark the loaded pair as already primed so the rate the transfer was
+      // saved with is not overwritten by the FX default (§2).
+      final from = store.accountById(src.fromRef);
+      final to = store.accountById(src.toRef);
+      if (from != null && to != null && from.currency != to.currency) {
+        _ratePairKey = '${from.currency}>${to.currency}';
+      }
+    }
   }
 
   @override
@@ -300,6 +370,10 @@ class _QuickAddScreenState extends State<QuickAddScreen>
     _noteFocus.dispose();
     _title.dispose();
     _titleFocus.dispose();
+    _rateController.dispose();
+    _rateFocus.dispose();
+    _feeController.dispose();
+    _feeFocus.dispose();
     super.dispose();
   }
 
@@ -729,24 +803,30 @@ class _QuickAddScreenState extends State<QuickAddScreen>
   }
 
   FormConfig _transfer(AppStore store) {
+    final l = AppLocalizations.of(context);
     final from = store.accountById(_fromRef);
     final to = store.accountById(_toRef);
     final cross =
         from != null && to != null && from.currency != to.currency;
-    final rate = _rateOverride ?? _defaultRate(from, to);
+    final rate = _rate ?? _defaultRate(from, to);
+    // The summary appears only when the two sides differ — a fee exists, or the
+    // currencies do (spec §5). It also needs both accounts, to name its rows.
+    final showSummary = from != null &&
+        to != null &&
+        transferShowsSummary(fee: _feeAmount, cross: cross);
 
     return FormConfig(
-      typeName: AppLocalizations.of(context).quickAddTransfer,
+      typeName: l.quickAddTransfer,
       accent: AppColors.transfer,
       accentDim: AppColors.transferDim,
       hero: _amountHero(),
       groups: [
-        FieldGroup(AppLocalizations.of(context).qaGroupRequired.toUpperCase(), [
+        FieldGroup(l.qaGroupRequired.toUpperCase(), [
           FieldSpec(
             icon: Icons.north_east_rounded,
-            label: AppLocalizations.of(context).qaFrom,
+            label: l.qaFrom,
             value: from?.name,
-            emptyText: AppLocalizations.of(context).qaChooseAccount,
+            emptyText: l.qaChooseAccount,
             flashId: 'from',
             // _pickAccountInto raises the account bottom sheet.
             opensSheet: true,
@@ -755,15 +835,15 @@ class _QuickAddScreenState extends State<QuickAddScreen>
                 : () => _pickAccountInto(
                       store,
                       isFrom: true,
-                      title: AppLocalizations.of(context).qaSourceAccount,
+                      title: l.qaSourceAccount,
                       excludeId: _toRef,
                     ),
           ),
           FieldSpec(
             icon: Icons.south_west_rounded,
-            label: AppLocalizations.of(context).qaTo,
+            label: l.qaTo,
             value: to?.name,
-            emptyText: AppLocalizations.of(context).qaChooseAccount,
+            emptyText: l.qaChooseAccount,
             flashId: 'to',
             // _pickAccountInto raises the account bottom sheet.
             opensSheet: true,
@@ -772,59 +852,259 @@ class _QuickAddScreenState extends State<QuickAddScreen>
                 : () => _pickAccountInto(
                       store,
                       isFrom: false,
-                      title: AppLocalizations.of(context).qaDestinationAccount,
+                      title: l.qaDestinationAccount,
                       excludeId: _fromRef,
                     ),
           ),
         ]),
-        // Absent entirely when both sides share a currency — not disabled,
-        // not empty.
-        if (cross)
-          FieldGroup(AppLocalizations.of(context).qaExchange.toUpperCase(), [
-            FieldSpec(
-              icon: Icons.currency_exchange_rounded,
-              label: AppLocalizations.of(context).qaRate,
-              value: '1 ${from.currency} = ${rate.toStringAsFixed(4)} '
-                  '${to.currency}',
-              // _editRate raises a bottom-sheet text prompt.
-              opensSheet: true,
-              onTap: () => _editRate(from, to, rate),
-            ),
-            FieldSpec(
-              icon: Icons.check_circle_rounded,
-              label: AppLocalizations.of(context).qaReceives,
-              value: money(_amount * rate, currency: to.currency),
-            ),
-          ]),
+        // Money order (§1): EXCHANGE (only when currencies differ), then the
+        // FEE button/section, then the SUMMARY, then OPTIONAL. The Receives row
+        // is gone — the summary answers "arrives"; the rate is typed in its row.
+        if (cross) FieldGroup.custom(_exchangeSection(from, to)),
+        FieldGroup.custom(_feeSection(store, from)),
+        if (showSummary)
+          FieldGroup.custom(_summarySection(store, from, to, cross, rate)),
         // No Tag: money moved between your own accounts is not spending and
         // should not enter tag reporting.
-        FieldGroup(AppLocalizations.of(context).qaGroupOptional.toUpperCase(),
+        FieldGroup(l.qaGroupOptional.toUpperCase(),
             [_dateField(), _repeatField(), _noteField()]),
       ],
-      // Repeat moved into the card (§3); Fee stays a toggle — a transfer has no
-      // Split, so no side-by-side pair remains.
-      toggles: [
-        FormToggle(
-          icon: Icons.percent_rounded,
-          label: AppLocalizations.of(context).qaFee,
-          value: _hasFee,
-          onTap: () => setState(() => _hasFee = !_hasFee),
-        ),
-      ],
-      saveLabel: AppLocalizations.of(context).qaSaveTransfer,
+      // The Fee toggle is gone — it is a button that opens the FEE section in
+      // place (§3.1); a transfer has no Split, so the toggle bar is empty.
+      toggles: const [],
+      saveLabel: l.qaSaveTransfer,
       blockers: [
-        Blocker(unmet: _amount <= 0, label: AppLocalizations.of(context).qaBlockAmount, flashId: 'amount'),
+        Blocker(unmet: _amount <= 0, label: l.qaBlockAmount, flashId: 'amount'),
         Blocker(
             unmet: _fromRef == null,
-            label: AppLocalizations.of(context).qaBlockSourceAccount,
+            label: l.qaBlockSourceAccount,
             flashId: 'from'),
         Blocker(
             unmet: _toRef == null,
-            label: AppLocalizations.of(context).qaBlockDestination,
+            label: l.qaBlockDestination,
             flashId: 'to'),
+        // A blank or unparseable rate blanks the arriving figure and stops Save
+        // (§2). No flashId: the rate lives in a custom section, not a flashable
+        // field row.
+        Blocker(
+            unmet: cross && (_rate == null || _rate! <= 0),
+            label: l.trBlockRate),
+        // A fee that eats the whole transfer is not a transfer (§3.3).
+        Blocker(unmet: !_feeIsValid, label: l.trBlockFeeTooBig),
+        // A fee with no category lands in no budget and no report (§3.3).
+        Blocker(unmet: !_feeIsComplete, label: l.trBlockFeeCategory),
       ],
       trailing: _editingExtras(),
     );
+  }
+
+  // ── Transfer sections (Transfer-fee spec §2/§3/§5) ─────────────────────────
+
+  /// Gross (the hero amount), the source currency's magnitude that leaves.
+  double get _grossAmount => _amount;
+
+  /// The typed fee, or null when the field is blank/unparseable (spec §3).
+  double? get _feeAmount => double.tryParse(_feeController.text.trim());
+
+  /// The typed rate, or null when blank/unparseable (spec §2).
+  double? get _rate => double.tryParse(_rateController.text.trim());
+
+  /// A fee must leave something to transfer (spec §3.3).
+  bool get _feeIsValid => transferFeeValid(_grossAmount, _feeAmount);
+
+  /// A non-zero fee must have a category (spec §3.3). A zero/blank fee is the
+  /// same as no fee, and needs none.
+  bool get _feeIsComplete => transferFeeComplete(_feeAmount, _feeCategoryId);
+
+  /// Deducted first, converted second (spec §4.2). Delegates to the shared pure
+  /// rule so the form and its tests never diverge.
+  double _arrivingAmount(bool cross, double rate, String toCurrency) =>
+      transferArriving(
+        gross: _grossAmount,
+        fee: _feeAmount,
+        cross: cross,
+        rate: rate,
+        toCurrency: toCurrency,
+      );
+
+  Widget _exchangeSection(Account from, Account to) {
+    final l = AppLocalizations.of(context);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        FormSectionLabel(l.qaExchange),
+        TxnCard(children: [
+          InRowNumberField(
+            icon: Icons.swap_horiz_rounded,
+            label: l.qaRate,
+            controller: _rateController,
+            focusNode: _rateFocus,
+            // Live: every parsing keystroke moves the summary (§2).
+            onChanged: (_) => setState(() {}),
+            numberColor: AppColors.textPrimary,
+            prefix: '1 ${from.currency} = ',
+            suffix: ' ${to.currency}',
+            semanticsLabel: '${l.qaRate}, 1 ${from.currency} = ${to.currency}',
+          ),
+        ]),
+      ],
+    );
+  }
+
+  Widget _feeSection(AppStore store, Account? from) {
+    final l = AppLocalizations.of(context);
+    // Before it is opened, the button stands where the section will (§3.1),
+    // whether or not the currencies differ.
+    if (!_hasFee) {
+      return TransferFeeButton(label: l.qaFee, onTap: _addFee);
+    }
+    // The fee is always charged in the source account's currency (§decisions).
+    final feeCurrency = from?.currency ?? _currency;
+    final category = store.categoryById(_feeCategoryId);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        TransferFeeHeader(
+          label: l.qaFee,
+          removeLabel: l.trRemove,
+          onRemove: _removeFee,
+        ),
+        TxnCard(children: [
+          InRowNumberField(
+            icon: Icons.payments_rounded,
+            label: l.qaAmount,
+            controller: _feeController,
+            focusNode: _feeFocus,
+            onChanged: (_) => setState(() {}),
+            numberColor: AppColors.negative,
+            suffix: ' $feeCurrency',
+            semanticsLabel: '${l.qaAmount}, $feeCurrency',
+          ),
+          TxnFieldRow(
+            icon: category?.icon ?? Icons.shopping_basket_rounded,
+            iconColor: category?.color,
+            label: l.fieldCategory,
+            value: category?.name,
+            emptyText: l.eaNotSet,
+            opensSheet: true,
+            onTap: _pickFeeCategory,
+          ),
+        ]),
+        TransferCaption(_feeBookingText(from, category)),
+      ],
+    );
+  }
+
+  Widget _summarySection(
+      AppStore store, Account from, Account to, bool cross, double rate) {
+    final l = AppLocalizations.of(context);
+    final masked = store.masked;
+    final arriving = _arrivingAmount(cross, rate, to.currency);
+    final children = <Widget>[
+      TransferSummaryCard(rows: [
+        TransferSummaryRow(
+          label: l.trLeaves(from.name),
+          // Force cents: the summary reconciles two exact figures, so it always
+          // shows them to the currency's precision ("$2,000.00"), not the
+          // headline-rounded form money() gives whole values ≥ 1000.
+          value: money(_grossAmount,
+              currency: from.currency, masked: masked, forceDecimals: true),
+          valueColor: AppColors.negative,
+        ),
+        TransferSummaryRow(
+          label: l.trArrives(to.name),
+          caption: _arrivesCaption(masked, cross, rate, from.currency),
+          value: money(arriving,
+              currency: to.currency, masked: masked, forceDecimals: true),
+          valueColor: AppColors.positive,
+        ),
+      ]),
+    ];
+    // Below the card, when a fee exists: the account and category it is booked
+    // against (§5).
+    if ((_feeAmount ?? 0) > 0) {
+      children.add(TransferCaption(
+          _feeBookingText(from, store.categoryById(_feeCategoryId))));
+    }
+    return Column(mainAxisSize: MainAxisSize.min, children: children);
+  }
+
+  /// The arriving figure appears in no field — it is derived from up to three
+  /// (spec §5). The caption shows its work; its money parts mask.
+  String? _arrivesCaption(
+      bool masked, bool cross, double rate, String sourceCurrency) {
+    final net = transferNet(_grossAmount, _feeAmount);
+    final l = AppLocalizations.of(context);
+    final netStr = money(net, currency: sourceCurrency, masked: masked);
+    final grossStr = money(_grossAmount, currency: sourceCurrency, masked: masked);
+    final feeStr =
+        money(_feeAmount ?? 0, currency: sourceCurrency, masked: masked);
+    final rateStr = _rateString(rate);
+    return switch (arrivesCaptionShape(fee: _feeAmount, cross: cross)) {
+      ArrivesCaptionShape.feeAndRate => l.trCapFeeAndRate(netStr, feeStr, rateStr),
+      ArrivesCaptionShape.fee => l.trCapFee(grossStr, feeStr),
+      ArrivesCaptionShape.rate => l.trCapRate(rateStr),
+      ArrivesCaptionShape.none => null,
+    };
+  }
+
+  /// The rate for the caption: up to four decimals, trailing zeros trimmed
+  /// (`0.9091`, `1.1`), never masked — it is not a monetary amount and is shown
+  /// unmasked in its own row above.
+  String _rateString(double rate) {
+    var s = rate.toStringAsFixed(4);
+    if (s.contains('.')) {
+      s = s.replaceAll(RegExp(r'0+$'), '').replaceAll(RegExp(r'\.$'), '');
+    }
+    return s;
+  }
+
+  String _feeBookingText(Account? from, Category? category) {
+    final l = AppLocalizations.of(context);
+    final acct = from?.name ?? '—';
+    return category == null
+        ? l.trFeeBookedAccount(acct)
+        : l.trFeeBookedFull(acct, category.name);
+  }
+
+  void _addFee() => setState(() {
+        _hasFee = true;
+        _keypadOpen = false;
+      });
+
+  void _removeFee() => setState(() {
+        _hasFee = false;
+        _feeController.clear();
+        _feeCategoryId = null;
+      });
+
+  Future<void> _pickFeeCategory() async {
+    setState(() => _keypadOpen = false);
+    final c = await pickCategory(context, type: CategoryType.expense);
+    if (c == null || !mounted) return;
+    setState(() => _feeCategoryId = c.id);
+  }
+
+  /// Re-defaults the rate field when the currency pair changes, and clears it
+  /// when the two sides match (spec §2 — a rate from a pair no longer selected
+  /// is not remembered). A rate typed for the current pair is left untouched.
+  void _syncTransferRateField() {
+    final store = StoreScope.read(context);
+    final from = store.accountById(_fromRef);
+    final to = store.accountById(_toRef);
+    final cross =
+        from != null && to != null && from.currency != to.currency;
+    if (!cross) {
+      _ratePairKey = null;
+      _rateController.clear();
+      return;
+    }
+    final key = '${from.currency}>${to.currency}';
+    if (key != _ratePairKey) {
+      _ratePairKey = key;
+      _rateController.text =
+          Fx.rate(from.currency, to.currency).toStringAsFixed(4);
+    }
   }
 
   FormConfig _rebalance(AppStore store) {
@@ -1067,6 +1347,9 @@ class _QuickAddScreenState extends State<QuickAddScreen>
       }
       _currency = a.currency;
     });
+    // A changed source/destination can change the currency pair; keep the rate
+    // field in step (spec §2). Harmless for non-transfer types.
+    if (_type == QuickAddType.transfer) _syncTransferRateField();
   }
 
   Future<void> _pickCategoryInto(CategoryType type,
@@ -1096,39 +1379,6 @@ class _QuickAddScreenState extends State<QuickAddScreen>
   double _defaultRate(Account? from, Account? to) {
     if (from == null || to == null) return 1;
     return Fx.rate(from.currency, to.currency);
-  }
-
-  Future<void> _editRate(Account from, Account to, double current) async {
-    final v = await _promptText(
-      title: AppLocalizations.of(context).qaExchangeRate,
-      initial: current.toStringAsFixed(4),
-      hint: '1 ${from.currency} = ? ${to.currency}',
-      numeric: true,
-    );
-    if (v == null || !mounted) return;
-    setState(() => _rateOverride = double.tryParse(v));
-  }
-
-  /// Free-text entry on a sheet, so Note and Tag keep the system keyboard
-  /// while the amount keeps the keypad.
-  Future<String?> _promptText({
-    required String title,
-    required String initial,
-    String? hint,
-    bool numeric = false,
-  }) async {
-    setState(() => _keypadOpen = false);
-    return showModalBottomSheet<String>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: AppColors.surfaceAlt,
-      builder: (_) => _TextPromptSheet(
-        title: title,
-        initial: initial,
-        hint: hint,
-        numeric: numeric,
-      ),
-    );
   }
 
   Future<void> _showTypeMenu() async {
@@ -1430,31 +1680,64 @@ class _QuickAddScreenState extends State<QuickAddScreen>
         _writeExpenseIncome(store, income: income);
       } else {
         // A cross-currency transfer's destination figure is derived from the
-        // amount and the rate, so an edit that changes the amount must
-        // re-derive `toAmount` — the create path does this, the edit path used
-        // not to, and leaving it stale silently corrupted the destination
-        // balance (the most important fix in this change). When the edit makes
-        // the two sides share a currency the FX fields are cleared outright.
+        // net and the rate, so an edit that changes either must re-derive
+        // `toAmount`; when the edit makes the two sides share a currency the FX
+        // fields are cleared outright.
         double? newRate;
         double? newToAmount;
         var clearExchange = false;
+        // Transfer-only: the transfer carries the net, and its fee is a linked
+        // expense reconciled here — created, updated or deleted so it always
+        // matches the form and never strands (§4.1).
+        var transferAmount = _amount;
+        String? feeLinkId = editing.feeTxnId;
+        var clearFeeLink = false;
         if (_type == QuickAddType.transfer) {
-          final from = store.accountById(_fromRef);
-          final to = store.accountById(_toRef);
-          final cross =
-              from != null && to != null && from.currency != to.currency;
+          final from = store.accountById(_fromRef)!;
+          final to = store.accountById(_toRef)!;
+          final cross = from.currency != to.currency;
+          final feeAmt = _feeAmount ?? 0;
+          transferAmount = _amount - feeAmt;
           if (cross) {
-            newRate = _rateOverride ?? _defaultRate(from, to);
-            newToAmount = _amount * newRate;
+            newRate = _rate ?? _defaultRate(from, to);
+            newToAmount = roundToCurrency(transferAmount * newRate, to.currency);
           } else {
             clearExchange = true;
+          }
+          final existing = editing.feeTxnId == null
+              ? null
+              : store.txnById(editing.feeTxnId!);
+          if (feeAmt > 0) {
+            if (existing != null) {
+              store.updateTxn(existing,
+                  amount: feeAmt,
+                  fromRef: from.id,
+                  toRef: _feeCategoryId,
+                  date: _date);
+              feeLinkId = existing.id;
+            } else {
+              feeLinkId = store
+                  .addTxn(
+                    type: TxnType.expense,
+                    amount: feeAmt,
+                    currency: from.currency,
+                    fromRef: from.id,
+                    toRef: _feeCategoryId!,
+                    date: _date,
+                  )
+                  .id;
+            }
+          } else {
+            if (existing != null) store.deleteTxn(existing);
+            feeLinkId = null;
+            clearFeeLink = true;
           }
         }
         store.updateTxn(
           editing,
           amount: _type == QuickAddType.rebalance
               ? _amount - store.balanceOf(_toRef!)
-              : _amount,
+              : (_type == QuickAddType.transfer ? transferAmount : _amount),
           fromRef: _fromRef,
           toRef: _toRef,
           date: _date,
@@ -1463,6 +1746,11 @@ class _QuickAddScreenState extends State<QuickAddScreen>
           exchangeRate: newRate,
           toAmount: newToAmount,
           clearExchange: clearExchange,
+          // A rewritten transfer carries no fee amount of its own; clear the
+          // legacy field and point the link at the (possibly new) fee expense.
+          clearFee: _type == QuickAddType.transfer,
+          feeTxnId: feeLinkId,
+          clearFeeLink: clearFeeLink,
         );
         if (_type == QuickAddType.expense ||
             income ||
@@ -1483,17 +1771,37 @@ class _QuickAddScreenState extends State<QuickAddScreen>
         final from = store.accountById(_fromRef)!;
         final to = store.accountById(_toRef)!;
         final cross = from.currency != to.currency;
-        final rate = _rateOverride ?? _defaultRate(from, to);
+        final rate = _rate ?? _defaultRate(from, to);
+        final feeAmt = _feeAmount ?? 0;
+        final net = _amount - feeAmt;
+        // The fee is money that genuinely leaves, so it is its own expense
+        // against its own category (§4); written first so the transfer can hold
+        // its id and the two delete/edit together.
+        String? feeId;
+        if (feeAmt > 0) {
+          feeId = store
+              .addTxn(
+                type: TxnType.expense,
+                amount: feeAmt,
+                // Always the source account's currency (§decisions).
+                currency: from.currency,
+                fromRef: from.id,
+                toRef: _feeCategoryId!, // guaranteed by _feeIsComplete
+                date: _date,
+              )
+              .id;
+        }
         final t = store.addTxn(
           type: TxnType.transfer,
-          amount: _amount,
+          amount: net, // the transfer carries the net (§4)
           currency: from.currency,
           fromRef: from.id,
           toRef: to.id,
           date: _date,
           exchangeRate: cross ? rate : null,
-          toAmount: cross ? _amount * rate : null,
+          toAmount: cross ? roundToCurrency(net * rate, to.currency) : null,
           note: _note.text.trim(),
+          feeTxnId: feeId,
         );
         _applyRepeatFor(store, t, income: false, transfer: true);
       case QuickAddType.rebalance:
@@ -1571,91 +1879,3 @@ const int _kNoteLimit = 280;
 /// `used / limit` under the row. A permanent counter reads as a restriction on
 /// a free field.
 const int _kNoteCounterThreshold = 50;
-
-/// `showModalBottomSheet` returns the moment `pop()` is called, but the sheet
-/// keeps rebuilding through its exit animation for several frames after that.
-/// Disposing at the await site therefore tore the controller out from under a
-/// still-building TextField. A State's `dispose()` runs only once the route is
-/// actually gone, which is the guarantee this needs.
-class _TextPromptSheet extends StatefulWidget {
-  const _TextPromptSheet({
-    required this.title,
-    required this.initial,
-    required this.hint,
-    required this.numeric,
-  });
-
-  final String title;
-  final String initial;
-  final String? hint;
-  final bool numeric;
-
-  @override
-  State<_TextPromptSheet> createState() => _TextPromptSheetState();
-}
-
-class _TextPromptSheetState extends State<_TextPromptSheet> {
-  late final _controller = TextEditingController(text: widget.initial);
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
-      child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(Insets.gutter),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(widget.title, style: AppText.rowTitle),
-              const SizedBox(height: Insets.md),
-              TextField(
-                controller: _controller,
-                autofocus: true,
-                keyboardType: widget.numeric
-                    ? const TextInputType.numberWithOptions(decimal: true)
-                    : TextInputType.text,
-                style: AppText.body.copyWith(fontSize: 16),
-                cursorColor: AppColors.accent,
-                decoration: InputDecoration(
-                  hintText: widget.hint,
-                  hintStyle: const TextStyle(color: AppColors.formDim2),
-                  filled: true,
-                  fillColor: AppColors.fieldCard,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(Radii.md),
-                    borderSide: BorderSide.none,
-                  ),
-                ),
-                onSubmitted: (v) => Navigator.of(context).pop(v),
-              ),
-              const SizedBox(height: Insets.md),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  onPressed: () => Navigator.of(context).pop(_controller.text),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.accent,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(Radii.md),
-                    ),
-                  ),
-                  child: Text(AppLocalizations.of(context).actionDone),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}

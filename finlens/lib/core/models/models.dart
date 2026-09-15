@@ -367,6 +367,7 @@ class Txn {
     this.goalId,
     this.splitGroupId,
     this.recurrenceTaskId,
+    this.feeTxnId,
   }) : createdAt = createdAt ?? date;
 
   final String id;
@@ -406,6 +407,15 @@ class Txn {
   /// Repeat: the id of the Planner Task that generates this transaction's future
   /// occurrences, or null when it does not repeat (spec §1).
   String? recurrenceTaskId;
+
+  /// Transfer fee link: on a `transfer`, the id of the separate `expense` Txn
+  /// that books this transfer's fee (Transfer-fee spec §4). A transfer moves
+  /// money and spends nothing, so the fee — money that genuinely leaves — is a
+  /// second record against its own category, joined here so the two are deleted
+  /// and edited together. Null on transfers with no fee and on every non-transfer
+  /// record. The legacy `fee`/`feeFromSource` fields are no longer written by the
+  /// form; they remain for older data and are reported, not removed.
+  String? feeTxnId;
 
   bool get movesCash => type != TxnType.rebalance;
 }

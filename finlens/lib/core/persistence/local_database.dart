@@ -40,7 +40,7 @@ class LocalDatabase {
   // The bump is one-way and additive: a newer build reads an older file (the new
   // columns simply come back empty/null), while an older build rejects a newer
   // backup. See [_onUpgrade].
-  static const int schemaVersion = 6;
+  static const int schemaVersion = 7;
 
   static const String accountsTable = 'accounts';
   static const String categoriesTable = 'categories';
@@ -173,7 +173,8 @@ class LocalDatabase {
         created_at INTEGER NOT NULL,
         goal_id TEXT,
         split_group_id TEXT,
-        recurrence_task_id TEXT
+        recurrence_task_id TEXT,
+        fee_txn_id TEXT
       )''');
     batch.execute('''
       CREATE TABLE $tagsTable(
@@ -341,6 +342,10 @@ class LocalDatabase {
       for (final sql in _createSyncTables) {
         await db.execute(sql);
       }
+    }
+    if (oldVersion < 7) {
+      // Transfer-fee spec §4.1 — a transfer joins its fee expense by id.
+      await db.execute('ALTER TABLE $txnsTable ADD COLUMN fee_txn_id TEXT');
     }
   }
 }

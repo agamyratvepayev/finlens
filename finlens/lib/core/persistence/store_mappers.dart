@@ -223,6 +223,7 @@ Map<String, Object?> txnToMap(Txn t) => {
       'goal_id': t.goalId,
       'split_group_id': t.splitGroupId,
       'recurrence_task_id': t.recurrenceTaskId,
+      'fee_txn_id': t.feeTxnId,
     };
 
 Txn txnFromMap(Map<String, Object?> m) => Txn(
@@ -244,6 +245,7 @@ Txn txnFromMap(Map<String, Object?> m) => Txn(
       goalId: m['goal_id'] as String?,
       splitGroupId: m['split_group_id'] as String?,
       recurrenceTaskId: m['recurrence_task_id'] as String?,
+      feeTxnId: m['fee_txn_id'] as String?,
     );
 
 // ── Tags ────────────────────────────────────────────────────────────────────

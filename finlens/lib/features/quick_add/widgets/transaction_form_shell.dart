@@ -143,10 +143,20 @@ class TextHero extends HeroSpec {
 /// A named section of fields. [title] of null renders the card with no label,
 /// which is how the hero stays unlabelled.
 class FieldGroup {
-  const FieldGroup(this.title, this.fields);
+  const FieldGroup(this.title, this.fields) : widget = null;
+
+  /// A section that supplies its own widget instead of a label + [TxnCard] —
+  /// the Transfer form's EXCHANGE / FEE / SUMMARY blocks, whose chrome (an
+  /// in-row rate field, a section header with a Remove action, a darker
+  /// read-only summary card and its captions) the generic row kit cannot
+  /// express. Rendered verbatim in position, so section order is preserved.
+  const FieldGroup.custom(this.widget)
+      : title = null,
+        fields = const [];
 
   final String? title;
   final List<FieldSpec> fields;
+  final Widget? widget;
 }
 
 /// One unmet requirement. The first unmet one becomes Save's label.
@@ -381,6 +391,11 @@ class TransactionFormShell extends StatelessWidget {
         child: heroWidget,
       ),
       for (final group in config.groups) ...[
+        // A custom section renders its own widget in place (Transfer's
+        // EXCHANGE / FEE / SUMMARY); the standard path builds a label + card.
+        if (group.widget != null)
+          group.widget!
+        else ...[
         if (group.title != null) FormSectionLabel(group.title!),
         TxnCard(
           children: [
@@ -414,6 +429,7 @@ class TransactionFormShell extends StatelessWidget {
         ),
         if (config.hint != null && group.title == AppLocalizations.of(context).qaGroupRequired.toUpperCase())
           HintStrip(spans: config.hint!.spans, accent: config.accent),
+        ],
       ],
       FormToggleBar(toggles: config.toggles),
       if (config.action != null) FormAction(spec: config.action!),

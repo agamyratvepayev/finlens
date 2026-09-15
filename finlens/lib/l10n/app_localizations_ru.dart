@@ -2635,10 +2635,54 @@ class AppLocalizationsRu extends AppLocalizations {
   String get qaRate => 'Курс';
 
   @override
-  String get qaReceives => 'Получит';
+  String get qaFee => 'Комиссия';
 
   @override
-  String get qaFee => 'Комиссия';
+  String get trRemove => 'Убрать';
+
+  @override
+  String get trBlockRate => 'Введите обменный курс';
+
+  @override
+  String get trBlockFeeTooBig => 'Комиссия должна быть меньше суммы';
+
+  @override
+  String get trBlockFeeCategory => 'Выберите категорию для комиссии';
+
+  @override
+  String trLeaves(Object account) {
+    return 'Уходит $account';
+  }
+
+  @override
+  String trArrives(Object account) {
+    return 'Поступает $account';
+  }
+
+  @override
+  String trCapFee(Object gross, Object fee) {
+    return '$gross минус $fee комиссии';
+  }
+
+  @override
+  String trCapFeeAndRate(Object net, Object fee, Object rate) {
+    return '$net после $fee комиссии, по $rate';
+  }
+
+  @override
+  String trCapRate(Object rate) {
+    return 'по курсу $rate';
+  }
+
+  @override
+  String trFeeBookedFull(Object account, Object category) {
+    return 'Комиссия проводится как расход со счёта $account по категории $category.';
+  }
+
+  @override
+  String trFeeBookedAccount(Object account) {
+    return 'Комиссия проводится как расход со счёта $account.';
+  }
 
   @override
   String get qaAccount => 'Счёт';
@@ -2690,9 +2734,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get qaTaskPlaceholder => 'Что нужно сделать?';
-
-  @override
-  String get qaExchangeRate => 'Обменный курс';
 
   @override
   String qaFxRate(Object from, Object to) {
