@@ -510,6 +510,19 @@ class _QuickAddScreenState extends State<QuickAddScreen>
 
   double get _amount => AmountEntry.value(_raw);
 
+  /// A scheduled task's direction comes from its category (task 030 §3): an
+  /// income category means the money arrives. Without a category there is
+  /// nothing to read, and a task defaults to a pay-out — the sign every task
+  /// carried before the create form could ask. The category is held in
+  /// `_fromRef` on the task form.
+  bool get _taskIsPayIn =>
+      StoreScope.read(context).categoryById(_fromRef)?.type ==
+      CategoryType.income;
+
+  /// Whether the task form has a resolved category. Only then does the amount
+  /// row show a sign (task 030 §3).
+  bool _hasTaskCategory(AppStore store) => store.categoryById(_fromRef) != null;
+
   // ── Type switching ────────────────────────────────────────────────────────
 
   _Slot _fromSlot(QuickAddType t) => switch (t) {
@@ -1522,6 +1535,16 @@ class _QuickAddScreenState extends State<QuickAddScreen>
             slotKey: _amountRowKey,
             onTap: _focusAmount,
             onCurrencyTap: _pickTaskCurrency,
+            // Task 030 §3: once a category names the direction, the amount is
+            // signed and coloured — `+` positive for money coming in, `−`
+            // negative for going out. With no category it stays unsigned and
+            // neutral, because the direction is not yet a fact.
+            amountSign: _hasTaskCategory(store)
+                ? (_taskIsPayIn ? '+' : '−')
+                : '',
+            valueColor: _hasTaskCategory(store)
+                ? (_taskIsPayIn ? AppColors.positive : AppColors.negative)
+                : null,
           ),
           FieldSpec(
             icon: Icons.account_balance_wallet_rounded,
@@ -1535,12 +1558,21 @@ class _QuickAddScreenState extends State<QuickAddScreen>
           ),
           FieldSpec(
             icon: Icons.category_rounded,
+            // The row asks for a Category, full stop (task 030 §1): the label is
+            // the same in both directions, and the side the user picks in the
+            // two-sided sheet is the task's direction. A task with no category
+            // keeps today's default — a pay-out (see [_taskIsPayIn]).
             label: AppLocalizations.of(context).fieldCategory,
             value: store.categoryById(_fromRef)?.name,
             emptyText: AppLocalizations.of(context).eaNotSet,
-            // _pickCategoryInto raises the category bottom sheet.
+            // _pickCategoryInto raises the two-sided category sheet; Expense
+            // opens first, so the common case costs no extra tap (§2).
             opensSheet: true,
-            onTap: () => _pickCategoryInto(CategoryType.expense, isFrom: true),
+            onTap: () => _pickCategoryInto(
+              CategoryType.expense,
+              isFrom: true,
+              types: const [CategoryType.expense, CategoryType.income],
+            ),
           ),
           // Repeat moves onto the transaction form's richer chooser (§5): a row
           // in OPTIONAL, not a button in a bar. A recurring bill is the clearest
@@ -1653,9 +1685,12 @@ class _QuickAddScreenState extends State<QuickAddScreen>
   }
 
   Future<void> _pickCategoryInto(CategoryType type,
-      {required bool isFrom}) async {
+      {required bool isFrom,
+      // Task 030 §2: the sides the sheet offers. Empty (every caller but the
+      // task form) keeps the single-type sheet; two entries raise the tab strip.
+      List<CategoryType> types = const []}) async {
     setState(() => _keypadOpen = false);
-    final c = await pickCategory(context, type: type);
+    final c = await pickCategory(context, type: type, types: types);
     if (c == null || !mounted) return;
     setState(() => isFrom ? _fromRef = c.id : _toRef = c.id);
   }
@@ -2295,7 +2330,11 @@ class _QuickAddScreenState extends State<QuickAddScreen>
         store.addTask(
           title: _title.text.trim(),
           linkedAccountId: linked,
-          expectedAmount: -_amount,
+          // Task 030 §3: the side of the chosen category is the sign. An income
+          // category means money coming in (positive); an expense category, or
+          // no category at all, means going out (negative) — the default every
+          // task carried before this was askable.
+          expectedAmount: _taskIsPayIn ? _amount : -_amount,
           dueDate: _date,
           icon: _taskIcon,
           categoryId: _fromRef,

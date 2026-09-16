@@ -617,6 +617,8 @@ class TxnAmountFieldRow extends StatefulWidget {
     required this.focused,
     required this.onTap,
     required this.onCurrencyTap,
+    this.sign = '',
+    this.valueColor,
   });
 
   final IconData icon;
@@ -625,6 +627,17 @@ class TxnAmountFieldRow extends StatefulWidget {
   /// The literal characters typed, straight from the form's `_raw`.
   final String raw;
   final String currency;
+
+  /// A leading sign glyph shown before the figure once a direction is known
+  /// (task 030 §3): '+' or '−'. Empty keeps the row unsigned, as every amount
+  /// row was before. Never drawn in the empty state — an unset amount has no
+  /// sign to carry.
+  final String sign;
+
+  /// The colour the figure (and its sign) take once a direction is known —
+  /// positive for money in, negative for money out. Null keeps the neutral
+  /// primary-text colour every other amount row uses.
+  final Color? valueColor;
 
   /// Shown while [raw] is empty *and* the row is unfocused. The instant the row
   /// takes focus the dim `0.00` replaces it; the two never coexist.
@@ -707,12 +720,17 @@ class _TxnAmountFieldRowState extends State<TxnAmountFieldRow>
         );
 
     final parts = AmountEntry.splitPlain(widget.raw, widget.currency);
+    // Task 030: once a direction is known the whole figure (sign, digits and
+    // padding) takes the direction colour; otherwise the neutral ramp below.
+    final numColor = widget.valueColor ?? AppColors.textPrimary;
     // Task 11: the typed digits are always bright; the untyped padding is dim
     // only while the keypad is still writing here (or the field is empty), and
     // joins the number at full brightness once the row is filled and unfocused.
-    // Pale means "not typed yet", never "these are the decimals".
-    final restColor =
-        (filled && !focused) ? AppColors.textPrimary : AppColors.textTertiary;
+    // Pale means "not typed yet", never "these are the decimals". A signed row
+    // paints the padding in the direction colour too, so `+1,200.00` reads as
+    // one figure.
+    final restColor = widget.valueColor ??
+        ((filled && !focused) ? AppColors.textPrimary : AppColors.textTertiary);
 
     final Widget value = showEmpty
         ? Text(
@@ -724,10 +742,12 @@ class _TxnAmountFieldRowState extends State<TxnAmountFieldRow>
           )
         : Text.rich(
             TextSpan(children: [
+              // The sign leads the figure (task 030 §3); never in the empty
+              // state, which this branch is not.
+              if (widget.sign.isNotEmpty)
+                TextSpan(text: widget.sign, style: numStyle(numColor)),
               if (parts.typed.isNotEmpty)
-                TextSpan(
-                    text: parts.typed,
-                    style: numStyle(AppColors.textPrimary)),
+                TextSpan(text: parts.typed, style: numStyle(numColor)),
               if (focused)
                 WidgetSpan(
                   alignment: PlaceholderAlignment.middle,
@@ -765,8 +785,9 @@ class _TxnAmountFieldRowState extends State<TxnAmountFieldRow>
     final content = LayoutBuilder(
       builder: (context, c) {
         final labelW = _measure(widget.label, labelStyle, scaler);
-        final shown =
-            showEmpty ? widget.emptyText : '${parts.typed}${parts.rest}';
+        final shown = showEmpty
+            ? widget.emptyText
+            : '${widget.sign}${parts.typed}${parts.rest}';
         final valueW = _measure(shown, numStyle(AppColors.textPrimary), scaler) +
             (focused ? 4 : 0); // the caret column
         final chipW = chip == null

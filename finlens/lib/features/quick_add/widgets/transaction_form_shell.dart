@@ -34,6 +34,7 @@ class FieldSpec {
     this.currency,
     this.onCurrencyTap,
     this.slotKey,
+    this.amountSign = '',
   });
 
   final IconData icon;
@@ -96,6 +97,12 @@ class FieldSpec {
   /// Attached to the rendered amount row so the form can scroll it above the
   /// docked keypad (task 007 §5.4). Only the task's amount field sets it.
   final GlobalKey? slotKey;
+
+  /// A leading sign glyph on an inline amount row (task 030 §3): '+' or '−'
+  /// (true minus U+2212) once the row's direction is a fact, '' before then.
+  /// The figure itself takes [valueColor] alongside it. Only the task form's
+  /// amount sets these; every other amount row leaves them neutral.
+  final String amountSign;
 }
 
 /// The hero card's content: a number the keypad drives, or free text.
@@ -483,6 +490,9 @@ Widget _fieldRow(FieldSpec f, String? flashTarget, bool keypadOpen) {
       focused: keypadOpen,
       onTap: f.onTap!,
       onCurrencyTap: f.onCurrencyTap!,
+      // Task 030 §3: sign and colour once the task has a direction.
+      sign: f.amountSign,
+      valueColor: f.valueColor,
     );
   }
   return TxnFieldRow(

@@ -687,6 +687,12 @@ class _AccountPickerBodyState extends State<_AccountPickerBody> {
 Future<Category?> pickCategory(
   BuildContext context, {
   required CategoryType type,
+  /// The sides the sheet may offer (task 030). Empty or of length one (the
+  /// default) is today's sheet, byte for byte: one title, one grid, no tab
+  /// strip. Two entries put a tab strip above the grid and let the chosen side
+  /// answer a question the caller would otherwise have to ask separately — for a
+  /// scheduled task, picking `Salary` *is* saying the money comes in.
+  List<CategoryType> types = const [],
   String? title,
   String? selectedId,
   /// Categories already taken elsewhere in the caller's set — rendered as
@@ -696,12 +702,26 @@ Future<Category?> pickCategory(
   Set<String> usedIds = const {},
 }) {
   final l = AppLocalizations.of(context);
+  // The sides on offer. Anything but exactly-two collapses to the single seed
+  // type, so every existing caller (which passes no `types`) is unchanged.
+  final tabs = types.length >= 2 ? types : <CategoryType>[type];
+  final twoSided = tabs.length >= 2;
+  // The active side, shared between the header `+ New` (which creates INTO the
+  // active side, §2) and the body (which swaps the grid). Seeded to `type`, so
+  // the common case opens on the side the caller asked for and costs no tap. A
+  // bare ValueNotifier with no attached listeners needs no disposal; the body
+  // reads it through the widget, not a listenable, and it is GC'd with the sheet.
+  final active = ValueNotifier<CategoryType>(type);
   return showAppSheet<Category>(
     context,
+    // Two-sided: the sheet asks for a `Category`, full stop — the tab names the
+    // side (§2). One-sided: today's per-type title. A caller title always wins.
     title: title ??
-        (type == CategoryType.expense
-            ? l.qaExpenseCategory
-            : l.qaIncomeCategory),
+        (twoSided
+            ? l.fieldCategory
+            : (type == CategoryType.expense
+                ? l.qaExpenseCategory
+                : l.qaIncomeCategory)),
     // A labelled, accessible dismissal, matching the account picker.
     cancelLabel: l.actionCancel,
     contentSized: true,
@@ -714,12 +734,15 @@ Future<Category?> pickCategory(
     actions: [
       _HeaderCreateAction<Category>(
         label: l.qaNewShort,
-        onCreate: (ctx) => showNewCategorySheet(ctx, type: type),
+        // Follows the active tab (§2): a sheet showing Income creates an income
+        // category. A single-type sheet reads the fixed seed, exactly as before.
+        onCreate: (ctx) => showNewCategorySheet(ctx, type: active.value),
       ),
     ],
     builder: (context, controller) => _CategoryPickerBody(
         controller: controller,
-        type: type,
+        tabs: tabs,
+        active: active,
         selectedId: selectedId,
         usedIds: usedIds),
   );
@@ -728,13 +751,21 @@ Future<Category?> pickCategory(
 class _CategoryPickerBody extends StatefulWidget {
   const _CategoryPickerBody({
     required this.controller,
-    required this.type,
+    required this.tabs,
+    required this.active,
     this.selectedId,
     this.usedIds = const {},
   });
 
   final ScrollController controller;
-  final CategoryType type;
+
+  /// The sides this sheet offers. One entry → no tab strip, today's sheet. Two
+  /// → a tab strip above the grid (task 030 §2).
+  final List<CategoryType> tabs;
+
+  /// The active side, shared with the header `+ New` action. The body is the
+  /// only writer; the header only reads it, at tap time.
+  final ValueNotifier<CategoryType> active;
 
   /// The transaction's current category, highlighted in the grid when supplied.
   final String? selectedId;
@@ -757,6 +788,21 @@ class _CategoryPickerBodyState extends State<_CategoryPickerBody> {
   /// column count — if [_kColumns] ever changes, this threshold moves with it.
   static const _kSearchThreshold = _kColumns * 2;
 
+  CategoryType get _active => widget.active.value;
+  bool get _twoSided => widget.tabs.length >= 2;
+
+  /// Switches the active side (task 030 §2): the grid swaps in place, the search
+  /// query and scroll reset to the top, and `contentSized` re-measures on the
+  /// next layout so the sheet does not keep the taller side's height.
+  void _selectTab(CategoryType type) {
+    if (type == _active) return;
+    setState(() {
+      widget.active.value = type;
+      _query = '';
+    });
+    if (widget.controller.hasClients) widget.controller.jumpTo(0);
+  }
+
   @override
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
@@ -764,9 +810,10 @@ class _CategoryPickerBodyState extends State<_CategoryPickerBody> {
 
     // The list this sheet draws from, before any query. Empty here is state 1 —
     // a different thing from a query that matched nothing, and the two must
-    // never be confused (§1). Usage-ordered, ties newest-first (§3).
-    final source = store.categoriesOfTypeByUsage(widget.type);
-    if (source.isEmpty) return _emptyState(context, l);
+    // never be confused (§1). Usage-ordered, ties newest-first (§3). In two-sided
+    // mode this reads the ACTIVE tab, so the empty state belongs to the tab, not
+    // the sheet (§2): an empty Income side still shows the tab strip above it.
+    final source = store.categoriesOfTypeByUsage(_active);
 
     final showSearch = source.length >= _kSearchThreshold;
     final rawQuery = _query.trim();
@@ -779,38 +826,62 @@ class _CategoryPickerBodyState extends State<_CategoryPickerBody> {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        if (showSearch)
-          _SearchBar(
-            hint: l.qaSearchCategories,
-            onChanged: (v) {
-              setState(() => _query = v);
-              // The now-unfiltered grid is taller; drop back to the top when the
-              // query empties so the user isn't left scrolled into the middle.
-              if (v.isEmpty && widget.controller.hasClients) {
-                widget.controller.jumpTo(0);
-              }
-            },
+        if (_twoSided) _tabStrip(context, l),
+        if (source.isEmpty)
+          _emptyState(context, l)
+        else ...[
+          if (showSearch)
+            _SearchBar(
+              hint: l.qaSearchCategories,
+              onChanged: (v) {
+                setState(() => _query = v);
+                // The now-unfiltered grid is taller; drop back to the top when
+                // the query empties so the user isn't left scrolled into the
+                // middle.
+                if (v.isEmpty && widget.controller.hasClients) {
+                  widget.controller.jumpTo(0);
+                }
+              },
+            ),
+          Flexible(
+            child: ListView(
+              controller: widget.controller,
+              // shrinkWrap so a short grid keeps the sheet short (§2); the outer
+              // Flexible caps it and it scrolls once the grid outgrows the sheet.
+              shrinkWrap: true,
+              // No spent/budget figures here — this is a picker; budget progress
+              // lives on the Planner tab (§2).
+              padding: const EdgeInsets.fromLTRB(14, Insets.md, 14, Insets.xxl),
+              children: [
+                // State 4 — and ONLY state 4: categories exist, a real query was
+                // typed, and it matched nothing. An empty/whitespace query can
+                // never reach here (§1, §4).
+                if (hasQuery && matches.isEmpty)
+                  _noMatchLine(context, l, rawQuery),
+                if (matches.isNotEmpty) _grid(context, matches),
+              ],
+            ),
           ),
-        Flexible(
-          child: ListView(
-            controller: widget.controller,
-            // shrinkWrap so a short grid keeps the sheet short (§2); the outer
-            // Flexible caps it and it scrolls once the grid outgrows the sheet.
-            shrinkWrap: true,
-            // No spent/budget figures here — this is a picker; budget progress
-            // lives on the Planner tab (§2).
-            padding: const EdgeInsets.fromLTRB(14, Insets.md, 14, Insets.xxl),
-            children: [
-              // State 4 — and ONLY state 4: categories exist, a real query was
-              // typed, and it matched nothing. An empty/whitespace query can
-              // never reach here (§1, §4).
-              if (hasQuery && matches.isEmpty)
-                _noMatchLine(context, l, rawQuery),
-              if (matches.isNotEmpty) _grid(context, matches),
-            ],
-          ),
-        ),
+        ],
       ],
+    );
+  }
+
+  /// The two-sided tab strip (task 030 §2): the app's segmented control, full
+  /// width with `Insets.gutter` side margins, sitting directly above the grid.
+  /// The chosen side is the task's direction — picking Income is saying the
+  /// money comes in.
+  Widget _tabStrip(BuildContext context, AppLocalizations l) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+          Insets.gutter, Insets.sm, Insets.gutter, Insets.xs),
+      child: SegmentedPicker<CategoryType>(
+        values: widget.tabs,
+        labelOf: (t) =>
+            t == CategoryType.expense ? l.quickAddExpense : l.quickAddIncome,
+        selected: _active,
+        onChanged: _selectTab,
+      ),
     );
   }
 
