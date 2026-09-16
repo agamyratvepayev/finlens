@@ -3450,7 +3450,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get rcOnTheseDays => 'On these days';
 
   @override
+  String get rcOnThisDay => 'On this day';
+
+  @override
   String get rcLast => 'Last';
+
+  @override
+  String get rcLastDay => 'last day';
+
+  @override
+  String get rcAnd => 'and';
+
+  @override
+  String rcEveryOnDays(Object every, Object days) {
+    return '$every on $days';
+  }
+
+  @override
+  String get actionClear => 'Clear';
 
   @override
   String get qaSplitAction => 'Split into several categories';

@@ -270,13 +270,15 @@ void main() {
 
     testWidgets('Every N unit renders singular then plural', (tester) async {
       await openCustom(tester);
-      // Switch the unit to weeks, N starts at 1 → singular.
+      // Switch the unit to weeks, N starts at 1. Task 030 §5: the headline now
+      // states the whole rule — the number-free "Every week" at interval 1, plus
+      // the day-set — so the assertion matches the interval clause within it.
       await tester.tap(find.text('Week'));
       await tester.pump();
-      expect(find.text('Every 1 week'), findsOneWidget);
+      expect(find.textContaining('Every week on'), findsOneWidget);
       await tester.tap(find.byIcon(Icons.add_rounded));
       await tester.pump();
-      expect(find.text('Every 2 weeks'), findsOneWidget);
+      expect(find.textContaining('Every 2 weeks on'), findsOneWidget);
     });
 
     testWidgets('month unit renders a 32-cell grid ending in Last',

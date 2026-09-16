@@ -3517,7 +3517,24 @@ class AppLocalizationsRu extends AppLocalizations {
   String get rcOnTheseDays => 'В эти дни';
 
   @override
+  String get rcOnThisDay => 'В этот день';
+
+  @override
   String get rcLast => 'Последний';
+
+  @override
+  String get rcLastDay => 'в последний день';
+
+  @override
+  String get rcAnd => 'и';
+
+  @override
+  String rcEveryOnDays(Object every, Object days) {
+    return '$every $days';
+  }
+
+  @override
+  String get actionClear => 'Очистить';
 
   @override
   String get qaSplitAction => 'Разбить на несколько категорий';

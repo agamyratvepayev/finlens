@@ -5404,11 +5404,41 @@ abstract class AppLocalizations {
   /// **'On these days'**
   String get rcOnTheseDays;
 
+  /// No description provided for @rcOnThisDay.
+  ///
+  /// In en, this message translates to:
+  /// **'On this day'**
+  String get rcOnThisDay;
+
   /// No description provided for @rcLast.
   ///
   /// In en, this message translates to:
   /// **'Last'**
   String get rcLast;
+
+  /// No description provided for @rcLastDay.
+  ///
+  /// In en, this message translates to:
+  /// **'last day'**
+  String get rcLastDay;
+
+  /// No description provided for @rcAnd.
+  ///
+  /// In en, this message translates to:
+  /// **'and'**
+  String get rcAnd;
+
+  /// No description provided for @rcEveryOnDays.
+  ///
+  /// In en, this message translates to:
+  /// **'{every} on {days}'**
+  String rcEveryOnDays(Object every, Object days);
+
+  /// No description provided for @actionClear.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear'**
+  String get actionClear;
 
   /// No description provided for @qaSplitAction.
   ///

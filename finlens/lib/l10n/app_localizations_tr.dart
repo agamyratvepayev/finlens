@@ -3435,7 +3435,24 @@ class AppLocalizationsTr extends AppLocalizations {
   String get rcOnTheseDays => 'Bu günlerde';
 
   @override
+  String get rcOnThisDay => 'Bu günde';
+
+  @override
   String get rcLast => 'Son';
+
+  @override
+  String get rcLastDay => 'son gün';
+
+  @override
+  String get rcAnd => 've';
+
+  @override
+  String rcEveryOnDays(Object every, Object days) {
+    return '$every $days';
+  }
+
+  @override
+  String get actionClear => 'Temizle';
 
   @override
   String get qaSplitAction => 'Birkaç kategoriye böl';

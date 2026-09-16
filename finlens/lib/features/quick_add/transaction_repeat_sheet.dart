@@ -57,7 +57,12 @@ String txnRepeatWord(RepeatFrequency f, AppLocalizations l) => switch (f) {
         l.rcCustom,
     };
 
-/// Composes `Every 3 weeks` / `Every 1 week` with an ICU-plural unit noun.
+/// The interval clause: `Every 3 weeks` / `Every 4 months` for n > 1, and the
+/// number-free `Every week` / `Every month` for n == 1 (task 030 §5 — a leading
+/// `1` reads as a stutter next to the day list). Russian needs a gendered
+/// "every" at n == 1 (каждый/каждую), so it is spelled out per unit; en/tr/tk
+/// read naturally as `rcEvery` + the singular noun the plural's `one` form
+/// already carries.
 String _everyPhrase(int n, RepeatUnit unit, AppLocalizations l) {
   final noun = switch (unit) {
     RepeatUnit.day => l.rcNDays(n),
@@ -65,7 +70,50 @@ String _everyPhrase(int n, RepeatUnit unit, AppLocalizations l) {
     RepeatUnit.month => l.rcNMonths(n),
     RepeatUnit.year => l.rcNYears(n),
   };
-  return '${l.rcEvery} $noun';
+  if (n != 1) return '${l.rcEvery} $noun';
+  if (l.localeName == 'ru') {
+    final every = unit == RepeatUnit.week ? 'Каждую' : 'Каждый';
+    final single = switch (unit) {
+      RepeatUnit.day => 'день',
+      RepeatUnit.week => 'неделю',
+      RepeatUnit.month => 'месяц',
+      RepeatUnit.year => 'год',
+    };
+    return '$every $single';
+  }
+  // Drop the leading "1 " from the plural's singular form: "1 month" → "month".
+  final single = noun.replaceFirst(RegExp(r'^1\s+'), '');
+  return '${l.rcEvery} $single';
+}
+
+/// Joins 1–3 day tokens as "a", "a and b" or "a, b and c" (task 030 §5). The
+/// last pair uses `rcAnd`; earlier items a plain comma.
+String _joinDays(List<String> items, AppLocalizations l) {
+  if (items.isEmpty) return '';
+  if (items.length == 1) return items.first;
+  final head = items.sublist(0, items.length - 1).join(', ');
+  return '$head ${l.rcAnd} ${items.last}';
+}
+
+/// The month day-set as it reads in the summary. English prefixes the article
+/// ("the 9th and 14th"); Russian follows the app's established genitive form
+/// ("9-го и 14-го числа", mirroring `rsMonthlyOnDay`); tr/tk list the ordinals
+/// as `ordinalDay` renders them. [days] is sorted and may include
+/// [kLastDayOfMonth].
+String _monthDaysClause(List<int> days, AppLocalizations l) {
+  final hasLast = days.contains(kLastDayOfMonth);
+  final nums = [for (final d in days) if (d != kLastDayOfMonth) ordinalDay(d, l)];
+  if (l.localeName == 'ru') {
+    return _joinDays([
+      if (nums.isNotEmpty) '${_joinDays(nums, l)} числа',
+      if (hasLast) l.rcLastDay,
+    ], l);
+  }
+  final tokens = [
+    for (final d in days) d == kLastDayOfMonth ? l.rcLastDay : ordinalDay(d, l),
+  ];
+  final joined = _joinDays(tokens, l);
+  return l.localeName == 'en' ? 'the $joined' : joined;
 }
 
 /// Opens the Repeat chooser. Returns the selection on Done, or null when
@@ -465,6 +513,36 @@ class _CustomSheetState extends State<_CustomSheet> {
   late Set<int> _daysOfMonth =
       widget.daysOfMonth.isEmpty ? {widget.date.day} : {...widget.daysOfMonth};
 
+  // The interval is typed in place (task 030 §2.2), on the system numeric
+  // keyboard — a count, not money, so not the app's `NumericKeypad`.
+  final _nFocus = FocusNode();
+  late final _nCtl = TextEditingController(text: '$_n');
+
+  /// True while the engine honours more than one day per period.
+  ///
+  /// `Recurrence._nextCustom` reads the day-set only when the interval is 1; for
+  /// wider cadences it steps whole periods from the anchor and keeps a single
+  /// day. Offering a multi-select there collects input that is silently dropped
+  /// at save, so the grid narrows to match what will actually happen (task 030
+  /// §4). Widening the engine is a separate task — see the spec's Non-goals.
+  bool get _multiDay => _n == 1;
+
+  @override
+  void initState() {
+    super.initState();
+    // Clamp the typed interval and collapse day-sets when focus leaves.
+    _nFocus.addListener(() {
+      if (!_nFocus.hasFocus) _commitN();
+    });
+  }
+
+  @override
+  void dispose() {
+    _nFocus.dispose();
+    _nCtl.dispose();
+    super.dispose();
+  }
+
   void _setUnit(RepeatUnit u) => setState(() {
         _unit = u;
         if (u == RepeatUnit.week && _weekdays.isEmpty) {
@@ -475,27 +553,66 @@ class _CustomSheetState extends State<_CustomSheet> {
         }
       });
 
-  /// Toggles [value] in [set] but refuses to empty it — a recurrence that
-  /// recurs on no day is not a recurrence (§5).
+  /// Adds [value] to [set]. With interval 1 it toggles but refuses to empty the
+  /// set — a recurrence on no day is not a recurrence (§5). With interval > 1
+  /// the engine keeps a single day, so selection replaces rather than
+  /// accumulates (task 030 §4).
   void _toggle(Set<int> set, int value) {
     setState(() {
-      if (set.contains(value)) {
-        if (set.length > 1) set.remove(value);
+      if (_multiDay) {
+        if (set.contains(value)) {
+          if (set.length > 1) set.remove(value);
+        } else {
+          set.add(value);
+        }
       } else {
-        set.add(value);
+        set
+          ..clear()
+          ..add(value);
       }
     });
   }
 
-  Future<void> _editN() async {
-    final v = await _showNumberSheet(
-      context,
-      title: AppLocalizations.of(context).rcEvery,
-      initial: _n,
-      min: 1,
-      max: 99,
-    );
-    if (v != null && mounted) setState(() => _n = v);
+  /// Applies a new interval. When [rewrite] the value is committed: it is
+  /// clamped and the field text is rewritten (steppers, blur, Done). While the
+  /// user types it is applied raw so the headline and grid track each keystroke;
+  /// the clamp waits for blur. Raising the interval above 1 collapses any
+  /// multi-day set to its lowest day, on screen (task 030 §4).
+  void _applyN(int v, {required bool rewrite}) {
+    setState(() {
+      _n = rewrite ? v.clamp(1, 99) : v;
+      if (_n != 1) {
+        if (_weekdays.length > 1) {
+          _weekdays = {_weekdays.reduce((a, b) => a < b ? a : b)};
+        }
+        if (_daysOfMonth.length > 1) {
+          _daysOfMonth = {_daysOfMonth.reduce((a, b) => a < b ? a : b)};
+        }
+      }
+      if (rewrite) {
+        _nCtl.text = '$_n';
+        _nCtl.selection = TextSelection.collapsed(offset: _nCtl.text.length);
+      }
+    });
+  }
+
+  /// Commits the typed interval on blur / Done. An empty field restores the last
+  /// valid value.
+  void _commitN() => _applyN(int.tryParse(_nCtl.text) ?? _n, rewrite: true);
+
+  void _stepN(int delta) => _applyN((_n + delta).clamp(1, 99), rewrite: true);
+
+  /// The card headline: the interval clause plus the day-set, when the unit has
+  /// one (task 030 §5). Day and year units carry no day-set.
+  String _summaryLine(AppLocalizations l) {
+    final every = _everyPhrase(_n, _unit, l);
+    final days = switch (_unit) {
+      RepeatUnit.day || RepeatUnit.year => null,
+      RepeatUnit.week =>
+        _joinDays([for (final d in (_weekdays.toList()..sort())) weekdayShort(d, l)], l),
+      RepeatUnit.month => _monthDaysClause(_daysOfMonth.toList()..sort(), l),
+    };
+    return days == null ? every : l.rcEveryOnDays(every, days);
   }
 
   _CustomResult _result() => _CustomResult(
@@ -521,11 +638,11 @@ class _CustomSheetState extends State<_CustomSheet> {
                   context, l.rcCustom, () => Navigator.of(context).pop()),
               _everyControl(l),
               if (_unit == RepeatUnit.week) ...[
-                _sectionLabel(l.rcOnTheseDays),
+                _sectionLabel(_multiDay ? l.rcOnTheseDays : l.rcOnThisDay),
                 _weekdayCard(l),
               ],
               if (_unit == RepeatUnit.month) ...[
-                _sectionLabel(l.rcOnTheseDays),
+                _sectionLabel(_multiDay ? l.rcOnTheseDays : l.rcOnThisDay),
                 _monthGridCard(l),
               ],
               _doneButton(
@@ -548,12 +665,16 @@ class _CustomSheetState extends State<_CustomSheet> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // The live, plural-correct reading of the rule.
+            // The live, plural-correct reading of the whole rule — interval and
+            // days. Ellipsises rather than wrapping or shoving the stepper (§5).
             Row(
               children: [
                 Expanded(
                   child: Text(
-                    _everyPhrase(_n, _unit, l),
+                    _summaryLine(l),
+                    maxLines: 1,
+                    softWrap: false,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                         fontSize: 15.5,
                         fontWeight: FontWeight.w600,
@@ -572,26 +693,41 @@ class _CustomSheetState extends State<_CustomSheet> {
   Widget _stepper() => Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _stepButton(Icons.remove_rounded, _n > 1, () {
-            if (_n > 1) setState(() => _n--);
-          }),
-          GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: _editN,
-            child: Container(
-              constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
-              alignment: Alignment.center,
-              child: Text('$_n',
-                  style: const TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                      fontFeatures: [FontFeature.tabularFigures()])),
+          _stepButton(Icons.remove_rounded, _n > 1, () => _stepN(-1)),
+          // The interval is typed here — no fourth sheet (task 030 §2.2). Sized
+          // to its digits, min 44×44 tap target, tabular figures, digits only,
+          // clamped 1..99 on blur.
+          ConstrainedBox(
+            constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+            child: IntrinsicWidth(
+              child: TextField(
+                controller: _nCtl,
+                focusNode: _nFocus,
+                textAlign: TextAlign.center,
+                keyboardType: TextInputType.number,
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'[0-9]')),
+                ],
+                cursorColor: AppColors.accent,
+                style: const TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                    fontFeatures: [FontFeature.tabularFigures()]),
+                decoration: const InputDecoration(
+                  isCollapsed: true,
+                  contentPadding: EdgeInsets.symmetric(vertical: 13),
+                  border: InputBorder.none,
+                ),
+                onChanged: (t) {
+                  final v = int.tryParse(t);
+                  if (v != null) _applyN(v, rewrite: false);
+                },
+                onEditingComplete: _commitN,
+              ),
             ),
           ),
-          _stepButton(Icons.add_rounded, _n < 99, () {
-            if (_n < 99) setState(() => _n++);
-          }),
+          _stepButton(Icons.add_rounded, _n < 99, () => _stepN(1)),
         ],
       );
 
@@ -853,6 +989,29 @@ class _EndsSheetState extends State<_EndsSheet> {
       DateTime(widget.date.year + 1, widget.date.month, widget.date.day);
   late int _count = widget.endCount ?? 12;
 
+  // The count is typed in the After row (task 030 §2.1). Tapping the row selects
+  // `after` and focuses the field in one move; there is no second sheet and no
+  // Done button but the sheet's own.
+  final _countFocus = FocusNode();
+  late final _countCtl = TextEditingController(text: '$_count');
+
+  @override
+  void initState() {
+    super.initState();
+    _countFocus.addListener(() {
+      // Clamp on blur (never per keystroke), and repaint the accent outline.
+      if (!_countFocus.hasFocus) _commitCount();
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _countFocus.dispose();
+    _countCtl.dispose();
+    super.dispose();
+  }
+
   Future<void> _pickDate() async {
     final d = await showDateTimeSheet(
       context,
@@ -870,20 +1029,22 @@ class _EndsSheetState extends State<_EndsSheet> {
     });
   }
 
-  Future<void> _pickCount() async {
-    final v = await _showNumberSheet(
-      context,
-      title: AppLocalizations.of(context).rcAfter,
-      initial: _count,
-      // At least two — something that happens once is not a repeat (§6). The
-      // first occurrence counts toward the total.
-      min: 2,
-      max: 999,
-    );
-    if (v == null || !mounted) return;
+  void _selectAfter() {
+    setState(() => _mode = _EndsMode.after);
+    _countFocus.requestFocus();
+  }
+
+  /// Commits the typed count on blur / Done. Clamp waits for here so typing the
+  /// first `1` of `12` is never snapped to `2`; the floor is 2 (one occurrence
+  /// is not a repeat) and the ceiling 999. An empty field restores the last
+  /// valid value (§2.1).
+  void _commitCount() {
+    final v = int.tryParse(_countCtl.text) ?? _count;
     setState(() {
-      _mode = _EndsMode.after;
-      _count = v;
+      _count = v.clamp(2, 999);
+      _countCtl.text = '$_count';
+      _countCtl.selection =
+          TextSelection.collapsed(offset: _countCtl.text.length);
     });
   }
 
@@ -907,27 +1068,26 @@ class _EndsSheetState extends State<_EndsSheet> {
             _sheetHeader(context, l.rcEnds, () => Navigator.of(context).pop()),
             _sheetCard([
               _endsRow(
+                mode: _EndsMode.never,
                 label: l.repeatNever,
                 value: null,
-                selected: _mode == _EndsMode.never,
                 onTap: () => setState(() => _mode = _EndsMode.never),
               ),
               _hair(),
               _endsRow(
+                mode: _EndsMode.onDate,
                 label: l.rcOnDate,
                 value: dayMonthYear(_date, l),
-                selected: _mode == _EndsMode.onDate,
                 onTap: _pickDate,
               ),
               _hair(),
-              _endsRow(
-                label: l.rcAfter,
-                value: l.rcTimes(_count),
-                selected: _mode == _EndsMode.after,
-                onTap: _pickCount,
-              ),
+              _afterRow(l),
             ]),
-            _doneButton(context, () => Navigator.of(context).pop(_result())),
+            _doneButton(context, () {
+              // Commit any in-progress typing before returning the result (§2.1).
+              if (_mode == _EndsMode.after) _commitCount();
+              Navigator.of(context).pop(_result());
+            }),
             const SizedBox(height: 12),
           ],
         ),
@@ -935,12 +1095,44 @@ class _EndsSheetState extends State<_EndsSheet> {
     );
   }
 
+  /// A round clear button in the selected row's trailing slot: the way to undo a
+  /// value belongs beside the value, not three rows up (task 030 §3).
+  Widget _clearButton() => Semantics(
+        button: true,
+        label: AppLocalizations.of(context).actionClear,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => setState(() => _mode = _EndsMode.never),
+          child: Container(
+            width: 36,
+            height: 36,
+            alignment: Alignment.center,
+            child: Container(
+              width: 20,
+              height: 20,
+              alignment: Alignment.center,
+              decoration: const BoxDecoration(
+                color: AppColors.surfaceHigh,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.close_rounded,
+                  size: 14, color: AppColors.textSecondary),
+            ),
+          ),
+        ),
+      );
+
+  /// The Never and On-a-date rows. The selected row's tick is replaced by a
+  /// clear button (task 030 §3) — except Never, which has no value to clear and
+  /// keeps its tick. Unselected rows show their candidate value dimmed with a
+  /// chevron, so both possibilities stay legible (§6).
   Widget _endsRow({
+    required _EndsMode mode,
     required String label,
     required String? value,
-    required bool selected,
     required VoidCallback onTap,
   }) {
+    final selected = _mode == mode;
     return Semantics(
       button: true,
       selected: selected,
@@ -965,13 +1157,13 @@ class _EndsSheetState extends State<_EndsSheet> {
                 Text(value,
                     style: TextStyle(
                       fontSize: 14.5,
-                      // Selected row's value is primary; the others dim, so both
-                      // possibilities are legible without choosing them (§6).
                       color: selected
                           ? AppColors.accentLight
                           : AppColors.textTertiary,
                     )),
-              if (selected) ...[
+              if (selected && value != null)
+                _clearButton()
+              else if (selected) ...[
                 const SizedBox(width: 6),
                 const Icon(Icons.check_rounded,
                     size: 18, color: AppColors.accentLight),
@@ -986,116 +1178,105 @@ class _EndsSheetState extends State<_EndsSheet> {
       ),
     );
   }
-}
 
-// ── Shared number entry ──────────────────────────────────────────────────────
+  /// The After row. When selected the count is typed in place (task 030 §2.1):
+  /// a digits-only field sized to its content, the unit word beside it, and a
+  /// clear button. Focus draws the accent outline `TxnNoteFieldRow` uses, inset
+  /// so the content does not shift when it appears. Unselected, it reads like
+  /// the others — dim value, chevron — and a tap selects and focuses it.
+  Widget _afterRow(AppLocalizations l) {
+    final selected = _mode == _EndsMode.after;
+    final focused = selected && _countFocus.hasFocus;
+    // The plural unit word from rcTimes with the number removed → "times".
+    final word =
+        l.rcTimes(_count).replaceFirst(RegExp('^$_count' r'\s*'), '').trim();
 
-/// A small sheet for typing a bounded integer (the custom `N` and the `After`
-/// count). Clamps to [min]..[max] on submit, so the floors the spec sets
-/// (N ≥ 1, count ≥ 2) can never be crossed.
-Future<int?> _showNumberSheet(
-  BuildContext context, {
-  required String title,
-  required int initial,
-  required int min,
-  required int max,
-}) {
-  return showModalBottomSheet<int>(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: AppColors.surfaceAlt,
-    builder: (_) => _NumberSheet(title: title, initial: initial, min: min, max: max),
-  );
-}
-
-class _NumberSheet extends StatefulWidget {
-  const _NumberSheet({
-    required this.title,
-    required this.initial,
-    required this.min,
-    required this.max,
-  });
-
-  final String title;
-  final int initial;
-  final int min;
-  final int max;
-
-  @override
-  State<_NumberSheet> createState() => _NumberSheetState();
-}
-
-class _NumberSheetState extends State<_NumberSheet> {
-  late final TextEditingController _controller =
-      TextEditingController(text: '${widget.initial}');
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  void _submit() {
-    final parsed = int.tryParse(_controller.text.trim());
-    if (parsed == null) {
-      Navigator.of(context).pop();
-      return;
-    }
-    Navigator.of(context).pop(parsed.clamp(widget.min, widget.max));
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
-      child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(widget.title,
-                  style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white)),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _controller,
-                autofocus: true,
+    final trailing = selected
+        ? [
+            IntrinsicWidth(
+              child: TextField(
+                controller: _countCtl,
+                focusNode: _countFocus,
+                textAlign: TextAlign.end,
                 keyboardType: TextInputType.number,
                 inputFormatters: [
                   FilteringTextInputFormatter.allow(RegExp(r'[0-9]')),
                 ],
                 cursorColor: AppColors.accent,
-                style: const TextStyle(fontSize: 16, color: Colors.white),
-                decoration: InputDecoration(
-                  filled: true,
-                  fillColor: AppColors.fieldCard,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: BorderSide.none,
-                  ),
+                style: const TextStyle(
+                    fontSize: 14.5,
+                    color: AppColors.accentLight,
+                    fontFeatures: [FontFeature.tabularFigures()]),
+                decoration: const InputDecoration(
+                  isCollapsed: true,
+                  border: InputBorder.none,
                 ),
-                onSubmitted: (_) => _submit(),
+                onChanged: (t) {
+                  final v = int.tryParse(t);
+                  // Track the typed value live (for the plural word) but do not
+                  // clamp until blur.
+                  if (v != null) setState(() => _count = v);
+                },
+                onEditingComplete: _commitCount,
               ),
-              const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  onPressed: _submit,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.accent,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                  ),
-                  child: Text(AppLocalizations.of(context).actionDone),
-                ),
-              ),
-            ],
-          ),
+            ),
+            const SizedBox(width: 4),
+            Text(word,
+                style: const TextStyle(
+                    fontSize: 14.5, color: AppColors.accentLight)),
+            _clearButton(),
+          ]
+        : [
+            Text(l.rcTimes(_count),
+                style: const TextStyle(
+                    fontSize: 14.5, color: AppColors.textTertiary)),
+            const SizedBox(width: 6),
+            const Icon(Icons.chevron_right_rounded,
+                size: 18, color: AppColors.formChevron),
+          ];
+
+    final content = Row(
+      children: [
+        Expanded(
+          child: Text(l.rcAfter,
+              style: TextStyle(
+                fontSize: 14.5,
+                color: selected ? Colors.white : AppColors.sheetAccountName,
+                fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+              )),
         ),
+        ...trailing,
+      ],
+    );
+
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: '${l.rcAfter} ${l.rcTimes(_count)}',
+      child: InkWell(
+        onTap: _selectAfter,
+        child: focused
+            // The accent outline: margin/padding swapped by 3 so content holds
+            // still (§2.1, mirroring TxnNoteFieldRow).
+            ? Container(
+                margin: const EdgeInsets.all(3),
+                constraints:
+                    const BoxConstraints(minHeight: kSheetRowHeight - 6),
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 8),
+                decoration: BoxDecoration(
+                  border: Border.all(
+                    color: AppColors.accent.withValues(alpha: 0.55),
+                    width: 1.5,
+                  ),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: content,
+              )
+            : Container(
+                constraints: const BoxConstraints(minHeight: kSheetRowHeight),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                child: content,
+              ),
       ),
     );
   }

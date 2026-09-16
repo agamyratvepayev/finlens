@@ -3437,7 +3437,24 @@ class AppLocalizationsTk extends AppLocalizations {
   String get rcOnTheseDays => 'Şu günlerde';
 
   @override
+  String get rcOnThisDay => 'Şu günde';
+
+  @override
   String get rcLast => 'Soňky';
+
+  @override
+  String get rcLastDay => 'soňky gün';
+
+  @override
+  String get rcAnd => 'we';
+
+  @override
+  String rcEveryOnDays(Object every, Object days) {
+    return '$every $days';
+  }
+
+  @override
+  String get actionClear => 'Arassala';
 
   @override
   String get qaSplitAction => 'Birnäçe kategoriýa böl';
