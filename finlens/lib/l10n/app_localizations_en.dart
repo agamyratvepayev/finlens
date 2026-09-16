@@ -2548,6 +2548,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String ldgNothingRecordedInRange(String range) {
+    return 'Nothing recorded in $range';
+  }
+
+  @override
   String ldgFirstRunHint(String plus) {
     return 'Start with $plus above';
   }

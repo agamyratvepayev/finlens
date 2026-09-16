@@ -2533,6 +2533,11 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
+  String ldgNothingRecordedInRange(String range) {
+    return '$range aralığında kayıt yok';
+  }
+
+  @override
   String ldgFirstRunHint(String plus) {
     return '$plus ile başla';
   }

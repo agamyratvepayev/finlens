@@ -679,6 +679,7 @@
   "ldgNothingHere": "Her amal şu ýerde ýaşaýar",
   "ldgNothingHereMsg": "Näme harçlanyňyzy we alanyňyzy ýazyň. Balanslar, býudjetler we maksatlar şu sanawdan okaýar.",
   "ldgNothingRecordedInMonth": "{month} aýynda hiç zat ýazylmady",
+  "ldgNothingRecordedInRange": "{range} aralygynda hiç zat ýazylmady",
   "ldgFirstRunHint": "Ýokardaky {plus} bilen başlaň",
   "ldgFirstRunHintA11y": "Ýokardaky goşmak düwmesi bilen başlaň",
   "ldgAddEntry": "Ýazgy goş",

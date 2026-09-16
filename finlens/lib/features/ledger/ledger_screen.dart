@@ -581,17 +581,30 @@ class _LedgerScreenState extends State<LedgerScreen> {
         ),
       );
     }
-    // §4 — an empty month on a store that has entries elsewhere. The zeros are
-    // the correct answer, not a problem, and the way out (the +) is two lines
-    // up: a large call to action would imply something is wrong. So a single
-    // centred line, matching the searching branch's shape, naming the month the
-    // title already shows.
+    // §4 — an empty period on a store that has entries elsewhere. The zeros are
+    // the correct answer, not a problem, and the way out (the + above, or the ✕
+    // that drops the lens) is already on screen: a large call to action would
+    // imply something is wrong. So a single centred line, matching the searching
+    // branch's shape, naming the period the title names.
+    //
+    // It names it by *asking the title's source*, not by formatting a second
+    // time: store.period is the month underneath a range lens and says nothing
+    // about the window actually on screen, so under a lens we render that lens's
+    // own label — the identical call _PeriodTitle makes. Passing store.today
+    // (the same value the title passes) keeps the two strings character-identical.
+    //
+    // No RangePreset.allTime branch: the ledger's only lens-setter
+    // (ledger_period_sheet's _applyRange → applyRangeLens) always builds a custom
+    // DateRange with preset == null, so a lens here is never a preset — allTime's
+    // "Since Mar 2023" origin label can never reach this line.
+    final l = AppLocalizations.of(context);
+    final lens = store.rangeLens;
     return Padding(
       padding: const EdgeInsets.only(top: 64),
       child: Text(
-        AppLocalizations.of(context).ldgNothingRecordedInMonth(
-          monthLong(store.period.month, AppLocalizations.of(context)),
-        ),
+        lens == null
+            ? l.ldgNothingRecordedInMonth(monthLong(store.period.month, l))
+            : l.ldgNothingRecordedInRange(lens.label(store.today, l)),
         textAlign: TextAlign.center,
         style: const TextStyle(fontSize: 14, color: AppColors.textTertiary),
       ),

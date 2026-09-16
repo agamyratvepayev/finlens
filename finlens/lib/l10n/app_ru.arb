@@ -679,6 +679,7 @@
   "ldgNothingHere": "Здесь живёт каждая операция",
   "ldgNothingHereMsg": "Записывайте расходы и поступления. Балансы, бюджеты и цели берут данные из этого списка.",
   "ldgNothingRecordedInMonth": "Нет записей за {month}",
+  "ldgNothingRecordedInRange": "Нет записей за {range}",
   "ldgFirstRunHint": "Начните с {plus} наверху",
   "ldgFirstRunHintA11y": "Начните с кнопки добавления наверху",
   "ldgAddEntry": "Добавить запись",

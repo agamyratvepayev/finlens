@@ -2604,6 +2604,11 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
+  String ldgNothingRecordedInRange(String range) {
+    return 'Нет записей за $range';
+  }
+
+  @override
   String ldgFirstRunHint(String plus) {
     return 'Начните с $plus наверху';
   }

@@ -3880,6 +3880,12 @@ abstract class AppLocalizations {
   /// **'Nothing recorded in {month}'**
   String ldgNothingRecordedInMonth(Object month);
 
+  /// No description provided for @ldgNothingRecordedInRange.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing recorded in {range}'**
+  String ldgNothingRecordedInRange(String range);
+
   /// No description provided for @ldgFirstRunHint.
   ///
   /// In en, this message translates to:

@@ -867,6 +867,8 @@
   "ldgNothingHereMsg": "Record what you spend and receive. Balances, budgets and goals all read from this list.",
   "ldgNothingRecordedInMonth": "Nothing recorded in {month}",
   "@ldgNothingRecordedInMonth": { "placeholders": { "month": {} } },
+  "ldgNothingRecordedInRange": "Nothing recorded in {range}",
+  "@ldgNothingRecordedInRange": { "placeholders": { "range": { "type": "String" } } },
   "ldgFirstRunHint": "Start with {plus} above",
   "ldgFirstRunHintA11y": "Start with the add button above",
   "@ldgFirstRunHint": { "placeholders": { "plus": { "type": "String" } } },

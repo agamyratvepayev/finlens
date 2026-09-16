@@ -2535,6 +2535,11 @@ class AppLocalizationsTk extends AppLocalizations {
   }
 
   @override
+  String ldgNothingRecordedInRange(String range) {
+    return '$range aralygynda hiç zat ýazylmady';
+  }
+
+  @override
   String ldgFirstRunHint(String plus) {
     return 'Ýokardaky $plus bilen başlaň';
   }
