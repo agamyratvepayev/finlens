@@ -71,7 +71,15 @@ class ScreenHeader extends StatelessWidget {
                   ],
                 ),
           ),
-          if (trailing != null) ...[trailing!, const SizedBox(width: Insets.sm)],
+          if (trailing != null) ...[
+            trailing!,
+            // The gap belongs to what follows. The eye has no leading gap of its
+            // own, so trailing supplies it; the + brings its own below. Emitting
+            // both when the eye is hidden doubled the space between ••• and + on
+            // the Planner and Insight See-all, whose eye moved into the •••
+            // menu (task 027 · header-controls spec §3).
+            if (showEye) const SizedBox(width: Insets.sm),
+          ],
           if (showEye)
             HeaderCircleButton(
               icon: store.masked
