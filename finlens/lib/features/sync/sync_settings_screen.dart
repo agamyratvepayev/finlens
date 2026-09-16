@@ -226,7 +226,6 @@ class _SyncSettingsScreenState extends State<SyncSettingsScreen> {
             ScreenHeader(
               title: l.syncAccountTitle,
               showBack: true,
-              showEye: false,
               showAdd: false,
             ),
             Expanded(

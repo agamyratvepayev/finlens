@@ -337,7 +337,7 @@ void main() {
     expect(find.byIcon(Icons.add_rounded), findsWidgets);
   });
 
-  testWidgets('only archived goals: the ••• stays, holding mask and Archive',
+  testWidgets('only archived goals: the ••• stays, holding Archive alone',
       (tester) async {
     bigScreen(tester);
     await tester.pumpWidget(wrap(archivedGoalStore(), const PlannerScreen()));
@@ -346,17 +346,17 @@ void main() {
     await tapTab(tester, 'Goals');
     expect(find.byType(EmptyState), findsOneWidget);
     // …but archivedCount is 1, so the header is not "untouched": the ••• stays.
-    // The eye is no longer a header button — masking moved into this menu
-    // (header-controls spec §3) and is reachable one tap in, above Archive.
+    // No eye anywhere — masking is a global preference in More › Preferences
+    // (task 028), never a Planner control.
     expect(archiveButton(), findsOneWidget);
     expect(eye(), findsNothing);
 
     await tester.tap(archiveButton());
     await tester.pumpAndSettle();
-    // First row is the mask toggle (a switch); Archive sits below the divider.
-    expect(find.text('Mask all amounts'), findsOneWidget);
-    expect(find.byType(Switch), findsOneWidget);
+    // The menu holds only Archive now — no mask row, no switch.
     expect(find.text('Archive'), findsOneWidget);
+    expect(find.text('Mask all amounts'), findsNothing);
+    expect(find.byType(Switch), findsNothing);
   });
 
   // ── §4.4 the hint ────────────────────────────────────────────────────────────

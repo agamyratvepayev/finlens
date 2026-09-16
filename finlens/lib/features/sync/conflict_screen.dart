@@ -74,7 +74,6 @@ class _ConflictScreenState extends State<ConflictScreen> {
             ScreenHeader(
               title: l.syncConflictsTitle,
               showBack: true,
-              showEye: false,
               showAdd: false,
             ),
             Expanded(

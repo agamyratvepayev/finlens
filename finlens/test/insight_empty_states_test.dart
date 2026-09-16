@@ -303,10 +303,11 @@ void main() {
       await tester.pump(const Duration(milliseconds: 300));
     }
 
-    // The eye and the filter moved into the ••• menu (header-controls spec §3):
-    // the header now shows a single ••• once there is anything to report, and
-    // both the mask toggle and the filter live inside the sheet it opens — so
-    // hasFilter()/hasMask() are only true with the menu open.
+    // The filter moved into the ••• menu (header-controls spec §3): the header
+    // shows a single ••• once there is anything to report, and the filter lives
+    // inside the sheet it opens — so hasFilter() is only true with the menu open.
+    // Masking is not in the menu: it is a global preference in More › Preferences
+    // (task 028); hasMask() must stay false even with the menu open.
     bool hasMenu() =>
         find.byIcon(Icons.more_horiz_rounded).evaluate().isNotEmpty;
     bool hasFilter() =>
@@ -351,23 +352,23 @@ void main() {
     });
 
     testWidgets(
-        'state 3 — everything hidden: ••• present, menu shows the mask toggle '
-        'and the filled filter, no add', (tester) async {
+        'state 3 — everything hidden: ••• present, menu shows the filled filter '
+        'alone, no mask row, no add', (tester) async {
       await pump(tester, everythingHidden());
       final l = await AppLocalizations.delegate.load(const Locale('en'));
       expect(find.text(l.insEmptyAllHiddenTitle), findsOneWidget);
       expect(find.text(l.insEmptyShowAll), findsOneWidget);
-      // The header carries the single ••• menu; no + ever. Closed, neither the
-      // filter nor the mask glyph is in the tree.
+      // The header carries the single ••• menu; no + ever. Closed, the filter
+      // glyph is not in the tree.
       expect(hasMenu(), isTrue);
       expect(hasAdd(), isFalse);
       expect(hasFilter(), isFalse);
       expect(hasMask(), isFalse);
-      // Open it: the mask toggle is present and the active filter shows its
-      // filled glyph.
+      // Open it: the active filter shows its filled glyph, and there is no mask
+      // row — masking moved to More › Preferences (task 028).
       await tester.tap(find.byIcon(Icons.more_horiz_rounded));
       await tester.pump(const Duration(milliseconds: 300));
-      expect(hasMask(), isTrue);
+      expect(hasMask(), isFalse);
       expect(find.byIcon(Icons.filter_alt_rounded), findsOneWidget);
     });
 
@@ -407,11 +408,12 @@ void main() {
       expect(find.byIcon(Icons.keyboard_arrow_down_rounded), findsOneWidget);
       expect(hasMenu(), isTrue);
       expect(hasAdd(), isFalse);
-      // The mask toggle and the filter are one tap away, inside the menu.
+      // The filter is one tap away, inside the menu; the mask toggle is not —
+      // masking moved to More › Preferences (task 028).
       await tester.tap(find.byIcon(Icons.more_horiz_rounded));
       await tester.pump(const Duration(milliseconds: 300));
-      expect(hasMask(), isTrue);
       expect(hasFilter(), isTrue);
+      expect(hasMask(), isFalse);
     });
 
     testWidgets('no accounts wins even with a stale filter (ordering)',

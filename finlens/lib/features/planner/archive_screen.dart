@@ -68,7 +68,6 @@ class ArchiveScreen extends StatelessWidget {
             ScreenHeader(
               title: l.moreArchive,
               showBack: true,
-              showEye: false,
               showAdd: false,
             ),
             Expanded(

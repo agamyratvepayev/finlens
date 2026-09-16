@@ -508,16 +508,11 @@ class _BalanceScreenState extends State<BalanceScreen> {
               : AppLocalizations.of(context).dateToday,
           onTap: () => _pickDate(store),
         ),
-        const SizedBox(width: Insets.sm),
-        HeaderCircleButton(
-          icon: store.masked
-              ? Icons.visibility_off_rounded
-              : Icons.visibility_rounded,
-          onTap: store.toggleMasked,
-        ),
         // The + is drawn as a persistent overlay (see _header); reserve its
-        // footprint — the sm gap plus its 36pt width — so the eye keeps the
-        // exact x-position it had when the + was an inline sibling here.
+        // footprint — the sm gap plus its 36pt width — so the date pill keeps the
+        // Insets.sm gap to the + that every adjacent header pair uses. Masking
+        // moved to More › Preferences (task 028), so no eye sits here; the
+        // reserved box stays because it holds the overlaid +'s space.
         const SizedBox(width: Insets.sm + HeaderCircleButton.diameter),
       ],
     );

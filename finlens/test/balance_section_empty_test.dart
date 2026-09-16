@@ -120,11 +120,12 @@ void main() {
     expect(find.byIcon(Icons.filter_alt_rounded), findsNothing);
     expect(find.byIcon(Icons.search_rounded), findsNothing);
 
-    // Row 1 survives: the label says where you are, the date and eye are shared
-    // controls, the + is the only create affordance.
+    // Row 1 survives: the label says where you are, the date is a shared
+    // control, the + is the only create affordance. No eye — masking moved to
+    // More › Preferences (task 028).
     expect(find.text('Liabilities'), findsOneWidget);
     expect(find.text('Today'), findsOneWidget);
-    expect(find.byIcon(Icons.visibility_rounded), findsOneWidget);
+    expect(find.byIcon(Icons.visibility_rounded), findsNothing);
     expect(find.byIcon(Icons.add_rounded), findsWidgets);
   });
 

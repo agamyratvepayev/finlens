@@ -50,7 +50,6 @@ class _CategoryManagementScreenState extends State<CategoryManagementScreen> {
             ScreenHeader(
               title: l.catManageTitle,
               showBack: true,
-              showEye: false,
               showAdd: false,
             ),
             Expanded(

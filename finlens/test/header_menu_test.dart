@@ -17,10 +17,11 @@ import 'package:finlens/shared/widgets/screen_header.dart'
 import 'package:finlens/theme/app_colors.dart';
 import 'package:finlens/theme/app_theme.dart';
 
-/// Header-controls spec: the corner carries at most `••• +`; the eye moved to
-/// the ••• menu as its first row, a mask toggle that does not close the sheet.
-/// These pin the pattern on the two screens it lands on (Planner, Insight) and
-/// on the shared component, and confirm Balance keeps its eye (the §5 exemption).
+/// Header-controls spec: the corner carries at most `••• +`, with no eye. The
+/// ••• menu holds only the screen's own secondary action (Archive on Planner,
+/// Filter on Insight); masking is not among them — it is a single global
+/// preference in More › Preferences (task 028). These pin that no eye appears on
+/// any of these screens and that no mask row appears inside the ••• menu.
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues(<String, Object>{}));
 
@@ -114,10 +115,10 @@ void main() {
     expect(eyeOffIcon(), findsNothing);
   });
 
-  // ── The menu: Mask all amounts is the first row, then a divider ───────────────
+  // ── The menu holds only the screen's action — no mask row, no divider ─────────
 
-  testWidgets('opening the Planner menu shows Mask all amounts first, then a '
-      'divider, then Archive', (tester) async {
+  testWidgets('opening the Planner menu shows Archive alone — no mask row, no '
+      'divider (task 028)', (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
@@ -128,75 +129,16 @@ void main() {
     await tester.tap(menuButton());
     await tester.pumpAndSettle();
 
-    final maskRow = find.text('Mask all amounts');
-    final divider = find.byType(Divider);
-    final archiveRow = find.text('Archive');
-    expect(maskRow, findsOneWidget);
-    expect(find.byType(Switch), findsOneWidget); // the toggle carries the state
-    expect(divider, findsOneWidget);
-    expect(archiveRow, findsOneWidget);
-
-    // Order: the preference sits above the divider, the action below it.
-    expect(tester.getTopLeft(maskRow).dy,
-        lessThan(tester.getTopLeft(divider).dy));
-    expect(tester.getTopLeft(divider).dy,
-        lessThan(tester.getTopLeft(archiveRow).dy));
-  });
-
-  // ── Toggling: flips the store and leaves the sheet open ───────────────────────
-
-  testWidgets('toggling the mask row flips store.masked and keeps the sheet open',
-      (tester) async {
-    final store = touchedStore();
-    tester.view.physicalSize = const Size(390, 844);
-    tester.view.devicePixelRatio = 1.0;
-    addTearDown(tester.view.reset);
-
-    await tester.pumpWidget(host(store, const PlannerScreen()));
-    await tester.pumpAndSettle();
-    await tester.tap(menuButton());
-    await tester.pumpAndSettle();
-
-    expect(store.masked, isFalse);
-    await tester.tap(find.text('Mask all amounts'));
-    await tester.pumpAndSettle();
-
-    expect(store.masked, isTrue);
-    // The sheet is still open — masking is meant to be visible behind it.
-    expect(find.text('Mask all amounts'), findsOneWidget);
     expect(find.text('Archive'), findsOneWidget);
-    // And the switch reflects the new state without a reopen.
-    expect(tester.widget<Switch>(find.byType(Switch)).value, isTrue);
+    // Masking is not a menu control any more: no mask row, no switch, and so no
+    // preference/action divider either.
+    expect(find.text('Mask all amounts'), findsNothing);
+    expect(find.byType(Switch), findsNothing);
+    expect(find.byType(Divider), findsNothing);
   });
 
-  // ── Two-way sync with the same preference the eye/More row write ──────────────
-
-  testWidgets('the menu switch reflects a pre-set preference and writes it back',
-      (tester) async {
-    final store = touchedStore()..toggleMasked(); // masked = true up front
-    tester.view.physicalSize = const Size(390, 844);
-    tester.view.devicePixelRatio = 1.0;
-    addTearDown(tester.view.reset);
-
-    await tester.pumpWidget(host(store, const PlannerScreen()));
-    await tester.pumpAndSettle();
-    await tester.tap(menuButton());
-    await tester.pumpAndSettle();
-
-    // Reflected: the preference was on before the sheet opened.
-    expect(tester.widget<Switch>(find.byType(Switch)).value, isTrue);
-
-    // Written back: toggling clears the same global flag.
-    await tester.tap(find.text('Mask all amounts'));
-    await tester.pumpAndSettle();
-    expect(store.masked, isFalse);
-    expect(tester.widget<Switch>(find.byType(Switch)).value, isFalse);
-  });
-
-  // ── Insight menu carries the filter below the mask toggle ─────────────────────
-
-  testWidgets('Insight menu: Mask all amounts first, then the Filter row',
-      (tester) async {
+  testWidgets('Insight menu: the Filter row alone — no mask row, no switch '
+      '(task 028)', (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
@@ -208,9 +150,9 @@ void main() {
     await tester.pumpAndSettle();
 
     final l = AppLocalizations.of(tester.element(find.byType(InsightScreen)));
-    expect(find.text('Mask all amounts'), findsOneWidget);
     expect(find.text(l.insFilterAccounts), findsOneWidget);
-    expect(find.byType(Switch), findsOneWidget);
+    expect(find.text('Mask all amounts'), findsNothing);
+    expect(find.byType(Switch), findsNothing);
   });
 
   // ── Circles are fixed-size across text scale ──────────────────────────────────
@@ -261,9 +203,9 @@ void main() {
     handle.dispose();
   });
 
-  // ── Balance keeps its eye (the deliberate §5 exemption) ───────────────────────
+  // ── Balance has no eye either (task 028) ──────────────────────────────────────
 
-  testWidgets('Balance still carries its own eye — its cluster is unchanged',
+  testWidgets('Balance carries no eye — masking moved to More › Preferences',
       (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1.0;
@@ -272,10 +214,10 @@ void main() {
     await tester.pumpWidget(host(touchedStore(), const BalanceScreen()));
     await tester.pumpAndSettle();
 
-    // Balance's other tools are the out-of-scope tool group, so its menu would
-    // be mask-only (§5): the eye stays a header button here, and no ••• appears.
-    expect(eyeIcon(), findsOneWidget);
-    expect(menuButton(), findsNothing);
+    // The eye is gone from Balance's header; masking is a single global
+    // preference in More › Preferences, so no header carries it.
+    expect(eyeIcon(), findsNothing);
+    expect(eyeOffIcon(), findsNothing);
   });
 
   // A HeaderMenuAction is a plain value; guard its defaults so a caller that

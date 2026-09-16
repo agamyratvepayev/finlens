@@ -439,8 +439,9 @@ void main() {
   testWidgets('masked mode: the amount range reads — (§10)', (tester) async {
     final store = _store();
     await _pump(tester, store);
-    // Hide amounts via the Ledger header eye, then open the sheet.
-    await tester.tap(find.byIcon(Icons.visibility_rounded));
+    // Hide amounts via the global preference (the Ledger no longer has an eye —
+    // masking moved to More › Preferences, task 028), then open the sheet.
+    store.toggleMasked();
     await tester.pump();
     await _openSheet(tester);
 

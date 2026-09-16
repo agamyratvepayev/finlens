@@ -46,7 +46,6 @@ class AccountsManagementScreen extends StatelessWidget {
           children: [
             ScreenHeader(
               showBack: true,
-              showEye: false,
               showAdd: false,
               titleWidget: _HeaderTitle(
                 activeCount: active.length,

@@ -8,17 +8,15 @@ import 'package:finlens/l10n/app_localizations.dart';
 import 'package:finlens/shared/widgets/screen_header.dart';
 import 'package:finlens/theme/app_theme.dart';
 
-/// Task 027 · header-controls spec §3 — the double gap uncovered when a screen
-/// carries a `trailing` (•••) but no header eye (its eye moved into the •••
-/// menu). The gap after `trailing` and the gap before `+` are both drawn by
-/// [ScreenHeader]; with the eye between them that is one gap each side, but with
-/// the eye gone the two `SizedBox(sm)`s sit together and •••→+ drifts to 2·sm.
+/// Task 028 — with the eye gone from [ScreenHeader] entirely, the only gap in
+/// the header's action cluster is the single `Insets.sm` the `+` brings. A
+/// screen with a `trailing` (•••) must show exactly one `Insets.sm` between •••
+/// and `+`, not the doubled gap that the eye's removal could have left (gap
+/// option A: the `trailing` branch emits no gap of its own).
 ///
-/// These pin that •••→+ equals a single `Insets.sm`, and equals the eye→+ gap on
-/// a screen that still shows its eye. The `+` itself does not move — it is the
-/// last child of a `Row` whose leading slot is `Expanded`, so it stays anchored
-/// to the right gutter; only the ••• shifts. (`plus_button_alignment_test.dart`
-/// pins the `+`'s rect across screens.)
+/// These pin •••→+ == `Insets.sm`, that no eye icon renders in either state, and
+/// that a header with no `trailing` keeps its `+` anchored to the right gutter.
+/// (`plus_button_alignment_test.dart` pins the `+`'s rect across screens.)
 void main() {
   setUp(() => SharedPreferences.setMockInitialValues(<String, Object>{}));
 
@@ -50,7 +48,7 @@ void main() {
     return r.left - l.right;
   }
 
-  testWidgets('•••→+ is a single Insets.sm when the eye is hidden (§3)',
+  testWidgets('•••→+ is a single Insets.sm, and no eye renders (task 028)',
       (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1.0;
@@ -59,7 +57,6 @@ void main() {
     await tester.pumpWidget(host(
       ScreenHeader(
         title: 'X',
-        showEye: false,
         onAdd: () {},
         trailing: HeaderCircleButton(
           icon: Icons.more_horiz_rounded,
@@ -69,15 +66,17 @@ void main() {
     ));
     await tester.pumpAndSettle();
 
+    // No eye in either state.
     expect(find.byIcon(Icons.visibility_rounded), findsNothing);
+    expect(find.byIcon(Icons.visibility_off_rounded), findsNothing);
     expect(
       gap(tester, Icons.more_horiz_rounded, Icons.add_rounded),
       moreOrLessEquals(Insets.sm, epsilon: 0.5),
     );
   });
 
-  testWidgets('eye→+ is the same single Insets.sm when the eye is shown',
-      (tester) async {
+  testWidgets('a header with no trailing carries no eye, and its + stays at the '
+      'right gutter', (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
@@ -87,39 +86,11 @@ void main() {
     ));
     await tester.pumpAndSettle();
 
-    expect(find.byIcon(Icons.visibility_rounded), findsOneWidget);
-    expect(
-      gap(tester, Icons.visibility_rounded, Icons.add_rounded),
-      moreOrLessEquals(Insets.sm, epsilon: 0.5),
-    );
-  });
-
-  testWidgets('•••→+ with the eye hidden equals eye→+ with the eye shown',
-      (tester) async {
-    tester.view.physicalSize = const Size(390, 844);
-    tester.view.devicePixelRatio = 1.0;
-    addTearDown(tester.view.reset);
-
-    await tester.pumpWidget(host(
-      ScreenHeader(
-        title: 'X',
-        showEye: false,
-        onAdd: () {},
-        trailing: HeaderCircleButton(
-          icon: Icons.more_horiz_rounded,
-          onTap: () {},
-        ),
-      ),
-    ));
-    await tester.pumpAndSettle();
-    final eyeless = gap(tester, Icons.more_horiz_rounded, Icons.add_rounded);
-
-    await tester.pumpWidget(host(
-      ScreenHeader(title: 'X', onAdd: () {}),
-    ));
-    await tester.pumpAndSettle();
-    final withEye = gap(tester, Icons.visibility_rounded, Icons.add_rounded);
-
-    expect(eyeless, moreOrLessEquals(withEye, epsilon: 0.5));
+    expect(find.byIcon(Icons.visibility_rounded), findsNothing);
+    expect(find.byIcon(Icons.visibility_off_rounded), findsNothing);
+    // The + is the last child of a Row whose leading slot is Expanded, so it is
+    // flush against the right gutter (390 width − gutter − its 36pt diameter).
+    final plus = tester.getRect(find.byIcon(Icons.add_rounded));
+    expect(plus.right, moreOrLessEquals(390 - Insets.gutter, epsilon: 0.5));
   });
 }

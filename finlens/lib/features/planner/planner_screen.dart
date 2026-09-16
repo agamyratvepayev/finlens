@@ -111,8 +111,10 @@ class _PlannerScreenState extends State<PlannerScreen> {
   };
 
   /// True when the Planner has never held anything: no budgets and no unbudgeted
-  /// spending, no goals, no tasks, and nothing in Archive. The eye would mask
-  /// nothing and the ••• would open an empty screen, so neither is drawn (§2).
+  /// spending, no goals, no tasks, and nothing in Archive. The ••• would open an
+  /// empty screen, so it is not drawn (§2). (Masking is a global preference in
+  /// More › Preferences now, task 028 — never a Planner control — but the test
+  /// is unchanged: its terms still gate the •••.)
   ///
   /// Archive is part of the test on purpose: a store whose only goals are
   /// archived reads as empty everywhere else, and hiding ••• there would strand
@@ -120,7 +122,7 @@ class _PlannerScreenState extends State<PlannerScreen> {
   /// budgets, archived accounts, and paused/completed/deleted tasks).
   ///
   /// Planner-wide, never per tab — the header sits above the segmented control,
-  /// so a per-tab test would make the eye flicker as the user swipes.
+  /// so a per-tab test would make the ••• flicker as the user swipes.
   bool _plannerUntouched(AppStore store) =>
       _budgetsEmpty(store) &&
       store.goals.isEmpty &&
@@ -207,9 +209,6 @@ class _PlannerScreenState extends State<PlannerScreen> {
               // list leaves the slot empty (§1).
               ScreenHeader(
                 titleWidget: _titleWidget(context, store),
-                // The eye moved into the ••• menu below (spec §3): masking is now
-                // its first row, so the header carries at most ••• and +.
-                showEye: false,
                 onAdd: () {
                   // Each tab's + creates that tab's own thing (§5). Goals use their
                   // own full-screen form (the WATCHING picker and targetв†”date pair
@@ -229,10 +228,9 @@ class _PlannerScreenState extends State<PlannerScreen> {
                   );
                 },
                 // The ••• menu is drawn only once the Planner has been touched:
-                // before that there is nothing to mask (no figures yet) and
-                // nothing archived to reach, so a menu would hold nothing (§5).
-                // Once touched it always carries the mask toggle, with Archive
-                // below it (spec 5.8 — Archive lives behind the menu, never a tab).
+                // before that there is nothing archived to reach, so the menu
+                // would hold nothing (§5). Once touched it carries Archive
+                // (spec 5.8 — Archive lives behind the menu, never a tab).
                 trailing: untouched
                     ? null
                     : HeaderCircleButton(

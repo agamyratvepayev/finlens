@@ -74,7 +74,6 @@ class CurrencyManagementScreen extends StatelessWidget {
             ScreenHeader(
               title: l.curListTitle,
               showBack: true,
-              showEye: false,
               showAdd: true,
               onAdd: () => showAddCurrencySheet(context),
             ),

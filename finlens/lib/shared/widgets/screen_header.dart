@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../core/store/app_store.dart';
 import '../../l10n/app_localizations.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
@@ -8,14 +7,15 @@ import '../../theme/app_typography.dart';
 
 /// The header shared by Balance, Assets, Liabilities, Ledger and Planner
 /// (spec 1.2: "Header'daki + ve göz ikonu Balance ile birebir aynı, paylaşılan
-/// component"). The eye toggles privacy mode; + opens Quick Add.
+/// component"). The + opens Quick Add. Masking is not a header control: it is a
+/// single global preference set in More › Preferences (task 028), so no screen
+/// carries an eye.
 class ScreenHeader extends StatelessWidget {
   const ScreenHeader({
     super.key,
     this.title,
     this.titleWidget,
     this.showBack = false,
-    this.showEye = true,
     this.showAdd = true,
     this.onAdd,
     this.trailing,
@@ -30,17 +30,15 @@ class ScreenHeader extends StatelessWidget {
   final Widget? titleWidget;
 
   final bool showBack;
-  final bool showEye;
   final bool showAdd;
   final VoidCallback? onAdd;
 
-  /// Extra action placed before the eye — e.g. the ••• menu on Planner.
+  /// Extra action placed before the + — e.g. the ••• menu on Planner.
   final Widget? trailing;
   final Widget? subtitle;
 
   @override
   Widget build(BuildContext context) {
-    final store = StoreScope.of(context);
     final l = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(
@@ -71,23 +69,11 @@ class ScreenHeader extends StatelessWidget {
                   ],
                 ),
           ),
-          if (trailing != null) ...[
-            trailing!,
-            // The gap belongs to what follows. The eye has no leading gap of its
-            // own, so trailing supplies it; the + brings its own below. Emitting
-            // both when the eye is hidden doubled the space between ••• and + on
-            // the Planner and Insight See-all, whose eye moved into the •••
-            // menu (task 027 · header-controls spec §3).
-            if (showEye) const SizedBox(width: Insets.sm),
-          ],
-          if (showEye)
-            HeaderCircleButton(
-              icon: store.masked
-                  ? Icons.visibility_off_rounded
-                  : Icons.visibility_rounded,
-              semanticLabel: l.moreMaskAmounts,
-              onTap: store.toggleMasked,
-            ),
+          // No gap here: the only thing that can follow `trailing` is the +, and
+          // its branch below brings the single Insets.sm between them. With the
+          // eye gone there is nothing to separate `trailing` from, so a gap here
+          // would double the space between ••• and + (task 028 · gap option A).
+          ?trailing,
           if (showAdd) ...[
             const SizedBox(width: Insets.sm),
             HeaderCircleButton(

@@ -198,7 +198,9 @@ void main() {
     // The full header is back: something has been recorded.
     expect(find.byType(ToolCluster), findsOneWidget);
     expect(find.byType(ProgressBar), findsOneWidget);
-    expect(find.byIcon(Icons.visibility_rounded), findsOneWidget);
+    // No eye, even populated: masking moved to More › Preferences (task 028).
+    expect(find.byIcon(Icons.visibility_rounded), findsNothing);
+    expect(find.byIcon(Icons.visibility_off_rounded), findsNothing);
 
     // The empty current month gets the light line, not the heavy EmptyState —
     // and no first-run hint or restore line.

@@ -50,7 +50,6 @@ class TagManagementScreen extends StatelessWidget {
             ScreenHeader(
               title: l.tagsTitle,
               showBack: true,
-              showEye: false,
               showAdd: false,
             ),
             Expanded(

@@ -83,10 +83,9 @@ class SeeAllScreen extends StatelessWidget {
               ),
               showBack: true,
               showAdd: false,
-              // The eye and the filter both live in the ••• menu now (spec §3):
-              // masking is its first row, the filter the row below. The active-
-              // filter cue moves onto that row's icon; the ••• never badges (§8).
-              showEye: false,
+              // The filter lives in the ••• menu (spec §3), with its active cue on
+              // that row's icon; the ••• never badges (§8). Masking is not here:
+              // it is a single global preference in More › Preferences (task 028).
               trailing: HeaderCircleButton(
                 icon: Icons.more_horiz_rounded,
                 semanticLabel: l.a11yMoreActions,

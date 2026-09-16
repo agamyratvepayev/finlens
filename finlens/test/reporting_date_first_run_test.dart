@@ -86,10 +86,11 @@ void main() {
       expect(find.text(l.balNoAccountsYet), findsNothing);
       expect(find.byIcon(Icons.history_rounded), findsOneWidget);
 
-      // The header stays live: the + and the eye are both present, and the
-      // "as of" line prints — this is a report of a date, not a blank slate.
+      // The header stays live: the + is present and the "as of" line prints —
+      // this is a report of a date, not a blank slate. No eye — masking moved to
+      // More › Preferences (task 028).
       expect(find.byIcon(Icons.add_rounded), findsOneWidget);
-      expect(find.byIcon(Icons.visibility_rounded), findsOneWidget);
+      expect(find.byIcon(Icons.visibility_rounded), findsNothing);
       expect(find.textContaining('as of'), findsOneWidget);
     });
 

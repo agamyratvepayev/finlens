@@ -540,10 +540,10 @@ class _InsightHeader extends StatelessWidget {
             ),
             const SizedBox(width: 7),
           ],
-          // The eye and the filter both moved into the ••• menu (spec §3): the
-          // eye becomes the menu's first row (masking), the filter the row below.
-          // The active-filter cue that used to fill this circle accent now lives
-          // on the menu's Filter row — the ••• itself never carries a badge (§8).
+          // The filter lives in the ••• menu (spec §3); its active cue moves onto
+          // that row's icon, and the ••• itself never carries a badge (§8).
+          // Masking is not here — it is a single global preference in
+          // More › Preferences (task 028), never a per-screen control.
           _CircleButton(
             icon: Icons.more_horiz_rounded,
             tint: AppColors.textSecondary,

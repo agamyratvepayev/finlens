@@ -1202,19 +1202,9 @@ class _HeaderZone extends StatelessWidget {
                       ),
                     ),
                   ],
-                  // Eye — hidden on first run (nothing money-shaped is drawn, so
-                  // masking has nothing to hide). The `+` always stays: it is the
-                  // one control that still does something, and the button a user
-                  // must not have to re-find the moment their first entry lands.
-                  if (everRecorded) ...[
-                    const SizedBox(width: Insets.sm),
-                    HeaderCircleButton(
-                      icon: store.masked
-                          ? Icons.visibility_off_rounded
-                          : Icons.visibility_rounded,
-                      onTap: store.toggleMasked,
-                    ),
-                  ],
+                  // Masking moved to More › Preferences (task 028); the Ledger no
+                  // longer carries an eye. The `+` keeps its own leading gap
+                  // below — it is the one header control that always stays.
                   const SizedBox(width: Insets.sm),
                   HeaderCircleButton(
                     icon: Icons.add_rounded,
