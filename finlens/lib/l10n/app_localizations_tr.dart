@@ -1433,6 +1433,17 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
+  String get balNothingYetTitle => 'Henüz hiçbir şey başlamamıştı';
+
+  @override
+  String balNothingYetBody(String date) {
+    return 'İlk hesabınız $date tarihinde açıldı.';
+  }
+
+  @override
+  String get balBackToToday => 'Bugüne dön';
+
+  @override
   String get balSortTooltip => 'Sırala';
 
   @override

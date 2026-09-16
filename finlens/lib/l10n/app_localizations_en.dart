@@ -1444,6 +1444,17 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get balNothingYetTitle => 'Nothing had started yet';
+
+  @override
+  String balNothingYetBody(String date) {
+    return 'Your first account opened on $date.';
+  }
+
+  @override
+  String get balBackToToday => 'Back to today';
+
+  @override
   String get balSortTooltip => 'Sort';
 
   @override

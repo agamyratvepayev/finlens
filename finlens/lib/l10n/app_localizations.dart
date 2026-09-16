@@ -2200,6 +2200,24 @@ abstract class AppLocalizations {
   /// **'{n, plural, one{{n} account in this section is hidden.} other{{n} accounts in this section are hidden.}}'**
   String balAllHiddenMsg(int n);
 
+  /// No description provided for @balNothingYetTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing had started yet'**
+  String get balNothingYetTitle;
+
+  /// No description provided for @balNothingYetBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your first account opened on {date}.'**
+  String balNothingYetBody(String date);
+
+  /// No description provided for @balBackToToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Back to today'**
+  String get balBackToToday;
+
   /// No description provided for @balSortTooltip.
   ///
   /// In en, this message translates to:

@@ -1307,9 +1307,34 @@ class AppStore extends ChangeNotifier {
       .where((a) => !a.archived && !_openedAfterCutoff(a))
       .toList(growable: false);
 
+  /// When an account starts existing for reporting. The opening receipt's date
+  /// is the one the user can actually set — [Account.openedOn] only ever records
+  /// the day the row was created, which is not a claim about the money (task 025
+  /// §2). Null when neither field is set, meaning "always" (seed accounts
+  /// predate both).
+  DateTime? existsFrom(Account a) => a.openingDate ?? a.openedOn;
+
   /// An account that did not exist yet on the reporting date must not appear.
-  bool _openedAfterCutoff(Account a) =>
-      a.openedOn != null && a.openedOn!.isAfter(_cutoff);
+  bool _openedAfterCutoff(Account a) {
+    final from = existsFrom(a);
+    return from != null && from.isAfter(_cutoff);
+  }
+
+  /// The earliest date any account began existing, across the whole non-archived
+  /// book — deliberately including accounts the reporting cutoff currently hides,
+  /// so the historical-empty pane can name the date that ends the emptiness (task
+  /// 025 §1.1). Reads the PRIVATE list because [accounts] is already cutoff-
+  /// filtered. Null when no non-archived account carries a date.
+  DateTime? get earliestAccountOpening {
+    DateTime? earliest;
+    for (final a in _accounts) {
+      if (a.archived) continue;
+      final from = existsFrom(a);
+      if (from == null) continue;
+      if (earliest == null || from.isBefore(earliest)) earliest = from;
+    }
+    return earliest;
+  }
 
   /// Hidden accounts stay in the totals but leave the lists (spec 1.5).
   List<Account> get visibleAccounts =>

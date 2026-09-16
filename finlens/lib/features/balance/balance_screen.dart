@@ -152,12 +152,21 @@ class _BalanceScreenState extends State<BalanceScreen> {
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
 
-    // One definition of "empty", computed once and handed to both the header
-    // and the list. Deliberately not netWorth == 0 (two accounts can cancel to
-    // zero and that user is not new) and not "all filtered away" (a filtered
-    // user still has accounts). Only a store with literally no account is a
-    // first run.
+    // One definition of "the list has something to draw", computed once and
+    // handed to both the header and the list. Deliberately not netWorth == 0
+    // (two accounts can cancel to zero and that user is not new) and not "all
+    // filtered away" (a filtered user still has accounts). It is cutoff-aware
+    // ([groupCount] reads the reporting-filtered [accounts]), so it goes false on
+    // a date before every account opened — that case is told apart below.
     final hasAccounts = AccountGroup.values.any((g) => store.groupCount(g) > 0);
+
+    // Two kinds of empty, told apart so the screen can say why (task 025 §1). A
+    // store that has never held an account is the genuine first run; a store
+    // whose every account opened *after* the reporting date is empty only
+    // because of *when* you are looking. [manageableAccounts] ignores the cutoff,
+    // so it is the one list that answers "was there ever anything".
+    final neverHadAccounts = store.manageableAccounts.isEmpty;
+    final emptyBecauseHistorical = !neverHadAccounts && !hasAccounts;
 
     // Why the *current section's* list is empty, computed once and handed to
     // both the header and the body — one definition of empty, the way
@@ -176,11 +185,20 @@ class _BalanceScreenState extends State<BalanceScreen> {
         // was; only the first-run block behind is added.
         fit: StackFit.expand,
         children: [
-          // First run: the empty block is laid against the whole tab body so its
-          // icon lands on the same y as the Ledger's and the Planner's (§1). It
-          // sits behind the header, which paints over its top edge — the two
-          // never consume each other's height. Absent once an account exists.
-          if (!hasAccounts) Positioned.fill(child: _firstRunPane()),
+          // Genuine first run: the empty block is laid against the whole tab
+          // body so its icon lands on the same y as the Ledger's and the
+          // Planner's (§1). It sits behind the header, which paints over its top
+          // edge — the two never consume each other's height. Absent once an
+          // account has ever existed.
+          if (neverHadAccounts) Positioned.fill(child: _firstRunPane()),
+          // Accounts exist, but none had opened by the reporting date: the same
+          // block with a different sentence, laid the same way so its icon lands
+          // on the shared line too. Unlike the first run it keeps the live header
+          // above it (task 025 §1.2); the childless SizedBox in that header's
+          // body hit-tests nothing, so this pane's "Back to today" link stays
+          // tappable through it.
+          if (emptyBecauseHistorical)
+            Positioned.fill(child: _historicalEmptyPane(store)),
           // The swipe wraps the whole tab — header included — so a horizontal
           // drag over the label, the hero amount or the empty area below all
           // change section, not just one over the list. Taps on the +, the eye
@@ -233,8 +251,12 @@ class _BalanceScreenState extends State<BalanceScreen> {
               children: [
                 _header(
                   store,
-                  hasAccounts,
-                  showHero: true,
+                  // The historical-empty header stays live — the date pill, the
+                  // eye, the $0 hero and the "as of" line — so it is built as a
+                  // populated header. Only the genuine first run collapses to the
+                  // bare + (task 025 §1.2).
+                  !neverHadAccounts,
+                  showHero: !neverHadAccounts,
                   cause: SectionEmptyCause.none,
                 ),
                 const Expanded(child: SizedBox.expand()),
@@ -1004,6 +1026,48 @@ class _BalanceScreenState extends State<BalanceScreen> {
         fit: BoxFit.scaleDown,
         child: buildFirstRunHint(l.ldgFirstRunHint(sentinel), sentinel,
             semanticsLabel: l.ldgFirstRunHintA11y),
+      ),
+    );
+  }
+
+  /// Accounts exist, but none had opened by the reporting date. A different
+  /// sentence entirely from the first run: the screen is empty because of *when*
+  /// you are looking, not because there is nothing to look at (task 025 §1.1).
+  ///
+  /// The way back is one tap away — the live date pill above, and this accent
+  /// link — so no framed button belongs here. That rival control was already
+  /// removed from the first-run pane once (the header + is the way forward); a
+  /// filled pill here would be the same mistake. The link copies the Ledger's
+  /// clear-filter link exactly (task 025 §1.1 / §0.5): 14pt, accent, 8pt padding.
+  ///
+  /// Reuses [FirstRunBlock], so its shared title/message and fourth-row heights
+  /// hold and the icon lands on the same line as the other five screens.
+  Widget _historicalEmptyPane(AppStore store) {
+    final l = AppLocalizations.of(context);
+    // The earliest opening across ALL accounts, including the ones this cutoff
+    // hides — the date the emptiness ends. Same form the header's "as of" line
+    // uses. Null only if nothing carries a date, in which case the pane would not
+    // have been chosen; the empty string degrades gracefully if it ever is.
+    final earliest = store.earliestAccountOpening;
+    final date = earliest == null ? '' : dayMonthYear(earliest, l);
+    return FirstRunBlock(
+      icon: Icons.history_rounded,
+      title: l.balNothingYetTitle,
+      message: l.balNothingYetBody(date),
+      action: Semantics(
+        button: true,
+        label: l.balBackToToday,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => store.setAsOf(null),
+          child: Padding(
+            padding: const EdgeInsets.all(8),
+            child: Text(
+              l.balBackToToday,
+              style: const TextStyle(fontSize: 14, color: AppColors.accent),
+            ),
+          ),
+        ),
       ),
     );
   }

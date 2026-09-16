@@ -1477,6 +1477,17 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
+  String get balNothingYetTitle => 'Тогда ещё ничего не было';
+
+  @override
+  String balNothingYetBody(String date) {
+    return 'Ваш первый счёт открыт $date.';
+  }
+
+  @override
+  String get balBackToToday => 'Вернуться к сегодня';
+
+  @override
   String get balSortTooltip => 'Сортировка';
 
   @override

@@ -1434,6 +1434,17 @@ class AppLocalizationsTk extends AppLocalizations {
   }
 
   @override
+  String get balNothingYetTitle => 'Entäk hiç zat başlamandy';
+
+  @override
+  String balNothingYetBody(String date) {
+    return 'Ilkinji hasabyňyz $date açyldy.';
+  }
+
+  @override
+  String get balBackToToday => 'Şu güne dolan';
+
+  @override
   String get balSortTooltip => 'Tertiple';
 
   @override
