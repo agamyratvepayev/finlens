@@ -681,19 +681,19 @@ abstract class AppLocalizations {
   /// No description provided for @quickAddNewBudget.
   ///
   /// In en, this message translates to:
-  /// **'New budget'**
+  /// **'Budget'**
   String get quickAddNewBudget;
 
   /// No description provided for @quickAddNewGoal.
   ///
   /// In en, this message translates to:
-  /// **'New goal'**
+  /// **'Goal'**
   String get quickAddNewGoal;
 
   /// No description provided for @quickAddNewTask.
   ///
   /// In en, this message translates to:
-  /// **'New task'**
+  /// **'Schedule'**
   String get quickAddNewTask;
 
   /// No description provided for @txnTypeExpense.
@@ -3421,13 +3421,13 @@ abstract class AppLocalizations {
   /// No description provided for @etTitle.
   ///
   /// In en, this message translates to:
-  /// **'Edit task'**
+  /// **'Edit scheduled item'**
   String get etTitle;
 
   /// No description provided for @etTaskTitle.
   ///
   /// In en, this message translates to:
-  /// **'Task title'**
+  /// **'Item title'**
   String get etTaskTitle;
 
   /// No description provided for @etPaidFrom.
@@ -3487,7 +3487,7 @@ abstract class AppLocalizations {
   /// No description provided for @etOneOff.
   ///
   /// In en, this message translates to:
-  /// **'One-off task'**
+  /// **'One-off item'**
   String get etOneOff;
 
   /// No description provided for @etRemindMe.
@@ -3571,7 +3571,7 @@ abstract class AppLocalizations {
   /// No description provided for @etOneOffRemoved.
   ///
   /// In en, this message translates to:
-  /// **'This one-off task is removed.'**
+  /// **'This one-off item is removed.'**
   String get etOneOffRemoved;
 
   /// No description provided for @etSeriesContinuesOn.
@@ -3709,7 +3709,7 @@ abstract class AppLocalizations {
   /// No description provided for @arTypeTask.
   ///
   /// In en, this message translates to:
-  /// **'Task'**
+  /// **'Schedule'**
   String get arTypeTask;
 
   /// No description provided for @arTypeBudget.
@@ -4729,7 +4729,7 @@ abstract class AppLocalizations {
   /// No description provided for @qaCreateTask.
   ///
   /// In en, this message translates to:
-  /// **'Create task'**
+  /// **'Schedule it'**
   String get qaCreateTask;
 
   /// No description provided for @qaSaved.
@@ -4807,7 +4807,7 @@ abstract class AppLocalizations {
   /// No description provided for @qaBlockNameTask.
   ///
   /// In en, this message translates to:
-  /// **'Name the task'**
+  /// **'Name the item'**
   String get qaBlockNameTask;
 
   /// No description provided for @qaBlockDueDate.
@@ -6829,7 +6829,7 @@ abstract class AppLocalizations {
   /// No description provided for @schPausedArchiveLine.
   ///
   /// In en, this message translates to:
-  /// **'{count, plural, one{{count} paused task} other{{count} paused tasks}} · Archive ›'**
+  /// **'{count, plural, one{{count} paused item} other{{count} paused items}} · Archive ›'**
   String schPausedArchiveLine(int count);
 
   /// No description provided for @schCompletedFooter.
@@ -7117,7 +7117,7 @@ abstract class AppLocalizations {
   /// No description provided for @tdKeptHistory.
   ///
   /// In en, this message translates to:
-  /// **'Payment history stays with the task in the Archive'**
+  /// **'Payment history stays with the item in the Archive'**
   String get tdKeptHistory;
 
   /// No description provided for @tdLostSchedule.

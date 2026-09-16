@@ -337,13 +337,13 @@ class AppLocalizationsTr extends AppLocalizations {
   String get quickAddRebalance => 'Yeniden dengele';
 
   @override
-  String get quickAddNewBudget => 'Yeni bütçe';
+  String get quickAddNewBudget => 'Bütçe';
 
   @override
-  String get quickAddNewGoal => 'Yeni hedef';
+  String get quickAddNewGoal => 'Hedef';
 
   @override
-  String get quickAddNewTask => 'Yeni görev';
+  String get quickAddNewTask => 'Takvim';
 
   @override
   String get txnTypeExpense => 'Gider';
@@ -2237,10 +2237,10 @@ class AppLocalizationsTr extends AppLocalizations {
   String get ebWhatSpent => 'Gerçekte ne harcadınız';
 
   @override
-  String get etTitle => 'Görevi düzenle';
+  String get etTitle => 'Takvim öğesini düzenle';
 
   @override
-  String get etTaskTitle => 'Görev başlığı';
+  String get etTaskTitle => 'Öğe başlığı';
 
   @override
   String get etPaidFrom => 'Ödeme kaynağı';
@@ -2270,7 +2270,7 @@ class AppLocalizationsTr extends AppLocalizations {
   String get etRepeats => 'Tekrar';
 
   @override
-  String get etOneOff => 'Tek seferlik görev';
+  String get etOneOff => 'Tek seferlik öğe';
 
   @override
   String get etRemindMe => 'Hatırlat';
@@ -2324,7 +2324,7 @@ class AppLocalizationsTr extends AppLocalizations {
   String get etJustThisOne => 'Yalnızca bu tekrar kaldırılır.';
 
   @override
-  String get etOneOffRemoved => 'Bu tek seferlik görev kaldırılır.';
+  String get etOneOffRemoved => 'Bu tek seferlik öğe kaldırılır.';
 
   @override
   String etSeriesContinuesOn(Object date) {
@@ -2412,7 +2412,7 @@ class AppLocalizationsTr extends AppLocalizations {
   String get arTypeGoal => 'Hedef';
 
   @override
-  String get arTypeTask => 'Görev';
+  String get arTypeTask => 'Takvim';
 
   @override
   String get arTypeBudget => 'Bütçe';
@@ -3021,7 +3021,7 @@ class AppLocalizationsTr extends AppLocalizations {
   String get qaCreateGoal => 'Hedef oluştur';
 
   @override
-  String get qaCreateTask => 'Görev oluştur';
+  String get qaCreateTask => 'Takvime ekle';
 
   @override
   String qaSaved(Object type) {
@@ -3062,7 +3062,7 @@ class AppLocalizationsTr extends AppLocalizations {
   String get qaBlockFunding => 'Bir fonlama hesabı seçin';
 
   @override
-  String get qaBlockNameTask => 'Görevi adlandırın';
+  String get qaBlockNameTask => 'Öğeyi adlandırın';
 
   @override
   String get qaBlockDueDate => 'Bir vade belirleyin';
@@ -4400,8 +4400,8 @@ class AppLocalizationsTr extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count duraklatılmış görev',
-      one: '$count duraklatılmış görev',
+      other: '$count duraklatılmış öğe',
+      one: '$count duraklatılmış öğe',
     );
     return '$_temp0 · Arşiv ›';
   }
@@ -4603,7 +4603,7 @@ class AppLocalizationsTr extends AppLocalizations {
   String get tdKeptBalances => 'Bakiyeler etkilenmez';
 
   @override
-  String get tdKeptHistory => 'Ödeme geçmişi görevle birlikte Arşiv\'de kalır';
+  String get tdKeptHistory => 'Ödeme geçmişi öğeyle birlikte Arşiv\'de kalır';
 
   @override
   String get tdLostSchedule => 'Takvim ve tahminden çıkar';

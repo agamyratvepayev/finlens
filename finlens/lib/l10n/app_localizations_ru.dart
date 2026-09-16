@@ -341,13 +341,13 @@ class AppLocalizationsRu extends AppLocalizations {
   String get quickAddRebalance => 'Корректировка';
 
   @override
-  String get quickAddNewBudget => 'Новый бюджет';
+  String get quickAddNewBudget => 'Бюджет';
 
   @override
-  String get quickAddNewGoal => 'Новая цель';
+  String get quickAddNewGoal => 'Цель';
 
   @override
-  String get quickAddNewTask => 'Новая задача';
+  String get quickAddNewTask => 'График';
 
   @override
   String get txnTypeExpense => 'Расход';
@@ -2305,10 +2305,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get ebWhatSpent => 'Сколько вы реально потратили';
 
   @override
-  String get etTitle => 'Изменить задачу';
+  String get etTitle => 'Изменить пункт графика';
 
   @override
-  String get etTaskTitle => 'Название задачи';
+  String get etTaskTitle => 'Название пункта';
 
   @override
   String get etPaidFrom => 'Оплата с';
@@ -2338,7 +2338,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get etRepeats => 'Повтор';
 
   @override
-  String get etOneOff => 'Разовая задача';
+  String get etOneOff => 'Разовый пункт';
 
   @override
   String get etRemindMe => 'Напомнить';
@@ -2392,7 +2392,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get etJustThisOne => 'Удаляется только это повторение.';
 
   @override
-  String get etOneOffRemoved => 'Эта разовая задача удаляется.';
+  String get etOneOffRemoved => 'Этот разовый пункт удаляется.';
 
   @override
   String etSeriesContinuesOn(Object date) {
@@ -2479,7 +2479,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get arTypeGoal => 'Цель';
 
   @override
-  String get arTypeTask => 'Задача';
+  String get arTypeTask => 'График';
 
   @override
   String get arTypeBudget => 'Бюджет';
@@ -3092,7 +3092,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get qaCreateGoal => 'Создать цель';
 
   @override
-  String get qaCreateTask => 'Создать задачу';
+  String get qaCreateTask => 'В график';
 
   @override
   String qaSaved(Object type) {
@@ -3133,7 +3133,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get qaBlockFunding => 'Выберите счёт пополнения';
 
   @override
-  String get qaBlockNameTask => 'Назовите задачу';
+  String get qaBlockNameTask => 'Назовите пункт';
 
   @override
   String get qaBlockDueDate => 'Задайте срок';
@@ -4530,8 +4530,8 @@ class AppLocalizationsRu extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count приостановленных задач',
-      one: '$count приостановленная задача',
+      other: '$count приостановленных пунктов',
+      one: '$count приостановленный пункт',
     );
     return '$_temp0 · Архив ›';
   }
@@ -4733,7 +4733,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get tdKeptBalances => 'Балансы не затрагиваются';
 
   @override
-  String get tdKeptHistory => 'История платежей остаётся с задачей в Архиве';
+  String get tdKeptHistory => 'История платежей остаётся с пунктом в Архиве';
 
   @override
   String get tdLostSchedule => 'Уходит из Расписания и прогноза';

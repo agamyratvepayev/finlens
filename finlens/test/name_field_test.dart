@@ -139,12 +139,13 @@ void main() {
     expect(h, greaterThan(40));
   });
 
-  testWidgets('edit task: one NameField, no "Task title" caption', (t) async {
+  testWidgets('edit task: one NameField, no "Item title" caption', (t) async {
     phone(t);
     await t.pumpWidget(wrap(buildSeedStore(), const EditTaskScreen(taskId: 'k-gym')));
     await t.pump();
     expect(find.byType(NameField), findsOneWidget);
-    expect(find.text('Task title'), findsNothing);
+    // Task 029: etTaskTitle is now "Item title"; the hint-not-caption rule holds.
+    expect(find.text('Item title'), findsNothing);
     final h = t.getSize(find.byType(NameField)).height;
     expect(h, lessThan(48));
     expect(h, greaterThan(40));
@@ -453,7 +454,7 @@ void main() {
       final store = oneAccount();
       await openTask(t, store);
       await t.enterText(find.byType(TextField), 'Buy milk');
-      await t.tap(find.text('Create task'));
+      await t.tap(find.text('Schedule it'));
       await t.pumpAndSettle();
 
       expect(store.tasks, hasLength(1));
@@ -477,7 +478,7 @@ void main() {
       await t.pumpAndSettle();
 
       await t.enterText(find.byType(TextField), 'Renew licence');
-      await t.tap(find.text('Create task'));
+      await t.tap(find.text('Schedule it'));
       await t.pumpAndSettle();
 
       expect(store.tasks.single.icon, chosen);
@@ -487,9 +488,9 @@ void main() {
         (t) async {
       final store = oneAccount();
       await openTask(t, store);
-      await t.tap(find.text('Create task'));
+      await t.tap(find.text('Schedule it'));
       await t.pump();
-      expect(find.text('Name the task'), findsWidgets);
+      expect(find.text('Name the item'), findsWidgets);
       expect(store.tasks, isEmpty);
     });
   });

@@ -115,7 +115,7 @@ void main() {
 
     // The create screen is up, category unset.
     expect(find.byType(EditBudgetScreen), findsOneWidget);
-    expect(find.text('New budget'), findsOneWidget); // the type pill
+    expect(find.text('Budget'), findsOneWidget); // Task 029: the type pill, now "Budget"
     expect(find.text('Not set'), findsOneWidget); // the Category value
     // The old step is gone — no picker on screen at this moment.
     expect(find.text('Budget which category?'), findsNothing);
@@ -305,7 +305,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(EditBudgetScreen), findsOneWidget);
-    expect(find.text('New budget'), findsOneWidget);
+    // Task 029: the type pill now reads "Budget".
+    expect(find.text('Budget'), findsOneWidget);
     // Not an expense form, and not the removed picker step.
     expect(find.byType(QuickAddScreen), findsNothing);
     expect(find.text('Budget which category?'), findsNothing);
@@ -325,7 +326,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(QuickAddScreen), findsOneWidget);
-    expect(find.text('New Task'), findsWidgets);
+    // Task 029: the schedule form's type pill now reads "Schedule".
+    expect(find.text('Schedule'), findsWidgets);
   });
 
   // ── §8 · 320pt, Turkish — the type sheet must not overflow ────────────────
@@ -344,7 +346,8 @@ void main() {
         matching: find.byIcon(Icons.keyboard_arrow_down_rounded)));
     await tester.pump(const Duration(milliseconds: 350));
 
-    expect(find.text('Yeni bütçe'), findsOneWidget);
+    // Task 029: the Turkish Budget row dropped its "Yeni" prefix → "Bütçe".
+    expect(find.text('Bütçe'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }

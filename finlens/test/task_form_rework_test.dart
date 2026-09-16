@@ -81,12 +81,13 @@ Future<void> _openTask(WidgetTester tester, AppStore store) async {
 
 void main() {
   group('§1 · the title hero is one captionless name line (task 004)', () {
-    testWidgets('the hero is a NameField, no "Task title" caption, hint is label',
+    testWidgets('the hero is a NameField, no "Item title" caption, hint is label',
         (tester) async {
       await _openTask(tester, _store());
       // One 48pt NameField, whose hint (the placeholder) carries the label's job.
       expect(find.byType(NameField), findsOneWidget);
-      expect(find.text('Task title'), findsNothing);
+      // Task 029: etTaskTitle is now "Item title".
+      expect(find.text('Item title'), findsNothing);
       expect(find.text('What needs doing?'), findsOneWidget);
     });
   });

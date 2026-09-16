@@ -195,8 +195,9 @@ void main() {
     expect(find.byType(EmptyState), findsOneWidget);
     expect(find.text('Yes, you can afford it'), findsOneWidget);
     // The pill is gone; the header + is the only action, named by the hint.
-    expect(find.text('New budget'), findsNothing);
-    expect(find.widgetWithText(FilledButton, 'New budget'), findsNothing);
+    // Task 029: the create pill/label is now "Budget", not "New budget".
+    expect(find.text('Budget'), findsNothing);
+    expect(find.widgetWithText(FilledButton, 'Budget'), findsNothing);
     expect(hint(), findsOneWidget);
   });
 

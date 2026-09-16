@@ -75,7 +75,8 @@ void main() {
     // Create mode: no category chosen.
     await tester.pumpWidget(_host(AppStore.empty(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32))), const EditBudgetScreen()));
     await tester.pumpAndSettle();
-    expect(find.text('New budget'), findsOneWidget);
+    // Task 029: the create-mode pill now reads "Budget", not "New budget".
+    expect(find.text('Budget'), findsOneWidget);
     expect(find.text('WHAT YOU ACTUALLY SPENT'), findsNothing);
 
     // Edit mode: a budgeted category.

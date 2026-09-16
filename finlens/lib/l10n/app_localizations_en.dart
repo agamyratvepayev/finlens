@@ -341,13 +341,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get quickAddRebalance => 'Rebalance';
 
   @override
-  String get quickAddNewBudget => 'New budget';
+  String get quickAddNewBudget => 'Budget';
 
   @override
-  String get quickAddNewGoal => 'New goal';
+  String get quickAddNewGoal => 'Goal';
 
   @override
-  String get quickAddNewTask => 'New task';
+  String get quickAddNewTask => 'Schedule';
 
   @override
   String get txnTypeExpense => 'Expense';
@@ -2252,10 +2252,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ebWhatSpent => 'What you actually spent';
 
   @override
-  String get etTitle => 'Edit task';
+  String get etTitle => 'Edit scheduled item';
 
   @override
-  String get etTaskTitle => 'Task title';
+  String get etTaskTitle => 'Item title';
 
   @override
   String get etPaidFrom => 'Paid from';
@@ -2285,7 +2285,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get etRepeats => 'Repeats';
 
   @override
-  String get etOneOff => 'One-off task';
+  String get etOneOff => 'One-off item';
 
   @override
   String get etRemindMe => 'Remind me';
@@ -2339,7 +2339,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get etJustThisOne => 'Just this one occurrence is removed.';
 
   @override
-  String get etOneOffRemoved => 'This one-off task is removed.';
+  String get etOneOffRemoved => 'This one-off item is removed.';
 
   @override
   String etSeriesContinuesOn(Object date) {
@@ -2427,7 +2427,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get arTypeGoal => 'Goal';
 
   @override
-  String get arTypeTask => 'Task';
+  String get arTypeTask => 'Schedule';
 
   @override
   String get arTypeBudget => 'Budget';
@@ -3036,7 +3036,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get qaCreateGoal => 'Create goal';
 
   @override
-  String get qaCreateTask => 'Create task';
+  String get qaCreateTask => 'Schedule it';
 
   @override
   String qaSaved(Object type) {
@@ -3077,7 +3077,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get qaBlockFunding => 'Choose a funding account';
 
   @override
-  String get qaBlockNameTask => 'Name the task';
+  String get qaBlockNameTask => 'Name the item';
 
   @override
   String get qaBlockDueDate => 'Set a due date';
@@ -4443,8 +4443,8 @@ class AppLocalizationsEn extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count paused tasks',
-      one: '$count paused task',
+      other: '$count paused items',
+      one: '$count paused item',
     );
     return '$_temp0 · Archive ›';
   }
@@ -4647,7 +4647,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get tdKeptHistory =>
-      'Payment history stays with the task in the Archive';
+      'Payment history stays with the item in the Archive';
 
   @override
   String get tdLostSchedule => 'It leaves the Schedule and the projection';

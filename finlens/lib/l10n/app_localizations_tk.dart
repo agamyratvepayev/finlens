@@ -336,13 +336,13 @@ class AppLocalizationsTk extends AppLocalizations {
   String get quickAddRebalance => 'Deňagramlaşdyrma';
 
   @override
-  String get quickAddNewBudget => 'Täze býujet';
+  String get quickAddNewBudget => 'Býujet';
 
   @override
-  String get quickAddNewGoal => 'Täze maksat';
+  String get quickAddNewGoal => 'Maksat';
 
   @override
-  String get quickAddNewTask => 'Täze tabşyryk';
+  String get quickAddNewTask => 'Meýilnama';
 
   @override
   String get txnTypeExpense => 'Çykdajy';
@@ -2240,10 +2240,10 @@ class AppLocalizationsTk extends AppLocalizations {
   String get ebWhatSpent => 'Hakykatda näçe harçladyňyz';
 
   @override
-  String get etTitle => 'Tabşyrygy üýtget';
+  String get etTitle => 'Meýilnama bendini üýtget';
 
   @override
-  String get etTaskTitle => 'Tabşyrygyň ady';
+  String get etTaskTitle => 'Bendiň ady';
 
   @override
   String get etPaidFrom => 'Töleg çeşmesi';
@@ -2273,7 +2273,7 @@ class AppLocalizationsTk extends AppLocalizations {
   String get etRepeats => 'Gaýtalama';
 
   @override
-  String get etOneOff => 'Bir gezeklik tabşyryk';
+  String get etOneOff => 'Bir gezeklik bent';
 
   @override
   String get etRemindMe => 'Ýatladyň';
@@ -2327,7 +2327,7 @@ class AppLocalizationsTk extends AppLocalizations {
   String get etJustThisOne => 'Diňe bu gaýtalanma aýrylýar.';
 
   @override
-  String get etOneOffRemoved => 'Bu bir gezeklik tabşyryk aýrylýar.';
+  String get etOneOffRemoved => 'Bu bir gezeklik bent aýrylýar.';
 
   @override
   String etSeriesContinuesOn(Object date) {
@@ -2414,7 +2414,7 @@ class AppLocalizationsTk extends AppLocalizations {
   String get arTypeGoal => 'Maksat';
 
   @override
-  String get arTypeTask => 'Tabşyryk';
+  String get arTypeTask => 'Meýilnama';
 
   @override
   String get arTypeBudget => 'Býujet';
@@ -3023,7 +3023,7 @@ class AppLocalizationsTk extends AppLocalizations {
   String get qaCreateGoal => 'Maksat döret';
 
   @override
-  String get qaCreateTask => 'Tabşyryk döret';
+  String get qaCreateTask => 'Meýilnama goş';
 
   @override
   String qaSaved(Object type) {
@@ -3064,7 +3064,7 @@ class AppLocalizationsTk extends AppLocalizations {
   String get qaBlockFunding => 'Doldurym hasabyny saýlaň';
 
   @override
-  String get qaBlockNameTask => 'Tabşyrygy atlandyryň';
+  String get qaBlockNameTask => 'Bendi atlandyryň';
 
   @override
   String get qaBlockDueDate => 'Möhlet belläň';
@@ -4377,7 +4377,7 @@ class AppLocalizationsTk extends AppLocalizations {
 
   @override
   String schPausedArchiveLine(int count) {
-    return '$count duruzylan iş · Arhiw ›';
+    return '$count duruzylan bent · Arhiw ›';
   }
 
   @override
@@ -4571,7 +4571,7 @@ class AppLocalizationsTk extends AppLocalizations {
   String get tdKeptBalances => 'Balanslara täsir etmeýär';
 
   @override
-  String get tdKeptHistory => 'Töleg taryhy iş bilen Arhiwde galýar';
+  String get tdKeptHistory => 'Töleg taryhy bent bilen Arhiwde galýar';
 
   @override
   String get tdLostSchedule => 'Meýilnamadan we çaklamadan çykýar';

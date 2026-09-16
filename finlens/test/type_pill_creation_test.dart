@@ -93,14 +93,14 @@ Goal _oneGoal(AppStore store) {
 void main() {
   // ── §6 · the creation screens render a pill ───────────────────────────────
 
-  testWidgets('New goal screen renders a TypePill: "New goal", violet dot, '
+  testWidgets('Goal screen renders a TypePill: "Goal", violet dot, '
       'chevron (not a padlock)', (tester) async {
     _size(tester, 390, 844);
     await tester.pumpWidget(_host(AppStore.empty(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32))), home: const EditGoalScreen()));
 
     final pill = find.byType(TypePill);
     expect(pill, findsOneWidget);
-    expect(find.descendant(of: pill, matching: find.text('New goal')),
+    expect(find.descendant(of: pill, matching: find.text('Goal')),
         findsOneWidget);
 
     // The dot is the goal accent, #BF5AF2.
@@ -126,7 +126,7 @@ void main() {
         findsNothing);
   });
 
-  testWidgets('New budget screen renders a TypePill reading "New budget", not '
+  testWidgets('Budget screen renders a TypePill reading "Budget", not '
       '"Edit budget"', (tester) async {
     _size(tester, 390, 844);
     final store = AppStore.empty(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)));
@@ -136,7 +136,7 @@ void main() {
 
     final pill = find.byType(TypePill);
     expect(pill, findsOneWidget);
-    expect(find.descendant(of: pill, matching: find.text('New budget')),
+    expect(find.descendant(of: pill, matching: find.text('Budget')),
         findsOneWidget);
     // The old wording is gone from the header.
     expect(find.text('Edit budget'), findsNothing);
@@ -180,19 +180,20 @@ void main() {
     expect(find.text('Edit budget'), findsOneWidget);
   });
 
-  testWidgets('Edit task shows a title and no pill', (tester) async {
+  testWidgets('Edit scheduled item shows a title and no pill', (tester) async {
     _size(tester, 390, 844);
     await tester.pumpWidget(
         _host(buildSeedStore(), home: const EditTaskScreen(taskId: 'k-gym')));
 
     expect(find.byType(TypePill), findsNothing);
-    expect(find.text('Edit task'), findsOneWidget);
+    // Task 029: the editor title is now "Edit scheduled item".
+    expect(find.text('Edit scheduled item'), findsOneWidget);
   });
 
   // ── §6 · the pill opens the menu, marked on the current type ──────────────
 
-  testWidgets('tapping the New goal pill opens the menu with the check on '
-      '"New goal"', (tester) async {
+  testWidgets('tapping the Goal pill opens the menu with the check on '
+      '"Goal"', (tester) async {
     _size(tester, 390, 844);
     await tester.pumpWidget(_host(AppStore.empty(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32))), home: const EditGoalScreen()));
 
@@ -200,9 +201,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('What are you adding?'), findsOneWidget);
-    // The current type — New goal — carries the check.
+    // The current type — Goal — carries the check.
     final checkRow = find.ancestor(
-      of: find.text('New goal'),
+      of: find.text('Goal'),
       matching: find.byType(Row),
     );
     expect(
@@ -211,8 +212,8 @@ void main() {
     );
   });
 
-  testWidgets('tapping the New budget pill opens the menu with the check on '
-      '"New budget"', (tester) async {
+  testWidgets('tapping the Budget pill opens the menu with the check on '
+      '"Budget"', (tester) async {
     _size(tester, 390, 844);
     final store = AppStore.empty(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)));
     final cat = _unbudgetedCategory(store);
@@ -224,7 +225,7 @@ void main() {
 
     expect(find.text('What are you adding?'), findsOneWidget);
     final checkRow = find.ancestor(
-      of: find.text('New budget'),
+      of: find.text('Budget'),
       matching: find.byType(Row),
     );
     expect(
@@ -235,7 +236,7 @@ void main() {
 
   // ── §6 · switching type off a creation screen ─────────────────────────────
 
-  testWidgets('from New goal, picking Expense pops the goal screen and lands on '
+  testWidgets('from Goal, picking Expense pops the goal screen and lands on '
       'QuickAddScreen (expense)', (tester) async {
     _size(tester, 390, 844);
     await tester.pumpWidget(_goalFlowHost(AppStore.empty(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)))));
@@ -257,7 +258,7 @@ void main() {
         findsOneWidget);
   });
 
-  testWidgets('from New goal, picking New budget lands on the budget screen',
+  testWidgets('from Goal, picking Budget lands on the budget screen',
       (tester) async {
     _size(tester, 390, 844);
     final store = AppStore.empty(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)));
@@ -268,18 +269,18 @@ void main() {
 
     await tester.tap(find.byType(TypePill));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('New budget'));
+    await tester.tap(find.text('Budget'));
     await tester.pumpAndSettle();
 
     // The goal screen is gone and the one-step budget screen is up in create
     // mode — no "Budget which category?" step any more (spec §4).
     expect(find.byType(EditGoalScreen), findsNothing);
     expect(find.byType(EditBudgetScreen), findsOneWidget);
-    expect(find.text('New budget'), findsOneWidget);
+    expect(find.text('Budget'), findsOneWidget);
     expect(find.text('Budget which category?'), findsNothing);
   });
 
-  testWidgets('picking "New goal" on the New goal screen closes the sheet and '
+  testWidgets('picking "Goal" on the Goal screen closes the sheet and '
       'leaves the screen mounted with fields untouched', (tester) async {
     _size(tester, 390, 844);
     await tester.pumpWidget(_host(AppStore.empty(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32))), home: const EditGoalScreen()));
@@ -290,7 +291,7 @@ void main() {
 
     await tester.tap(find.byType(TypePill));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('New goal'));
+    await tester.tap(find.text('Goal'));
     await tester.pumpAndSettle();
 
     // The sheet closed; the screen is still here; the name is intact.
@@ -392,20 +393,20 @@ void main() {
     for (final code in ['en', 'ru', 'tk', 'tr']) {
       _size(tester, 320, 568);
 
-      // New goal.
+      // Goal.
       await tester.pumpWidget(
           _host(AppStore.empty(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32))), home: const EditGoalScreen(), locale: Locale(code)));
       await tester.pump();
-      expect(tester.takeException(), isNull, reason: 'New goal overflow in $code');
+      expect(tester.takeException(), isNull, reason: 'Goal overflow in $code');
 
-      // New budget.
+      // Budget.
       final store = AppStore.empty(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)));
       final cat = _unbudgetedCategory(store);
       await tester.pumpWidget(_host(store,
           home: EditBudgetScreen(categoryId: cat.id), locale: Locale(code)));
       await tester.pump();
       expect(tester.takeException(), isNull,
-          reason: 'New budget overflow in $code');
+          reason: 'Budget overflow in $code');
     }
   });
 }
