@@ -5305,7 +5305,7 @@ abstract class AppLocalizations {
   /// No description provided for @rsDaysJoin.
   ///
   /// In en, this message translates to:
-  /// **'{head} & {last}'**
+  /// **'{head} and {last}'**
   String rsDaysJoin(Object head, Object last);
 
   /// No description provided for @rcDaily.
@@ -5422,11 +5422,11 @@ abstract class AppLocalizations {
   /// **'last day'**
   String get rcLastDay;
 
-  /// No description provided for @rcAnd.
+  /// No description provided for @rcRepeatEvery.
   ///
   /// In en, this message translates to:
-  /// **'and'**
-  String get rcAnd;
+  /// **'Repeat every'**
+  String get rcRepeatEvery;
 
   /// No description provided for @rcEveryOnDays.
   ///

@@ -3358,7 +3358,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String rsDaysJoin(Object head, Object last) {
-    return '$head & $last';
+    return '$head and $last';
   }
 
   @override
@@ -3459,7 +3459,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get rcLastDay => 'last day';
 
   @override
-  String get rcAnd => 'and';
+  String get rcRepeatEvery => 'Repeat every';
 
   @override
   String rcEveryOnDays(Object every, Object days) {

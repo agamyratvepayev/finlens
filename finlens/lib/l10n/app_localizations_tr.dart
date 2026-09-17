@@ -3444,7 +3444,7 @@ class AppLocalizationsTr extends AppLocalizations {
   String get rcLastDay => 'son gün';
 
   @override
-  String get rcAnd => 've';
+  String get rcRepeatEvery => 'Tekrarlama aralığı';
 
   @override
   String rcEveryOnDays(Object every, Object days) {

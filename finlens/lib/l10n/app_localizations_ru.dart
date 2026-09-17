@@ -3526,7 +3526,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get rcLastDay => 'в последний день';
 
   @override
-  String get rcAnd => 'и';
+  String get rcRepeatEvery => 'Повторять каждые';
 
   @override
   String rcEveryOnDays(Object every, Object days) {

@@ -958,7 +958,7 @@
   "rcOnThisDay": "В этот день",
   "rcLast": "Последний",
   "rcLastDay": "в последний день",
-  "rcAnd": "и",
+  "rcRepeatEvery": "Повторять каждые",
   "rcEveryOnDays": "{every} {days}",
   "@rcEveryOnDays": { "placeholders": { "every": {}, "days": {} } },
   "actionClear": "Очистить",

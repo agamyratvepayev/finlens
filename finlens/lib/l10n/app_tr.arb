@@ -958,7 +958,7 @@
   "rcOnThisDay": "Bu günde",
   "rcLast": "Son",
   "rcLastDay": "son gün",
-  "rcAnd": "ve",
+  "rcRepeatEvery": "Tekrarlama aralığı",
   "rcEveryOnDays": "{every} {days}",
   "@rcEveryOnDays": { "placeholders": { "every": {}, "days": {} } },
   "actionClear": "Temizle",

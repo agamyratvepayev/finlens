@@ -958,7 +958,7 @@
   "rcOnThisDay": "Şu günde",
   "rcLast": "Soňky",
   "rcLastDay": "soňky gün",
-  "rcAnd": "we",
+  "rcRepeatEvery": "Gaýtalama aralygy",
   "rcEveryOnDays": "{every} {days}",
   "@rcEveryOnDays": { "placeholders": { "every": {}, "days": {} } },
   "actionClear": "Arassala",

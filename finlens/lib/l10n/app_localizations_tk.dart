@@ -3446,7 +3446,7 @@ class AppLocalizationsTk extends AppLocalizations {
   String get rcLastDay => 'soňky gün';
 
   @override
-  String get rcAnd => 'we';
+  String get rcRepeatEvery => 'Gaýtalama aralygy';
 
   @override
   String rcEveryOnDays(Object every, Object days) {

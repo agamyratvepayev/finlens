@@ -86,34 +86,61 @@ String _everyPhrase(int n, RepeatUnit unit, AppLocalizations l) {
   return '${l.rcEvery} $single';
 }
 
-/// Joins 1–3 day tokens as "a", "a and b" or "a, b and c" (task 030 §5). The
-/// last pair uses `rcAnd`; earlier items a plain comma.
+/// Joins day tokens as "a", "a and b" or "a, b and c" — the last pair via the
+/// localized [AppLocalizations.rsDaysJoin] pattern (en "and", ru "и", tr "ve",
+/// tk "we"), earlier items a plain comma. This is the one joiner in the app:
+/// `repeat_labels`' cadence rows use the same key, so a day list reads the same
+/// on a task row and in this summary (custom-repeat spec §4.1).
 String _joinDays(List<String> items, AppLocalizations l) {
   if (items.isEmpty) return '';
   if (items.length == 1) return items.first;
   final head = items.sublist(0, items.length - 1).join(', ');
-  return '$head ${l.rcAnd} ${items.last}';
+  return l.rsDaysJoin(head, items.last);
 }
 
-/// The month day-set as it reads in the summary. English prefixes the article
-/// ("the 9th and 14th"); Russian follows the app's established genitive form
-/// ("9-го и 14-го числа", mirroring `rsMonthlyOnDay`); tr/tk list the ordinals
-/// as `ordinalDay` renders them. [days] is sorted and may include
-/// [kLastDayOfMonth].
+/// Past this many selected month-days the list stops being readable at any
+/// length and collapses to a count ("on 14 days"): a truncated list of fourteen
+/// numbers carries less than the sentence (custom-repeat spec §4).
+const int _maxListedDays = 10;
+
+/// The month day-set as it reads in the summary.
+///
+/// One day takes an ordinal — "the 11th" reads naturally (ru "11-го числа", the
+/// app's established genitive; tr/tk as `ordinalDay` renders). Two-to-ten days
+/// drop to bare numbers — "on 11, 12, 17 and 19" — which is what keeps a busy
+/// month inside two lines; a run of ordinals ("the 1st, 3rd, 8th…") does not,
+/// and in tr it is worse. Past ten the list becomes a count. `last day` always
+/// sorts last, whatever the numeric days are. [days] arrives sorted ascending
+/// (with [kLastDayOfMonth] already last).
 String _monthDaysClause(List<int> days, AppLocalizations l) {
   final hasLast = days.contains(kLastDayOfMonth);
-  final nums = [for (final d in days) if (d != kLastDayOfMonth) ordinalDay(d, l)];
+  final nums = [for (final d in days) if (d != kLastDayOfMonth) d];
+  final total = nums.length + (hasLast ? 1 : 0);
+  if (total == 0) return '';
+
+  if (total == 1) {
+    if (hasLast) return l.rcLastDay;
+    final d = nums.single;
+    return switch (l.localeName) {
+      'ru' => '${ordinalDay(d, l)} числа',
+      'en' => 'the ${ordinalDay(d, l)}',
+      _ => ordinalDay(d, l),
+    };
+  }
+
+  if (total > _maxListedDays) return l.rcNDays(total);
+
+  // 2..10: bare numbers, ascending, `last day` always final.
   if (l.localeName == 'ru') {
     return _joinDays([
-      if (nums.isNotEmpty) '${_joinDays(nums, l)} числа',
+      if (nums.isNotEmpty) '${_joinDays([for (final d in nums) '$d'], l)} числа',
       if (hasLast) l.rcLastDay,
     ], l);
   }
   final tokens = [
-    for (final d in days) d == kLastDayOfMonth ? l.rcLastDay : ordinalDay(d, l),
+    for (final d in days) d == kLastDayOfMonth ? l.rcLastDay : '$d',
   ];
-  final joined = _joinDays(tokens, l);
-  return l.localeName == 'en' ? 'the $joined' : joined;
+  return _joinDays(tokens, l);
 }
 
 /// Opens the Repeat chooser. Returns the selection on Done, or null when
@@ -208,20 +235,6 @@ Widget _sheetCard(List<Widget> children) => Container(
 
 Widget _hair() =>
     Container(height: 1, color: Colors.white.withValues(alpha: 0.06));
-
-Widget _sectionLabel(String text) => Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 5),
-      child: Align(
-        alignment: Alignment.centerLeft,
-        child: Text(text.toUpperCase(),
-            style: const TextStyle(
-              fontSize: 10.5,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 0.07 * 10.5,
-              color: AppColors.textTertiary,
-            )),
-      ),
-    );
 
 // ── Repeat sheet (§4) ────────────────────────────────────────────────────────
 
@@ -509,6 +522,12 @@ class _CustomSheet extends StatefulWidget {
 }
 
 class _CustomSheetState extends State<_CustomSheet> {
+  // The unit segments' geometry, named once so the interval row reads the same
+  // values rather than repeating them: the two rows are one setting written on
+  // two lines, so they share a height and a corner radius (custom-repeat §3).
+  static const double _segmentHeight = 40;
+  static const double _segmentRadius = 9;
+
   late int _n = widget.interval.clamp(1, 99);
   late RepeatUnit _unit = widget.unit;
   // Both grids seed from the transaction's own date, so the user who only
@@ -617,7 +636,9 @@ class _CustomSheetState extends State<_CustomSheet> {
         _joinDays([for (final d in (_weekdays.toList()..sort())) weekdayShort(d, l)], l),
       RepeatUnit.month => _monthDaysClause(_daysOfMonth.toList()..sort(), l),
     };
-    return days == null ? every : l.rcEveryOnDays(every, days);
+    // No day-set (Day/Year), or the user cleared it: the sentence is the
+    // interval phrase alone — never a dangling "on" or a double space (§4.2).
+    return (days == null || days.isEmpty) ? every : l.rcEveryOnDays(every, days);
   }
 
   _CustomResult _result() => _CustomResult(
@@ -641,13 +662,20 @@ class _CustomSheetState extends State<_CustomSheet> {
               _grabber(),
               _sheetHeader(
                   context, l.rcCustom, () => Navigator.of(context).pop()),
-              _everyControl(l),
+              // A readback of the rule, not a control: it leaves the card and
+              // sits under the title at full width, where it wraps freely (§2).
+              _summary(l),
+              _intervalRow(l),
+              // One setting, two rows — a tighter gap than the sheet's other
+              // rhythm (§1.1).
+              const SizedBox(height: 6),
+              _unitSegments(l),
               if (_unit == RepeatUnit.week) ...[
-                _sectionLabel(_multiDay ? l.rcOnTheseDays : l.rcOnThisDay),
+                _daysHeader(l),
                 _weekdayCard(l),
               ],
               if (_unit == RepeatUnit.month) ...[
-                _sectionLabel(_multiDay ? l.rcOnTheseDays : l.rcOnThisDay),
+                _daysHeader(l),
                 _monthGridCard(l),
               ],
               _doneButton(
@@ -660,101 +688,217 @@ class _CustomSheetState extends State<_CustomSheet> {
     );
   }
 
-  Widget _everyControl(AppLocalizations l) => Container(
-        margin: const EdgeInsets.fromLTRB(14, 0, 14, 12),
-        padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
-        decoration: BoxDecoration(
-          color: AppColors.sheetCard,
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // The live, plural-correct reading of the whole rule — interval and
-            // days. Ellipsises rather than wrapping or shoving the stepper (§5).
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    _summaryLine(l),
-                    maxLines: 1,
-                    softWrap: false,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                        fontSize: 15.5,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white),
-                  ),
-                ),
-                _stepper(),
-              ],
-            ),
-            const SizedBox(height: 12),
-            _unitPicker(l),
-          ],
-        ),
-      );
-
-  Widget _stepper() => Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _stepButton(Icons.remove_rounded, _n > 1, () => _stepN(-1)),
-          // The interval is typed here — no fourth sheet (task 030 §2.2). Sized
-          // to its digits, min 44×44 tap target, tabular figures, digits only,
-          // clamped 1..99 on blur.
-          ConstrainedBox(
-            constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
-            child: IntrinsicWidth(
-              child: TextField(
-                controller: _nCtl,
-                focusNode: _nFocus,
-                textAlign: TextAlign.center,
-                keyboardType: TextInputType.number,
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'[0-9]')),
-                ],
-                cursorColor: AppColors.accent,
-                style: const TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
-                    fontFeatures: [FontFeature.tabularFigures()]),
-                decoration: const InputDecoration(
-                  isCollapsed: true,
-                  contentPadding: EdgeInsets.symmetric(vertical: 13),
-                  border: InputBorder.none,
-                ),
-                onChanged: (t) {
-                  final v = int.tryParse(t);
-                  if (v != null) _applyN(v, rewrite: false);
-                },
-                onEditingComplete: _commitN,
+  /// The rule, read back at full width under the title. Not a control: no
+  /// chevron, not tappable. Announced as a live region so a screen-reader user
+  /// who taps a day hears the rule change. Wraps freely — never truncates (§2).
+  Widget _summary(AppLocalizations l) => Padding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+        child: Align(
+          alignment: Alignment.centerLeft,
+          child: Semantics(
+            liveRegion: true,
+            child: Text(
+              _summaryLine(l),
+              style: const TextStyle(
+                fontSize: 13,
+                height: 1.45,
+                color: AppColors.accentLight,
               ),
             ),
           ),
-          _stepButton(Icons.add_rounded, _n < 99, () => _stepN(1)),
-        ],
+        ),
       );
 
-  Widget _stepButton(IconData icon, bool enabled, VoidCallback onTap) =>
+  /// `Repeat every N` and the unit segments are one setting written on two
+  /// rows, so this bar matches the segments' height and radius exactly. The
+  /// stepper gained the label the summary used to supply implicitly (§3).
+  Widget _intervalRow(AppLocalizations l) => Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        // The bar renders at _segmentHeight; the step buttons keep a 44×44 tap
+        // target that overhangs it — expand the target, do not grow the row.
+        child: SizedBox(
+          height: 44,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  color: AppColors.sheetCard,
+                  borderRadius: BorderRadius.circular(_segmentRadius),
+                ),
+                child: const SizedBox(
+                    key: ValueKey('repeatEveryBar'),
+                    height: _segmentHeight,
+                    width: double.infinity),
+              ),
+              Row(
+                children: [
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      l.rcRepeatEvery,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 12.5, color: Colors.white),
+                    ),
+                  ),
+                  // `−` runs out at the minimum; `+` is always available — the
+                  // two carry different enabled accents on purpose (§1.2).
+                  _stepButton(
+                    Icons.remove_rounded,
+                    enabled: _n > 1,
+                    color: _n > 1
+                        ? AppColors.accentLight
+                        : AppColors.textSecondary,
+                    onTap: () => _stepN(-1),
+                  ),
+                  const SizedBox(width: 12),
+                  SizedBox(
+                    // Fixed to the two-digit width at the current text scale so
+                    // the glyphs do not shuffle between 1 and 12 (§1.2).
+                    width: _valueWidth(context),
+                    child: _valueField(),
+                  ),
+                  const SizedBox(width: 12),
+                  _stepButton(
+                    Icons.add_rounded,
+                    enabled: _n < 99,
+                    color:
+                        _n < 99 ? AppColors.accent : AppColors.textSecondary,
+                    onTap: () => _stepN(1),
+                  ),
+                  const SizedBox(width: 12),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+
+  /// The interval typed in place — no fourth sheet (task 030 §2.2). Digits only,
+  /// tabular figures, clamped 1..99 on blur; sits in a fixed-width slot so it
+  /// stays centred without shifting the step glyphs.
+  Widget _valueField() => TextField(
+        controller: _nCtl,
+        focusNode: _nFocus,
+        textAlign: TextAlign.center,
+        keyboardType: TextInputType.number,
+        inputFormatters: [
+          FilteringTextInputFormatter.allow(RegExp(r'[0-9]')),
+        ],
+        cursorColor: AppColors.accent,
+        style: const TextStyle(
+            fontSize: 13.5,
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
+            fontFeatures: [FontFeature.tabularFigures()]),
+        decoration: const InputDecoration(
+          isCollapsed: true,
+          contentPadding: EdgeInsets.zero,
+          border: InputBorder.none,
+        ),
+        onChanged: (t) {
+          final v = int.tryParse(t);
+          if (v != null) _applyN(v, rewrite: false);
+        },
+        onEditingComplete: _commitN,
+      );
+
+  /// The rendered width of two tabular digits at the current text scale, plus a
+  /// hair of padding — never a hard-coded pixel count, which breaks at 130%.
+  double _valueWidth(BuildContext context) {
+    final tp = TextPainter(
+      text: const TextSpan(
+        text: '00',
+        style: TextStyle(
+            fontSize: 13.5,
+            fontWeight: FontWeight.w600,
+            fontFeatures: [FontFeature.tabularFigures()]),
+      ),
+      textDirection: TextDirection.ltr,
+      textScaler: MediaQuery.textScalerOf(context),
+    )..layout();
+    return tp.width + 6;
+  }
+
+  Widget _stepButton(
+    IconData icon, {
+    required bool enabled,
+    required Color color,
+    required VoidCallback onTap,
+  }) =>
       Semantics(
         button: true,
         enabled: enabled,
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: enabled ? onTap : null,
-          child: Container(
+          child: SizedBox(
             width: 44,
             height: 44,
-            alignment: Alignment.center,
-            child: Icon(icon,
-                size: 20,
-                color: enabled
-                    ? AppColors.accentLight
-                    : AppColors.textTertiary),
+            child: Center(child: Icon(icon, size: 18, color: color)),
           ),
         ),
       );
+
+  /// The unit segments — appearance and behaviour unchanged (hard boundary);
+  /// only lifted out of the old card into their own block below the interval
+  /// row.
+  Widget _unitSegments(AppLocalizations l) => Padding(
+        padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
+        child: _unitPicker(l),
+      );
+
+  /// The day section's header: the label on the left, and — while any day is
+  /// selected — a Clear on the right, baseline-aligned (§1.3). Clear empties the
+  /// day set and then removes itself; a Clear that clears nothing has no state
+  /// to act on (§5).
+  Widget _daysHeader(AppLocalizations l) {
+    final anySelected = _unit == RepeatUnit.week
+        ? _weekdays.isNotEmpty
+        : _daysOfMonth.isNotEmpty;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.baseline,
+        textBaseline: TextBaseline.alphabetic,
+        children: [
+          Expanded(
+            child: Text(
+              (_multiDay ? l.rcOnTheseDays : l.rcOnThisDay).toUpperCase(),
+              style: const TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.07 * 10,
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ),
+          if (anySelected)
+            Semantics(
+              button: true,
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: _clearDays,
+                child: Text(
+                  l.actionClear,
+                  style: const TextStyle(
+                      fontSize: 11.5, color: AppColors.accentLight),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  void _clearDays() => setState(() {
+        if (_unit == RepeatUnit.week) {
+          _weekdays = {};
+        } else {
+          _daysOfMonth = {};
+        }
+      });
 
   Widget _unitPicker(AppLocalizations l) {
     final units = <(RepeatUnit, String)>[
@@ -776,13 +920,13 @@ class _CustomSheetState extends State<_CustomSheet> {
                 behavior: HitTestBehavior.opaque,
                 onTap: () => _setUnit(units[i].$1),
                 child: Container(
-                  height: 40,
+                  height: _segmentHeight,
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
                     color: _unit == units[i].$1
                         ? AppColors.accent
                         : Colors.white.withValues(alpha: 0.06),
-                    borderRadius: BorderRadius.circular(9),
+                    borderRadius: BorderRadius.circular(_segmentRadius),
                   ),
                   child: Text(
                     units[i].$2,
