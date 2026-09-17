@@ -1330,9 +1330,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String get obTitle => 'Açılış bakiyesi';
 
   @override
-  String get obNotSet => 'Ayarlanmadı';
-
-  @override
   String get obShiftsNote => 'Bu, bu hesaptaki her yürüyen bakiyeyi kaydırır.';
 
   @override
@@ -2845,9 +2842,6 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get qaTo => 'Hedef';
-
-  @override
-  String get qaChooseAccount => 'Hesap seç';
 
   @override
   String get qaChooseCategory => 'Kategori seç';

@@ -299,11 +299,11 @@ class MoreScreen extends StatelessWidget {
                   ),
                   // Back up / Restore share one row (§2): carry the whole store
                   // to a JSON file and back, so a user can move to a new phone.
-                  // The indent-48 hairline aligns to the text past the 24-icon +
-                  // 12-gap column. Restore replaces everything, but sitting it
+                  // The indent-42 hairline aligns to the text past the 18-icon +
+                  // 12-gap column (task 042). Restore replaces everything, but sitting it
                   // beside Back up is safe only because runRestoreFlow always
                   // opens a destructive confirm first — see the note in §2.2.
-                  const RowDivider(indent: 48),
+                  const RowDivider(indent: 42),
                   SplitActionRow(
                     leftIcon: Icons.save_alt_rounded,
                     leftLabel: l.moreBackupShort,
@@ -321,9 +321,9 @@ class MoreScreen extends StatelessWidget {
                     value: _languageLabel(store.locale),
                     onTap: () => _pickLanguage(context, store),
                   ),
-                  // Indent 48 (= 12 padding + 24 icon + 12 gap) so the hairline
-                  // starts at the text, not the 52 the shared FormSection uses.
-                  const RowDivider(indent: 48),
+                  // Indent 42 (= 12 padding + 18 icon + 12 gap) so the hairline
+                  // starts at the text, matching the shared RowMetrics.textStart.
+                  const RowDivider(indent: 42),
                   // Base currency (spec §12): the one currency every total is
                   // shown in. Its own hairline above and below, matching the
                   // card. `store.baseCurrency` reads live, so choosing a new one
@@ -332,7 +332,7 @@ class MoreScreen extends StatelessWidget {
                     value: store.baseCurrency,
                     onTap: () => _pickBaseCurrency(context, store),
                   ),
-                  const RowDivider(indent: 48),
+                  const RowDivider(indent: 42),
                   _MaskRow(
                     value: store.masked,
                     onChanged: (_) => store.toggleMasked(),
@@ -357,9 +357,9 @@ Widget _card(List<Widget> children) => AppCard(
     );
 
 /// FormRow-shaped but inline: FormRow's padding is 12 and its value sits in a
-/// Flexible sized for text; this row owns More's shared 38 pt metrics. Do not
-/// widen FormRow to take it — five other screens render FormRow and must stay
-/// byte-identical.
+/// Flexible sized for text; this row owns More's shared 48 pt metrics (task 042
+/// — was 38, now level with every FormRow). Do not widen FormRow to take it —
+/// five other screens render FormRow and must stay byte-identical.
 ///
 /// Renders at zero and prints `0` rather than disappearing: Archive has its own
 /// empty state, so a tap at zero lands somewhere coherent, and a row that
@@ -376,13 +376,13 @@ class _ArchiveRow extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 38),
+        constraints: const BoxConstraints(minHeight: 48),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: Insets.md),
           child: Row(
             children: [
               const SizedBox(
-                width: 24,
+                width: 18,
                 child: Icon(Icons.inventory_2_rounded,
                     size: 18, color: AppColors.textSecondary),
               ),
@@ -411,7 +411,7 @@ class _ArchiveRow extends StatelessWidget {
 
 /// The ACCOUNT card's single row: "Continue with Google" while signed out, the
 /// account email (→ [SyncSettingsScreen]) once signed in. Inline like
-/// [_ArchiveRow] so it inherits More's shared 38 pt metrics.
+/// [_ArchiveRow] so it inherits More's shared 48 pt metrics (task 042).
 class _AccountRow extends StatelessWidget {
   const _AccountRow({required this.sync});
 
@@ -446,13 +446,13 @@ class _AccountRow extends StatelessWidget {
               ))
           : () => _signIn(context),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 38),
+        constraints: const BoxConstraints(minHeight: 48),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: Insets.md),
           child: Row(
             children: [
               SizedBox(
-                width: 24,
+                width: 18,
                 child: Icon(
                   signedIn
                       ? Icons.account_circle_rounded
@@ -532,13 +532,13 @@ class _LanguageRow extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 38),
+        constraints: const BoxConstraints(minHeight: 48),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: Insets.md),
           child: Row(
             children: [
               const SizedBox(
-                width: 24,
+                width: 18,
                 child: Icon(Icons.language_rounded,
                     size: 18, color: AppColors.textSecondary),
               ),
@@ -583,13 +583,13 @@ class _BaseCurrencyRow extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 38),
+        constraints: const BoxConstraints(minHeight: 48),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: Insets.md),
           child: Row(
             children: [
               const SizedBox(
-                width: 24,
+                width: 18,
                 child: Icon(Icons.currency_exchange_rounded,
                     size: 18, color: AppColors.textSecondary),
               ),
@@ -632,13 +632,13 @@ class _MaskRow extends StatelessWidget {
     return InkWell(
       onTap: () => onChanged(!value),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 38),
+        constraints: const BoxConstraints(minHeight: 48),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: Insets.md),
           child: Row(
             children: [
               const SizedBox(
-                width: 24,
+                width: 18,
                 child: Icon(Icons.visibility_off_rounded,
                     size: 18, color: AppColors.textSecondary),
               ),

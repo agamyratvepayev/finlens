@@ -1369,9 +1369,6 @@ class AppLocalizationsRu extends AppLocalizations {
   String get obTitle => 'Начальный баланс';
 
   @override
-  String get obNotSet => 'Не задано';
-
-  @override
   String get obShiftsNote => 'Это сместит каждый остаток по этому счёту.';
 
   @override
@@ -2916,9 +2913,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get qaTo => 'Куда';
-
-  @override
-  String get qaChooseAccount => 'Выберите счёт';
 
   @override
   String get qaChooseCategory => 'Выберите категорию';

@@ -6,6 +6,48 @@ import '../../theme/app_theme.dart';
 import '../../theme/app_typography.dart';
 import 'app_card.dart';
 
+/// The metrics every label-and-value row shares (task 042).
+///
+/// Seventeen families had six heights, two icon columns, two label sizes and
+/// two chevrons. These are the numbers they all use now, at scale 1; the Quick
+/// Add family multiplies them by `formScale`, which is why they live here as
+/// plain doubles rather than baked into one widget.
+///
+/// [iconColumn] equals [iconGlyph] on purpose. A wider column pads the glyph
+/// invisibly, so [iconGap] stops describing the distance the eye sees — the bug
+/// this class exists to make impossible.
+abstract final class RowMetrics {
+  /// Single-line rows. Above the 44pt minimum tap target, which three of the
+  /// six old heights were not.
+  static const height = 48.0;
+
+  static const padding = 12.0;
+  static const iconColumn = 18.0;
+  static const iconGlyph = 18.0;
+  static const iconGap = 12.0;
+
+  /// Where every label, every value's left bound and every divider begins:
+  /// padding + iconColumn + iconGap. Derived, never written by hand.
+  static const textStart = padding + iconColumn + iconGap;
+
+  static const labelSize = 14.5;
+  static const valueSize = 14.5;
+  static const valueToChevron = 2.0;
+  static const chevronSize = 18.0;
+
+  /// A subtitled row is two lines and cannot be 48. It is the only exception,
+  /// and it is bounded here so "exception" does not become "whatever fits":
+  /// pass a subtitle only when the row cannot be understood without one.
+  static const subtitlePadding = 9.0;
+  static const subtitleSize = 11.5;
+
+  /// The focus frame is drawn *inside* the row — margin out, padding in — so a
+  /// field's content does not shift when focus arrives or leaves, and the row
+  /// stays [height] either way.
+  static const focusInset = 3.0;
+  static const focusBorder = 1.5;
+}
+
 /// Groups form rows into one rounded card with hairlines between them.
 class FormSection extends StatelessWidget {
   const FormSection({super.key, required this.children, this.margin});
@@ -21,7 +63,7 @@ class FormSection extends StatelessWidget {
       child: Column(
         children: [
           for (var i = 0; i < children.length; i++) ...[
-            if (i > 0) const RowDivider(indent: 52),
+            if (i > 0) const RowDivider(indent: RowMetrics.textStart),
             children[i],
           ],
         ],
@@ -79,116 +121,119 @@ class FormRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dim = !enabled || locked;
-    // A subtitle is the only child that can be a sentence. When one is present
-    // the row tightens the air inside its line boxes (§5b) and caps the sentence
-    // at two lines (§5a); a single-line row keeps today's metrics byte-for-byte.
+    // A subtitle is the only child that can be a sentence, and the only reason
+    // a row may exceed RowMetrics.height. It tightens the air inside its line
+    // boxes and caps the sentence at two lines; a single-line row is exactly
+    // RowMetrics.height tall (task 042).
     final hasSub = subtitle != null;
     return InkWell(
       onTap: enabled && !locked ? onTap : null,
-      child: Padding(
-        padding: EdgeInsets.symmetric(
-          horizontal: Insets.md,
-          vertical: hasSub ? 9 : Insets.md,
+      child: ConstrainedBox(
+        // The height is stated, not inferred from the tallest child — a trailing
+        // switch or a padlock must not be able to grow the row.
+        constraints: BoxConstraints(
+          minHeight: hasSub ? 0 : RowMetrics.height,
         ),
-        child: Row(
-          children: [
-            if (icon != null) ...[
-              SizedBox(
-                width: 24,
-                child: Icon(
-                  icon,
-                  size: 18,
-                  color: dim ? AppColors.textTertiary : AppColors.textSecondary,
+        child: Padding(
+          padding: EdgeInsets.symmetric(
+            horizontal: RowMetrics.padding,
+            vertical: hasSub ? RowMetrics.subtitlePadding : 0,
+          ),
+          child: Row(
+            children: [
+              if (icon != null) ...[
+                SizedBox(
+                  // The column *is* the glyph: a wider box would pad it
+                  // invisibly and make the gap below mean something other than
+                  // what it says (task 042 §2).
+                  width: RowMetrics.iconColumn,
+                  child: Icon(
+                    icon,
+                    size: RowMetrics.iconGlyph,
+                    color: dim
+                        ? AppColors.textTertiary
+                        : AppColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(width: RowMetrics.iconGap),
+              ],
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            label,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: RowMetrics.labelSize,
+                              height: hasSub ? 1.2 : null,
+                              color: dim
+                                  ? AppColors.textSecondary
+                                  : AppColors.textPrimary,
+                            ),
+                          ),
+                        ),
+                        if (locked)
+                          const Padding(
+                            padding: EdgeInsets.only(left: 6),
+                            child: Icon(
+                              Icons.lock_rounded,
+                              size: 13,
+                              color: AppColors.textTertiary,
+                            ),
+                          ),
+                        ?labelBadge,
+                      ],
+                    ),
+                    if (subtitle != null) ...[
+                      const SizedBox(height: 1),
+                      Text(
+                        subtitle!,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: RowMetrics.subtitleSize,
+                          height: 1.15,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ),
-              const SizedBox(width: Insets.md),
-            ],
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Flexible(
-                        child: Text(
-                          label,
-                          style: AppText.body.copyWith(
-                            fontSize: 14.5,
-                            // Tighten the label's line box only when a subtitle
-                            // sits under it; `null` keeps AppText.body's 1.35 for
-                            // a lone label, so single-line rows do not move (§5b).
-                            height: hasSub ? 1.2 : null,
-                            color: dim
-                                ? AppColors.textSecondary
-                                : AppColors.textPrimary,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      if (locked)
-                        const Padding(
-                          padding: EdgeInsets.only(left: 6),
-                          child: Icon(
-                            Icons.lock_rounded,
-                            size: 13,
-                            color: AppColors.textTertiary,
-                          ),
-                        ),
-                      ?labelBadge,
-                    ],
-                  ),
-                  if (subtitle != null) ...[
-                    const SizedBox(height: 1),
-                    Text(
-                      subtitle!,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppText.caption.copyWith(
-                        fontSize: 11.5,
-                        height: 1.15,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            const SizedBox(width: Insets.sm),
-            if (trailing != null)
-              trailing!
-            else if (value != null)
-              // Expanded, not Flexible. Both slots carry flex 1, so a *loose*
-              // fit let the value shrink-wrap and land immediately after the
-              // label's half of the row — at the card's midpoint — with
-              // `textAlign: right` aligning inside a box already the width of
-              // its own text, i.e. doing nothing. A tight fit gives the value
-              // the rest of the row to align against, so it reaches the right
-              // edge like every other value on the card. The ellipsis budget is
-              // unchanged: loose and tight cap the value at the same half-width.
-              Expanded(
-                child: Text(
+              if (value != null)
+                Text(
                   value!,
-                  textAlign: TextAlign.right,
-                  style: AppText.amount.copyWith(
-                    color: valueColor ??
-                        (dim ? AppColors.textTertiary : AppColors.textPrimary),
-                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: RowMetrics.valueSize,
+                    color: valueColor ??
+                        (dim
+                            ? AppColors.textTertiary
+                            : AppColors.textSecondary),
+                  ),
                 ),
-              ),
-            if (showChevron)
-              Padding(
-                padding: const EdgeInsets.only(left: 2),
-                child: Icon(
-                  opensSheet
-                      ? Icons.keyboard_arrow_down_rounded
-                      : Icons.chevron_right_rounded,
-                  size: 18,
-                  color: AppColors.textTertiary,
+              ?trailing,
+              if (showChevron)
+                Padding(
+                  padding: const EdgeInsets.only(left: RowMetrics.valueToChevron),
+                  child: Icon(
+                    // chevron direction unchanged — see [opensSheet]
+                    opensSheet
+                        ? Icons.keyboard_arrow_down_rounded
+                        : Icons.chevron_right_rounded,
+                    size: RowMetrics.chevronSize,
+                    color: AppColors.textTertiary,
+                  ),
                 ),
-              ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -301,21 +346,28 @@ class TextFieldRow extends StatelessWidget {
         children: [
           if (icon != null) ...[
             SizedBox(
-              width: 24,
-              child: Icon(icon, size: 18, color: AppColors.textSecondary),
+              // Aligns to the shared icon column and text start (task 042 §5).
+              // TextFieldRow keeps its caption-over-field structure — its callers
+              // are labelled fields where the caption is the point — so it stays a
+              // two-line row taller than 48, the documented exception.
+              width: RowMetrics.iconColumn,
+              child: Icon(icon,
+                  size: RowMetrics.iconGlyph, color: AppColors.textSecondary),
             ),
-            const SizedBox(width: Insets.md),
+            const SizedBox(width: RowMetrics.iconGap),
           ],
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label, style: AppText.caption.copyWith(fontSize: 11.5)),
+                Text(label,
+                    style: AppText.caption
+                        .copyWith(fontSize: RowMetrics.subtitleSize)),
                 TextField(
                   controller: controller,
                   focusNode: focusNode,
                   autofocus: autofocus,
-                  style: AppText.body.copyWith(fontSize: 15),
+                  style: AppText.body.copyWith(fontSize: RowMetrics.labelSize),
                   cursorColor: AppColors.accentSoft,
                   decoration: InputDecoration(
                     isDense: true,
@@ -367,38 +419,41 @@ class NoteRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      // FormRow's own padding, so the row lands on the same height without
-      // depending on the field's intrinsic metrics.
-      padding: const EdgeInsets.symmetric(
-        horizontal: Insets.md,
-        vertical: Insets.md,
-      ),
-      child: Row(
-        children: [
-          if (icon != null) ...[
-            SizedBox(
-              width: 24,
-              child: Icon(icon, size: 18, color: AppColors.textSecondary),
-            ),
-            const SizedBox(width: Insets.md),
-          ],
-          Expanded(
-            child: TextField(
-              controller: controller,
-              focusNode: focusNode,
-              style: AppText.body.copyWith(fontSize: 14.5),
-              cursorColor: AppColors.accentSoft,
-              decoration: InputDecoration(
-                isDense: true,
-                border: InputBorder.none,
-                contentPadding: EdgeInsets.zero,
-                hintText: hint,
-                hintStyle: const TextStyle(color: AppColors.textTertiary),
+    return ConstrainedBox(
+      // Sits level with every other row on the card — one shared height (§042).
+      constraints: const BoxConstraints(minHeight: RowMetrics.height),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: RowMetrics.padding,
+          vertical: Insets.sm,
+        ),
+        child: Row(
+          children: [
+            if (icon != null) ...[
+              SizedBox(
+                width: RowMetrics.iconColumn,
+                child: Icon(icon,
+                    size: RowMetrics.iconGlyph, color: AppColors.textSecondary),
+              ),
+              const SizedBox(width: RowMetrics.iconGap),
+            ],
+            Expanded(
+              child: TextField(
+                controller: controller,
+                focusNode: focusNode,
+                style: AppText.body.copyWith(fontSize: RowMetrics.labelSize),
+                cursorColor: AppColors.accentSoft,
+                decoration: InputDecoration(
+                  isDense: true,
+                  border: InputBorder.none,
+                  contentPadding: EdgeInsets.zero,
+                  hintText: hint,
+                  hintStyle: const TextStyle(color: AppColors.textTertiary),
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -867,8 +922,8 @@ class DestructiveRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Same two-line shape as [FormRow] (§5): tighten and cap only when the
-    // subtitle is present; a lone red label keeps today's metrics byte-for-byte.
+    // Same two-line shape as [FormRow] (task 042): a lone red label is exactly
+    // RowMetrics.height; a subtitle is the only thing that makes the row taller.
     final hasSub = subtitle != null;
     return AppCard(
       margin: const EdgeInsets.fromLTRB(
@@ -880,49 +935,55 @@ class DestructiveRow extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(Radii.card),
-        child: Padding(
-          padding: EdgeInsets.symmetric(
-            horizontal: Insets.md,
-            vertical: hasSub ? 9 : Insets.md,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            minHeight: hasSub ? 0 : RowMetrics.height,
           ),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      label,
-                      style: AppText.body.copyWith(
-                        fontSize: 14.5,
-                        height: hasSub ? 1.2 : null,
-                        color: AppColors.negative,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    if (subtitle != null) ...[
-                      const SizedBox(height: 1),
+          child: Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: RowMetrics.padding,
+              vertical: hasSub ? RowMetrics.subtitlePadding : 0,
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
                       Text(
-                        subtitle!,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppText.caption.copyWith(
-                          fontSize: 11.5,
-                          height: 1.15,
+                        label,
+                        style: AppText.body.copyWith(
+                          fontSize: RowMetrics.labelSize,
+                          height: hasSub ? 1.2 : null,
+                          color: AppColors.negative,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
+                      if (subtitle != null) ...[
+                        const SizedBox(height: 1),
+                        Text(
+                          subtitle!,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppText.caption.copyWith(
+                            fontSize: RowMetrics.subtitleSize,
+                            height: 1.15,
+                          ),
+                        ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
-              ),
-              Icon(
-                opensSheet
-                    ? Icons.keyboard_arrow_down_rounded
-                    : Icons.chevron_right_rounded,
-                size: 18,
-                color: AppColors.textTertiary,
-              ),
-            ],
+                Icon(
+                  opensSheet
+                      ? Icons.keyboard_arrow_down_rounded
+                      : Icons.chevron_right_rounded,
+                  size: RowMetrics.chevronSize,
+                  color: AppColors.textTertiary,
+                ),
+              ],
+            ),
           ),
         ),
       ),

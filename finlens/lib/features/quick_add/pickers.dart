@@ -2599,7 +2599,8 @@ class _AccountTypeRow extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         child: Container(
-          constraints: const BoxConstraints(minHeight: 44),
+          // Task 042: level with every label-and-value row at 48pt (was 44).
+          constraints: const BoxConstraints(minHeight: 48),
           padding: const EdgeInsets.symmetric(
               horizontal: Insets.md, vertical: 10),
           child: Row(
@@ -2619,7 +2620,7 @@ class _AccountTypeRow extends StatelessWidget {
                   children: [
                     Text(group.label(l),
                         style: const TextStyle(
-                            fontSize: 15, color: AppColors.textPrimary)),
+                            fontSize: 14.5, color: AppColors.textPrimary)),
                     const SizedBox(height: 2),
                     Text(
                       accountGroupDesc(group, l),
@@ -2808,7 +2809,9 @@ class _StartingBalanceRowState extends State<_StartingBalanceRow>
                   borderRadius: BorderRadius.circular(8),
                 )
               : null,
-          constraints: BoxConstraints(minHeight: focused ? 38 : 44),
+          // Task 042: 48pt unfocused; the accent frame insets 3 all round, so the
+          // focused box is 48 − 6 and the content does not move on focus (§7).
+          constraints: BoxConstraints(minHeight: focused ? 42 : 48),
           padding: EdgeInsets.symmetric(
               horizontal: focused ? Insets.md - 3 : Insets.md,
               vertical: focused ? 6 : 9),

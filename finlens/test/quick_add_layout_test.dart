@@ -116,7 +116,10 @@ void main() {
     // across the full width (see quick_add_note_test.dart), so it neither shares
     // this right edge nor carries a label.
     final edges = [
-      rightEdgeOf('Choose account'),
+      // Task 042 §8: the account field's empty value is now the unified
+      // `Not set` (was `Choose account`); it is the only `Not set` on the
+      // expense form, so it still resolves uniquely.
+      rightEdgeOf('Not set'),
       rightEdgeOf('Choose category'),
       rightEdgeOf('None'),
     ];

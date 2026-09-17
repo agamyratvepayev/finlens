@@ -6,6 +6,7 @@ import '../../../core/utils/formatters.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../core/utils/search_fold.dart';
 import '../../../shared/widgets/app_card.dart';
+import '../../../shared/widgets/form_fields.dart';
 import '../../../theme/app_colors.dart';
 import '../trans_filter.dart';
 
@@ -1470,7 +1471,11 @@ class _PickRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final row = InkWell(
       onTap: onTap,
-      child: Padding(
+      child: ConstrainedBox(
+        // Task 042: level with every other label-and-value row at 48pt (was ~46
+        // with a 30pt tile and 8pt padding), so the tap target clears 44.
+        constraints: const BoxConstraints(minHeight: RowMetrics.height),
+        child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         child: Row(
           children: [
@@ -1486,7 +1491,7 @@ class _PickRow extends StatelessWidget {
                 item.label,
                 highlight,
                 style: const TextStyle(
-                    fontSize: 15, color: AppColors.textPrimary),
+                    fontSize: 14.5, color: AppColors.textPrimary),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -1507,6 +1512,7 @@ class _PickRow extends StatelessWidget {
             ),
           ],
         ),
+      ),
       ),
     );
     // Dim the visuals only — Opacity does not absorb taps, so the InkWell

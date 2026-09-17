@@ -1338,9 +1338,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get obTitle => 'Opening balance';
 
   @override
-  String get obNotSet => 'Not set';
-
-  @override
   String get obShiftsNote =>
       'This shifts every running balance on this account.';
 
@@ -2860,9 +2857,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get qaTo => 'To';
-
-  @override
-  String get qaChooseAccount => 'Choose account';
 
   @override
   String get qaChooseCategory => 'Choose category';

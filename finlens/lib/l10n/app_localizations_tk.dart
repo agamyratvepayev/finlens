@@ -1328,9 +1328,6 @@ class AppLocalizationsTk extends AppLocalizations {
   String get obTitle => 'Açylyş balansy';
 
   @override
-  String get obNotSet => 'Bellenmedik';
-
-  @override
   String get obShiftsNote =>
       'Bu şu hasapdaky ähli hereket edýän balansy süýşürer.';
 
@@ -2847,9 +2844,6 @@ class AppLocalizationsTk extends AppLocalizations {
 
   @override
   String get qaTo => 'Nirä';
-
-  @override
-  String get qaChooseAccount => 'Hasap saýla';
 
   @override
   String get qaChooseCategory => 'Kategoriýa saýla';

@@ -2026,12 +2026,6 @@ abstract class AppLocalizations {
   /// **'Opening balance'**
   String get obTitle;
 
-  /// No description provided for @obNotSet.
-  ///
-  /// In en, this message translates to:
-  /// **'Not set'**
-  String get obNotSet;
-
   /// No description provided for @obShiftsNote.
   ///
   /// In en, this message translates to:
@@ -4419,12 +4413,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'To'**
   String get qaTo;
-
-  /// No description provided for @qaChooseAccount.
-  ///
-  /// In en, this message translates to:
-  /// **'Choose account'**
-  String get qaChooseAccount;
 
   /// No description provided for @qaChooseCategory.
   ///

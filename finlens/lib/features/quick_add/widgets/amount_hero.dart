@@ -704,16 +704,16 @@ class _TxnAmountFieldRowState extends State<TxnAmountFieldRow>
     final showEmpty = !filled && !focused;
 
     final labelStyle = TextStyle(
-      fontSize: 15 * s * t,
+      fontSize: 14.5 * s * t,
       fontWeight: FontWeight.w400,
       height: 1.2,
       color: AppColors.textPrimary,
     );
-    // The value takes TxnFieldRow's style exactly — 15 pt w400, not the
-    // starting-balance row's 16 pt w600. Here the amount is one optional row
+    // The value takes TxnFieldRow's style exactly — 14.5 pt w400 (task 042), not
+    // the starting-balance row's 16 pt w600. Here the amount is one optional row
     // among five and must not outweigh Account, Category and Repeat beside it.
     TextStyle numStyle(Color c) => TextStyle(
-          fontSize: 15 * s * t,
+          fontSize: 14.5 * s * t,
           fontWeight: FontWeight.w400,
           height: 1.2,
           color: c,

@@ -145,7 +145,7 @@ class _EditAccountScreenState extends State<EditAccountScreen> {
                                 _currency,
                                 kind: AmountKind.magnitude,
                               )
-                            : l.obNotSet,
+                            : l.eaNotSet,
                         showChevron: true,
                         // showOpeningBalanceSheet raises a bottom sheet.
                         opensSheet: true,

@@ -925,7 +925,8 @@ class _BudgetRow extends StatelessWidget {
           child: Row(
             children: [
               SizedBox(
-                width: 24,
+                // Task 042: icon column = glyph (18); text starts at the shared 42.
+                width: 18,
                 child: Icon(icon, size: 18, color: AppColors.textSecondary),
               ),
               const SizedBox(width: Insets.md),

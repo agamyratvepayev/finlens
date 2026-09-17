@@ -30,10 +30,14 @@ const kFormMargin = 16.0;
 const double kSheetRowHeight = 44.0;
 
 /// Row padding, icon column and gap add up to where the hairline starts.
-const kRowPadding = 15.0;
-const kIconColumn = 22.0;
+/// Task 042 unified these with the app-wide [RowMetrics]: padding 15→12, the
+/// icon column 22→18 (= the glyph, so [kIconGap] means what it says), and the
+/// hairline inset 50→42 (= padding + column + gap). Every number is `* s`-scaled
+/// at the call site, which is why they stay plain doubles here.
+const kRowPadding = 12.0;
+const kIconColumn = 18.0;
 const kIconGap = 12.0;
-const kSeparatorInset = 50.0;
+const kSeparatorInset = 42.0;
 
 /// A 48px row: icon, label, right-aligned value, chevron.
 ///
@@ -136,7 +140,7 @@ class TxnFieldRow extends StatelessWidget {
                   maxLines: valueMaxLines,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: 15 * s * t,
+                    fontSize: 14.5 * s * t,
                     fontWeight: FontWeight.w400,
                     height: 1.2,
                     color: filled
@@ -151,8 +155,11 @@ class TxnFieldRow extends StatelessWidget {
                   opensSheet
                       ? Icons.keyboard_arrow_down_rounded
                       : Icons.chevron_right_rounded,
-                  size: 17 * s,
-                  color: AppColors.formChevron,
+                  // Task 042: the sheet's chevron matches the screens' — 18pt,
+                  // textTertiary — so a Quick Add row and a full-screen row line
+                  // up on it.
+                  size: 18 * s,
+                  color: AppColors.textTertiary,
                 ),
               ],
             ],
@@ -200,7 +207,7 @@ class TxnFieldRow extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  fontSize: 15 * s * t,
+                  fontSize: 14.5 * s * t,
                   fontWeight: FontWeight.w400,
                   height: 1.2,
                   color: readOnly
@@ -220,7 +227,7 @@ class TxnFieldRow extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  fontSize: 15 * s * t,
+                  fontSize: 14.5 * s * t,
                   fontWeight: FontWeight.w400,
                   height: 1.2,
                   color: filled
@@ -440,7 +447,7 @@ class _TxnNoteFieldRowState extends State<TxnNoteFieldRow> {
                   // above the keyboard also keeps the counter visible.
                   scrollPadding: const EdgeInsets.fromLTRB(20, 20, 20, 56),
                   style: TextStyle(
-                    fontSize: 15 * s * t,
+                    fontSize: 14.5 * s * t,
                     fontWeight: FontWeight.w400,
                     height: 1.2,
                     color: AppColors.textPrimary,

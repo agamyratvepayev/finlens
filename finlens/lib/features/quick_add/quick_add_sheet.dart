@@ -906,7 +906,7 @@ class _QuickAddScreenState extends State<QuickAddScreen>
             icon: Icons.account_balance_wallet_rounded,
             label: AppLocalizations.of(context).qaFrom,
             value: from?.name,
-            emptyText: AppLocalizations.of(context).qaChooseAccount,
+            emptyText: AppLocalizations.of(context).eaNotSet,
             flashId: 'from',
             // _pickAccountInto raises the account bottom sheet.
             opensSheet: true,
@@ -992,7 +992,7 @@ class _QuickAddScreenState extends State<QuickAddScreen>
             icon: Icons.account_balance_wallet_rounded,
             label: AppLocalizations.of(context).qaTo,
             value: to?.name,
-            emptyText: AppLocalizations.of(context).qaChooseAccount,
+            emptyText: AppLocalizations.of(context).eaNotSet,
             flashId: 'to',
             // _pickAccountInto raises the account bottom sheet.
             opensSheet: true,
@@ -1052,7 +1052,7 @@ class _QuickAddScreenState extends State<QuickAddScreen>
             icon: Icons.north_east_rounded,
             label: l.qaFrom,
             value: from?.name,
-            emptyText: l.qaChooseAccount,
+            emptyText: l.eaNotSet,
             flashId: 'from',
             // _pickAccountInto raises the account bottom sheet.
             opensSheet: true,
@@ -1069,7 +1069,7 @@ class _QuickAddScreenState extends State<QuickAddScreen>
             icon: Icons.south_west_rounded,
             label: l.qaTo,
             value: to?.name,
-            emptyText: l.qaChooseAccount,
+            emptyText: l.eaNotSet,
             flashId: 'to',
             // _pickAccountInto raises the account bottom sheet.
             opensSheet: true,
@@ -1408,7 +1408,7 @@ class _QuickAddScreenState extends State<QuickAddScreen>
             icon: Icons.donut_large_rounded,
             label: l.qaAccount,
             value: account?.name,
-            emptyText: l.qaChooseAccount,
+            emptyText: l.eaNotSet,
             // _pickAccountInto raises the account bottom sheet.
             opensSheet: true,
             onTap: () => _pickAccountInto(

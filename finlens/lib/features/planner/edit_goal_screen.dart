@@ -778,7 +778,9 @@ class _LineRow extends StatelessWidget {
           child: Row(
             children: [
               SizedBox(
-                width: 24,
+                // Task 042: the icon column is the glyph (18), so the gap is the
+                // gap and the text starts at the shared 42.
+                width: 18,
                 child: Icon(
                   icon,
                   size: 18,
