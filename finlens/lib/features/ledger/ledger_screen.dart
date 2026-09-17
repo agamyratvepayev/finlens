@@ -392,6 +392,7 @@ class _LedgerScreenState extends State<LedgerScreen> {
     required bool searching,
     required bool showDesc,
   }) {
+    final l = AppLocalizations.of(context);
     // Never "87 of 87" (§2): the "of" form appears only when the view is
     // actually narrower than the month, not merely because a filter is set.
     final String label;
@@ -403,6 +404,18 @@ class _LedgerScreenState extends State<LedgerScreen> {
       label = '$total transactions';
     }
 
+    // The lens's width, moved down from the title (task 038). This row exists
+    // in both modes at a fixed height, so the count costs nothing here, and it
+    // belongs with the transaction count: both measure the same window. Accent,
+    // because it is the lens speaking — the same purple as the title above.
+    final lens = store.rangeLens;
+    final daysSpan = lens == null
+        ? null
+        : TextSpan(
+            text: ' · ${l.countDays(lens.days)}',
+            style: const TextStyle(color: AppColors.accentLight),
+          );
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(Insets.gutter, 0, Insets.gutter, 0),
       child: SizedBox(
@@ -412,8 +425,11 @@ class _LedgerScreenState extends State<LedgerScreen> {
             Expanded(
               child: Semantics(
                 liveRegion: true,
-                child: Text(
-                  label,
+                child: Text.rich(
+                  TextSpan(
+                    text: label,
+                    children: daysSpan == null ? null : [daysSpan],
+                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -1308,10 +1324,16 @@ class _HeaderZone extends StatelessWidget {
 }
 
 /// The period title: the month in white, or — while a range lens is active —
-/// the range in accent purple (the app's temporary-lens language) with a
-/// `{n} days` subtitle. The ⌄ chevron and the tap-to-open behaviour are
-/// unchanged in both states; the range form shrinks/ellipsizes before it can
-/// reach the eye/`+` buttons.
+/// the range in accent purple (the app's temporary-lens language). The ⌄
+/// chevron and the tap-to-open behaviour are unchanged in both states; the
+/// range form shrinks/ellipsizes before it can reach the ✕/`+` buttons.
+///
+/// One line in both modes (task 038). The `{n} days` subtitle that used to sit
+/// here grew the header ~13pt whenever a lens was active, which moved the `+`
+/// and every row beneath it; the count now rides in the transactions-count row,
+/// which is present in both modes at a fixed height and already describes the
+/// same window. Colour alone carries the mode here — the count is the second
+/// signal, one row down.
 class _PeriodTitle extends StatelessWidget {
   const _PeriodTitle({
     required this.store,
@@ -1336,6 +1358,9 @@ class _PeriodTitle extends StatelessWidget {
         ? lens.label(store.today, l)
         : monthYearLong(store.period, l);
     final days = isLens ? lens.days : 0;
+    // The day count leaves the screen here but not the screen reader: a lens
+    // user still hears how wide the window is, from the title, without the
+    // sighted layout paying 13pt for it.
     final semanticLabel = isLens
         ? '$titleText, ${l.countDays(days)}'
         : monthYearLong(store.period, l);
@@ -1349,50 +1374,30 @@ class _PeriodTitle extends StatelessWidget {
       child: GestureDetector(
         onTap: enabled ? onTap : null,
         behavior: HitTestBehavior.opaque,
-        child: Column(
+        child: Row(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Flexible(
-                  child: Text(
-                    titleText,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w700,
-                      color: isLens
-                          ? AppColors.accentLight
-                          : AppColors.textPrimary,
-                      letterSpacing: -0.4,
-                    ),
-                  ),
+            Flexible(
+              child: Text(
+                titleText,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w700,
+                  color:
+                      isLens ? AppColors.accentLight : AppColors.textPrimary,
+                  letterSpacing: -0.4,
                 ),
-                // The chevron is the affordance for tap-to-pick; with picking
-                // inert it goes too (§2).
-                if (enabled)
-                  const Icon(
-                    Icons.keyboard_arrow_down_rounded,
-                    size: 15,
-                    color: AppColors.textSecondary,
-                  ),
-              ],
+              ),
             ),
-            // The lens's only new vertical cost (~13pt); absent in month mode.
-            if (isLens)
-              Padding(
-                padding: const EdgeInsets.only(top: 1),
-                child: Text(
-                  l.countDays(days),
-                  style: const TextStyle(
-                    fontSize: 10.5,
-                    height: 1.2,
-                    color: AppColors.textTertiary,
-                  ),
-                ),
+            // The chevron is the affordance for tap-to-pick; with picking
+            // inert it goes too (§2).
+            if (enabled)
+              const Icon(
+                Icons.keyboard_arrow_down_rounded,
+                size: 15,
+                color: AppColors.textSecondary,
               ),
           ],
         ),

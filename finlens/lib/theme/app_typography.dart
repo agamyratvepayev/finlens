@@ -194,10 +194,4 @@ abstract final class AppText {
     fontFeatures: _amountFeatures,
   );
 
-  static const asOfLine = TextStyle(
-    fontSize: 11,
-    height: 1.2,
-    fontWeight: FontWeight.w600,
-    color: AppColors.accentSoft,
-  );
 }

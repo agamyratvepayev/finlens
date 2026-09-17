@@ -113,8 +113,8 @@ void main() {
     expect(store.isRangeLensActive, isFalse);
   });
 
-  testWidgets('custom range applies as a lens with a purple title + subtitle',
-      (t) async {
+  testWidgets('custom range applies as a lens with a purple title; the day '
+      'count rides in the transactions-count row (task 038)', (t) async {
     final store = buildSeedStore();
     await pumpLedger(t, store);
     await t.tap(find.text('August 2026'));
@@ -131,10 +131,13 @@ void main() {
     await t.tap(find.textContaining('Apply · '));
     await t.pumpAndSettle();
 
-    // The lens is active; the header reads the range in purple with a subtitle.
+    // The lens is active; the header reads the range in purple, and the day
+    // count moved to the count row as a "· N days" suffix (task 038) — never a
+    // standalone subtitle any more.
     expect(store.isRangeLensActive, isTrue);
     expect(find.text('6–9 Aug'), findsOneWidget);
-    expect(find.text('4 days'), findsOneWidget);
+    expect(find.text('4 days'), findsNothing);
+    expect(find.textContaining('· 4 days', findRichText: true), findsOneWidget);
   });
 
   testWidgets('reopening during a lens shows the calendar pre-filled', (t) async {
@@ -209,19 +212,19 @@ void main() {
         DateRange(DateTime(2026, 8, 2), DateTime(2026, 8, 6, 23, 59, 59, 999)));
     await t.pumpAndSettle();
 
-    // Lens mode: the range title + subtitle, and a × beside the eye.
+    // Lens mode: the range title, the day count in the count row, and a ×.
     expect(find.text('2–6 Aug'), findsOneWidget);
-    expect(find.text('5 days'), findsOneWidget);
+    expect(find.textContaining('· 5 days', findRichText: true), findsOneWidget);
     expect(find.byIcon(Icons.close_rounded), findsOneWidget);
 
     await t.tap(find.bySemanticsLabel('Clear custom range'));
     await t.pumpAndSettle();
 
-    // Back to August 2026: title white, subtitle and × gone.
+    // Back to August 2026: title white, the day count and × gone.
     expect(store.isRangeLensActive, isFalse);
     expect(store.period, DateTime(2026, 8));
     expect(find.text('August 2026'), findsOneWidget);
-    expect(find.text('5 days'), findsNothing);
+    expect(find.textContaining('days', findRichText: true), findsNothing);
     expect(find.byIcon(Icons.close_rounded), findsNothing);
   });
 

@@ -508,9 +508,16 @@ class _BalanceScreenState extends State<BalanceScreen> {
         ),
         const Spacer(),
         _DatePill(
+          // The year appears only when the chosen date leaves the current one —
+          // the rule DateRange.label already uses for ranges. Without it the
+          // pill would say `10 Sep` for a date two years back, which is the one
+          // thing the deleted `as of` line said that the pill did not.
           label: store.isHistorical
-              ? dayMonth(store.asOf!, AppLocalizations.of(context))
+              ? (store.asOf!.year == store.today.year
+                  ? dayMonth(store.asOf!, AppLocalizations.of(context))
+                  : dayMonthYear(store.asOf!, AppLocalizations.of(context)))
               : AppLocalizations.of(context).dateToday,
+          active: store.isHistorical,
           onTap: () => _pickDate(store),
         ),
         // The + is drawn as a persistent overlay (see _header); reserve its
@@ -539,7 +546,6 @@ class _BalanceScreenState extends State<BalanceScreen> {
   /// signal when a filter is active.
   Widget _amountRow(AppStore store) {
     final filter = store.balanceFilter;
-    final l = AppLocalizations.of(context);
     // Every headline figure is the *filtered* one — hiding Valuables has to
     // move Net Worth, not just drop a row. The store getters stay unfiltered so
     // no other tab is affected; the filtering lives here.
@@ -577,12 +583,12 @@ class _BalanceScreenState extends State<BalanceScreen> {
     final tools =
         listHasAccounts ? _buildTools(store) : const <_HeaderTool>[];
 
-    // Without this line a user can easily believe a historical view is live
-    // data. It rides under the amount; the tools centre against the amount.
-    final asOf = store.isHistorical
-        ? Text('as of ${dayMonthYear(store.asOf!, l)}', style: AppText.asOfLine)
-        : null;
-
+    // The `as of …` line that used to sit under the amount is gone (task 038).
+    // It restated the date pill directly above it and cost ~15pt whenever a
+    // past date was chosen, moving the ratio bar, the sections and the list.
+    // The pill now carries the state itself: accent while historical, and it
+    // adds the year when the date leaves the current one — the only thing this
+    // line said that the pill did not.
     return Align(
       key: const ValueKey('amount'),
       alignment: Alignment.centerLeft,
@@ -594,7 +600,6 @@ class _BalanceScreenState extends State<BalanceScreen> {
         color: color,
         isWarning: amount == null,
         measured: measured,
-        asOf: asOf,
         tools: tools,
       ),
     );
@@ -1509,7 +1514,6 @@ class _BalanceAmountRow extends StatelessWidget {
     required this.display,
     required this.color,
     required this.measured,
-    required this.asOf,
     required this.tools,
     this.isWarning = false,
   });
@@ -1525,7 +1529,6 @@ class _BalanceAmountRow extends StatelessWidget {
   /// All three pages' formatted totals; the font size is solved from the widest
   /// so it does not jump on a section swipe.
   final List<String> measured;
-  final Widget? asOf;
   final List<_HeaderTool> tools;
 
   @override
@@ -1546,20 +1549,14 @@ class _BalanceAmountRow extends StatelessWidget {
       style: _amountStyle(step.fontSize, isWarning ? AppColors.warning : color),
     );
 
-    final left = asOf == null
-        ? amount
-        : Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [amount, asOf!],
-          );
-
+    // One line in every state (task 038): the amount is the whole left side, so
+    // the hero block's height no longer depends on which date is selected.
     if (step.toolsBelow) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Align(alignment: Alignment.centerLeft, child: left),
+          Align(alignment: Alignment.centerLeft, child: amount),
           const SizedBox(height: _kToolsBelowGap),
           Align(alignment: Alignment.centerRight, child: _toolRow(step)),
         ],
@@ -1571,7 +1568,7 @@ class _BalanceAmountRow extends StatelessWidget {
       // visibly below the digits' optical centre.
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Expanded(child: Align(alignment: Alignment.centerLeft, child: left)),
+        Expanded(child: Align(alignment: Alignment.centerLeft, child: amount)),
         if (tools.isNotEmpty) _toolRow(step),
       ],
     );
@@ -1796,11 +1793,24 @@ class _RatioBar extends StatelessWidget {
   );
 }
 
+/// The as-of control. Accent while the view is historical (task 038): a
+/// temporary lens is a mode, and this is where the mode is announced now that
+/// the `as of …` line under the amount is gone. Same purple the Ledger paints
+/// its title while a range lens is active.
 class _DatePill extends StatelessWidget {
-  const _DatePill({required this.label, required this.onTap});
+  const _DatePill({
+    required this.label,
+    required this.onTap,
+    this.active = false,
+  });
 
   final String label;
   final VoidCallback onTap;
+
+  /// True while a past date is selected. Colour is not the only signal — the
+  /// label itself changes from `Today` to the date — so this is reinforcement,
+  /// not the whole message.
+  final bool active;
 
   @override
   Widget build(BuildContext context) {
@@ -1810,17 +1820,25 @@ class _DatePill extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.fromLTRB(11, 6, 8, 6),
         decoration: BoxDecoration(
-          color: AppColors.surfaceAlt,
+          color: active
+              ? AppColors.accent.withValues(alpha: 0.22)
+              : AppColors.surfaceAlt,
           borderRadius: BorderRadius.circular(9),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(label, style: AppText.datePill),
-            const Icon(
+            Text(
+              label,
+              style: active
+                  ? AppText.datePill.copyWith(color: AppColors.accentLight)
+                  : AppText.datePill,
+            ),
+            Icon(
               Icons.keyboard_arrow_down_rounded,
               size: 16,
-              color: AppColors.textSecondary,
+              color:
+                  active ? AppColors.accentLight : AppColors.textSecondary,
             ),
           ],
         ),

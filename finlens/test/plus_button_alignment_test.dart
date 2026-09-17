@@ -344,13 +344,13 @@ void main() {
     expect(lensMode.right, monthMode.right);
     expect(lensMode.size, monthMode.size);
 
-    // Vertically it does drop 4.5pt — the lens's range title is taller than the
-    // month title, and ScreenHeader's Row centres the circle against it. That
-    // is pre-existing (identical on untouched `main`, where the + sat at the
-    // same 12.5 with the lens on and 8.0 with it off) and is a property of the
-    // title, not the button. Pinned so the day it changes, it changes visibly.
+    // Vertically it no longer drops (task 038): the lens's title is one line,
+    // the same height as the month title, so the header row stays 36pt and the
+    // circle keeps its column *and* its dy. Before task 038 the `{n} days`
+    // subtitle grew the title taller than the circle and the + sat at 12.5 with
+    // the lens on and 8.0 with it off; the two are now equal.
     expect(monthMode.top, 8.0);
-    expect(lensMode.top, 12.5);
+    expect(lensMode.top, monthMode.top);
     expect(tester.takeException(), isNull);
   });
 
