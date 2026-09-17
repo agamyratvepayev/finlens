@@ -432,9 +432,14 @@ class _BalanceScreenState extends State<BalanceScreen> {
                           // The ratio bar reports a split between two figures.
                           // With neither on screen it has nothing to divide, so
                           // it rides with the hero — same NET-WORTH-only
-                          // condition, same widget, same gap.
+                          // condition, same widget.
                           if (showRatio) ...[
-                            const SizedBox(height: 8),
+                            // 14, not the column's usual 8: the container leaves
+                            // 14 below the bar, and the bar belongs to neither
+                            // neighbour. It divides ASSETS from LIABILITIES —
+                            // the two blocks under it — so hanging it off the
+                            // figure above misreads it as part of the number.
+                            const SizedBox(height: 14),
                             _RatioBar(
                               assets:
                                   filter.sectionTotal(store, assets: true) ?? 0,

@@ -9,6 +9,7 @@ import 'package:finlens/core/utils/formatters.dart';
 import 'package:finlens/features/balance/balance_filter.dart';
 import 'package:finlens/features/balance/balance_screen.dart';
 import 'package:finlens/l10n/app_localizations.dart';
+import 'package:finlens/shared/widgets/rate_missing.dart';
 import 'package:finlens/shared/widgets/section_header.dart';
 import 'package:finlens/theme/app_colors.dart';
 import 'package:finlens/theme/app_theme.dart';
@@ -91,6 +92,14 @@ Finder _headerAmount() => find.descendant(
 Text _amountWidget(WidgetTester tester) =>
     tester.widget<Text>(_headerAmount().first);
 
+/// The ratio bar — a private widget, matched by its runtime type name.
+Finder _ratioBar() =>
+    find.byWidgetPredicate((w) => w.runtimeType.toString() == '_RatioBar');
+
+/// The amount+tools row (`_headerRow2`'s populated child) — also private.
+Finder _amountRowBox() =>
+    find.byWidgetPredicate((w) => w.runtimeType.toString() == '_BalanceAmountRow');
+
 /// The fill of the tool button that carries [icon].
 Color _toolFill(WidgetTester tester, IconData icon) {
   final box = tester.widget<Container>(
@@ -159,20 +168,21 @@ void main() {
       expect(top, closeTo(50, 1.5));
     });
 
-    testWidgets('gap below: amount → ASSETS label composes to 39',
+    testWidgets('gap below: amount → ASSETS label composes to 45',
         (tester) async {
-      // On NET WORTH the chain is amount(30) →8→ ratio bar(3) →14 (header
-      // bottom pad) → list → 14 (section-header top pad) → "ASSETS". The 14pt
-      // header-bottom pad — the header-ends/list-begins boundary — is the
-      // load-bearing value here. (The ratio bar is deliberately kept, per the
-      // product decision, so the literal amount→section=14 does not apply.)
+      // On NET WORTH the chain is amount(30) →14→ ratio bar(3) →14 (header
+      // bottom pad) → list → 14 (section-header top pad) → "ASSETS". The bar
+      // now sits 14 above and 14 below — equal gaps that read it as a line of
+      // its own between the two sections, not the tail of the number (task
+      // 032). The 14pt header-bottom pad — the header-ends/list-begins
+      // boundary — is still load-bearing.
       _setSize(tester, 390, 844);
       await tester.pumpWidget(_host(_store()));
       await tester.pumpAndSettle();
 
       final amountBottom = tester.getRect(_headerAmount().first).bottom;
       final labelTop = tester.getRect(find.text('ASSETS')).top;
-      expect(labelTop - amountBottom, closeTo(8 + 3 + 14 + 14, 2.0));
+      expect(labelTop - amountBottom, closeTo(14 + 3 + 14 + 14, 2.0));
     });
   });
 
@@ -276,6 +286,147 @@ void main() {
       expect(filterFill, isNot(searchFill));
       expect(filterFill, AppColors.tint(AppColors.accent, 0.20));
       expect(searchFill, AppColors.surfaceAlt);
+    });
+  });
+
+  group('Task 032 — the ratio bar sits between its neighbours', () {
+    // A store with no accounts → the bare-+ first-run header.
+    AppStore emptyStore() => AppStore(
+          clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)),
+          baseCurrency: 'USD',
+          accounts: const [],
+          categories: const [],
+          txns: const [],
+          goals: const [],
+          tasks: const [],
+        );
+
+    testWidgets('row2 → bar is 14 and bar → header bottom edge is 14',
+        (tester) async {
+      _setSize(tester, 390, 844);
+      await tester.pumpWidget(_host(_store()));
+      await tester.pumpAndSettle();
+
+      final row2Bottom = tester.getRect(_amountRowBox()).bottom;
+      final bar = tester.getRect(_ratioBar());
+      // Above the bar: the gap this task raised from 8 to 14.
+      expect(bar.top - row2Bottom, closeTo(14, 1.5));
+
+      // Below the bar: the header's own 14pt bottom pad, then the section
+      // header's 14pt top pad, before "ASSETS". bar→edge = 14 is proved by
+      // bar-bottom → label-top composing to 28.
+      final labelTop = tester.getRect(find.text('ASSETS')).top;
+      expect(labelTop - bar.bottom, closeTo(14 + 14, 2.0));
+    });
+
+    testWidgets('with a missing rate: bar → card is 8 and card → edge is 14',
+        (tester) async {
+      _setSize(tester, 390, 844);
+      // A spendable account in an unrated currency (CHF is not in Fx.seedRates)
+      // silences the total and raises the rate-missing card under the bar.
+      final store = _store(extra: [
+        Account(
+          id: 'chf',
+          name: 'Zurich',
+          group: AccountGroup.spendable,
+          currency: 'CHF',
+          startingBalance: 500,
+        ),
+      ]);
+      expect(store.hasMissingRate, isTrue);
+      await tester.pumpWidget(_host(store));
+      await tester.pumpAndSettle();
+
+      final barBottom = tester.getRect(_ratioBar()).bottom;
+      final card = tester.getRect(find.byType(RateMissingCard));
+      // The 8 below the bar stays 8 when the card follows it — the equal 14s
+      // are the bar's relationship with the header edge, not a blanket rule.
+      expect(card.top - barBottom, closeTo(8, 1.5));
+
+      // card → edge is 14, proved by card-bottom → "ASSETS" composing to 28.
+      final labelTop = tester.getRect(find.text('ASSETS')).top;
+      expect(labelTop - card.bottom, closeTo(14 + 14, 2.0));
+    });
+
+    testWidgets('first-run header height is unchanged (56)', (tester) async {
+      _setSize(tester, 390, 844);
+      await tester.pumpWidget(_host(emptyStore()));
+      await tester.pumpAndSettle();
+
+      // The bare-+ header: 6 (top pad) + 36 (+ footprint) + 14 (bottom pad).
+      // No bar here, so this task cannot move it.
+      expect(_ratioBar(), findsNothing);
+      expect(find.byType(AnimatedSize), findsOneWidget);
+      expect(tester.getRect(find.byType(AnimatedSize)).height, closeTo(56, 0.5));
+    });
+
+    testWidgets('all-filtered header height is unchanged (92)', (tester) async {
+      _setSize(tester, 390, 844);
+      final store = _store();
+      // Hide the only group that owns accounts → the all-filtered state:
+      // reduced tool row, no hero, no bar.
+      store.setBalanceFilter(
+        const BalanceFilter().toggleGroup(store, AccountGroup.spendable),
+      );
+      await tester.pumpWidget(_host(store));
+      await tester.pumpAndSettle();
+
+      // 6 + row1(36) + 8 + reduced tool row(28) + 14 = 92. No bar here either.
+      expect(_ratioBar(), findsNothing);
+      expect(find.byType(AnimatedSize), findsOneWidget);
+      expect(tester.getRect(find.byType(AnimatedSize)).height, closeTo(92, 0.5));
+    });
+
+    testWidgets('bar segment widths for assets 4,998 / liabilities 800 hold',
+        (tester) async {
+      _setSize(tester, 390, 844);
+      // Assets 4,998 (spendable) and liabilities 800 (payables, held negative).
+      final store = _store(
+        wallet: 4998,
+        extra: [
+          Account(
+            id: 'pay',
+            name: 'Card',
+            group: AccountGroup.payables,
+            currency: 'USD',
+            startingBalance: -800,
+          ),
+        ],
+      );
+      await tester.pumpWidget(_host(store));
+      await tester.pumpAndSettle();
+
+      final pos = tester
+          .getRect(find.descendant(
+            of: _ratioBar(),
+            matching: find.byWidgetPredicate((w) =>
+                w is DecoratedBox &&
+                (w.decoration as BoxDecoration).color == AppColors.positive),
+          ))
+          .width;
+      final neg = tester
+          .getRect(find.descendant(
+            of: _ratioBar(),
+            matching: find.byWidgetPredicate((w) =>
+                w is DecoratedBox &&
+                (w.decoration as BoxDecoration).color == AppColors.negative),
+          ))
+          .width;
+
+      // ratio = 800 / 5798 ≈ 0.138, so the negative segment is ~138/1000 of the
+      // drawn span. A purely vertical gap change cannot move this.
+      expect(neg / (pos + neg), closeTo(800 / 5798, 0.02));
+    });
+
+    testWidgets('at 1.3 text scale the header lays out with no overflow',
+        (tester) async {
+      for (final width in const [390.0, 360.0, 320.0]) {
+        _setSize(tester, width, 844);
+        await tester.pumpWidget(_host(_store(), textScale: 1.3));
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull, reason: 'overflow at $width pt');
+        expect(_ratioBar(), findsOneWidget);
+      }
     });
   });
 }
