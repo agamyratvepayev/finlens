@@ -306,12 +306,12 @@ void main() {
   group('removing lines (§5/§11)', () {
     testWidgets('the last remaining line cannot be removed', (tester) async {
       _portrait(tester);
-      // A *filled* single line so the sheet stays in list mode: a lone blank
-      // line is a fresh split and opens active (spec §2), and an active line
-      // hides its ✕ — so there would be no close button to inspect at all.
+      // A single line — its remove button is present, dimmed and disabled
+      // (task 035 §2.4/§5): the icon is now a minus-in-a-circle, and it is
+      // built on every line, active or not, so a lone line still shows it.
       await _openSheet(tester, total: 200, initial: [_line('c1', 200)]);
       final remove = tester.widget<IconButton>(
-          find.widgetWithIcon(IconButton, Icons.close_rounded));
+          find.widgetWithIcon(IconButton, Icons.remove_circle_outline_rounded));
       expect(remove.onPressed, isNull);
     });
 
@@ -319,9 +319,10 @@ void main() {
       _portrait(tester);
       await _openSheet(tester,
           total: 200, initial: [_line('c1', 120), _line('c2', 80)]);
-      await tester.tap(find.byIcon(Icons.close_rounded).first);
+      await tester.tap(find.byIcon(Icons.remove_circle_outline_rounded).first);
       await tester.pumpAndSettle();
-      expect(find.byIcon(Icons.close_rounded), findsOneWidget);
+      expect(
+          find.byIcon(Icons.remove_circle_outline_rounded), findsOneWidget);
     });
   });
 

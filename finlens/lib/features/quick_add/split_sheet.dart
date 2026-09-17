@@ -476,93 +476,137 @@ class _SplitSheetState extends State<_SplitSheet> {
         key: _keyFor(index),
         color: active ? AppColors.surfaceHigh : null,
         child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
-        child: Row(
-          children: [
-            Container(
-              width: 30,
-              height: 30,
-              decoration: BoxDecoration(
-                color: missing
-                    ? AppColors.surfaceHigh
-                    : Color.alphaBlend(
-                        color.withValues(alpha: 0.18), AppColors.sheetCard),
-                borderRadius: BorderRadius.circular(9),
-              ),
-              child: Icon(category?.icon ?? Icons.category_rounded,
-                  size: 16, color: color),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () async {
-                  final c = await pickCategory(context,
-                      type: widget.categoryType,
-                      // This line's own category shows as selected and stays
-                      // selectable; the *other* lines' categories are dimmed out
-                      // (spec §1c), so re-picking the same one is a no-op.
-                      selectedId: line.categoryId,
-                      usedIds: _usedCategoryIds(exceptIndex: index));
-                  if (c != null && mounted) {
-                    setState(() => line.categoryId = c.id);
-                  }
-                },
-                // A line with no category names the fault in place, in amber —
-                // no separate status line (spec §8).
-                child: Text(
-                  missing ? l.ssChooseCategory : category.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 14.5,
-                    color: missing ? AppColors.warning : Colors.white,
+          // Horizontal only. The height is given once below so the two tap cells
+          // can stretch to fill it without the row growing past 48 (task 035
+          // §1): a minHeight on the amount cell would have been *added* to a
+          // vertical padding here, not absorbed by it.
+          padding: const EdgeInsets.symmetric(horizontal: 11),
+          child: SizedBox(
+            height: 48,
+            child: Row(
+              // Both tap cells take the row's full height this way, so each
+              // target is 48 pt tall whatever it contains.
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Centred so `stretch` does not pull the tile to 48.
+                Center(
+                  child: Container(
+                    width: 30,
+                    height: 30,
+                    decoration: BoxDecoration(
+                      color: missing
+                          ? AppColors.surfaceHigh
+                          : Color.alphaBlend(color.withValues(alpha: 0.18),
+                              AppColors.sheetCard),
+                      borderRadius: BorderRadius.circular(9),
+                    ),
+                    child: Icon(category?.icon ?? Icons.category_rounded,
+                        size: 16, color: color),
                   ),
                 ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              // Tapping another line moves the active line and leaves the
-              // keypad open; tapping the active line again closes it (spec §3).
-              onTap: () => _activate(index),
-              child: Text(
-                amountText,
-                style: TextStyle(
-                  fontSize: 14.5,
-                  fontWeight: FontWeight.w600,
-                  color: line.isBlank
-                      ? AppColors.textSecondary
-                      : amountOver
-                          ? AppColors.negative
-                          : Colors.white,
-                  fontFeatures: const [FontFeature.tabularFigures()],
+                const SizedBox(width: 10),
+                Expanded(
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () async {
+                      final c = await pickCategory(context,
+                          type: widget.categoryType,
+                          // This line's own category shows as selected and stays
+                          // selectable; the *other* lines' categories are dimmed
+                          // out (spec §1c), so re-picking the same one is a
+                          // no-op.
+                          selectedId: line.categoryId,
+                          usedIds: _usedCategoryIds(exceptIndex: index));
+                      if (c != null && mounted) {
+                        setState(() => line.categoryId = c.id);
+                      }
+                    },
+                    // Align, because `stretch` gives this cell the row's height
+                    // and the label must stay on the centre line.
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      // A line with no category names the fault in place, in
+                      // amber — no separate status line (spec §8).
+                      child: Text(
+                        missing ? l.ssChooseCategory : category.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 14.5,
+                          color: missing ? AppColors.warning : Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
-              ),
-            ),
-            // The active line hides its ✕: the delete control would sit under
-            // the finger that is typing, and a mis-tap there destroys the line
-            // and its amount (spec §3). The slot is held so nothing reflows.
-            SizedBox(
-              width: 44,
-              height: 44,
-              child: active
-                  ? null
-                  : IconButton(
+                const SizedBox(width: 8),
+                GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  // Tapping another line moves the active line and leaves the
+                  // keypad open; tapping the active line again closes it
+                  // (spec §3).
+                  onTap: () => _activate(index),
+                  // The hit area is the cell, not the string. A blank line draws
+                  // `—`; with the detector wrapped around the Text that made the
+                  // target about ten pixels wide, which is why filling line 1
+                  // after adding line 2 was so hard (task 035 §1). 70 pt fits
+                  // the widest figure this sheet shows at 14.5 tabular, and the
+                  // height comes from the row's `stretch` — a minHeight here
+                  // would grow the row.
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(minWidth: 70),
+                    child: Align(
+                      alignment: Alignment.centerRight,
+                      child: Text(
+                        amountText,
+                        style: TextStyle(
+                          fontSize: 14.5,
+                          fontWeight: FontWeight.w600,
+                          color: line.isBlank
+                              ? AppColors.textSecondary
+                              : amountOver
+                                  ? AppColors.negative
+                                  : Colors.white,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                // Built on every line, the active one included.
+                //
+                // It was hidden there because the delete control sat one mis-tap
+                // from an em-dash-sized amount target; the cell above is now
+                // 70 × 48, so the hazard the hiding protected against is gone.
+                // Holding the slot empty instead left 44 pt of hole against the
+                // right edge of the very row being worked in, and hiding a
+                // destructive control on the row most likely to need removing
+                // was never the friendlier half of that trade (task 035 §2).
+                //
+                // Not `✕`: that glyph means *clear this value* in this app — the
+                // Ends rows (task 030) and the rate row (task 033) both use it
+                // that way. A minus in a circle is the opposite of the
+                // `+ Add a line` directly beneath, which is exactly what it is.
+                Center(
+                  child: SizedBox(
+                    width: 44,
+                    height: 44,
+                    child: IconButton(
                       padding: EdgeInsets.zero,
-                      iconSize: 15,
+                      iconSize: 18,
                       color: removable
                           ? AppColors.textTertiary
                           : AppColors.textTertiary.withValues(alpha: 0.3),
-                      icon: const Icon(Icons.close_rounded),
+                      icon: const Icon(Icons.remove_circle_outline_rounded),
                       // The last remaining line cannot be removed (spec §5).
                       onPressed: removable ? () => _removeLine(index) : null,
                       tooltip: l.ssRemoveLine,
                     ),
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
         ),
       ),
     );

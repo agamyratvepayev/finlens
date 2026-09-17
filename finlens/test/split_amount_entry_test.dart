@@ -275,20 +275,26 @@ void main() {
     expect(find.byType(NumericKeypad), findsNothing);
   });
 
-  // ── §3 · the active line hides its ✕ ──────────────────────────────────────
-  testWidgets('the active line shows no ✕; inactive lines do', (tester) async {
+  // ── task 035 §2.4 · the remove button is built on every line ───────────────
+  // Reworked from 'the active line shows no ✕; inactive lines do'. The active
+  // line used to hide its delete control (the hazard: a mis-tap beside a ten-
+  // pixel amount target); with the amount cell now 70 × 48 that hazard is gone,
+  // so the button is present on every line, the active one included. The icon
+  // is a minus-in-a-circle, never `✕` (which means *clear this value*).
+  testWidgets('the active line keeps its remove button', (tester) async {
     await _open(tester, total: 100, initial: [
       _line('c1', 50),
       _line('c2', 50),
     ]);
 
-    expect(find.byIcon(Icons.close_rounded), findsNWidgets(2));
+    expect(find.byIcon(Icons.remove_circle_outline_rounded), findsNWidgets(2));
+    expect(find.byIcon(Icons.close_rounded), findsNothing);
 
     await tester.tap(find.text(r'$50.00').first);
     await tester.pumpAndSettle();
 
-    // The delete control would sit under the finger that is typing.
-    expect(find.byIcon(Icons.close_rounded), findsOneWidget);
+    // The active line no longer hides it — both lines still show a button.
+    expect(find.byIcon(Icons.remove_circle_outline_rounded), findsNWidgets(2));
   });
 
   // ── §9 · `—` means empty, `$0.00` means zero ──────────────────────────────
