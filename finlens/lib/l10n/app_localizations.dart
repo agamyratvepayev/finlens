@@ -264,11 +264,11 @@ abstract class AppLocalizations {
   /// **'Name'**
   String get curName;
 
-  /// No description provided for @curSymbolOptional.
+  /// No description provided for @curSymbol.
   ///
   /// In en, this message translates to:
-  /// **'Symbol · optional'**
-  String get curSymbolOptional;
+  /// **'Symbol'**
+  String get curSymbol;
 
   /// No description provided for @curPosition.
   ///

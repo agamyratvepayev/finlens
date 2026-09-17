@@ -97,7 +97,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get curName => 'Name';
 
   @override
-  String get curSymbolOptional => 'Symbol · optional';
+  String get curSymbol => 'Symbol';
 
   @override
   String get curPosition => 'Position';

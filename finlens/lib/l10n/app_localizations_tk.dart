@@ -93,7 +93,7 @@ class AppLocalizationsTk extends AppLocalizations {
   String get curName => 'At';
 
   @override
-  String get curSymbolOptional => 'Nyşan · islege bagly';
+  String get curSymbol => 'Nyşan';
 
   @override
   String get curPosition => 'Ýerleşiş';

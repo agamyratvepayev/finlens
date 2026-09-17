@@ -3378,8 +3378,13 @@ class _AddCurrencyFormState extends State<_AddCurrencyForm> {
   bool _before = true;
   int _decimals = 2;
 
-  /// A rate the user typed in this sheet (021a §4a), written to the store on
-  /// Save. Null means "no change — keep the stored rate".
+  /// The rate typed in place in the Rate row (task 033 §3). [_rate] is the live
+  /// editing buffer; [_rateOverride] tracks its parsed value, non-null only once
+  /// the user has typed a usable rate, and is what Save writes (021a §4a). Null
+  /// means "no change — keep the stored rate".
+  final _rate = TextEditingController();
+  final _rateFocusNode = FocusNode();
+  bool _rateSeeded = false;
   double? _rateOverride;
 
   bool get _editing => widget.initial != null;
@@ -3426,12 +3431,60 @@ class _AddCurrencyFormState extends State<_AddCurrencyForm> {
     }
   }
 
+  /// Seeds the Rate row's buffer from the stored rate and wires its listeners —
+  /// once, here rather than in [initState], because the store needs a context.
+  /// Seeding assigns [_rate] *before* the change listener is attached, so the
+  /// seed does not read as a user-typed override (Save must stay disabled until
+  /// something actually changes, §4).
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_rateSeeded) return;
+    _rateSeeded = true;
+    final store = StoreScope.read(context);
+    final code = _rateCode;
+    if (code.isNotEmpty && code != store.baseCurrency) {
+      final r = store.rateFor(code);
+      if (r != null) _rate.text = formatRate(r);
+    }
+    _rate.addListener(_onRateChanged);
+    _rateFocusNode.addListener(_onRateFocusChanged);
+  }
+
   @override
   void dispose() {
-    for (final c in [_code, _name, _symbol]) {
+    for (final c in [_code, _name, _symbol, _rate]) {
       c.dispose();
     }
+    _rateFocusNode.dispose();
     super.dispose();
+  }
+
+  /// The rate the user has typed, or null when the field is empty or unusable.
+  /// Parsed with the app's one decimal parser ([double.tryParse]); a typed
+  /// comma is normalised to a dot first so the `[0-9.,]` field a locale offers
+  /// still lands on that parser rather than a second one (§3).
+  double? get _typedRate {
+    final v = double.tryParse(_rate.text.trim().replaceAll(',', '.'));
+    return (v != null && v > 0) ? v : null;
+  }
+
+  void _onRateChanged() => setState(() => _rateOverride = _typedRate);
+
+  /// On blur, canonicalise a good value and restore a bad or empty one to the
+  /// last valid rate — the empty case then reads as the designed `Set rate`
+  /// state rather than a half-typed number (§3).
+  void _onRateFocusChanged() {
+    if (_rateFocusNode.hasFocus) return;
+    final v = _typedRate;
+    if (v != null) {
+      final s = formatRate(v);
+      if (_rate.text != s) _rate.text = s;
+    } else {
+      final stored = StoreScope.read(context).rateFor(_rateCode);
+      _rate.text = stored != null ? formatRate(stored) : '';
+    }
+    setState(() {});
   }
 
   String get _codeUp => _code.text.trim().toUpperCase();
@@ -3458,9 +3511,6 @@ class _AddCurrencyFormState extends State<_AddCurrencyForm> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    // At a large text scale two controls on one line stop fitting; the spec says
-    // split them rather than compress (§7a). One breakpoint governs both rows.
-    final split = MediaQuery.textScalerOf(context).scale(14) > 18;
     // Preview uses a fixed example so the shape (grouping, decimals, token side
     // and spacing) is legible before saving.
     final preview =
@@ -3489,11 +3539,61 @@ class _AddCurrencyFormState extends State<_AddCurrencyForm> {
                 clipBehavior: Clip.antiAlias,
                 child: Column(
                   children: [
-                    _codeNameRow(l, split),
+                    // Code and Name were paired side by side to save height. They
+                    // did not: each half was a caption over a value, so the pair
+                    // cost two rows' height and bought a second layout for large
+                    // text scales. Four single rows are the same height, read in
+                    // one rhythm, and delete the `split` branch outright (§1).
+                    //
+                    // Code is locked in every edit mode (a rename orphans rows);
+                    // Name is locked only for a built-in (an ISO fact). Add mode
+                    // types both. `_factsLocked` is name's condition, not code's —
+                    // using it for code would unlock a custom currency's code.
+                    _editing
+                        ? FormRow(
+                            key: const Key('curRowCode'),
+                            label: l.curCode,
+                            value: _codeUp,
+                            locked: true)
+                        : _inlineTextRow(
+                            rowKey: const Key('curRowCode'),
+                            label: l.curCode,
+                            controller: _code,
+                            formatters: [
+                              LengthLimitingTextInputFormatter(5),
+                              FilteringTextInputFormatter.allow(
+                                  RegExp('[A-Za-z]')),
+                              TextInputFormatter.withFunction((_, n) =>
+                                  n.copyWith(text: n.text.toUpperCase())),
+                            ],
+                            textCapitalization:
+                                TextCapitalization.characters,
+                          ),
                     _hair(),
-                    _symbolBeforeRow(l, split),
+                    _factsLocked
+                        ? FormRow(
+                            key: const Key('curRowName'),
+                            label: l.curName,
+                            value: _name.text,
+                            locked: true)
+                        : _inlineTextRow(
+                            rowKey: const Key('curRowName'),
+                            label: l.curName,
+                            controller: _name),
+                    _hair(),
+                    // Optionality is carried by the empty value and the code-
+                    // shaped hint, not by a word in the label (§2).
+                    _inlineTextRow(
+                      rowKey: const Key('curRowSymbol'),
+                      label: l.curSymbol,
+                      controller: _symbol,
+                      hint: _codeUp.isEmpty ? null : _codeUp,
+                    ),
+                    _hair(),
+                    _positionRow(l),
                     _hair(),
                     FormRow(
+                      key: const Key('curRowDecimals'),
                       label: l.curDecimals,
                       value: '$_decimals',
                       showChevron: true,
@@ -3513,10 +3613,9 @@ class _AddCurrencyFormState extends State<_AddCurrencyForm> {
                           fontSize: 12, color: AppColors.negative)),
                 ),
               const SizedBox(height: Insets.lg),
-              // Preview row — reflects code, symbol, switch and decimals live.
+              // Preview row — reflects code, symbol, position and decimals live.
               Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 12, vertical: 12),
+                padding: const EdgeInsets.all(Insets.md),
                 decoration: BoxDecoration(
                   color: AppColors.sheetCard,
                   borderRadius: BorderRadius.circular(11),
@@ -3527,9 +3626,12 @@ class _AddCurrencyFormState extends State<_AddCurrencyForm> {
                         style: const TextStyle(
                             fontSize: 14.5, color: AppColors.textSecondary)),
                     const Spacer(),
+                    // 14.5, not 16: weight and colour carry the emphasis, so the
+                    // sheet's most important figure is not also its tallest row
+                    // (§1).
                     Text(preview,
                         style: const TextStyle(
-                            fontSize: 16,
+                            fontSize: 14.5,
                             fontWeight: FontWeight.w600,
                             color: AppColors.textPrimary)),
                   ],
@@ -3592,57 +3694,20 @@ class _AddCurrencyFormState extends State<_AddCurrencyForm> {
   String get _rateCode => _editing ? widget.initial!.code : _codeUp;
 
   /// The Rate block (021a §4a) — shown for any currency that is not the base.
+  /// One card, one row: the rate is typed here rather than on a sheet over this
+  /// one (task 033 §3).
   List<Widget> _rateBlock(BuildContext context, AppLocalizations l) {
     final store = StoreScope.of(context);
     final code = _rateCode;
     if (code.isEmpty || code == store.baseCurrency) return const [];
-    final rate = _rateOverride ?? store.rateFor(code);
     return [
       Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
         decoration: BoxDecoration(
           color: AppColors.sheetCard,
           borderRadius: BorderRadius.circular(11),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(l.curRate, style: AppText.caption.copyWith(fontSize: 11.5)),
-            const SizedBox(height: 6),
-            InkWell(
-              onTap: () async {
-                final v = await promptDecimal(
-                  context,
-                  title: AppLocalizations.of(context).qaExchangeRate,
-                  initial: rate,
-                  hint: '1 ${store.baseCurrency} = ? $code',
-                );
-                if (v != null) setState(() => _rateOverride = v);
-              },
-              child: Row(
-                children: [
-                  Text('1 ${store.baseCurrency} =',
-                      style: AppText.body.copyWith(fontSize: 15)),
-                  const Spacer(),
-                  if (rate == null)
-                    Text(l.curSetRate,
-                        style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.warning))
-                  else
-                    Text('${formatRate(rate)} $code',
-                        style: AppText.body.copyWith(
-                            fontSize: 15, fontWeight: FontWeight.w600)),
-                  const SizedBox(width: 6),
-                  const Icon(Icons.expand_more_rounded,
-                      size: 18, color: AppColors.textTertiary),
-                ],
-              ),
-            ),
-          ],
-        ),
+        clipBehavior: Clip.antiAlias,
+        child: _rateRow(l, store.baseCurrency, code),
       ),
       Padding(
         padding: const EdgeInsets.fromLTRB(Insets.xs, Insets.sm, 0, 0),
@@ -3654,154 +3719,212 @@ class _AddCurrencyFormState extends State<_AddCurrencyForm> {
     ];
   }
 
+  /// The rate row (task 033 §3). One row, `FormRow` tall: the question on the
+  /// left, the answer on the right, typed here rather than on a sheet over this
+  /// one. The code beside the field is static — only the number is editable.
+  ///
+  /// The clear button appears only when there is a value; clearing drops the row
+  /// to the existing `curSetRate` state, so the empty case is one that was
+  /// already designed rather than a new one. It is overlaid in a `Stack` so its
+  /// 36×36 tap target never makes this row taller than the FormRows beside it —
+  /// the row's height comes from the 14.5pt line, exactly like `FormRow`.
+  Widget _rateRow(AppLocalizations l, String base, String code) {
+    final focused = _rateFocusNode.hasFocus;
+    final hasValue = _rate.text.trim().isNotEmpty;
+    // Focused, the row takes TxnNoteFieldRow's accent outline, inset by a 3pt
+    // margin with the padding reduced to match, so the content does not move.
+    final pad = Insets.md - (focused ? 3 : 0);
+
+    final content = GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () {
+        if (!_rateFocusNode.hasFocus) _rateFocusNode.requestFocus();
+      },
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: pad, vertical: pad),
+        child: Row(
+          children: [
+            Text('1 $base =',
+                style: AppText.body.copyWith(
+                    fontSize: 14.5, color: AppColors.textSecondary)),
+            const SizedBox(width: Insets.sm),
+            Expanded(
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _rate,
+                      focusNode: _rateFocusNode,
+                      textAlign: TextAlign.right,
+                      keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true),
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
+                      ],
+                      style: AppText.body.copyWith(
+                          fontSize: 14.5, fontWeight: FontWeight.w600),
+                      cursorColor: AppColors.accentSoft,
+                      decoration: InputDecoration(
+                        isCollapsed: true,
+                        border: InputBorder.none,
+                        // Empty reads as the designed "Set rate" state, in
+                        // warning, rather than a blank field (§3).
+                        hintText: l.curSetRate,
+                        hintStyle: const TextStyle(
+                            fontSize: 14.5,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.warning),
+                      ),
+                    ),
+                  ),
+                  if (hasValue) ...[
+                    const SizedBox(width: 5),
+                    Text(code,
+                        style: AppText.body.copyWith(
+                            fontSize: 14.5,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textSecondary)),
+                  ],
+                  // Reserve room for the overlaid clear button so the code and
+                  // number never sit under it.
+                  SizedBox(width: hasValue ? 34 : 0),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    Widget row = Stack(
+      key: const Key('curRowRate'),
+      alignment: Alignment.centerRight,
+      children: [
+        content,
+        if (hasValue)
+          Padding(
+            padding: EdgeInsets.only(right: pad - 6),
+            child: _rateClearButton(l),
+          ),
+      ],
+    );
+
+    if (focused) {
+      row = Container(
+        margin: const EdgeInsets.all(3),
+        decoration: BoxDecoration(
+          border: Border.all(
+              color: AppColors.accent.withValues(alpha: 0.55), width: 1.5),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: row,
+      );
+    }
+    return row;
+  }
+
+  /// Clears the typed rate, dropping the row to its `Set rate` state (§3).
+  Widget _rateClearButton(AppLocalizations l) {
+    return Semantics(
+      button: true,
+      label: l.actionClear,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        // The controller's listener sets `_rateOverride` to null and rebuilds.
+        onTap: _rate.clear,
+        child: SizedBox(
+          width: 36,
+          height: 36,
+          child: Center(
+            child: Container(
+              width: 26,
+              height: 26,
+              decoration: const BoxDecoration(
+                color: AppColors.surfaceHigh,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.close_rounded,
+                  size: 19, color: AppColors.textSecondary),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _hair() =>
       Container(height: 1, color: Colors.white.withValues(alpha: 0.07));
 
-  /// The same rule turned on its side. `_hair()` is `height: 1` with no width —
-  /// correct between stacked rows, but inside a `Row` it is a zero-width box and
-  /// paints nothing, which is why the divider the layout comment describes has
-  /// never appeared. A vertical divider needs the width; `CrossAxisAlignment
-  /// .stretch` on the parent Row gives it the height.
-  Widget _vhair() =>
-      Container(width: 1, color: Colors.white.withValues(alpha: 0.07));
-
-  /// Row 1 — Code (fixed ~78pt column) │ hairline │ Name (fills). Splits into
-  /// two stacked rows at a large text scale (§7a).
-  Widget _codeNameRow(AppLocalizations l, bool split) {
-    final code = _miniField(
-      label: l.curCode,
-      controller: _code,
-      formatters: [
-        LengthLimitingTextInputFormatter(5),
-        FilteringTextInputFormatter.allow(RegExp('[A-Za-z]')),
-        TextInputFormatter.withFunction((_, n) =>
-            n.copyWith(text: n.text.toUpperCase())),
-      ],
-      textCapitalization: TextCapitalization.characters,
-      // Account.currency and Txn.currency carry the code as a bare string, so a
-      // rename would orphan every row that names it (spec §2). To use a
-      // different code, delete and re-add.
-      locked: _editing,
-    );
-    // A standard currency's name is an ISO fact — read-only, with the same
-    // padlock treatment the code uses (§4). A custom currency's name is the
-    // user's, so it stays editable.
-    final name =
-        _miniField(label: l.curName, controller: _name, locked: _factsLocked);
-    if (split) {
-      return Column(children: [code, _hair(), name]);
-    }
-    return IntrinsicHeight(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          SizedBox(width: 92, child: code),
-          _vhair(),
-          Expanded(child: name),
-        ],
-      ),
-    );
-  }
-
-  /// Row 2 — Symbol (fills) │ hairline │ Position segmented control. Splits at
-  /// scale.
-  ///
-  /// The switch this replaces was labelled "Before amount" in a 168pt box and
-  /// truncated to "Before a…" at *normal* text scale — the split breakpoint only
-  /// fires above 1.29×, so nothing rescued it — and worse in ru ("Перед суммой")
-  /// and tr ("Tutardan önce"). A two-option segmented control is the honest
-  /// control for a two-way choice, and its option words are short in every
-  /// locale we ship: Before/After, Önce/Sonra, До/После, Öň/Soň.
-  Widget _symbolBeforeRow(AppLocalizations l, bool split) {
-    final symbol = _miniField(
-      label: l.curSymbolOptional,
-      controller: _symbol,
-      // The placeholder shows the current code so the fallback is visible
-      // without a sentence explaining it (§7a).
-      hint: _codeUp.isEmpty ? null : _codeUp,
-    );
-    final position = Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(l.curPosition, style: AppText.caption.copyWith(fontSize: 11.5)),
-          const SizedBox(height: 5),
-          SegmentedPicker<bool>(
-            values: const [true, false],
-            labelOf: (v) => v ? l.curPosBefore : l.curPosAfter,
-            selected: _before,
-            onChanged: (v) => setState(() => _before = v),
-          ),
-        ],
-      ),
-    );
-    if (split) {
-      return Column(children: [symbol, _hair(), position]);
-    }
-    return IntrinsicHeight(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Expanded(child: symbol),
-          _vhair(),
-          SizedBox(width: 168, child: position),
-        ],
-      ),
-    );
-  }
-
-  /// [locked] mirrors [FormRow]'s read-only treatment — padlock beside the
-  /// label, dimmed value, no cursor — so a field the user cannot edit says so in
-  /// the same language everywhere in the app (§3d).
-  Widget _miniField({
+  /// A single-line editable row inside the format card, the same height as a
+  /// [FormRow] (§1/§2): the label on the left, a right-aligned field on the
+  /// right, sharing FormRow's `Insets.md` padding, 14.5pt text and `accentSoft`
+  /// cursor. It replaces the old caption-over-value `_miniField`, which stood
+  /// twice as tall. Locked fields are plain [FormRow]s, so this never needs a
+  /// read-only branch.
+  Widget _inlineTextRow({
+    Key? rowKey,
     required String label,
     required TextEditingController controller,
     String? hint,
     List<TextInputFormatter>? formatters,
     TextCapitalization textCapitalization = TextCapitalization.none,
-    bool locked = false,
   }) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
+      key: rowKey,
+      padding: const EdgeInsets.symmetric(
+          horizontal: Insets.md, vertical: Insets.md),
+      child: Row(
         children: [
-          Row(
-            children: [
-              Flexible(
-                child: Text(label,
-                    style: AppText.caption.copyWith(fontSize: 11.5),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis),
+          Text(label,
+              style: AppText.body
+                  .copyWith(fontSize: 14.5, color: AppColors.textPrimary)),
+          const SizedBox(width: Insets.md),
+          Expanded(
+            child: TextField(
+              controller: controller,
+              inputFormatters: formatters,
+              textCapitalization: textCapitalization,
+              textAlign: TextAlign.right,
+              style: AppText.body.copyWith(fontSize: 14.5),
+              cursorColor: AppColors.accentSoft,
+              decoration: InputDecoration(
+                isCollapsed: true,
+                border: InputBorder.none,
+                hintText: hint,
+                hintStyle: const TextStyle(color: AppColors.textTertiary),
               ),
-              if (locked)
-                const Padding(
-                  padding: EdgeInsets.only(left: 5),
-                  child: Icon(Icons.lock_rounded,
-                      size: 12, color: AppColors.textTertiary),
-                ),
-            ],
-          ),
-          TextField(
-            controller: controller,
-            inputFormatters: formatters,
-            textCapitalization: textCapitalization,
-            readOnly: locked,
-            enableInteractiveSelection: !locked,
-            style: AppText.body.copyWith(
-              fontSize: 15,
-              color: locked ? AppColors.textSecondary : null,
             ),
-            cursorColor: AppColors.accentSoft,
-            decoration: InputDecoration(
-              isDense: true,
-              border: InputBorder.none,
-              contentPadding: const EdgeInsets.only(top: 2),
-              hintText: hint,
-              hintStyle: const TextStyle(color: AppColors.textTertiary),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// The Position row (§1): the label plus the existing [SegmentedPicker],
+  /// right-aligned. The picker carries its own ~40pt height, so this row takes a
+  /// reduced 2pt vertical padding to land level with the FormRows around it —
+  /// equal height, not equal padding.
+  Widget _positionRow(AppLocalizations l) {
+    return Padding(
+      key: const Key('curRowPosition'),
+      padding: const EdgeInsets.symmetric(horizontal: Insets.md, vertical: 2),
+      child: Row(
+        children: [
+          Flexible(
+            child: Text(l.curPosition,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppText.body
+                    .copyWith(fontSize: 14.5, color: AppColors.textPrimary)),
+          ),
+          const SizedBox(width: Insets.md),
+          SizedBox(
+            width: 168,
+            child: SegmentedPicker<bool>(
+              values: const [true, false],
+              labelOf: (v) => v ? l.curPosBefore : l.curPosAfter,
+              selected: _before,
+              onChanged: (v) => setState(() => _before = v),
             ),
           ),
         ],

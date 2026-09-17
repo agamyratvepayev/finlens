@@ -291,35 +291,46 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('standard edit: code & name read-only, symbol editable',
+  // Task 033 §2: Code and Name are no longer editable-but-read-only TextFields.
+  // A locked field is a plain FormRow with the padlock FormRow draws; only the
+  // fields that are actually typable (symbol, and the rate) are TextFields. So
+  // "code & name are read-only" now means "they are not TextFields at all".
+  testWidgets('standard edit: code & name are locked FormRows, symbol editable',
       (tester) async {
     setSize(tester, 390, 844);
     await openEdit(tester, store(), currencyDef('TMT'));
 
+    // Two padlocks: the Code and Name FormRows.
+    expect(find.byIcon(Icons.lock_rounded), findsNWidgets(2));
+    expect(find.text('TMT'), findsWidgets, reason: 'code shown as a value');
+    expect(find.text('Turkmen Manat'), findsWidgets);
+
+    // The symbol IS editable — the field carrying the built-in's 'm'.
     final fields =
         tester.widgetList<TextField>(find.byType(TextField)).toList();
-    expect(fields[0].readOnly, isTrue, reason: 'code — a rename orphans rows');
-    expect(fields[1].readOnly, isTrue, reason: 'name — an ISO fact');
-    expect(fields[2].readOnly, isFalse, reason: 'symbol — the user\'s choice');
-    // Two padlocks: code and name.
-    expect(find.byIcon(Icons.lock_rounded), findsNWidgets(2));
+    final symbol = fields.firstWhere((f) => f.controller?.text == 'm');
+    expect(symbol.readOnly, isFalse, reason: 'symbol — the user\'s choice');
   });
 
-  testWidgets('custom edit: name & symbol editable, code still locked',
+  testWidgets('custom edit: name & symbol editable, code a locked FormRow',
       (tester) async {
     setSize(tester, 390, 844);
     final s = store();
-    s.addCustomCurrency(
-        const CurrencyDef(code: 'ZED', name: 'Zedland', custom: true));
+    s.addCustomCurrency(const CurrencyDef(
+        code: 'ZED', name: 'Zedland', symbol: 'z', custom: true));
 
     await openEdit(tester, s, currencyDef('ZED'));
 
+    // One padlock: the code. A custom currency's name stays the user's.
+    expect(find.byIcon(Icons.lock_rounded), findsOneWidget);
+    expect(find.text('ZED'), findsWidgets, reason: 'code shown as a value');
+
     final fields =
         tester.widgetList<TextField>(find.byType(TextField)).toList();
-    expect(fields[0].readOnly, isTrue, reason: 'code stays locked everywhere');
-    expect(fields[1].readOnly, isFalse, reason: 'a custom name is the user\'s');
-    expect(fields[2].readOnly, isFalse);
-    expect(find.byIcon(Icons.lock_rounded), findsOneWidget);
+    final name = fields.firstWhere((f) => f.controller?.text == 'Zedland');
+    expect(name.readOnly, isFalse, reason: 'a custom name is the user\'s');
+    final symbol = fields.firstWhere((f) => f.controller?.text == 'z');
+    expect(symbol.readOnly, isFalse);
   });
 
   testWidgets('add: all fields editable', (tester) async {

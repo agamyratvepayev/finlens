@@ -32,7 +32,7 @@
   "curAddTitle": "Добавить валюту",
   "curCode": "Код",
   "curName": "Название",
-  "curSymbolOptional": "Символ · необязательно",
+  "curSymbol": "Символ",
   "curPosition": "Позиция",
   "curPosBefore": "До",
   "curPosAfter": "После",

@@ -41,9 +41,12 @@ void main() {
           code: 'DDD', name: 'D', symbolBefore: false, custom: true);
       setCustomCurrencies([before, after, codeBefore, codeAfter]);
 
-      // A symbol sits flush against the number; a code takes a space (§7a).
-      expect(money(9850.5, currency: 'AAA'), 'ø9,850.50');
-      expect(money(9850.5, currency: 'BBB'), '9,850.50ø');
+      // Task 033 §4: the gap follows the token's characters, not whether it is
+      // a symbol. `ø` is a Latin letter, so it now takes a space on either side
+      // just like a code — an ASCII-only rule would have glued it. A glyph
+      // symbol would still hug; there is no glyph among these four.
+      expect(money(9850.5, currency: 'AAA'), 'ø 9,850.50');
+      expect(money(9850.5, currency: 'BBB'), '9,850.50 ø');
       expect(money(9850.5, currency: 'CCC'), 'CCC 9,850.50');
       expect(money(9850.5, currency: 'DDD'), '9,850.50 DDD');
     });
@@ -71,14 +74,17 @@ void main() {
       const def = CurrencyDef(
           code: 'NEG', name: 'N', symbol: 'ø', symbolBefore: true, custom: true);
       setCustomCurrencies([def]);
-      expect(money(-12, currency: 'NEG'), '−ø12.00');
+      // `ø` is a letter → spaced from the number (task 033 §4); the minus still
+      // leads the whole token.
+      expect(money(-12, currency: 'NEG'), '−ø 12.00');
     });
 
     test('formatCurrencyExample matches money() before registration', () {
       const def = CurrencyDef(
           code: 'PRV', name: 'Preview', symbol: 'p', symbolBefore: false, custom: true);
-      // Not registered — the preview path must still format it.
-      expect(formatCurrencyExample(def, 9850), '9,850.00p');
+      // Not registered — the preview path must still format it. `p` is a letter
+      // → spaced (task 033 §4).
+      expect(formatCurrencyExample(def, 9850), '9,850.00 p');
     });
 
     test('built-in currencies are untouched by the custom branch', () {

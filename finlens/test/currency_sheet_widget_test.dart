@@ -84,8 +84,11 @@ void main() {
     return out;
   }
 
-  // ── §3a — the vertical hairlines actually paint ────────────────────────────
-  testWidgets('both vertical hairlines in the sheet are drawn with real size',
+  // ── task 033 §2 — the side-by-side pairs (and their vertical rules) are gone ─
+  // Code/Name and Symbol/Position used to sit two-abreast, separated by a
+  // vertical hairline. Task 033 stacks every row single-file, so there is no
+  // vertical rule left to draw — the format card is a plain column of rows.
+  testWidgets('the format card stacks single rows — no vertical rules',
       (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1.0;
@@ -93,15 +96,8 @@ void main() {
 
     await openAdd(tester, emptyStore());
 
-    // One between Code and Name, one between Symbol and Position.
-    final rules = verticalRules(tester);
-    expect(rules, hasLength(2),
-        reason: 'Code│Name and Symbol│Position each carry a rule');
-    for (final r in rules) {
-      expect(r.width, 1);
-      expect(r.height, greaterThan(10),
-          reason: 'a rule with no height paints nothing, which was the defect');
-    }
+    expect(verticalRules(tester), isEmpty,
+        reason: 'the paired side-by-side layout retired with the split branch');
   });
 
   // ── §3b — the truncating switch is gone, replaced by Before | After ────────
@@ -140,7 +136,10 @@ void main() {
         reason: 'exactly what the Turkmenistan user asked for');
   });
 
-  // ── §3b/§9 — the option words fit at 320pt / 200% in every locale ──────────
+  // ── §6 — the sheet fits at 320pt / 130% in every locale ────────────────────
+  // Task 033 dropped the split-at-large-scale layout (the rows are single-file
+  // now) and sets the supported ceiling at 130% per its acceptance list; the
+  // old 200% target belonged to the paired layout that no longer exists.
   for (final locale in const [
     Locale('en'),
     Locale('ru'),
@@ -148,7 +147,7 @@ void main() {
     Locale('tk')
   ]) {
     testWidgets(
-        'the sheet does not overflow at 320×568 / 200% in '
+        'the sheet does not overflow at 320×568 / 130% in '
         '${locale.languageCode}', (tester) async {
       tester.view.physicalSize = const Size(320, 568);
       tester.view.devicePixelRatio = 1.0;
@@ -173,7 +172,7 @@ void main() {
           supportedLocales: AppLocalizations.supportedLocales,
           builder: (context, child) => MediaQuery(
             data: MediaQuery.of(context)
-                .copyWith(textScaler: const TextScaler.linear(2.0)),
+                .copyWith(textScaler: const TextScaler.linear(1.3)),
             child: child!,
           ),
           home: Scaffold(
@@ -216,7 +215,8 @@ void main() {
   });
 
   // ── §2 — the two modes ─────────────────────────────────────────────────────
-  testWidgets('edit mode loads the values and locks the code', (tester) async {
+  testWidgets('edit mode shows the values and locks code & name as FormRows',
+      (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
@@ -227,29 +227,19 @@ void main() {
     expect(find.text('Save changes'), findsOneWidget);
     expect(find.text('Add currency'), findsNothing);
 
-    // Seeded from the built-in.
-    final code = tester.widget<TextField>(find.byType(TextField).first);
-    expect(code.controller!.text, 'TMT');
+    // Task 033 §2: a locked field is a plain FormRow with a value, not an
+    // editable-but-read-only TextField. Code and Name both show their value and
+    // both carry the padlock FormRow draws.
+    expect(find.text('TMT'), findsWidgets, reason: 'code shown as a value');
     expect(find.text('Turkmen Manat'), findsWidgets);
+    expect(find.byIcon(Icons.lock_rounded), findsNWidgets(2),
+        reason: 'code and name are both locked ISO facts');
 
-    // The code is locked: padlock, read-only, and typing changes nothing.
-    expect(code.readOnly, isTrue, reason: 'a rename would orphan every row');
-    // Two padlocks now: a standard currency's code AND name are ISO facts, both
-    // read-only (currency-sheet spec §4). The name field is the second.
-    expect(find.byIcon(Icons.lock_rounded), findsNWidgets(2));
-    final name = tester.widget<TextField>(find.byType(TextField).at(1));
-    expect(name.readOnly, isTrue, reason: 'a standard name is a locked ISO fact');
-
-    await tester.enterText(find.byType(TextField).first, 'ZZZ');
-    await tester.pumpAndSettle();
-    expect(
-      tester
-          .widget<TextField>(find.byType(TextField).first)
-          .controller!
-          .text,
-      'TMT',
-      reason: 'the locked field refuses the edit',
-    );
+    // Neither the code nor the name is a TextField any more — they cannot be
+    // typed into at all.
+    for (final f in tester.widgetList<TextField>(find.byType(TextField))) {
+      expect(f.controller?.text == 'TMT' && f.readOnly == false, isFalse);
+    }
   });
 
   testWidgets('add mode keeps its own title, button and editable code',

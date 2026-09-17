@@ -95,7 +95,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get curName => 'Название';
 
   @override
-  String get curSymbolOptional => 'Символ · необязательно';
+  String get curSymbol => 'Символ';
 
   @override
   String get curPosition => 'Позиция';

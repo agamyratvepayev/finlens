@@ -94,7 +94,7 @@ class AppLocalizationsTr extends AppLocalizations {
   String get curName => 'Ad';
 
   @override
-  String get curSymbolOptional => 'Simge · isteğe bağlı';
+  String get curSymbol => 'Simge';
 
   @override
   String get curPosition => 'Konum';

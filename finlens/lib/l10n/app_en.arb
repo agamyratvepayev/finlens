@@ -35,7 +35,7 @@
   "curAddTitle": "Add a currency",
   "curCode": "Code",
   "curName": "Name",
-  "curSymbolOptional": "Symbol · optional",
+  "curSymbol": "Symbol",
   "curPosition": "Position",
   "curPosBefore": "Before",
   "curPosAfter": "After",
