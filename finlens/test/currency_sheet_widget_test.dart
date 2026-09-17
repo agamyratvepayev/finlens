@@ -128,11 +128,11 @@ void main() {
     await tester.pumpAndSettle();
 
     // Symbol left empty → the token falls back to the code and takes a space.
-    expect(find.text('TMT 9,850.00'), findsOneWidget);
+    expect(find.text('TMT\u00A09,850.00'), findsOneWidget);
 
     await tester.tap(find.text('After'));
     await tester.pumpAndSettle();
-    expect(find.text('9,850.00 TMT'), findsOneWidget,
+    expect(find.text('9,850.00\u00A0TMT'), findsOneWidget,
         reason: 'exactly what the Turkmenistan user asked for');
   });
 

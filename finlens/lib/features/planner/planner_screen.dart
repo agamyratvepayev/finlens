@@ -876,7 +876,8 @@ class _BudgetCard extends StatelessWidget {
         final delta = b.limit - spent;
         final under = delta >= 0;
         final amount =
-            money(delta.abs(), currency: curArg, masked: store.masked);
+            formatAmount(delta, curArg,
+                kind: AmountKind.magnitude, masked: store.masked);
         return Row(
           children: [
             Flexible(
@@ -1116,7 +1117,8 @@ class _GoalsTab extends StatelessWidget {
       case GoalSection.earning:
         return l.goalOfTotal(money(sums.current), money(sums.target));
       case GoalSection.payingOff:
-        return l.goalLeftTotal(money(sums.current.abs()));
+        return l.goalLeftTotal(
+            formatAmount(sums.current, null, kind: AmountKind.magnitude));
       case GoalSection.waitingOn:
         return l.goalOwedTotal(money(sums.current));
     }

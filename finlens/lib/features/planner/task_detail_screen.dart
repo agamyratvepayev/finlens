@@ -164,13 +164,13 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
     final cols = <(String, Widget)>[];
     if (task.isRecurring) {
       cols.add((l.tdNext, _dateValue(dayMonth(task.dueDate, l))));
-      cols.add((l.tdAmount, _amountValue(task.expectedAmount.abs())));
+      cols.add((l.tdAmount, _amountValue(task.expectedAmount)));
       final perYear = store.taskAmountInBase(task) *
           (task.occurrencesPerYear ?? 0);
       cols.add((l.tdPerYear, _amountValue(perYear)));
     } else {
       cols.add((l.tdDue, _dateValue(dayMonth(task.dueDate, l))));
-      cols.add((l.tdAmount, _amountValue(task.expectedAmount.abs())));
+      cols.add((l.tdAmount, _amountValue(task.expectedAmount)));
     }
 
     return Padding(
@@ -210,8 +210,11 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
         style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
       );
 
+  // A task amount is a magnitude (spec §4): unsigned, direction carried by the
+  // row's own words. The `.abs()` the callers used lived here as the kind now.
   Widget _amountValue(double v) => AmountText(
         v,
+        kind: AmountKind.magnitude,
         style: const TextStyle(
           fontSize: 18,
           fontWeight: FontWeight.w700,
@@ -274,7 +277,8 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                                   .copyWith(fontWeight: FontWeight.w500)),
                         ),
                         AmountText(
-                          task.expectedAmount.abs(),
+                          task.expectedAmount,
+                          kind: AmountKind.magnitude,
                           style: AppText.amount
                               .copyWith(color: AppColors.textTertiary),
                           forceDecimals: task.expectedAmount.abs() % 1 != 0,

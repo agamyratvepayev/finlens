@@ -1436,11 +1436,11 @@ class _QuickAddScreenState extends State<QuickAddScreen>
             label: l.qaDifference,
             value: diff == null
                 ? null
-                : money(diff,
-                    currency: currency, withSymbol: false, showSign: true),
+                : formatAmount(diff, currency,
+                    kind: AmountKind.signed, withSymbol: false),
             semanticValue: diff == null
                 ? null
-                : money(diff, currency: currency, showSign: true),
+                : formatAmount(diff, currency, kind: AmountKind.signed),
             emptyText: '—',
             valueColor: diff == null
                 ? null

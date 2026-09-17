@@ -113,9 +113,9 @@ void main() {
       // No amount anywhere carries a plus any more.
       expect(texts.where((s) => s.startsWith('+')), isEmpty);
 
-      // The figures that must now be unsigned are the row amounts and the day
-      // nets. Build them from the same query the screen uses and assert none
-      // of them renders a sign.
+      // Row amounts must be unsigned. The day net, by contrast, is a *net* and
+      // now keeps its sign (a negative day reads `−$…`), so its signed string is
+      // a legitimate on-screen figure and is excluded from the row check below.
       final range = RangePreset.thisMonth.resolve(DateTime(2026, 8, 9));
       final rows = LedgerQuery(
         store: store,
@@ -125,11 +125,26 @@ void main() {
       ).rows();
       expect(rows, isNotEmpty);
 
+      // The day nets the screen may print (grouped exactly as it groups them).
+      final dayNets = <String>{};
+      final byDay = <DateTime, double>{};
+      for (final r in rows) {
+        final d = DateTime(r.txn.date.year, r.txn.date.month, r.txn.date.day);
+        byDay[d] = (byDay[d] ?? 0) + r.netContribution;
+      }
+      for (final n in byDay.values) {
+        dayNets.add(money(n)); // signed day-header net
+      }
+
       // Only on-screen rows build, so assert the inverse: no row's *signed*
-      // rendering appears anywhere. That is the actual requirement, and it
-      // holds regardless of how many rows the viewport happened to build.
+      // rendering appears anywhere — unless that exact string is a signed day
+      // net, which is allowed. This holds regardless of how many rows the
+      // viewport happened to build.
       for (final r in rows.where((r) => r.displayAmount < 0)) {
-        expect(texts, isNot(contains(money(r.displayAmount))));
+        final signed = money(r.displayAmount);
+        if (!dayNets.contains(signed)) {
+          expect(texts, isNot(contains(signed)));
+        }
         expect(texts, isNot(contains(money(r.displayAmount, showSign: true))));
       }
 

@@ -339,7 +339,10 @@ class CategoryDetailScreen extends StatelessWidget {
         Flexible(
           child: Text(
             l.insVsRange(
-                money(delta.abs(), masked: store.masked), rangeLabel, signedPct),
+                formatAmount(delta, null,
+                    kind: AmountKind.magnitude, masked: store.masked),
+                rangeLabel,
+                signedPct),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(fontSize: 12.5, color: color),
@@ -419,7 +422,9 @@ class CategoryDetailScreen extends StatelessWidget {
                     Text(
                       over
                           ? l.insOverBudget(
-                              money(remainder.abs(), masked: store.masked))
+                              formatAmount(remainder, null,
+                                  kind: AmountKind.magnitude,
+                                  masked: store.masked))
                           : l.insLeft(money(remainder, masked: store.masked)),
                       style: TextStyle(
                           fontSize: 13,

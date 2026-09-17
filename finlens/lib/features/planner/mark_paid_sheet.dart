@@ -145,8 +145,8 @@ class _MarkPaidSheetState extends State<_MarkPaidSheet> {
                 const SizedBox(height: 3),
                 Center(
                   child: Text(
-                    l.mpExpected(money(_task.expectedAmount.abs(),
-                        currency: _currency, masked: _store.masked)),
+                    l.mpExpected(formatAmount(_task.expectedAmount, _currency,
+                        kind: AmountKind.magnitude, masked: _store.masked)),
                     style: AppText.caption.copyWith(
                         fontSize: 11.5, color: AppColors.textTertiary),
                   ),

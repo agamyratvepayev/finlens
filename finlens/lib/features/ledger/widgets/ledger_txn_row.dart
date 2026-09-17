@@ -139,9 +139,11 @@ class LedgerDayCard extends StatelessWidget {
                     ),
                   ),
                 ),
-                // Unsigned, like the rows beneath it: colour carries direction
-                // on both, so a sign here and none there would be an
-                // inconsistency the eye notices without being able to name it.
+                // Signed, because it is a net (spec §2/§4): a negative day reads
+                // `−$6,247`. Colour still carries direction independently. The
+                // spoken label keeps the "Net out"/"Net in" word plus the bare
+                // magnitude, so a reader hears the direction as a word rather
+                // than a lone minus glyph.
                 // Kept in the tree and faded rather than removed: the header's
                 // box must be identical whether or not the total shows, so a
                 // date lands on the same pixel row either way and a day flipping
@@ -157,9 +159,10 @@ class LedgerDayCard extends StatelessWidget {
                           '${money(net, signless: true, masked: StoreScope.of(context).masked)}',
                       excludeSemantics: true,
                       child: Text(
-                        money(
+                        formatAmount(
                           net,
-                          signless: true,
+                          null,
+                          kind: AmountKind.signed,
                           masked: StoreScope.of(context).masked,
                         ),
                         style: TextStyle(

@@ -62,7 +62,7 @@ void main() {
         reason: 'money() must take the metadata branch');
     // The token falls back to the code and takes a space — CurrencyDef's own
     // spacing rule, unchanged by this task.
-    expect(money(9850, currency: 'TMT'), '9,850.00 TMT');
+    expect(money(9850, currency: 'TMT'), '9,850.00\u00A0TMT');
   });
 
   test('reset removes the override and the built-in returns byte-for-byte', () {
@@ -75,7 +75,7 @@ void main() {
       symbolBefore: false,
       custom: true,
     ));
-    expect(money(9850, currency: 'TMT'), '9,850.00 TMT');
+    expect(money(9850, currency: 'TMT'), '9,850.00\u00A0TMT');
 
     store.removeCustomCurrency('TMT');
 
@@ -295,12 +295,12 @@ void main() {
     final store = emptyStore();
     store.updateCustomCurrency(const CurrencyDef(
         code: 'TMT', name: 'Manat', decimals: 0, symbolBefore: false));
-    expect(money(9850, currency: 'TMT'), '9,850 TMT');
-    expect(formatCurrencyExample(currencyDef('TMT'), 9850), '9,850 TMT');
+    expect(money(9850, currency: 'TMT'), '9,850\u00A0TMT');
+    expect(formatCurrencyExample(currencyDef('TMT'), 9850), '9,850\u00A0TMT');
 
     store.updateCustomCurrency(const CurrencyDef(
         code: 'TMT', name: 'Manat', decimals: 3, symbolBefore: false));
-    expect(money(9850, currency: 'TMT'), '9,850.000 TMT');
+    expect(money(9850, currency: 'TMT'), '9,850.000\u00A0TMT');
   });
 
   test('a cleared symbol falls the token back to the code, for the badge too',

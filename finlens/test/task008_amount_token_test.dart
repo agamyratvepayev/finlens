@@ -98,7 +98,7 @@ void main() {
 
     test('a code-only currency keeps its code when there is no chip', () {
       final p = s('2000', 'BAM', chip: false);
-      expect(p.typed, 'BAM 2,000');
+      expect(p.typed, 'BAM\u00A02,000');
       expect(p.rest, isEmpty);
     });
 
@@ -128,7 +128,7 @@ void main() {
       expect(s('', 'USD').rest, r'$0'); // symbol before
       expect(s('', 'RUB').rest, '0₽'); // symbol after, flush
       expect(s('', 'BAM').rest, '0'); // code-only, chip
-      expect(s('', 'BAM', chip: false).rest, 'BAM 0'); // code-only, no chip
+      expect(s('', 'BAM', chip: false).rest, 'BAM\u00A00'); // code-only, no chip
     });
   });
 
@@ -219,7 +219,7 @@ void main() {
     await _pumpAt(tester, _host(raw: '2000', currency: 'BAM'));
 
     // The bare number is `2,000` (no token), but the hero speaks its currency:
-    // money(2000, 'BAM') == 'BAM 2,000'.
+    // money(2000, 'BAM') == 'BAM\u00A02,000'.
     expect(find.bySemanticsLabel(RegExp('BAM')), findsWidgets);
     handle.dispose();
   });

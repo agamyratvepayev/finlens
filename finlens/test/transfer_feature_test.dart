@@ -161,7 +161,7 @@ void main() {
   });
 
   group('§5 — read-only transfer detail', () {
-    testWidgets('shows both accounts, both signed legs, and Net worth Unchanged',
+    testWidgets('shows both accounts, both legs unsigned, and Net worth Unchanged',
         (tester) async {
       final store = _store();
       final t = store.addTxn(
@@ -182,9 +182,13 @@ void main() {
       expect(find.text('TO'), findsOneWidget);
       expect(find.text('Main Checking'), findsOneWidget);
       expect(find.text('Savings'), findsOneWidget);
-      // Signs appear here and only here (true U+2212 minus / plus).
-      expect(find.text('−\$500'), findsOneWidget);
-      expect(find.text('+\$500'), findsOneWidget);
+      // A leg amount is a movement → magnitude (spec §2/§4): unsigned, with the
+      // FROM/TO caption and the colour carrying direction. Neither a minus nor a
+      // plus appears; the hero and both legs read a bare `$500`.
+      expect(find.text('−\$500'), findsNothing);
+      expect(find.text('+\$500'), findsNothing);
+      // Hero + both legs all read a bare `$500` (a balance-after could add more).
+      expect(find.text(r'$500'), findsAtLeastNWidgets(3));
       expect(find.text('Unchanged'), findsOneWidget);
       // The hero carries no "Transfer" label — the glyph says it.
       expect(find.text('Transfer'), findsNothing);

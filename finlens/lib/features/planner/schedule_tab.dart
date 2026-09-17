@@ -357,7 +357,8 @@ class _ScheduleTabState extends State<ScheduleTab> {
         ? AppColors.textSecondary
         : (net > 0 ? AppColors.positive : AppColors.negative);
     return AmountText(
-      net.abs(),
+      net,
+      kind: AmountKind.magnitude,
       style: AppText.label.copyWith(color: color),
       color: color,
     );
@@ -448,7 +449,8 @@ class _TaskRow extends StatelessWidget {
                       ),
                       const SizedBox(width: Insets.sm),
                       AmountText(
-                        task.expectedAmount.abs(),
+                        task.expectedAmount,
+                        kind: AmountKind.magnitude,
                         style: const TextStyle(
                             fontSize: 14.5,
                             fontWeight: FontWeight.w600,
@@ -537,7 +539,8 @@ class _TaskRow extends StatelessWidget {
 
   String _semantics(
       AppLocalizations l, bool payOut, bool overdue, String? account) {
-    final amount = money(task.expectedAmount.abs(), masked: store.masked);
+    final amount = formatAmount(task.expectedAmount, null,
+        kind: AmountKind.magnitude, masked: store.masked);
     final parts = <String>[
       task.title,
       '${payOut ? l.schSemPayingOut : l.schSemComingIn} $amount',

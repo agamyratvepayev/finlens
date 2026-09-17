@@ -1234,9 +1234,10 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
   Future<void> _deleteOpening(Account account) async {
     final store = StoreScope.read(context);
     final l = AppLocalizations.of(context);
-    final amountStr = money(
-      account.startingBalance.abs(),
-      currency: account.currency,
+    final amountStr = formatAmount(
+      account.startingBalance,
+      account.currency,
+      kind: AmountKind.magnitude,
       masked: store.masked,
     );
     final ok = await showDestructiveConfirm(

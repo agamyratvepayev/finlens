@@ -140,9 +140,10 @@ class _EditAccountScreenState extends State<EditAccountScreen> {
                         icon: Icons.flag_rounded,
                         label: l.obTitle,
                         value: _account.hasOpeningReceipt
-                            ? money(
-                                _account.startingBalance.abs(),
-                                currency: _currency,
+                            ? formatAmount(
+                                _account.startingBalance,
+                                _currency,
+                                kind: AmountKind.magnitude,
                               )
                             : l.obNotSet,
                         showChevron: true,
@@ -378,7 +379,8 @@ class _EditAccountScreenState extends State<EditAccountScreen> {
     final l = AppLocalizations.of(context);
     final isDebt = balance < 0;
     final figure =
-        money(balance.abs(), currency: _currency, masked: _store.masked);
+        formatAmount(balance, _currency,
+            kind: AmountKind.magnitude, masked: _store.masked);
 
     final move = await showModalBottomSheet<bool>(
       context: context,

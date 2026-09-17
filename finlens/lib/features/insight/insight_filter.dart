@@ -146,7 +146,7 @@ class InsightFilterPreview extends StatelessWidget {
       _row(
         label: '${l.insNetWorth.toUpperCase()} · ${insightWindowLabel(window, l, store.today)}',
         value: AmountText(netChange,
-            showSign: true,
+            kind: AmountKind.signed,
             style: AppText.groupAmount
                 .copyWith(fontSize: 17, fontWeight: FontWeight.w700)),
         right: l.insAccountsShown(visAccts, totalAccts),

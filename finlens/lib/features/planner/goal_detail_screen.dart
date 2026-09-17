@@ -926,7 +926,8 @@ class _MovementRow extends StatelessWidget {
     // §6 — the sign is gone, so colour is the only visual carrier of direction.
     // The screen reader gets that direction in words (masked amount honoured).
     final moneyIn = effect >= 0;
-    final magnitude = money(effect.abs(), masked: store.masked);
+    final magnitude = formatAmount(effect, null,
+        kind: AmountKind.magnitude, masked: store.masked);
     final directionLabel =
         moneyIn ? l.a11yMoneyIn(magnitude) : l.a11yMoneyOut(magnitude);
 
@@ -960,6 +961,11 @@ class _MovementRow extends StatelessWidget {
             excludeSemantics: true,
             child: AmountText(
               effect,
+              // A contribution is a movement → magnitude (spec §2/§4): unsigned,
+              // with colour and the direction word in the label carrying which
+              // way it went. Previously this printed a minus, contradicting the
+              // §6 "colour carries direction" note beside it.
+              kind: AmountKind.magnitude,
               color: effect < 0 ? AppColors.negative : AppColors.positive,
             ),
           ),

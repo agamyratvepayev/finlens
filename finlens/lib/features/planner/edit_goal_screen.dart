@@ -840,7 +840,7 @@ Future<bool> confirmGoalDelete(
     if (acc != null) {
       impact.add(ImpactLine.kept(l.goalDeleteAccountStays(
         acc.name,
-        money(store.balanceOf(acc.id).abs()),
+        formatAmount(store.balanceOf(acc.id), null, kind: AmountKind.magnitude),
       )));
       impact.add(
           ImpactLine.kept(l.goalDeleteTxnStay(store.txnsForAccount(acc.id).length)));
@@ -909,7 +909,8 @@ class _SourcePicker extends StatelessWidget {
                 icon: a.displayIcon,
                 color: a.color,
                 title: a.name,
-                subtitle: money(store.balanceOf(a.id).abs(), currency: a.currency),
+                subtitle: formatAmount(store.balanceOf(a.id), a.currency,
+                    kind: AmountKind.magnitude),
                 onTap: () => Navigator.of(context)
                     .pop(_SourceChoice.existing(GoalSource.account(a.id))),
               ),

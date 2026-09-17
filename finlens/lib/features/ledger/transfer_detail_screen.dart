@@ -367,10 +367,11 @@ class TransferDetailScreen extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                money(signedAmount,
-                    currency: currency,
-                    showSign: true,
-                    masked: store.masked),
+                // A leg amount is a movement → magnitude (spec §2/§4): the
+                // caption, the account name and the colour already say which way
+                // it went, so no sign.
+                formatAmount(signedAmount, currency,
+                    kind: AmountKind.magnitude, masked: store.masked),
                 style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w600,

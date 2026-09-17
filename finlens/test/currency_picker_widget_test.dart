@@ -390,18 +390,18 @@ void main() {
 
     await tester.enterText(find.byType(TextField).first, 'TMT');
     await tester.pumpAndSettle();
-    expect(find.text('TMT 9,850.00'), findsOneWidget);
+    expect(find.text('TMT\u00A09,850.00'), findsOneWidget);
 
     await tester.tap(find.text('After'));
     await tester.pumpAndSettle();
-    expect(find.text('9,850.00 TMT'), findsOneWidget);
+    expect(find.text('9,850.00\u00A0TMT'), findsOneWidget);
 
     // Drop to 0 decimals.
     await tester.tap(find.text('Decimal places'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('0').last);
     await tester.pumpAndSettle();
-    expect(find.text('9,850 TMT'), findsOneWidget);
+    expect(find.text('9,850\u00A0TMT'), findsOneWidget);
   });
 
   // ── §5 — 320pt / tr: name ellipsises, code + CUSTOM + symbol stay ──────────

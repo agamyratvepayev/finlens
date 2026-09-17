@@ -95,9 +95,9 @@ void main() {
 
   test('a code-only token stays spaced (BAM), unchanged', () {
     expect(formatCurrencyExample(def('BAM', null, before: true), 2000),
-        'BAM 2,000.00');
+        'BAM\u00A02,000.00');
     expect(formatCurrencyExample(def('BAM', null, before: false), 2000),
-        '2,000.00 BAM');
+        '2,000.00\u00A0BAM');
   });
 
   test('§4 is Unicode-aware — non-ASCII letters take the space too', () {
@@ -297,16 +297,16 @@ void main() {
     await tester.enterText(fieldIn('curRowCode'), 'TMT');
     await tester.pumpAndSettle();
     // Symbol empty → token is the code, spaced.
-    expect(find.text('TMT 9,850.00'), findsOneWidget);
+    expect(find.text('TMT\u00A09,850.00'), findsOneWidget);
 
     // A letter symbol is spaced too (§4), live.
     await tester.enterText(fieldIn('curRowSymbol'), 'zł');
     await tester.pumpAndSettle();
-    expect(find.text('zł 9,850.00'), findsOneWidget);
+    expect(find.text('zł\u00A09,850.00'), findsOneWidget);
 
     await tester.tap(find.text('After'));
     await tester.pumpAndSettle();
-    expect(find.text('9,850.00 zł'), findsOneWidget);
+    expect(find.text('9,850.00\u00A0zł'), findsOneWidget);
   });
 
   // ── §6 — no overflow across widths, scales and locales ─────────────────────

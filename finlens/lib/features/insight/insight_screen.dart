@@ -929,7 +929,8 @@ class _Hero extends StatelessWidget {
         ? AppColors.textQuaternary
         : (v > 0 ? AppColors.positive : AppColors.negative);
 
-    final spoken = money(v.abs(), masked: store.masked);
+    final spoken = formatAmount(v, null,
+        kind: AmountKind.magnitude, masked: store.masked);
     final sentence = zero
         ? l.insA11yHeroFlat(spoken)
         : (v > 0 ? l.insA11yHeroUp(spoken) : l.insA11yHeroDown(spoken));
@@ -957,7 +958,10 @@ class _Hero extends StatelessWidget {
                             fontWeight: FontWeight.w700,
                             color: color)),
                   ),
-                AmountText(v.abs(),
+                // Magnitude: the ▲/▼ beside it already carries direction
+                // (Yön ≠ renk), so a minus here would double-encode it.
+                AmountText(v,
+                    kind: AmountKind.magnitude,
                     style: AppText.hero.copyWith(fontSize: 34), color: color),
                 const SizedBox(width: Insets.sm),
                 Padding(
@@ -1217,11 +1221,11 @@ class _Waterfall extends StatelessWidget {
             child: Center(
               child: FittedBox(
                 fit: BoxFit.scaleDown,
-                // Signed so the steps read "+$6,100", "−$2,972", "+$1,300"; a
-                // zero step reads "$0", never "+$0".
+                // Signed so a negative step reads "−$2,972"; a positive step is
+                // bare ("$6,100", no "+", spec §1/§2) and a zero step "$0".
                 child: AmountText(
                   value,
-                  showSign: nonZero,
+                  kind: AmountKind.signed,
                   color: color,
                   style: TextStyle(
                     fontSize: 11,
@@ -1415,7 +1419,8 @@ class _GroupGrid extends StatelessWidget {
     for (final (g, c) in shown) {
       maxName = math.max(maxName, measure(g.label(l), nameStyle));
       maxAmt = math.max(
-          maxAmt, measure(money(c.abs(), showSign: true), amtStyle));
+          maxAmt,
+          measure(formatAmount(c, null, kind: AmountKind.signed), amtStyle));
     }
     const columnGap = 14.0;
     const innerGap = 8.0;
@@ -1431,7 +1436,8 @@ class _GroupGrid extends StatelessWidget {
     final frac =
         report.maxGroupAbs <= 0 ? 0.0 : (change.abs() / report.maxGroupAbs);
 
-    final spoken = money(change.abs(), masked: store.masked);
+    final spoken = formatAmount(change, null,
+        kind: AmountKind.magnitude, masked: store.masked);
     final sentence = negative
         ? l.insA11yGroupDown(g.label(l), spoken)
         : l.insA11yGroupUp(g.label(l), spoken);
@@ -1481,7 +1487,7 @@ class _GroupGrid extends StatelessWidget {
                       const SizedBox(width: 8),
                       AmountText(
                         change,
-                        showSign: true,
+                        kind: AmountKind.signed,
                         style: const TextStyle(
                           fontSize: 12.5,
                           height: 1.0,
@@ -1819,8 +1825,10 @@ class _DebtBlock extends StatelessWidget {
     final store = report.store;
     final unchanged = delta.abs() < _Report.eps;
 
-    final balSpoken = money(balance.abs(), masked: store.masked);
-    final deltaSpoken = money(delta.abs(), masked: store.masked);
+    final balSpoken = formatAmount(balance, null,
+        kind: AmountKind.magnitude, masked: store.masked);
+    final deltaSpoken = formatAmount(delta, null,
+        kind: AmountKind.magnitude, masked: store.masked);
     final sentence = unchanged
         ? l.insA11yDebtFlat(label, balSpoken)
         : (delta > 0
@@ -1883,7 +1891,8 @@ class _DebtBlock extends StatelessWidget {
   }) {
     final l = AppLocalizations.of(context);
     final store = report.store;
-    final spoken = money(value.abs(), masked: store.masked);
+    final spoken = formatAmount(value, null,
+        kind: AmountKind.magnitude, masked: store.masked);
     final sentence = increased
         ? l.insA11yMovementUp(title, spoken)
         : l.insA11yMovementDown(title, spoken);
@@ -1950,7 +1959,8 @@ class _DeltaTag extends StatelessWidget {
       children: [
         Text(rising ? '▲' : '▼', style: TextStyle(fontSize: 9, color: color)),
         const SizedBox(width: 1),
-        AmountText(value.abs(),
+        AmountText(value,
+            kind: AmountKind.magnitude,
             style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
@@ -2021,7 +2031,8 @@ class _RevaluationBlock extends StatelessWidget {
     final up = amountBase >= 0;
 
     final nameSpoken = acc?.name ?? '—';
-    final amtSpoken = money(amountBase.abs(), masked: store.masked);
+    final amtSpoken = formatAmount(amountBase, null,
+        kind: AmountKind.magnitude, masked: store.masked);
     final pctPart = pctStr == null ? '' : l.insA11yPercent(pctStr);
     final dateSpoken = dayMonth(t.date, l);
     // The note (Rebalance §6): shown first in the subtitle, ellipsised when it
@@ -2085,7 +2096,7 @@ class _RevaluationBlock extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     AmountText(amountBase,
-                        showSign: true,
+                        kind: AmountKind.signed,
                         color: up ? AppColors.positive : AppColors.negative,
                         style: AppText.amount.copyWith(fontSize: 14)),
                     if (pctStr != null)

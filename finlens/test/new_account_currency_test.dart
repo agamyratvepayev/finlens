@@ -45,8 +45,8 @@ void main() {
       // a symbol. `ø` is a Latin letter, so it now takes a space on either side
       // just like a code — an ASCII-only rule would have glued it. A glyph
       // symbol would still hug; there is no glyph among these four.
-      expect(money(9850.5, currency: 'AAA'), 'ø 9,850.50');
-      expect(money(9850.5, currency: 'BBB'), '9,850.50 ø');
+      expect(money(9850.5, currency: 'AAA'), 'ø 9,850.50');
+      expect(money(9850.5, currency: 'BBB'), '9,850.50 ø');
       expect(money(9850.5, currency: 'CCC'), 'CCC 9,850.50');
       expect(money(9850.5, currency: 'DDD'), '9,850.50 DDD');
     });
@@ -76,7 +76,7 @@ void main() {
       setCustomCurrencies([def]);
       // `ø` is a letter → spaced from the number (task 033 §4); the minus still
       // leads the whole token.
-      expect(money(-12, currency: 'NEG'), '−ø 12.00');
+      expect(money(-12, currency: 'NEG'), '−ø 12.00');
     });
 
     test('formatCurrencyExample matches money() before registration', () {

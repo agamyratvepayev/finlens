@@ -719,7 +719,8 @@ class _SplitSheetState extends State<_SplitSheet> {
     final Color color;
     if (over) {
       word = l.ssOverAssignedBy;
-      figure = money(remaining.abs(), currency: widget.currency, masked: masked);
+      figure = formatAmount(remaining, widget.currency,
+          kind: AmountKind.magnitude, masked: masked);
       color = AppColors.negative;
     } else if (under) {
       word = l.ssLeftToAssign;

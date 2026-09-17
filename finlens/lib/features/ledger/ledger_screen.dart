@@ -710,7 +710,10 @@ class _LedgerScreenState extends State<LedgerScreen> {
       AppLocalizations.of(context),
       store.today,
     ).toUpperCase();
-    final totalLabel = money(net, signless: true, masked: store.masked);
+    // The day total is a net (spec §2/§4): it keeps its sign, so a negative day
+    // reads `−$6,247`. Colour still carries direction independently below.
+    final totalLabel =
+        formatAmount(net, null, kind: AmountKind.signed, masked: store.masked);
 
     final Color netColor = net > 0
         ? AppColors.positive

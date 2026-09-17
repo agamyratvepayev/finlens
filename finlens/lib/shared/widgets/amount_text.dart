@@ -19,6 +19,7 @@ class AmountText extends StatelessWidget {
     this.maskable = true,
     this.signless = false,
     this.isLiability = false,
+    this.kind,
   });
 
   /// A balance. Unsigned while its sign agrees with its account's kind, signed
@@ -44,7 +45,8 @@ class AmountText extends StatelessWidget {
     this.maskable = true,
     this.isLiability = false,
   })  : showSign = false,
-        signless = true;
+        signless = true,
+        kind = null;
 
   final double value;
 
@@ -66,18 +68,35 @@ class AmountText extends StatelessWidget {
   /// default constructor never sets [signless], so this has no effect there.
   final bool isLiability;
 
+  /// The explicit kind (spec §1). When set it drives the sign policy —
+  /// [AmountKind.magnitude] renders unsigned, [AmountKind.signed] keeps a minus
+  /// when negative and never adds a `+`. Left null by the `.balance` constructor
+  /// and by legacy call sites, which keep the [signless]/[showSign]/[isLiability]
+  /// behaviour below unchanged.
+  final AmountKind? kind;
+
   @override
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
     final masked = maskable && store.masked;
-    // The sign is redundant exactly while it agrees with the kind: a positive
-    // asset, a negative liability. Otherwise it is the only thing that says the
-    // balance is not what the account is for.
-    final contradicts = isLiability ? value > 0 : value < 0;
-    final signlessNow = signless && !contradicts;
-    // A negative value already prints its − once signless is off; showSign is
-    // needed only to force a + on a liability that has gone into credit.
-    final showSignNow = showSign || (contradicts && isLiability);
+
+    final bool signlessNow;
+    final bool showSignNow;
+    if (kind != null) {
+      // Explicit kind wins: magnitude is unsigned, signed keeps its minus, and
+      // neither forces a `+` on a positive (spec §1/§2).
+      signlessNow = kind == AmountKind.magnitude;
+      showSignNow = false;
+    } else {
+      // The sign is redundant exactly while it agrees with the kind: a positive
+      // asset, a negative liability. Otherwise it is the only thing that says
+      // the balance is not what the account is for.
+      final contradicts = isLiability ? value > 0 : value < 0;
+      signlessNow = signless && !contradicts;
+      // A negative value already prints its − once signless is off; showSign is
+      // needed only to force a + on a liability that has gone into credit.
+      showSignNow = showSign || (contradicts && isLiability);
+    }
     return Text(
       money(
         value,

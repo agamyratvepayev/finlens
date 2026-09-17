@@ -52,7 +52,9 @@ void setFormatterBaseCurrency(String code) {
 /// their own metadata-driven branch.
 String currencySymbol(String code) {
   final def = currencyDef(code);
-  return def.tokenIsSymbol ? def.symbol! : '$code ';
+  // A code prefix keeps a NON-BREAKING space (spec §3): `CHF 1,234`, so an
+  // amount never wraps between its unit and its digits. A symbol hugs.
+  return def.tokenIsSymbol ? def.symbol! : '$code ';
 }
 
 /// Formats a custom currency from its [CurrencyDef] metadata (spec §7a): fixed
@@ -87,7 +89,13 @@ String _moneyCustom(
         : '$whole.${(rounded * factor).round().remainder(factor).toString().padLeft(decimals, '0')}';
   }
 
-  final sign = signless ? '' : (negative ? _minus : (showSign ? '+' : ''));
+  // No sign on a masked figure — the mask replaces the whole output, sign
+  // included (spec §7) — and never a minus on a value that rounds to zero
+  // (spec §2: −0.0 and anything rounding to zero render as `$0`, never `−$0`).
+  final displaysZero = abs < (decimals == 0 ? 0.5 : 0.5 / _pow10(decimals));
+  final sign = (signless || masked || displaysZero)
+      ? ''
+      : (negative ? _minus : (showSign ? '+' : ''));
   // A unit shown elsewhere (a currency chip beside the row) makes the token
   // redundant; drop it and print the bare number (Rebalance §2c).
   if (!withSymbol) return '$sign$number';
@@ -96,7 +104,7 @@ String _moneyCustom(
   // letter symbol (`TMT`, `Kč`, `zł`) now takes one too, a glyph (`$`) none
   // (task 033 §4).
   final token = def.token;
-  final gap = _tokenHugs(token) ? '' : ' ';
+  final gap = _tokenHugs(token) ? '' : ' ';
   return def.symbolBefore
       ? '$sign$token$gap$number'
       : '$sign$number$gap$token';
@@ -208,9 +216,55 @@ String money(
   // minus shifts every digit one place and breaks column alignment. Ledger
   // amounts pass signless: false, because there direction is the whole point
   // and the sign is the only cue a colourblind reader gets.
-  final sign = signless ? '' : (negative ? _minus : (showSign ? '+' : ''));
+  // Never a minus on a value that rounds to zero (spec §2 — never `−$0`).
+  final displaysZero = needsDecimals ? abs < 0.005 : rounded == 0;
+  final sign = (signless || displaysZero)
+      ? ''
+      : (negative ? _minus : (showSign ? '+' : ''));
   return '$sign$symbol$text';
 }
+
+/// Which kind of number an amount is (spec §1). There is no default: every call
+/// site states it explicitly, because a wrong default is invisible — the number
+/// still renders, still looks like money, and is simply read backwards.
+///
+/// * [magnitude] — a movement, or a total of movements that all went the same
+///   way (a transaction's amount, a category's spend, `IN`/`OUT`, a budget's
+///   limit, a goal's target). Direction is carried by colour and by the row, so
+///   the number is drawn **unsigned**: `$2,000`, `1,415.67 TMT`.
+/// * [signed] — a net, a balance, a change or a difference: anything that can
+///   land on either side of zero, where which side is the point (`LEFT`, a day's
+///   net, a running balance, net worth, a budget's remainder). Drawn with a
+///   `−` when negative; no `+` on positives (that is a separate decision, not
+///   made here).
+enum AmountKind { magnitude, signed }
+
+/// The single place an amount becomes display text with an explicit [kind]
+/// (spec §2). A [AmountKind.magnitude] renders unsigned; the `.abs()` happens
+/// **inside** here, so no call site abses before formatting. A
+/// [AmountKind.signed] value keeps a U+2212 minus when negative. Zero is never
+/// negative. Masking, decimals, affix and its (non-breaking) space are all the
+/// shared [money] path — this only chooses the sign policy from [kind].
+String formatAmount(
+  num value,
+  String? currency, {
+  required AmountKind kind,
+  bool masked = false,
+  bool forceDecimals = false,
+  bool roundUp = false,
+  bool noDecimals = false,
+  bool withSymbol = true,
+}) =>
+    money(
+      value.toDouble(),
+      currency: currency,
+      signless: kind == AmountKind.magnitude,
+      masked: masked,
+      forceDecimals: forceDecimals,
+      roundUp: roundUp,
+      noDecimals: noDecimals,
+      withSymbol: withSymbol,
+    );
 
 /// Compact form for dense captions ("$8.4K/yr").
 String moneyCompact(double value, {String? currency}) {

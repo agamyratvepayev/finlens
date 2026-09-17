@@ -50,7 +50,7 @@ void main() {
       decimals: 2,
       symbolBefore: false,
     ));
-    expect(money(9850, currency: 'TMT'), '9,850.00 TMT');
+    expect(money(9850, currency: 'TMT'), '9,850.00\u00A0TMT');
 
     final json = encodeBackup(store, exportedAt: DateTime(2026, 9, 8));
 
@@ -64,7 +64,7 @@ void main() {
     expect(restored.snapshotCustomCurrencies.single.symbolBefore, isFalse);
     expect(restored.snapshotCustomCurrencies.single.symbol, isNull);
     // The AppStore constructor re-registers, so formatting is live again.
-    expect(money(9850, currency: 'TMT'), '9,850.00 TMT');
+    expect(money(9850, currency: 'TMT'), '9,850.00\u00A0TMT');
     expect(restored.accountsUsingCurrency('TMT').single.name, 'Wallet');
   });
 
@@ -150,6 +150,6 @@ void main() {
     // it the new way — the only thing it lacks is the UI to change it back.
     setCustomCurrencies(
         rows.map(currencyDefFromMap).toList(growable: false));
-    expect(money(9850, currency: 'TMT'), '9,850.00 TMT');
+    expect(money(9850, currency: 'TMT'), '9,850.00\u00A0TMT');
   });
 }

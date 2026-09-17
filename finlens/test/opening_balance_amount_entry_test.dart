@@ -216,7 +216,7 @@ void main() {
       // true) → "CHF 500.00". No bare "$" prefix; the token follows the def.
       final chf = _store([_asset('a1', 'Main', 500, currency: 'CHF')]);
       await _open(tester, chf, 'a1');
-      expect(_amountText(tester, '500').textSpan!.toPlainText(), 'CHF 500.00');
+      expect(_amountText(tester, '500').textSpan!.toPlainText(), 'CHF\u00A0500.00');
     });
 
     testWidgets('a symbol-after currency renders the symbol flush after',
