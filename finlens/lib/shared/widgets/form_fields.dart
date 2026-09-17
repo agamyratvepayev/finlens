@@ -195,7 +195,49 @@ class FormRow extends StatelessWidget {
   }
 }
 
-/// FormRow with a switch on the right.
+/// The app's only switch (task 041).
+///
+/// One size everywhere: 40 × 24. Three call sites had three sizes — a bare
+/// Switch.adaptive with its default 48pt layout box, the same with
+/// shrinkWrap, and More's boxed 40 × 24 — and only the last was sized to fit a
+/// compact row. Now that every toggle row is 48pt tall, that is the size that
+/// fits, so it is the one that wins.
+///
+/// FittedBox, not Transform.scale: a bare Transform shrinks the paint and keeps
+/// the full layout box, which is what broke More's 38pt row before it was boxed.
+/// The tap target stays 44pt via the enclosing row, not this widget — shrinking
+/// a control must never shrink what a finger has to hit.
+class FormSwitch extends StatelessWidget {
+  const FormSwitch({super.key, required this.value, required this.onChanged});
+
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 40,
+      height: 24,
+      child: FittedBox(
+        fit: BoxFit.contain,
+        child: Switch.adaptive(
+          value: value,
+          onChanged: onChanged,
+          activeThumbColor: Colors.white,
+          activeTrackColor: AppColors.accent,
+          inactiveTrackColor: AppColors.surfaceHigh,
+        ),
+      ),
+    );
+  }
+}
+
+/// A labelled switch row inside a [FormSection].
+///
+/// [subtitle] is still supported — the account editor's "hide from balance" row
+/// needs its explanation — but a subtitled row runs two lines and is therefore
+/// taller than its neighbours. Pass one only when the row genuinely cannot be
+/// understood without it.
 class ToggleRow extends StatelessWidget {
   const ToggleRow({
     super.key,
@@ -219,13 +261,7 @@ class ToggleRow extends StatelessWidget {
       label: label,
       subtitle: subtitle,
       onTap: () => onChanged(!value),
-      trailing: Switch.adaptive(
-        value: value,
-        onChanged: onChanged,
-        activeThumbColor: Colors.white,
-        activeTrackColor: AppColors.accent,
-        inactiveTrackColor: AppColors.surfaceHigh,
-      ),
+      trailing: FormSwitch(value: value, onChanged: onChanged),
     );
   }
 }
@@ -293,6 +329,75 @@ class TextFieldRow extends StatelessWidget {
             ),
           ),
           ?trailing,
+        ],
+      ),
+    );
+  }
+}
+
+/// A free-text note on one line, at [FormRow]'s height (task 041).
+///
+/// [TextFieldRow] stacks a caption over its field, which is right for a name or
+/// a title — the label names what the value is. A note needs no such label: the
+/// placeholder says "Add a note" and, once written, the note says it itself. So
+/// this row spends no second line on a caption and sits level with every other
+/// row in the card.
+///
+/// TextFieldRow is deliberately left alone; its four other callers are labelled
+/// fields where the caption is the point.
+class NoteRow extends StatelessWidget {
+  const NoteRow({
+    super.key,
+    this.icon,
+    required this.controller,
+    required this.hint,
+    this.focusNode,
+    this.semanticsLabel,
+  });
+
+  final IconData? icon;
+  final TextEditingController controller;
+
+  /// Carries the label's job. `Add a note` — not `Optional`, which describes the
+  /// field rather than naming it.
+  final String hint;
+
+  final FocusNode? focusNode;
+  final String? semanticsLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      // FormRow's own padding, so the row lands on the same height without
+      // depending on the field's intrinsic metrics.
+      padding: const EdgeInsets.symmetric(
+        horizontal: Insets.md,
+        vertical: Insets.md,
+      ),
+      child: Row(
+        children: [
+          if (icon != null) ...[
+            SizedBox(
+              width: 24,
+              child: Icon(icon, size: 18, color: AppColors.textSecondary),
+            ),
+            const SizedBox(width: Insets.md),
+          ],
+          Expanded(
+            child: TextField(
+              controller: controller,
+              focusNode: focusNode,
+              style: AppText.body.copyWith(fontSize: 14.5),
+              cursorColor: AppColors.accentSoft,
+              decoration: InputDecoration(
+                isDense: true,
+                border: InputBorder.none,
+                contentPadding: EdgeInsets.zero,
+                hintText: hint,
+                hintStyle: const TextStyle(color: AppColors.textTertiary),
+              ),
+            ),
+          ),
         ],
       ),
     );

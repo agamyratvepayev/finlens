@@ -6,6 +6,7 @@ import '../../core/store/app_store.dart';
 import '../../core/utils/formatters.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/app_card.dart';
+import '../../shared/widgets/form_fields.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/app_typography.dart';
@@ -269,13 +270,9 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
           icon: Icons.repeat_rounded,
           label: l.ebRollOver,
           dense: true,
-          trailing: Switch.adaptive(
+          trailing: FormSwitch(
             value: _rollover,
             onChanged: (v) => setState(() => _rollover = v),
-            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            activeThumbColor: Colors.white,
-            activeTrackColor: AppColors.accent,
-            inactiveTrackColor: AppColors.surfaceHigh,
           ),
         ),
       _BudgetRow(

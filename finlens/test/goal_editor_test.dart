@@ -157,21 +157,32 @@ void main() {
         findsOneWidget);
   });
 
-  testWidgets('Target amount, Target date, Monthly and Watching are equal height',
+  // Task 041 row-parity: the whole card now reads as one list. All five rows —
+  // the target trio (_LineRow), the Note (NoteRow) and Done once reached
+  // (ToggleRow, subtitle dropped) — measure 48pt and equal one another. RED
+  // before §5/§6, when Note was ~58pt (TextFieldRow) and Done ~56pt (subtitled).
+  testWidgets('all five goal rows are 48pt and equal (task 041 row parity)',
       (tester) async {
     phone(tester);
     await tester.pumpWidget(wrap(AppStore.empty(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)))));
 
-    final h = {
-      for (final label in ['Watching', 'Target amount', 'Target date', 'Monthly'])
+    final trio = {
+      for (final label in ['Target amount', 'Target date', 'Monthly'])
         label: tester.getSize(rowByLabel(label)).height,
     };
-    expect(h['Watching'], closeTo(48, 0.5));
-    expect(h['Target amount'], closeTo(48, 0.5));
-    expect(h['Target date'], closeTo(48, 0.5));
-    expect(h['Monthly'], closeTo(48, 0.5));
-    // …and equal to one another.
-    expect(h.values.toSet().length <= 1 || (h.values.reduce((a, b) => a > b ? a : b) - h.values.reduce((a, b) => a < b ? a : b)) < 0.5, isTrue);
+    final noteH = tester.getSize(find.byType(NoteRow)).height;
+    final doneH = tester.getSize(rowByLabel('Done once reached')).height;
+    // Watching too (a _LineRow in create mode), for good measure.
+    final watchingH = tester.getSize(rowByLabel('Watching')).height;
+
+    final all = [...trio.values, noteH, doneH, watchingH];
+    for (final h in all) {
+      expect(h, closeTo(48, 0.5));
+    }
+    final maxH = all.reduce((a, b) => a > b ? a : b);
+    final minH = all.reduce((a, b) => a < b ? a : b);
+    expect(maxH - minH, lessThan(0.5),
+        reason: 'row-parity: every row within 0.5px of the others');
   });
 
   testWidgets('the chip and the plain code share a right edge with the values',
@@ -415,17 +426,21 @@ void main() {
         findsNothing);
   });
 
+  // Task 041 inverts the old relationship: "Done once reached" no longer carries
+  // a subtitle, so it is one line at 48pt — level with the single-line Watching
+  // row, not taller than it. (Was: two-line switch row grows past the single
+  // line.)
   testWidgets(
-      'row heights: the single-line Watching row is shorter than the two-line '
-      '"Done once reached" row', (tester) async {
+      'row heights (task 041): "Done once reached" is one line, 48pt, equal to '
+      'Watching', (tester) async {
     phone(tester);
     await tester.pumpWidget(wrap(AppStore.empty(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)))));
 
-    final single = tester.getSize(rowByLabel('Watching')).height;
-    final twoLine = tester.getSize(rowByLabel('Done once reached')).height;
-    // The single-line row is the shared 48pt _LineRow…
-    expect(single, closeTo(48, 0.5));
-    // …and the two-line switch row grows past it to fit its subtitle.
-    expect(twoLine, greaterThan(single));
+    final watching = tester.getSize(rowByLabel('Watching')).height;
+    final done = tester.getSize(rowByLabel('Done once reached')).height;
+    expect(watching, closeTo(48, 0.5));
+    expect(done, closeTo(48, 0.5));
+    expect((watching - done).abs(), lessThan(0.5),
+        reason: 'the switch row lost its subtitle and no longer runs two lines');
   });
 }

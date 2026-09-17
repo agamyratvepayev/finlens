@@ -13,6 +13,7 @@ import '../../l10n/app_localizations.dart';
 import '../sync/sync_settings_screen.dart';
 import '../../shared/restore_flow.dart';
 import '../../shared/widgets/app_card.dart';
+import '../../shared/widgets/form_fields.dart';
 import '../../shared/widgets/screen_header.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
@@ -653,23 +654,9 @@ class _MaskRow extends StatelessWidget {
               ),
               const SizedBox(width: Insets.sm),
               // The control's right edge is the same content edge the chevrons sit
-              // on; FittedBox constrains the switch's layout box to 40 × 24 (a bare
-              // Transform.scale would shrink the paint but keep the full layout
-              // size, breaking the 38 pt row).
-              SizedBox(
-                width: 40,
-                height: 24,
-                child: FittedBox(
-                  fit: BoxFit.contain,
-                  child: Switch.adaptive(
-                    value: value,
-                    onChanged: onChanged,
-                    activeThumbColor: Colors.white,
-                    activeTrackColor: AppColors.accent,
-                    inactiveTrackColor: AppColors.surfaceHigh,
-                  ),
-                ),
-              ),
+              // on; FormSwitch boxes the switch's layout to 40 × 24 (task 041 —
+              // one switch, one size, shared).
+              FormSwitch(value: value, onChanged: onChanged),
             ],
           ),
         ),

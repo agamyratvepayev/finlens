@@ -6025,7 +6025,7 @@ abstract class AppLocalizations {
   /// No description provided for @goalNoteHint.
   ///
   /// In en, this message translates to:
-  /// **'Optional'**
+  /// **'Add a note'**
   String get goalNoteHint;
 
   /// No description provided for @goalDoneOnceReached.
@@ -6033,12 +6033,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Done once reached'**
   String get goalDoneOnceReached;
-
-  /// No description provided for @goalDoneOnceReachedDesc.
-  ///
-  /// In en, this message translates to:
-  /// **'Off for funds you refill'**
-  String get goalDoneOnceReachedDesc;
 
   /// No description provided for @goalDeleteRowDesc.
   ///

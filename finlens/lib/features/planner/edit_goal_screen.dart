@@ -351,16 +351,18 @@ class _EditGoalScreenState extends State<EditGoalScreen> {
         // ── Options ──
         FormSection(
           children: [
-            TextFieldRow(
+            NoteRow(
               icon: Icons.notes_rounded,
-              label: l.goalNoteLabel,
               controller: _note,
               hint: l.goalNoteHint,
+              semanticsLabel: l.goalNoteLabel,
             ),
+            // No subtitle: every row in this card is one line, and this one is
+            // understood without a second (task 041). `goalDoneOnceReachedDesc`
+            // had no other caller and is deleted.
             ToggleRow(
               icon: Icons.check_circle_rounded,
               label: l.goalDoneOnceReached,
-              subtitle: l.goalDoneOnceReachedDesc,
               value: _endsWhenReached,
               onChanged: (v) => setState(() => _endsWhenReached = v),
             ),
@@ -391,6 +393,18 @@ class _EditGoalScreenState extends State<EditGoalScreen> {
     required Widget token,
   }) {
     return Row(
+      // Baseline, not centre (task 041). Centre matches the two children's line
+      // boxes, and the token is 11.5pt beside a ~17pt figure, so its glyphs fell
+      // below the number's optical centre. A unit written beside a number sits
+      // on that number's baseline.
+      //
+      // Only *this* Row. _LineRow's Row keeps CrossAxisAlignment.center: baseline
+      // applied one level up aligns the label, the icon and the value to each
+      // other and collapses the row's vertical centring — which is the very
+      // defect §8 exists to fix. Verified: doing so lifts the Monthly row's
+      // content ~15pt and breaks the even pitch between the three rows.
+      crossAxisAlignment: CrossAxisAlignment.baseline,
+      textBaseline: TextBaseline.alphabetic,
       children: [
         Expanded(
           child: TextField(

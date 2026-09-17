@@ -3854,13 +3854,10 @@ class AppLocalizationsTk extends AppLocalizations {
   String get goalNoteLabel => 'Bellik';
 
   @override
-  String get goalNoteHint => 'Islege görä';
+  String get goalNoteHint => 'Bellik goşuň';
 
   @override
   String get goalDoneOnceReached => 'Ýetilende tamamlansyn';
-
-  @override
-  String get goalDoneOnceReachedDesc => 'Doldurylýan gaznalar üçin öçüriň';
 
   @override
   String get goalDeleteRowDesc => 'Maksady öçürýär, pul galýar';

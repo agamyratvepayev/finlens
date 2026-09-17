@@ -3863,13 +3863,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get goalNoteLabel => 'Note';
 
   @override
-  String get goalNoteHint => 'Optional';
+  String get goalNoteHint => 'Add a note';
 
   @override
   String get goalDoneOnceReached => 'Done once reached';
-
-  @override
-  String get goalDoneOnceReachedDesc => 'Off for funds you refill';
 
   @override
   String get goalDeleteRowDesc => 'Removes the goal, keeps the money';

@@ -3942,13 +3942,10 @@ class AppLocalizationsRu extends AppLocalizations {
   String get goalNoteLabel => 'Заметка';
 
   @override
-  String get goalNoteHint => 'Необязательно';
+  String get goalNoteHint => 'Добавить заметку';
 
   @override
   String get goalDoneOnceReached => 'Завершить по достижении';
-
-  @override
-  String get goalDoneOnceReachedDesc => 'Выключите для пополняемых фондов';
 
   @override
   String get goalDeleteRowDesc => 'Удаляет цель, деньги остаются';

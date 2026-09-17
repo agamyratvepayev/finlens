@@ -3849,14 +3849,10 @@ class AppLocalizationsTr extends AppLocalizations {
   String get goalNoteLabel => 'Not';
 
   @override
-  String get goalNoteHint => 'İsteğe bağlı';
+  String get goalNoteHint => 'Not ekle';
 
   @override
   String get goalDoneOnceReached => 'Ulaşınca tamamlanır';
-
-  @override
-  String get goalDoneOnceReachedDesc =>
-      'Yeniden dolduracağın fonlar için kapat';
 
   @override
   String get goalDeleteRowDesc => 'Hedefi siler, para kalır';
