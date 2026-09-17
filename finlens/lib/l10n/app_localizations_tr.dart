@@ -871,6 +871,17 @@ class AppLocalizationsTr extends AppLocalizations {
   String get insDebtCredit => 'Borç & alacak';
 
   @override
+  String get insDebt => 'Borç';
+
+  @override
+  String get insCredit => 'Alacak';
+
+  @override
+  String insTransferCost(Object amount) {
+    return 'Transferler bu dönem $amount komisyon ve kur farkı';
+  }
+
+  @override
   String get insRevaluation => 'Değer değişimi';
 
   @override

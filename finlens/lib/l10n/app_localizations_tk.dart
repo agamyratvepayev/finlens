@@ -868,6 +868,17 @@ class AppLocalizationsTk extends AppLocalizations {
   String get insDebtCredit => 'Bergi & alacak';
 
   @override
+  String get insDebt => 'Bergi';
+
+  @override
+  String get insCredit => 'Alacak';
+
+  @override
+  String insTransferCost(Object amount) {
+    return 'Geçirimler bu döwürde $amount komissiýa we walýuta tapawudy';
+  }
+
+  @override
   String get insRevaluation => 'Gymmat üýtgemesi';
 
   @override

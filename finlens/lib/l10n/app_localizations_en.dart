@@ -875,6 +875,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get insDebtCredit => 'Debt & credit';
 
   @override
+  String get insDebt => 'Debt';
+
+  @override
+  String get insCredit => 'Credit';
+
+  @override
+  String insTransferCost(Object amount) {
+    return 'Transfers cost $amount in fees & FX this period';
+  }
+
+  @override
   String get insRevaluation => 'Revaluation';
 
   @override

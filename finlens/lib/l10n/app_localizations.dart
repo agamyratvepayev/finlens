@@ -1422,6 +1422,24 @@ abstract class AppLocalizations {
   /// **'Debt & credit'**
   String get insDebtCredit;
 
+  /// No description provided for @insDebt.
+  ///
+  /// In en, this message translates to:
+  /// **'Debt'**
+  String get insDebt;
+
+  /// No description provided for @insCredit.
+  ///
+  /// In en, this message translates to:
+  /// **'Credit'**
+  String get insCredit;
+
+  /// No description provided for @insTransferCost.
+  ///
+  /// In en, this message translates to:
+  /// **'Transfers cost {amount} in fees & FX this period'**
+  String insTransferCost(Object amount);
+
   /// No description provided for @insRevaluation.
   ///
   /// In en, this message translates to:

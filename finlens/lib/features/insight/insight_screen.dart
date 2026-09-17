@@ -201,6 +201,7 @@ class _InsightScreenState extends State<InsightScreen> {
                       children: [
                         _Hero(report: report),
                         _Waterfall(report: report),
+                        _TransferFootnote(report: report),
                         _GroupGrid(
                           report: report,
                           expanded: _gridExpanded,
@@ -530,24 +531,27 @@ class _InsightHeader extends StatelessWidget {
           ),
           const SizedBox(width: Insets.sm),
           // The way out of the range lens sits beside the state it undoes (spec
-          // §2, mirroring the Ledger's ×): only present for a custom range.
+          // §2, mirroring the Ledger's ×): only present for a custom range. Both
+          // this and the ••• are the shared [HeaderCircleButton] (task 039 §3) —
+          // one corner control for the whole app, not a 26pt clone — so a reader
+          // switching tabs finds the same button under the same thumb.
           if (isCustom) ...[
-            _CircleButton(
+            HeaderCircleButton(
               icon: Icons.close_rounded,
               tint: AppColors.accentLight,
-              tooltip: l.insClearCustomRange,
+              semanticLabel: l.insClearCustomRange,
               onTap: onClearCustom,
             ),
-            const SizedBox(width: 7),
+            const SizedBox(width: Insets.sm),
           ],
           // The filter lives in the ••• menu (spec §3); its active cue moves onto
           // that row's icon, and the ••• itself never carries a badge (§8).
           // Masking is not here — it is a single global preference in
-          // More › Preferences (task 028), never a per-screen control.
-          _CircleButton(
+          // More › Preferences (task 028), never a per-screen control. Insight
+          // has no primary action, so the corner shows ••• alone — no + (§3).
+          HeaderCircleButton(
             icon: Icons.more_horiz_rounded,
-            tint: AppColors.textSecondary,
-            tooltip: l.a11yMoreActions,
+            semanticLabel: l.a11yMoreActions,
             onTap: () => showHeaderMenu(
               context,
               actions: [
@@ -566,44 +570,6 @@ class _InsightHeader extends StatelessWidget {
         ],
       ),
     );
-  }
-}
-
-/// A 26pt circular tool button — Insight's header clone (spec §2/§13). Smaller
-/// than the shared [ScreenHeader]'s 36pt so the range × and the ••• fit beside a
-/// long month at 320pt.
-///
-/// Intentionally *not* [HeaderCircleButton]: Insight's header is the small clone
-/// (26pt, no `+`). Do not merge the two.
-class _CircleButton extends StatelessWidget {
-  const _CircleButton({
-    required this.icon,
-    this.onTap,
-    this.tint,
-    this.tooltip,
-  });
-
-  final IconData icon;
-  final VoidCallback? onTap;
-  final Color? tint;
-  final String? tooltip;
-
-  @override
-  Widget build(BuildContext context) {
-    final button = Material(
-      color: AppColors.surfaceAlt,
-      shape: const CircleBorder(),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: SizedBox(
-          width: 26,
-          height: 26,
-          child: Icon(icon, size: 16, color: tint ?? AppColors.textPrimary),
-        ),
-      ),
-    );
-    return tooltip == null ? button : Tooltip(message: tooltip!, child: button);
   }
 }
 
@@ -1284,6 +1250,36 @@ class _Waterfall extends StatelessWidget {
       );
 }
 
+// ── Transfer footnote (task 039 §1 / spec §3.5) ──────────────────────────────
+// The waterfall's three flow columns cannot hold the transfer leak — the fee
+// and FX gap that belong to no step, so `NOW` sits below the cumulative total by
+// exactly this much (the identity `now = before + in − out + revalued` is short
+// by `leak`). Folding it into OUT would call an FX spread "spending"; moving the
+// NOW line would make the strip lie. Instead this names the cost and lets the
+// strip stay honestly open by that amount. Display-only: it reads the already
+// computed `report.leak` (transferLeakInWindow) — no figure is recomputed.
+
+class _TransferFootnote extends StatelessWidget {
+  const _TransferFootnote({required this.report});
+  final _Report report;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    if (report.leak.abs() < _Report.eps) return const SizedBox.shrink();
+    // Amount honours the privacy eye like every other figure (spec §12).
+    final amount = money(report.leak, masked: report.store.masked);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(Insets.gutter, 6, Insets.gutter, 0),
+      child: Text(
+        l.insTransferCost(amount),
+        style: const TextStyle(
+            fontSize: 11.5, height: 1.35, color: AppColors.textTertiary),
+      ),
+    );
+  }
+}
+
 // ── ③ The group grid (spec §5) ───────────────────────────────────────────────
 
 /// The movers the grid renders, and how many are hidden behind the link (spec
@@ -1729,9 +1725,29 @@ class _InsightFoot extends StatelessWidget {
   }
 }
 
-// ── ⑥ Debt & credit (spec §7) ────────────────────────────────────────────────
-// One list, not two cells. The two movement rows explain the DEBT side only;
-// under a two-column header they appeared to belong to both.
+// ── ⑥ Debt & credit (task 039 §2) ────────────────────────────────────────────
+// Two equal cells with a hairline between them (label ABOVE value); one cell
+// spans the full width when the other side is absent. The two card-movement rows
+// explain the DEBT side only, so they sit full-width BELOW the cells rather than
+// inside either column. The two-cell layout was chosen (task 039 §2) knowing it
+// reintroduces the ownership ambiguity the earlier single list was written to
+// avoid — the movements below, not beside, is the compromise.
+
+/// A debt/credit side renders when it holds a balance at either end of the
+/// window, or moved inside it (§2.1). Zero balance is not the same as nothing
+/// happened: a card borrowed against on the 3rd and cleared on the 28th ends the
+/// month at zero, yet dropping its cell would erase its only trace on this tab.
+/// [delta] is `balanceNow − balanceBefore`, so a side present only at the far
+/// end (now == 0, before ≠ 0) is caught by a non-zero delta. Pure and top-level
+/// so §2.1 is tested directly.
+bool insightSidePresent({
+  required double balanceNow,
+  required double delta,
+  required double moved,
+}) =>
+    balanceNow.abs() >= _Report.eps ||
+    delta.abs() >= _Report.eps ||
+    moved.abs() >= _Report.eps;
 
 class _DebtBlock extends StatelessWidget {
   const _DebtBlock({required this.report, required this.window});
@@ -1745,25 +1761,59 @@ class _DebtBlock extends StatelessWidget {
 
     final hasCharged = report.charged.abs() >= eps;
     final hasPaid = report.paid.abs() >= eps;
-    final showDebt = report.debtNow.abs() >= eps ||
-        report.debtDelta.abs() >= eps ||
-        hasCharged ||
-        hasPaid;
-    final showCredit =
-        report.creditNow.abs() >= eps || report.creditDelta.abs() >= eps;
+    // A side renders when it holds a balance at either end of the window, or
+    // moved inside it (§2.1). A card cleared to zero mid-month still shows — its
+    // only trace on this tab is not erased.
+    final showDebt = insightSidePresent(
+        balanceNow: report.debtNow,
+        delta: report.debtDelta,
+        // Charged and paid are positive magnitudes; either one is movement.
+        moved: report.charged + report.paid);
+    final showCredit = insightSidePresent(
+        balanceNow: report.creditNow, delta: report.creditDelta, moved: 0);
     if (!showDebt && !showCredit) return const SizedBox.shrink();
 
-    final rows = <Widget>[];
-    if (showDebt) {
-      rows.add(_sideRow(
-        context,
-        label: l.insYourDebt,
-        balance: report.debtNow,
-        delta: report.debtDelta,
-        isLiability: true,
-      ));
-      if (hasCharged) {
-        rows.add(_movementRow(
+    // The header names what is actually shown (§2.5): both, debt only, or credit
+    // only — never "Debt & credit" above a single cell.
+    final header = showDebt && showCredit
+        ? l.insDebtCredit
+        : (showDebt ? l.insDebt : l.insCredit);
+
+    final cells = <Widget>[
+      if (showDebt)
+        Expanded(
+          child: _StateCell(
+            report: report,
+            label: l.insYourDebt,
+            balance: report.debtNow,
+            delta: report.debtDelta,
+            isLiability: true,
+          ),
+        ),
+      if (showDebt && showCredit)
+        // A full-cell-height hairline. No `hairlineStrong` / rgba(255,255,255,.12)
+        // token exists; `divider` is the established in-card hairline (§2.2).
+        const SizedBox(
+          width: 1,
+          child: ColoredBox(color: AppColors.divider),
+        ),
+      if (showCredit)
+        Expanded(
+          child: _StateCell(
+            report: report,
+            label: l.insYourCredit,
+            balance: report.creditNow,
+            delta: report.creditDelta,
+            isLiability: false,
+          ),
+        ),
+    ];
+
+    // Movement rows belong to DEBT only and open the credit-cards ledger; each
+    // is omitted when its figure is zero (§2.6).
+    final movements = <Widget>[
+      if (showDebt && hasCharged)
+        _movementRow(
           context,
           title: l.insChargedToCards,
           // The debt grew: negative (bad), ▲ (up).
@@ -1771,10 +1821,9 @@ class _DebtBlock extends StatelessWidget {
           increased: true,
           // Charges are money leaving toward the cards (spec §4.2).
           flow: FlowKind.outflow,
-        ));
-      }
-      if (hasPaid) {
-        rows.add(_movementRow(
+        ),
+      if (showDebt && hasPaid)
+        _movementRow(
           context,
           title: l.insPaidToCards,
           // The debt shrank: positive (good), ▼ (down).
@@ -1782,101 +1831,40 @@ class _DebtBlock extends StatelessWidget {
           increased: false,
           // Payments are money arriving at the cards (spec §4.2).
           flow: FlowKind.inflow,
-        ));
-      }
-    }
-    if (showCredit) {
-      if (rows.isNotEmpty) rows.add(const RowDivider());
-      rows.add(_sideRow(
-        context,
-        label: l.insYourCredit,
-        balance: report.creditNow,
-        delta: report.creditDelta,
-        isLiability: false,
-      ));
-    }
+        ),
+    ];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // The section-header right edge is empty (spec §7): a delta there would
-        // repeat the one printed 20pt below, and SPENDING/INCOME carry a total,
-        // not a delta — a second grammar in one slot.
-        SectionLabel(l.insDebtCredit),
+        SectionLabel(header),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: Insets.gutter),
           child: AppCard(
             key: const Key('ins-debtlist'),
-            child: Column(children: rows),
+            // The cells and the divider paint to the card edges, so clip to the
+            // rounded corners.
+            clipBehavior: Clip.antiAlias,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // IntrinsicHeight lets the 1pt divider stretch to the taller
+                // cell's full height rather than collapsing.
+                IntrinsicHeight(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: cells,
+                  ),
+                ),
+                if (movements.isNotEmpty) ...[
+                  const RowDivider(),
+                  ...movements,
+                ],
+              ],
+            ),
           ),
         ),
       ],
-    );
-  }
-
-  Widget _sideRow(
-    BuildContext context, {
-    required String label,
-    required double balance,
-    required double delta,
-    required bool isLiability,
-  }) {
-    final l = AppLocalizations.of(context);
-    final store = report.store;
-    final unchanged = delta.abs() < _Report.eps;
-
-    final balSpoken = formatAmount(balance, null,
-        kind: AmountKind.magnitude, masked: store.masked);
-    final deltaSpoken = formatAmount(delta, null,
-        kind: AmountKind.magnitude, masked: store.masked);
-    final sentence = unchanged
-        ? l.insA11yDebtFlat(label, balSpoken)
-        : (delta > 0
-            ? l.insA11yDebtUp(label, balSpoken, deltaSpoken)
-            : l.insA11yDebtDown(label, balSpoken, deltaSpoken));
-
-    return Semantics(
-      container: true,
-      label: sentence,
-      child: ExcludeSemantics(
-        child: Padding(
-          key: const Key('ins-debtside'),
-          padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Text(label.toUpperCase(),
-                  style: const TextStyle(
-                      fontSize: 10,
-                      height: 1.0,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0.5,
-                      color: AppColors.textTertiary)),
-              const Spacer(),
-              Flexible(
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.centerRight,
-                  child: AmountText.balance(balance,
-                      style: const TextStyle(
-                          fontSize: 16,
-                          height: 1.0,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.textPrimary,
-                          fontFeatures: [FontFeature.tabularFigures()])),
-                ),
-              ),
-              const SizedBox(width: 6),
-              if (unchanged)
-                Text(l.insUnchanged,
-                    style: const TextStyle(
-                        fontSize: 11, color: AppColors.textSecondary))
-              else
-                _DeltaTag(value: delta, isLiability: isLiability),
-            ],
-          ),
-        ),
-      ),
     );
   }
 
@@ -1933,6 +1921,105 @@ class _DebtBlock extends StatelessWidget {
                     size: 16, color: AppColors.textTertiary),
               ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// One debt/credit cell: the label sits ABOVE the value (never beside it), so
+/// both cells share one grammar and mirror cleanly across the divider (§2.3).
+/// The value shrinks with a FittedBox rather than a smaller font when it must
+/// (§4). Height comes from the content, never a fixed `height:`.
+class _StateCell extends StatelessWidget {
+  const _StateCell({
+    required this.report,
+    required this.label,
+    required this.balance,
+    required this.delta,
+    required this.isLiability,
+  });
+
+  final _Report report;
+  final String label;
+  final double balance;
+  final double delta;
+  final bool isLiability;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final store = report.store;
+    final unchanged = delta.abs() < _Report.eps;
+
+    // The cell announces label, value and what the delta means in words —
+    // "your debt, 800 dollars, up 120" — never the arrow glyph's name (§4).
+    final balSpoken = formatAmount(balance, null,
+        kind: AmountKind.magnitude, masked: store.masked);
+    final deltaSpoken = formatAmount(delta, null,
+        kind: AmountKind.magnitude, masked: store.masked);
+    final sentence = unchanged
+        ? l.insA11yDebtFlat(label, balSpoken)
+        : (delta > 0
+            ? l.insA11yDebtUp(label, balSpoken, deltaSpoken)
+            : l.insA11yDebtDown(label, balSpoken, deltaSpoken));
+
+    return Semantics(
+      container: true,
+      label: sentence,
+      child: ExcludeSemantics(
+        child: Padding(
+          key: const Key('ins-debtside'),
+          padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Label token: spec table hex #8E8E93 is [textSecondary] (its Dart
+              // comment said textTertiary — resolved to the hex). No cellLabel
+              // token exists, so the style is inline like the rest of Insight.
+              Text(label.toUpperCase(),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                      fontSize: 10,
+                      height: 1.3, // ≈13pt line
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.6, // ≈ .06em at 10pt
+                      color: AppColors.textSecondary)),
+              const SizedBox(height: 3),
+              // Value + delta share a row. Centre-aligned, not baseline: the
+              // value is a FittedBox (which carries no baseline), and the old
+              // label-beside-value row paired exactly these two under
+              // CrossAxisAlignment.center and shipped — baseline here would
+              // top-align the value against the delta instead of aligning them.
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Flexible(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: AmountText.balance(balance,
+                          style: const TextStyle(
+                              fontSize: 16,
+                              height: 1.0,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.textPrimary,
+                              fontFeatures: [FontFeature.tabularFigures()])),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  if (unchanged)
+                    Text(l.insUnchanged,
+                        style: const TextStyle(
+                            fontSize: 11, color: AppColors.textSecondary))
+                  else
+                    _DeltaTag(value: delta, isLiability: isLiability),
+                ],
+              ),
+            ],
           ),
         ),
       ),

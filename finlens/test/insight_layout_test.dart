@@ -138,7 +138,11 @@ void main() {
     double h(Key k) => tester.getSize(find.byKey(k).first).height;
     expect(h(const Key('ins-waterfall')), closeTo(92, 1));
     expect(h(const Key('ins-gridcell')), closeTo(21, 1));
-    expect(h(const Key('ins-debtside')), closeTo(34, 2));
+    // Task 039 §2: the debt/credit side is now a label-ABOVE-value cell, not the
+    // old ~34pt label-beside-value row. Built from the §2.3 parts (padding 9 +
+    // label ~13 + gap 3 + value row ~16 + padding 9 ≈ 50–54); the spec's "47pt"
+    // is unreachable from those parts, so the parts (≈54) are authoritative.
+    expect(h(const Key('ins-debtside')), closeTo(52, 6));
     expect(h(const Key('ins-debtmove')), closeTo(28, 2));
     expect(h(const Key('ins-revalrow')), closeTo(44, 2.5));
     expect(h(const Key('ins-foot')), closeTo(30, 1.5));

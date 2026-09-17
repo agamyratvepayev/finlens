@@ -895,6 +895,17 @@ class AppLocalizationsRu extends AppLocalizations {
   String get insDebtCredit => 'Долги и требования';
 
   @override
+  String get insDebt => 'Долги';
+
+  @override
+  String get insCredit => 'Требования';
+
+  @override
+  String insTransferCost(Object amount) {
+    return 'Переводы: $amount на комиссии и курс за период';
+  }
+
+  @override
   String get insRevaluation => 'Переоценка';
 
   @override
