@@ -52,6 +52,13 @@ class EditScaffold extends StatelessWidget {
                 Insets.sm,
                 Insets.sm,
               ),
+              // Kept on centre alignment (task 031): Cancel and Save are Material
+              // TextButtons whose equal 48pt tap targets carry *different*
+              // internal baselines — Cancel resolves to Material's labelLarge
+              // (line height 1.43) while Save uses AppText.button (no height) and
+              // the centre slot is a shorter Text/TypePill. Baseline-aligning
+              // them would grow this header by that baseline gap (~1px), which the
+              // task's boundary forbids. The picker sheets have no such mismatch.
               child: Row(
                 children: [
                   TextButton(

@@ -216,6 +216,11 @@ class _IconPickerSheetState extends State<_IconPickerSheet> {
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
               child: Row(
+                // Different type sizes on one line: align the letters, not the
+                // boxes. Centring put the 16pt title's line box and the Cancel
+                // tap target on the same midpoint, leaving their baselines apart.
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
                 children: [
                   Expanded(
                     child: Text(l.qaIcon,

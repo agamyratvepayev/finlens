@@ -151,6 +151,11 @@ Widget _sheetHeader(BuildContext context, String title, VoidCallback onCancel) =
     Padding(
       padding: const EdgeInsets.fromLTRB(16, 14, 14, 12),
       child: Row(
+        // Different type sizes on one line: align the letters, not the boxes.
+        // Centring put the 17pt title's line box and the Cancel tap target on
+        // the same midpoint, leaving their baselines apart.
+        crossAxisAlignment: CrossAxisAlignment.baseline,
+        textBaseline: TextBaseline.alphabetic,
         children: [
           Expanded(
             child: Text(title,

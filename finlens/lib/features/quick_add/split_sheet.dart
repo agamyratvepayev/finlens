@@ -325,6 +325,11 @@ class _SplitSheetState extends State<_SplitSheet> {
   Widget _header() => Padding(
         padding: const EdgeInsets.fromLTRB(16, 14, 14, 10),
         child: Row(
+          // Different type sizes on one line: align the letters, not the boxes.
+          // Centring put the 17pt title's line box and the 14.5pt Remove/Cancel
+          // tap targets on the same midpoint, leaving their baselines apart.
+          crossAxisAlignment: CrossAxisAlignment.baseline,
+          textBaseline: TextBaseline.alphabetic,
           children: [
             Expanded(
               child: Text(AppLocalizations.of(context).ssSplit,

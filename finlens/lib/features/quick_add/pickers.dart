@@ -243,6 +243,11 @@ class _AppSheetBodyState extends State<_AppSheetBody> {
           Insets.md,
         ),
         child: Row(
+          // Different type sizes on one line: align the letters, not the boxes.
+          // Centring put a 19pt title's line box and a 44pt tap target on the
+          // same midpoint, which left their baselines ~2px apart on device.
+          crossAxisAlignment: CrossAxisAlignment.baseline,
+          textBaseline: TextBaseline.alphabetic,
           children: [
             Expanded(
               child: Text(
