@@ -163,7 +163,12 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
               onTap: () async {
                 _closeKeypad();
                 final a = await pickAccount(context, title: l.etLinkedAccount);
-                if (a != null) setState(() => _accountId = a.id);
+                // Re-validate even on cancel — the picker can delete a ref (§5).
+                if (!mounted) return;
+                setState(() {
+                  _dropDeletedRefs();
+                  if (a != null) _accountId = a.id;
+                });
               },
             ),
             FormRow(
@@ -261,16 +266,33 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
     return store.categoryById(_categoryId)?.name ?? l.etCategoryHint;
   }
 
+  /// Clears any nullable ref the form holds that no longer resolves after a
+  /// picker closes (task 033 §5). Archived items still resolve and are kept.
+  /// `_accountId` is non-nullable and cannot be cleared to a placeholder here —
+  /// its row already renders "select account" when the id fails to resolve.
+  void _dropDeletedRefs() {
+    if (_categoryId != null && _store.categoryById(_categoryId) == null) {
+      _categoryId = null;
+    }
+    if (_payToAccountId != null &&
+        _store.accountById(_payToAccountId) == null) {
+      _payToAccountId = null;
+    }
+  }
+
   Future<void> _pickDestination() async {
     _closeKeypad();
     if (!_payOut) {
       final c = await pickCategory(context, type: CategoryType.income);
-      if (c != null) {
-        setState(() {
+      // Re-validate even on cancel — the picker can delete a ref (§5).
+      if (!mounted) return;
+      setState(() {
+        _dropDeletedRefs();
+        if (c != null) {
           _categoryId = c.id;
           _payToAccountId = null;
-        });
-      }
+        }
+      });
       return;
     }
     // Pay-out: expense categories or a liability account (a transfer) (§10.4).

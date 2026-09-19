@@ -15,6 +15,12 @@ import '../quick_add/pickers.dart';
 import '../quick_add/quick_add_sheet.dart';
 import 'opening_balance_sheet.dart';
 
+/// What `EditAccountScreen` did before it popped (task 033). The screen pops
+/// itself exactly once and hands this back; what else should close is the
+/// caller's business, not the screen's — three callers want three different
+/// things.
+enum EditAccountOutcome { saved, archived, removed }
+
 /// Spec 1.5 — identity & credit details on top, visibility & removal below.
 class EditAccountScreen extends StatefulWidget {
   const EditAccountScreen({super.key, required this.accountId});
@@ -327,7 +333,7 @@ class _EditAccountScreenState extends State<EditAccountScreen> {
       paymentDue: _paymentDue,
       hidden: _hidden,
     );
-    Navigator.of(context).pop();
+    Navigator.of(context).pop(EditAccountOutcome.saved);
   }
 
   /// Spec 1.5 / 6.2 / §3 — Hide vs Archive vs Delete, spelled out in concrete
@@ -364,10 +370,11 @@ class _EditAccountScreenState extends State<EditAccountScreen> {
 
     if (!ok || !mounted) return;
     _store.removeAccount(_account);
-    // Pop Edit Account and the now-empty Account Detail behind it.
-    Navigator.of(context)
-      ..pop()
-      ..pop();
+    // Pop Edit Account exactly once, reporting what happened; whatever else
+    // should close (the scoped ledger, nothing) is the caller's call (§4).
+    Navigator.of(context).pop(
+      archiving ? EditAccountOutcome.archived : EditAccountOutcome.removed,
+    );
   }
 
   /// §3 — the "move it out first" sheet, shown instead of the archive impact

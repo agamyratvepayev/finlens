@@ -569,6 +569,28 @@ class _QuickAddScreenState extends State<QuickAddScreen>
     };
   }
 
+  /// Whether [id] still points at a real account or category (task 033 §5).
+  /// Archived items stay in the store's private lists and resolve; only a true
+  /// delete makes both lookups fail. Type-agnostic on purpose: `_fromRef` holds
+  /// a *category* for rebalance and tasks yet an *account* elsewhere, so a
+  /// slot-typed check (as `_keepRef` does) would wrongly clear a still-valid
+  /// polymorphic ref. The rule §5 states is resolution, not type.
+  bool _refResolves(AppStore store, String? id) =>
+      id != null &&
+      (store.accountById(id) != null || store.categoryById(id) != null);
+
+  /// Re-validates every ref the form holds after a picker closes (task 033 §5).
+  /// The user can delete a category or account from inside the picker, and a
+  /// form left holding its id would render an empty row and save a dangling
+  /// reference. Archived items still resolve and are deliberately kept.
+  void _dropDeletedRefs(AppStore store) {
+    if (!_refResolves(store, _fromRef)) _fromRef = null;
+    if (!_refResolves(store, _toRef)) _toRef = null;
+    if (_feeCategoryId != null && store.categoryById(_feeCategoryId) == null) {
+      _feeCategoryId = null;
+    }
+  }
+
   void _switchType(QuickAddType next) {
     final store = StoreScope.read(context);
     // The note unfocuses cleanly on a type change (inline-note spec §6): its
@@ -1328,10 +1350,16 @@ class _QuickAddScreenState extends State<QuickAddScreen>
       });
 
   Future<void> _pickFeeCategory() async {
+    final store = StoreScope.read(context);
     setState(() => _keypadOpen = false);
     final c = await pickCategory(context, type: CategoryType.expense);
-    if (c == null || !mounted) return;
-    setState(() => _feeCategoryId = c.id);
+    // Re-validate even on cancel — the user may have opened the picker only to
+    // delete a category (§5).
+    if (!mounted) return;
+    setState(() {
+      _dropDeletedRefs(store);
+      if (c != null) _feeCategoryId = c.id;
+    });
   }
 
   /// Re-defaults the rate field when the currency pair changes, and clears it
@@ -1689,23 +1717,29 @@ class _QuickAddScreenState extends State<QuickAddScreen>
       excludeId: excludeId,
       filter: filter,
     );
-    if (a == null || !mounted) return;
+    // Re-validate even on cancel — the user may have opened the picker only to
+    // delete an account (§5).
+    if (!mounted) return;
     setState(() {
-      if (isFrom) {
-        _fromRef = a.id;
-      } else {
-        _toRef = a.id;
-        if (alsoSetFrom) _fromRef = a.id;
+      _dropDeletedRefs(store);
+      if (a != null) {
+        if (isFrom) {
+          _fromRef = a.id;
+        } else {
+          _toRef = a.id;
+          if (alsoSetFrom) _fromRef = a.id;
+        }
+        _currency = a.currency;
+        // A new revalued account can change its group (revaluation vs not) and
+        // its sign, flipping the difference — drop a category that no longer
+        // fits, and clear any stale one when the account is now a revaluation
+        // (§3/§4).
+        if (_type == QuickAddType.rebalance) _reconcileRebalanceCategory(store);
       }
-      _currency = a.currency;
-      // A new revalued account can change its group (revaluation vs not) and its
-      // sign, flipping the difference — drop a category that no longer fits, and
-      // clear any stale one when the account is now a revaluation (§3/§4).
-      if (_type == QuickAddType.rebalance) _reconcileRebalanceCategory(store);
     });
     // A changed source/destination can change the currency pair; keep the rate
     // field in step (spec §2). Harmless for non-transfer types.
-    if (_type == QuickAddType.transfer) _syncTransferRateField();
+    if (a != null && _type == QuickAddType.transfer) _syncTransferRateField();
   }
 
   Future<void> _pickCategoryInto(CategoryType type,
@@ -1713,10 +1747,16 @@ class _QuickAddScreenState extends State<QuickAddScreen>
       // Task 030 §2: the sides the sheet offers. Empty (every caller but the
       // task form) keeps the single-type sheet; two entries raise the tab strip.
       List<CategoryType> types = const []}) async {
+    final store = StoreScope.read(context);
     setState(() => _keypadOpen = false);
     final c = await pickCategory(context, type: type, types: types);
-    if (c == null || !mounted) return;
-    setState(() => isFrom ? _fromRef = c.id : _toRef = c.id);
+    // Re-validate even on cancel — the user may have opened the picker only to
+    // delete a category (§5).
+    if (!mounted) return;
+    setState(() {
+      _dropDeletedRefs(store);
+      if (c != null) isFrom ? _fromRef = c.id : _toRef = c.id;
+    });
   }
 
   Future<void> _pickDate() async {

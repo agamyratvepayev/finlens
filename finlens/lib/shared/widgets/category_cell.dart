@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 
 import '../../core/models/models.dart';
 import '../../l10n/app_localizations.dart';
@@ -25,6 +26,7 @@ class CategoryCell extends StatelessWidget {
     required this.category,
     required this.selected,
     required this.onTap,
+    this.onLongPress,
     this.enabled = true,
     this.tileSize = 46,
     this.reserveTwoLines = false,
@@ -33,6 +35,13 @@ class CategoryCell extends StatelessWidget {
   final Category category;
   final bool selected;
   final VoidCallback onTap;
+
+  /// Opens the category's editor from a picker grid (task 033). Null — the
+  /// default, and what More > Categories passes — leaves the cell with exactly
+  /// the gestures it had before this field existed. Gated by [enabled] for the
+  /// same reason the tap is: a cell that is shown but not offered must not be a
+  /// second route into anything.
+  final VoidCallback? onLongPress;
 
   /// False renders the cell as chosen-but-unavailable: the `selected` fill at
   /// [_kDisabledOpacity], no tap, `enabled: false` to assistive tech. The Split
@@ -92,11 +101,21 @@ class CategoryCell extends StatelessWidget {
       enabled: enabled ? null : false,
       selected: selected,
       label: category.name,
+      // The long-press editor is swipe-only equivalent — unreachable to a screen
+      // reader — so expose it as a custom action, but only when a picker grid
+      // supplies one, leaving the management grid's semantics tree untouched.
+      customSemanticsActions: onLongPress == null
+          ? null
+          : <CustomSemanticsAction, VoidCallback>{
+              CustomSemanticsAction(
+                  label: AppLocalizations.of(context).actionEdit): onLongPress!,
+            },
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         // A used category is shown, not offered: the tap is a no-op so re-picking
         // it can't add a duplicate line (spec §1b).
         onTap: enabled ? onTap : null,
+        onLongPress: enabled ? onLongPress : null,
         child: Opacity(
           opacity: enabled ? 1 : _kDisabledOpacity,
           child: Column(

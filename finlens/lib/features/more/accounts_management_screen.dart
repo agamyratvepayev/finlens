@@ -191,8 +191,12 @@ class _AccountRow extends StatelessWidget {
       child: InkWell(
         // Tapping an active row opens Edit Account — never archives, deletes, or
         // opens a menu. Those live inside Edit Account. Pushed on the root
-        // navigator, as the Categories cell pushes its editor.
-        onTap: () => Navigator.of(context, rootNavigator: true).push(
+        // navigator, as the Categories cell pushes its editor. The outcome is
+        // awaited and discarded: this screen must stay open whatever the editor
+        // did (the list rebuilds through the store) — EditAccountScreen now pops
+        // itself exactly once, so its removal no longer drops this list too (§4).
+        onTap: () => Navigator.of(context, rootNavigator: true)
+            .push<EditAccountOutcome>(
           MaterialPageRoute(
             builder: (_) => EditAccountScreen(accountId: account.id),
           ),

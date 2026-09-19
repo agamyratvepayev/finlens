@@ -277,6 +277,34 @@ class _SplitSheetState extends State<_SplitSheet> {
     Navigator.of(context).pop(const <SplitLine>[]);
   }
 
+  /// After a picker closes, a category a line referenced may have been deleted
+  /// from inside the editor (task 033 §5). A line with a typed amount keeps its
+  /// place with its category cleared, for the user to re-pick; a blank line is
+  /// dropped. Archived categories still resolve and are kept, and the split
+  /// never falls below its one line.
+  void _dropDeletedCategories(AppStore store) {
+    var removed = false;
+    for (var i = _lines.length - 1; i >= 0; i--) {
+      final id = _lines[i].categoryId;
+      if (id == null || store.categoryById(id) != null) continue;
+      // A typed amount is a question, not scrap — never delete it silently; the
+      // last line is never removed either. Clear the dead category and stay.
+      if (!_lines[i].isBlank || _lines.length == 1) {
+        _lines[i].categoryId = null;
+      } else {
+        _lines.removeAt(i);
+        _raw.removeAt(i);
+        removed = true;
+      }
+    }
+    if (removed) {
+      _lineKeys.clear();
+      if (_active != null && _active! >= _lines.length) {
+        _active = _lines.length - 1;
+      }
+    }
+  }
+
   void _removeLine(int index) {
     setState(() {
       _lines.removeAt(index);
@@ -558,6 +586,7 @@ class _SplitSheetState extends State<_SplitSheet> {
                   child: GestureDetector(
                     behavior: HitTestBehavior.opaque,
                     onTap: () async {
+                      final store = StoreScope.read(context);
                       final c = await pickCategory(context,
                           type: widget.categoryType,
                           // This line's own category shows as selected and stays
@@ -566,9 +595,14 @@ class _SplitSheetState extends State<_SplitSheet> {
                           // no-op.
                           selectedId: line.categoryId,
                           usedIds: _usedCategoryIds(exceptIndex: index));
-                      if (c != null && mounted) {
-                        setState(() => line.categoryId = c.id);
-                      }
+                      if (!mounted) return;
+                      setState(() {
+                        // Apply the pick first, then sweep: a category deleted
+                        // and immediately re-picked in one session must survive
+                        // (§5). A cancel after a delete still sweeps the dead id.
+                        if (c != null) line.categoryId = c.id;
+                        _dropDeletedCategories(store);
+                      });
                     },
                     // Align, because `stretch` gives this cell the row's height
                     // and the label must stay on the centre line.
@@ -693,15 +727,21 @@ class _SplitSheetState extends State<_SplitSheet> {
   Future<void> _addLine() async {
     // The categories the existing lines already hold are dimmed and unselectable
     // (spec §1c): a new line can only be a category not yet in the split.
+    final store = StoreScope.read(context);
     final c = await pickCategory(context,
         type: widget.categoryType, usedIds: _usedCategoryIds());
-    if (c == null || !mounted) return;
+    if (!mounted) return;
     setState(() {
-      _lines.add(SplitLine(categoryId: c.id));
-      _raw.add(Expression.empty);
-      _active = _lines.length - 1;
+      if (c != null) {
+        _lines.add(SplitLine(categoryId: c.id));
+        _raw.add(Expression.empty);
+        _active = _lines.length - 1;
+      }
+      // This picker dims every used category, so only an unused one can be
+      // deleted here — but sweep anyway, uniformly with the other sites (§5).
+      _dropDeletedCategories(store);
     });
-    _scrollActiveIntoView();
+    if (c != null) _scrollActiveIntoView();
   }
 
   // ── Split evenly ───────────────────────────────────────────────────────────

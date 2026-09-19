@@ -555,13 +555,24 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
           // scopes there is no account to edit, so it stays inert.
           if (_scope is AccountScope)
             InkWell(
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => EditAccountScreen(
-                    accountId: (_scope as AccountScope).accountId,
+              onTap: () async {
+                final outcome =
+                    await Navigator.of(context).push<EditAccountOutcome>(
+                  MaterialPageRoute(
+                    builder: (_) => EditAccountScreen(
+                      accountId: (_scope as AccountScope).accountId,
+                    ),
                   ),
-                ),
-              ),
+                );
+                // The account this ledger is scoped to is gone or archived —
+                // this screen must not stay open on it (preserves the old
+                // double-pop behaviour now that the editor pops only itself, §4).
+                if (!mounted) return;
+                if (outcome == EditAccountOutcome.removed ||
+                    outcome == EditAccountOutcome.archived) {
+                  Navigator.of(context).pop();
+                }
+              },
               child: const Padding(
                 padding: EdgeInsets.only(right: 16, left: 8, top: 8, bottom: 8),
                 child: Icon(

@@ -332,13 +332,33 @@ class _MarkPaidSheetState extends State<_MarkPaidSheet> {
     }
   }
 
+  /// Clears the destination ref if it no longer resolves after a picker closes
+  /// (task 033 §5). `_toRef` is polymorphic — an account or a category by
+  /// [_toIsAccount] — so it is checked against the matching lookup. Archived
+  /// items still resolve and are kept. `_fromAccountId` is non-nullable and
+  /// cannot be cleared to a placeholder; its row already renders "—".
+  void _dropDeletedRefs() {
+    if (_toRef != null &&
+        (_toIsAccount
+            ? _store.accountById(_toRef) == null
+            : _store.categoryById(_toRef) == null)) {
+      _toRef = null;
+      _toIsAccount = false;
+    }
+  }
+
   Future<void> _pickFromAccount() async {
     // The row above still reads From / Into (mpFrom / mpInto, line 190); the
     // *sheet* names what the list holds, and reuses Quick Add's keys rather
     // than inventing a third pair for the same two concepts.
     final a = await pickAccount(context,
         title: _payOut ? _l.qaPaymentAccount : _l.qaIncomeAccount);
-    if (a != null) setState(() => _fromAccountId = a.id);
+    // Re-validate even on cancel — the picker can delete a ref (§5).
+    if (!mounted) return;
+    setState(() {
+      _dropDeletedRefs();
+      if (a != null) _fromAccountId = a.id;
+    });
   }
 
   AppLocalizations get _l => AppLocalizations.of(context);
@@ -346,12 +366,15 @@ class _MarkPaidSheetState extends State<_MarkPaidSheet> {
   Future<void> _pickDestination() async {
     if (!_payOut) {
       final c = await pickCategory(context, type: CategoryType.income);
-      if (c != null) {
-        setState(() {
+      // Re-validate even on cancel — the picker can delete a ref (§5).
+      if (!mounted) return;
+      setState(() {
+        _dropDeletedRefs();
+        if (c != null) {
           _toRef = c.id;
           _toIsAccount = false;
-        });
-      }
+        }
+      });
       return;
     }
     final picked = await pickPayOutDestination(context, _store);

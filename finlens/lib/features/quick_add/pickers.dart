@@ -22,6 +22,8 @@ import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/app_typography.dart';
 import '../balance/balance_screen.dart' show EmptyState;
+import '../balance/edit_account_screen.dart';
+import '../more/edit_category_screen.dart';
 import 'account_icons.dart';
 import 'icon_picker_sheet.dart';
 import 'widgets/amount_hero.dart';
@@ -574,27 +576,15 @@ class _AccountPickerBodyState extends State<_AccountPickerBody> {
                       style: AppText.label),
                 ),
                 AppCard(
+                  // The swipe action strip paints to the row's edge; clip it to
+                  // the card's rounded corners, exactly as _currencyCard does.
+                  clipBehavior: Clip.antiAlias,
                   child: Column(
                     children: [
                       for (var i = 0; i < entry.value.length; i++) ...[
-                        if (i > 0) const RowDivider(indent: Insets.md),
-                        _pickRow(
-                          context,
-                          icon: entry.value[i].displayIcon,
-                          color: entry.value[i].color,
-                          title: entry.value[i].name,
-                          // Spec 3.2 — the current balance is previewed on the
-                          // right so the user picks with context.
-                          trailing: AmountText(
-                            store.balanceOf(entry.value[i].id),
-                            currency: entry.value[i].currency,
-                            style: AppText.amount.copyWith(
-                              color: AppColors.textSecondary,
-                            ),
-                          ),
-                          onTap: () =>
-                              Navigator.of(context).pop(entry.value[i]),
-                        ),
+                        if (i > 0)
+                          const RowDivider(indent: _accountRowTextStart),
+                        _accountSwipeRow(context, store, l, entry.value[i]),
                       ],
                     ],
                   ),
@@ -605,6 +595,71 @@ class _AccountPickerBodyState extends State<_AccountPickerBody> {
         ),
       ],
     );
+  }
+
+  /// One account row: [_pickRow] wrapped in a swipe-to-Edit action, mirroring
+  /// the currency picker's [_CurrencyRow]. The tap still selects and pops; the
+  /// swipe reaches [EditAccountScreen]. There is no Delete action here —
+  /// deleting and archiving live inside the editor, which guards both (§2).
+  Widget _accountSwipeRow(
+    BuildContext context,
+    AppStore store,
+    AppLocalizations l,
+    Account account,
+  ) {
+    final row = _pickRow(
+      context,
+      icon: account.displayIcon,
+      color: account.color,
+      title: account.name,
+      // Spec 3.2 — the current balance is previewed on the right so the user
+      // picks with context. Onto the row contract's value size, keeping its
+      // tabular figures (copyWith preserves fontFeatures) and its colour.
+      trailing: AmountText(
+        store.balanceOf(account.id),
+        currency: account.currency,
+        style: AppText.amount.copyWith(
+          fontSize: RowMetrics.valueSize,
+          color: AppColors.textSecondary,
+        ),
+      ),
+      onTap: () => Navigator.of(context).pop(account),
+    );
+
+    // A swipe-only action is unreachable to a screen reader; expose it as a
+    // custom action too, exactly as _CurrencyRow does (§2.3). The row's own
+    // Semantics(button: true) and composed label are left untouched.
+    return Semantics(
+      customSemanticsActions: <CustomSemanticsAction, VoidCallback>{
+        CustomSemanticsAction(label: l.actionEdit): () =>
+            _openEditAccount(account),
+      },
+      child: SwipeActions(
+        actions: [
+          SwipeActionItem(
+            icon: Icons.edit_outlined,
+            label: l.actionEdit,
+            color: AppColors.accent,
+            onTap: () => _openEditAccount(account),
+          ),
+        ],
+        child: row,
+      ),
+    );
+  }
+
+  Future<void> _openEditAccount(Account account) async {
+    closeOpenSwipeRow();
+    await Navigator.of(context, rootNavigator: true).push<EditAccountOutcome>(
+      MaterialPageRoute(
+        builder: (_) => EditAccountScreen(accountId: account.id),
+      ),
+    );
+    // The store notifies on save/archive/remove, so this body rebuilds through
+    // its StoreScope.of subscription and the sheet re-measures on the next
+    // layout; no manual refresh needed. The sheet stays open in every outcome —
+    // only a tap on a row pops it. A caller still holding the removed id clears
+    // its own field when the picker returns (§5).
   }
 
   /// State 1 body: a heading and a direction-neutral line. Nothing else.
@@ -917,12 +972,28 @@ class _CategoryPickerBodyState extends State<_CategoryPickerBody> {
                   tileSize: tile,
                   reserveTwoLines: true,
                   onTap: () => Navigator.of(context).pop(c),
+                  onLongPress: () => _openEditCategory(c),
                 ),
               ),
           ],
         );
       },
     );
+  }
+
+  Future<void> _openEditCategory(Category category) async {
+    // The swipe rows in the sibling pickers share one open-row notifier; a
+    // long-press here must not leave one of them open behind the editor.
+    closeOpenSwipeRow();
+    HapticFeedback.lightImpact();
+    await Navigator.of(context, rootNavigator: true).push(
+      MaterialPageRoute(
+        builder: (_) => EditCategoryScreen(categoryId: category.id),
+      ),
+    );
+    // The store notifies on save/archive/delete, so this body rebuilds through
+    // its StoreScope.of subscription and `contentSized` re-measures on the next
+    // layout; no manual refresh needed.
   }
 
   /// State 1 (§1): two lines of copy and no button. `+ New` is in the header,
@@ -1625,6 +1696,22 @@ class _ScopeTab extends StatelessWidget {
   }
 }
 
+/// This sheet's row carries the account's colour tile instead of RowMetrics'
+/// 18pt monochrome glyph column, so its glyph is wider and its text starts
+/// further in. 28pt is More > Accounts' own account tile — the app's other list
+/// of the same objects — and it is the largest tile that still leaves a
+/// RowMetrics.height row with symmetric padding.
+const double _accountRowGlyph = 28.0;
+
+/// padding + glyph + gap, the same derivation as [RowMetrics.textStart].
+/// Where the name, the balance's left bound and the divider all begin.
+const double _accountRowTextStart =
+    RowMetrics.padding + _accountRowGlyph + RowMetrics.iconGap;
+
+/// What is left of [RowMetrics.height] once the glyph has taken its share,
+/// split evenly. The row is the contract's height; the padding follows.
+const double _accountRowVPad = (RowMetrics.height - _accountRowGlyph) / 2;
+
 Widget _pickRow(
   BuildContext context, {
   required IconData icon,
@@ -1642,17 +1729,20 @@ Widget _pickRow(
       onTap: onTap,
       child: Padding(
         padding: const EdgeInsets.symmetric(
-          horizontal: Insets.md,
-          vertical: Insets.md,
+          horizontal: RowMetrics.padding,
+          vertical: _accountRowVPad,
         ),
         child: Row(
           children: [
-            IconTile(icon, color: color, size: 32),
-            const SizedBox(width: Insets.md),
+            IconTile(icon, color: color, size: _accountRowGlyph),
+            const SizedBox(width: RowMetrics.iconGap),
             Expanded(
               child: Text(
                 title,
-                style: AppText.rowTitle.copyWith(fontWeight: FontWeight.w500),
+                style: AppText.rowTitle.copyWith(
+                  fontSize: RowMetrics.labelSize,
+                  fontWeight: FontWeight.w500,
+                ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
