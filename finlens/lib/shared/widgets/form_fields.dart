@@ -312,6 +312,15 @@ class ToggleRow extends StatelessWidget {
 }
 
 /// Free-text row (names, notes) rendered inline inside a [FormSection].
+///
+/// One line at [RowMetrics.height], label left and field right — the same shape
+/// as every other row in a [FormSection] (task 043 §5). It used to stack a
+/// caption over its field, which made it ~54pt and left it visibly taller than
+/// its neighbours wherever it appeared. The caption said the same words the
+/// label says now; moving them costs nothing and buys the shared rhythm.
+///
+/// The subtitled [FormRow] is the only row in the app that may exceed
+/// [RowMetrics.height]. This one no longer is.
 class TextFieldRow extends StatelessWidget {
   const TextFieldRow({
     super.key,
@@ -332,56 +341,55 @@ class TextFieldRow extends StatelessWidget {
   final Widget? trailing;
 
   /// Optional external focus node. Null (every existing caller) keeps the
-  /// TextField's own internal node — so those screens are byte-identical.
+  /// TextField's own internal node.
   final FocusNode? focusNode;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: Insets.md,
-        vertical: Insets.sm + 2,
-      ),
-      child: Row(
-        children: [
-          if (icon != null) ...[
-            SizedBox(
-              // Aligns to the shared icon column and text start (task 042 §5).
-              // TextFieldRow keeps its caption-over-field structure — its callers
-              // are labelled fields where the caption is the point — so it stays a
-              // two-line row taller than 48, the documented exception.
-              width: RowMetrics.iconColumn,
-              child: Icon(icon,
-                  size: RowMetrics.iconGlyph, color: AppColors.textSecondary),
-            ),
+    return ConstrainedBox(
+      // Stated once, as in [FormRow] — never inferred from padding around an
+      // intrinsic field.
+      constraints: const BoxConstraints(minHeight: RowMetrics.height),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: RowMetrics.padding),
+        child: Row(
+          children: [
+            if (icon != null) ...[
+              SizedBox(
+                // Aligns to the shared icon column and text start (task 042 §5).
+                width: RowMetrics.iconColumn,
+                child: Icon(icon,
+                    size: RowMetrics.iconGlyph, color: AppColors.textSecondary),
+              ),
+              const SizedBox(width: RowMetrics.iconGap),
+            ],
+            Text(label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: RowMetrics.labelSize,
+                  color: AppColors.textPrimary,
+                )),
             const SizedBox(width: RowMetrics.iconGap),
-          ],
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(label,
-                    style: AppText.caption
-                        .copyWith(fontSize: RowMetrics.subtitleSize)),
-                TextField(
-                  controller: controller,
-                  focusNode: focusNode,
-                  autofocus: autofocus,
-                  style: AppText.body.copyWith(fontSize: RowMetrics.labelSize),
-                  cursorColor: AppColors.accentSoft,
-                  decoration: InputDecoration(
-                    isDense: true,
-                    border: InputBorder.none,
-                    contentPadding: const EdgeInsets.only(top: 2),
-                    hintText: hint,
-                    hintStyle: const TextStyle(color: AppColors.textTertiary),
-                  ),
+            Expanded(
+              child: TextField(
+                controller: controller,
+                focusNode: focusNode,
+                autofocus: autofocus,
+                textAlign: TextAlign.right,
+                style: AppText.body.copyWith(fontSize: RowMetrics.labelSize),
+                cursorColor: AppColors.accentSoft,
+                decoration: InputDecoration(
+                  isCollapsed: true,
+                  border: InputBorder.none,
+                  hintText: hint,
+                  hintStyle: const TextStyle(color: AppColors.textTertiary),
                 ),
-              ],
+              ),
             ),
-          ),
-          ?trailing,
-        ],
+            ?trailing,
+          ],
+        ),
       ),
     );
   }
@@ -389,14 +397,11 @@ class TextFieldRow extends StatelessWidget {
 
 /// A free-text note on one line, at [FormRow]'s height (task 041).
 ///
-/// [TextFieldRow] stacks a caption over its field, which is right for a name or
-/// a title — the label names what the value is. A note needs no such label: the
-/// placeholder says "Add a note" and, once written, the note says it itself. So
-/// this row spends no second line on a caption and sits level with every other
-/// row in the card.
-///
-/// TextFieldRow is deliberately left alone; its four other callers are labelled
-/// fields where the caption is the point.
+/// What distinguishes this from [TextFieldRow] is not the height — both are one
+/// line at [RowMetrics.height] now — but the label: [TextFieldRow] names its
+/// value on the left, because a name or a limit means nothing without its
+/// caption. A note needs none. The placeholder says "Add note" and, once
+/// written, the note speaks for itself, so this row carries no label at all.
 class NoteRow extends StatelessWidget {
   const NoteRow({
     super.key,
@@ -410,7 +415,7 @@ class NoteRow extends StatelessWidget {
   final IconData? icon;
   final TextEditingController controller;
 
-  /// Carries the label's job. `Add a note` — not `Optional`, which describes the
+  /// Carries the label's job. `Add note` — not `Optional`, which describes the
   /// field rather than naming it.
   final String hint;
 

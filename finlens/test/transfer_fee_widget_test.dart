@@ -97,7 +97,7 @@ void main() {
     expect(find.byType(TransferFeeButton), findsNothing);
     expect(find.text('FEE'), findsOneWidget);
     expect(find.text('Remove'), findsOneWidget);
-    expect(find.text('Not set'), findsOneWidget);
+    expect(find.text('Choose category'), findsOneWidget);
   });
 
   testWidgets('tapping Rate opens no modal — no sheet, no Done (§2)',
@@ -173,7 +173,7 @@ void main() {
     await tester.tap(find.text('Fee'));
     await tester.pump();
 
-    await tester.tap(find.text('Not set')); // the category row
+    await tester.tap(find.text('Choose category')); // the category row
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
 

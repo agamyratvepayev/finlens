@@ -323,7 +323,15 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
 
   String _targetsValue(AppLocalizations l) {
     final names = [for (final id in _targets) _nameOf(id) ?? id];
-    if (names.isEmpty) return l.eaNotSet;
+    if (names.isEmpty) {
+      // One imperative per scope: the row says which thing to choose, and the
+      // scope is what decides (task 043 §3).
+      return switch (_scope) {
+        BudgetScope.categories => l.emptyChooseCategories,
+        BudgetScope.account => l.emptyChooseAccount,
+        BudgetScope.tag => l.emptyChooseTags,
+      };
+    }
     if (names.length == 1) return names.first;
     if (names.length == 2) return '${names[0]}, ${names[1]}';
     return '${names.first} +${names.length - 1}';
@@ -401,7 +409,7 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
   }
 
   String _datesValue(AppLocalizations l) {
-    if (_startDate == null || _endDate == null) return l.eaNotSet;
+    if (_startDate == null || _endDate == null) return l.emptyPickDates;
     return '${dayMonth(_startDate!, l)} – ${dayMonth(_endDate!, l)}';
   }
 

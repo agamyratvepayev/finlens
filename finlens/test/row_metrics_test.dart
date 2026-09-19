@@ -77,7 +77,7 @@ void main() {
     phone(tester);
     await tester.pumpWidget(wrap(emptyStore(), const EditGoalScreen()));
     await tester.pumpAndSettle();
-    // Target date is a plain label/value row (value "Not set", chevron).
+    // Target date is a plain label/value row (value "Pick month", chevron).
     final h = tester.getSize(rowByLabel('Target date')).height;
     expect(h, moreOrLessEquals(RowMetrics.height, epsilon: 0.5));
   });

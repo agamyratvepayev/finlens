@@ -185,7 +185,7 @@ void main() {
         .dy;
     final c2 = tester
         .getRect(find.descendant(
-            of: rowByLabel('Target date'), matching: find.text('Not set')))
+            of: rowByLabel('Target date'), matching: find.text('Pick month')))
         .center
         .dy;
     final c3 = tester
@@ -234,11 +234,11 @@ void main() {
     await tester.pumpAndSettle();
 
     final monthly = rowByLabel('Monthly');
-    // The token ("USD") and the value's hint ("Not set") share the Monthly row.
+    // The token ("USD") and the value's hint ("Enter amount") share the Monthly row.
     final tokenBase = baselineDy(
         tester, find.descendant(of: monthly, matching: find.text('USD')));
     final valueBase = baselineDy(
-        tester, find.descendant(of: monthly, matching: find.text('Not set')));
+        tester, find.descendant(of: monthly, matching: find.text('Enter amount')));
 
     expect((tokenBase - valueBase).abs(), lessThan(1.0),
         reason: 'token baseline $tokenBase vs value baseline $valueBase');

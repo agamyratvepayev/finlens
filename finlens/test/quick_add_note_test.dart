@@ -145,18 +145,18 @@ void main() {
     expect(find.text('Dinner with Aygul'), findsOneWidget);
   });
 
-  testWidgets('empty row shows "Add a note"', (tester) async {
+  testWidgets('empty row shows "Add note"', (tester) async {
     await pumpForm(tester);
-    expect(find.text('Add a note'), findsOneWidget);
+    expect(find.text('Add note'), findsOneWidget);
   });
 
   // §6 — focusing clears the qaAddNote hint: the editor holds no hint text.
-  testWidgets('focused empty field drops the "Add a note" hint',
+  testWidgets('focused empty field drops the "Add note" hint',
       (tester) async {
     await pumpForm(tester);
     await _focusNote(tester);
 
-    expect(find.text('Add a note'), findsNothing);
+    expect(find.text('Add note'), findsNothing);
     expect(find.text('What was this for?'), findsNothing); // the sheet's prompt
   });
 
@@ -208,14 +208,14 @@ void main() {
     await _setNote(tester, '');
 
     expect(find.text('Groceries'), findsNothing);
-    expect(find.text('Add a note'), findsOneWidget);
+    expect(find.text('Add note'), findsOneWidget);
   });
 
   testWidgets('whitespace-only note shows as no note', (tester) async {
     await pumpForm(tester);
     await _setNote(tester, '     ');
 
-    expect(find.text('Add a note'), findsOneWidget);
+    expect(find.text('Add note'), findsOneWidget);
   });
 
   // §1 — the threshold boundary: 280 − 229 = 51 hides it, 280 − 230 = 50

@@ -464,7 +464,7 @@ class _SplitSheetState extends State<_SplitSheet> {
         : money(line.amount!, currency: widget.currency,
             forceDecimals: true, masked: lineMasked);
     final amountLabel = line.isBlank ? l.ssUnassignedA11y : amountText;
-    final name = missing ? l.ssChooseCategory : category.name;
+    final name = missing ? l.emptyChooseCategory : category.name;
 
     return Semantics(
       container: true,
@@ -528,7 +528,7 @@ class _SplitSheetState extends State<_SplitSheet> {
                       // A line with no category names the fault in place, in
                       // amber — no separate status line (spec §8).
                       child: Text(
-                        missing ? l.ssChooseCategory : category.name,
+                        missing ? l.emptyChooseCategory : category.name,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
@@ -739,7 +739,7 @@ class _SplitSheetState extends State<_SplitSheet> {
         ? StoreScope.of(context)
                 .categoryById(_lines[_active!].categoryId)
                 ?.name ??
-            l.ssChooseCategory
+            l.emptyChooseCategory
         : '';
 
     final row = Padding(

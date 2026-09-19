@@ -145,7 +145,7 @@ class _EditAccountScreenState extends State<EditAccountScreen> {
                                 _currency,
                                 kind: AmountKind.magnitude,
                               )
-                            : l.eaNotSet,
+                            : l.emptySetBalance,
                         showChevron: true,
                         // showOpeningBalanceSheet raises a bottom sheet.
                         opensSheet: true,
@@ -176,7 +176,7 @@ class _EditAccountScreenState extends State<EditAccountScreen> {
                             icon: Icons.receipt_long_rounded,
                             label: l.eaStatementDay,
                             value: _statementDay == null
-                                ? l.eaNotSet
+                                ? l.emptyPickDay
                                 : ordinalDay(_statementDay!, AppLocalizations.of(context)),
                             showChevron: true,
                             // _pickDay raises a bottom sheet.
@@ -190,7 +190,7 @@ class _EditAccountScreenState extends State<EditAccountScreen> {
                             icon: Icons.event_available_rounded,
                             label: l.eaPaymentDue,
                             value: _paymentDue == null
-                                ? l.eaNotSet
+                                ? l.emptyPickDay
                                 : ordinalDay(_paymentDue!, AppLocalizations.of(context)),
                             showChevron: true,
                             // _pickDay raises a bottom sheet.

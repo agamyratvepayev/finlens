@@ -77,18 +77,18 @@ void main() {
     phone(tester);
     await tester.pumpWidget(wrap(AppStore.empty(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)))));
 
-    // Untouched: both halves read "Not set" and the caption is the "either" line.
+    // Untouched: the caption is the "either" line.
     expect(find.text('Set either one — the other follows.'), findsOneWidget);
 
     await tester.enterText(fieldInRow('Target amount'), '12000');
     await tester.enterText(fieldInRow('Monthly'), '500');
     await tester.pump();
 
-    // The date is now derived: its value is no longer "Not set", and the caption
-    // flipped to the monthly-drives-date wording.
+    // The date is now derived: its value is no longer the "Pick month"
+    // placeholder, and the caption flipped to the monthly-drives-date wording.
     expect(find.text('The date follows the monthly amount.'), findsOneWidget);
     final dateVal = valueTextOf(tester, 'Target date');
-    expect(dateVal.data, isNot('Not set'));
+    expect(dateVal.data, isNot('Pick month'));
     // The derived row is dimmed (label + value in the secondary tone).
     expect(dateVal.style?.color, AppColors.textSecondary);
   });
@@ -138,7 +138,7 @@ void main() {
     expect(editable.focusNode.hasFocus, isTrue);
   });
 
-  testWidgets('Watching and Monthly read "Not set" and no instruction leaks in',
+  testWidgets('Watching and Monthly name their action and no instruction leaks in',
       (tester) async {
     phone(tester);
     await tester.pumpWidget(wrap(AppStore.empty(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)))));
@@ -148,12 +148,15 @@ void main() {
     expect(find.text('Set a monthly amount'), findsNothing);
     expect(find.text('Set a date, or a monthly amount'), findsNothing);
 
-    // Watching shows "Not set"…
-    expect(find.descendant(of: rowByLabel('Watching'), matching: find.text('Not set')),
-        findsOneWidget);
-    // …and so does Monthly (as its placeholder).
+    // Watching names its action — "Choose source" (task 043 §3)…
     expect(
-        find.descendant(of: rowByLabel('Monthly'), matching: find.text('Not set')),
+        find.descendant(
+            of: rowByLabel('Watching'), matching: find.text('Choose source')),
+        findsOneWidget);
+    // …and Monthly's placeholder reads "Enter amount".
+    expect(
+        find.descendant(
+            of: rowByLabel('Monthly'), matching: find.text('Enter amount')),
         findsOneWidget);
   });
 
@@ -201,10 +204,10 @@ void main() {
             w.style?.color == AppColors.textTertiary))
         .right;
 
-    // The Target date value ("Not set") — right-aligned to the same edge.
+    // The Target date value ("Pick month") — right-aligned to the same edge.
     final dateValRight = tester
         .getRect(find.descendant(
-            of: rowByLabel('Target date'), matching: find.text('Not set')))
+            of: rowByLabel('Target date'), matching: find.text('Pick month')))
         .right;
 
     expect(codeRight, closeTo(chipRight, 0.5));
@@ -311,12 +314,13 @@ void main() {
 
   // ── The Watching row's value, three states (§1) ─────────────────────────────
 
-  testWidgets('Watching · nothing picked → "Not set", no chip', (tester) async {
+  testWidgets('Watching · nothing picked → "Choose source", no chip',
+      (tester) async {
     phone(tester);
     await tester.pumpWidget(wrap(AppStore.empty(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)))));
 
     final row = rowByLabel('Watching');
-    expect(find.descendant(of: row, matching: find.text('Not set')),
+    expect(find.descendant(of: row, matching: find.text('Choose source')),
         findsOneWidget);
     // No account chip before a source is chosen.
     expect(

@@ -519,7 +519,50 @@
   "eaCreditLimit": "Credit limit",
   "eaStatementDay": "Statement day",
   "eaPaymentDue": "Payment due",
-  "eaNotSet": "Not set",
+  "emptyChooseAccount": "Choose account",
+  "@emptyChooseAccount": {
+    "description": "Empty-row placeholder for a required account field, imperative, no article."
+  },
+  "emptyChooseCategory": "Choose category",
+  "@emptyChooseCategory": {
+    "description": "Empty-row placeholder for a required single-category field, imperative, no article."
+  },
+  "emptyChooseCategories": "Choose categories",
+  "@emptyChooseCategories": {
+    "description": "Empty-row placeholder for a required multi-category field, imperative, no article."
+  },
+  "emptyChooseTags": "Choose tags",
+  "@emptyChooseTags": {
+    "description": "Empty-row placeholder for a required tags field, imperative, no article."
+  },
+  "emptyChooseSource": "Choose source",
+  "@emptyChooseSource": {
+    "description": "Empty-row placeholder for a required source field (goal funding), imperative, no article."
+  },
+  "emptyEnterAmount": "Enter amount",
+  "@emptyEnterAmount": {
+    "description": "Empty-row placeholder for a required amount field, imperative, no article."
+  },
+  "emptyPickMonth": "Pick month",
+  "@emptyPickMonth": {
+    "description": "Empty-row placeholder for a required month field, imperative, no article."
+  },
+  "emptyPickDay": "Pick day",
+  "@emptyPickDay": {
+    "description": "Empty-row placeholder for a required day field, imperative, no article."
+  },
+  "emptyPickDates": "Pick dates",
+  "@emptyPickDates": {
+    "description": "Empty-row placeholder for a required date-range field, imperative, no article."
+  },
+  "emptySetBalance": "Set balance",
+  "@emptySetBalance": {
+    "description": "Empty-row placeholder for a required opening-balance field, imperative, no article."
+  },
+  "pkNothingYet": "Nothing here yet",
+  "@pkNothingYet": {
+    "description": "Shown inside a picker that has no items to list — an empty list, not an unset value."
+  },
   "eaHideFromBalance": "Hide from Balance",
   "eaHideDesc": "Kept in totals, hidden from lists",
   "eaRemoveThisAccount": "Remove this account",
@@ -971,7 +1014,7 @@
   "qaTag": "Tags",
   "qaNone": "None",
   "qaNote": "Note",
-  "qaAddNote": "Add a note",
+  "qaAddNote": "Add note",
   "qaNotePlaceholder": "What was this for?",
   "qaSplitCategories": "{count} categories",
   "@qaSplitCategories": { "placeholders": { "count": {} } },
@@ -1111,7 +1154,6 @@
   "ssRemove": "Remove",
   "ssRemoveSplitA11y": "Remove split",
   "ssAddLine": "Add a line",
-  "ssChooseCategory": "Choose a category",
   "ssSplitEvenly": "Split evenly",
   "ssFullyAssigned": "Fully assigned",
   "ssOverAssignedBy": "Over-assigned by",

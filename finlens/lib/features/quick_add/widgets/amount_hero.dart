@@ -61,10 +61,13 @@ abstract final class AmountEntry {
   /// nothing else states the unit. A currency that has a symbol always shows
   /// the symbol, chip or no chip.
   ///
-  /// `rest` is now only the empty field's placeholder `0` (painted dim). Once a
-  /// digit is typed the whole number lives in `typed` and `rest` is empty — no
-  /// decimal places appear before the digits that fill them (§2). The tuple
-  /// shape is kept so the caret still sits between the two spans.
+  /// Decimals follow one rule, shared with [splitPlain] (task 043 §4): no
+  /// decimal point typed means no decimals at all, and a decimal point typed
+  /// means the field is completed to the currency's own width with dim zeros.
+  /// Dim has always meant "not typed yet" here, and that is exactly what those
+  /// zeros are. `rest` carries the empty field's placeholder `0`, or that dim
+  /// completion; the tuple shape is kept so the caret still sits between the two
+  /// spans.
   static ({String typed, String rest}) split(
     String raw,
     String currency, {
@@ -90,7 +93,8 @@ abstract final class AmountEntry {
       post = '';
     }
 
-    // Empty: the whole placeholder is the dim `rest` — `$0`, `0₼`, `0` (§1/§2).
+    // Empty: the whole placeholder is the dim `rest` — `$0`, `0₼`, `0`. No
+    // point has been typed, so there are no decimals to show (§4).
     if (raw.isEmpty) return (typed: '', rest: '${pre}0$post');
 
     final dot = raw.indexOf('.');
@@ -98,26 +102,38 @@ abstract final class AmountEntry {
     final decimals = dot < 0 ? '' : raw.substring(dot + 1);
     final grouped = _group(whole.isEmpty ? '0' : whole);
 
-    // Only what was typed: a trailing dot and a lone decimal survive verbatim
-    // (`2,000.`, `2,000.5`); nothing is padded to two places (§2).
-    final body = dot < 0 ? grouped : '$grouped.$decimals';
-    return (typed: '$pre$body$post', rest: '');
+    // A whole number stays whole: `100000` is `100,000`, never `100,000.00`.
+    if (dot < 0) return (typed: '$pre$grouped$post', rest: '');
+
+    // The point exists, so the decimal field exists and is completed to the
+    // currency's width: `100,000.` → `100,000.` + dim `00`, `100,000.5` →
+    // `100,000.5` + dim `0`, `100,000.95` → nothing dim.
+    final pad = def.decimals - decimals.length;
+    final padding = pad > 0 ? '0' * pad : '';
+    if (padding.isEmpty) {
+      return (typed: '$pre$grouped.$decimals$post', rest: '');
+    }
+    // A trailing symbol joins the dim run rather than being stranded bright on
+    // the far side of it — the hero paints two spans, not three, and the empty
+    // placeholder above already dims its token for the same reason. The symbol
+    // returns to full brightness the moment the number is complete.
+    return (typed: '$pre$grouped.$decimals', rest: '$padding$post');
   }
 
   /// The typed/untyped split **without a currency token**, for rows that carry
   /// the unit in a chip beside the number.
   ///
-  /// [split] prefixes the symbol and assumes two decimal places; this one does
-  /// neither and takes the count from `currencyDef(currency).decimals`, so a JPY
-  /// row pads nothing and a dinar row pads three.
+  /// Same decimal rule as [split] — no point, no decimals; a point, a completed
+  /// field — and the same `currencyDef(currency).decimals` width, so a JPY row
+  /// pads nothing and a dinar row pads three. It differs from [split] in one
+  /// thing only: no symbol or code is attached here.
   static ({String typed, String rest}) splitPlain(String raw, String currency) {
     final def = currencyDef(currency);
-    final zeros = def.decimals > 0 ? '.${'0' * def.decimals}' : '';
-    if (raw.isEmpty) return (typed: '', rest: '0$zeros');
+    if (raw.isEmpty) return (typed: '', rest: '0');
     final dot = raw.indexOf('.');
     final wholeRaw = dot < 0 ? raw : raw.substring(0, dot);
     final whole = _group(wholeRaw.isEmpty ? '0' : wholeRaw);
-    if (dot < 0) return (typed: whole, rest: zeros);
+    if (dot < 0) return (typed: whole, rest: '');
     final decs = raw.substring(dot + 1);
     final pad = def.decimals - decs.length;
     return (typed: '$whole.$decs', rest: pad > 0 ? '0' * pad : '');

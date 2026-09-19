@@ -15,7 +15,7 @@ import 'package:finlens/theme/app_theme.dart';
 //   flutter test test/task_form_rework_test.dart
 //
 // Covers the New-Task form rework (§1–§6): the hero label sits above its field,
-// the three optional rows read "Not set", no Remind control exists in either
+// the three required rows name their action (task 043 §3), no Remind control exists in either
 // screen, Quick Add writes null reminders, an edit preserves stored reminders,
 // Repeat opens the transaction sheet and reads one word, and the toggle bar is
 // absent for tasks but present where it still belongs.
@@ -92,13 +92,18 @@ void main() {
     });
   });
 
-  group('§2 · empty optional rows read "Not set"', () {
-    testWidgets('Amount, Account and Category all read Not set', (tester) async {
+  group('§2 · empty optional rows name their action', () {
+    testWidgets('Amount, Account and Category each read their imperative',
+        (tester) async {
       await _openTask(tester, _store());
-      // Amount, Account, Category — the note reads "Add note", the due date has
-      // a value, so exactly three "Not set" values render.
-      expect(find.text('Not set'), findsNWidgets(3));
+      // Each empty required row names the action that fills it (task 043 §3):
+      // Amount → Enter amount, Account → Choose account, Category → Choose
+      // category. The note reads "Add note" and the due date has a value.
+      expect(find.text('Enter amount'), findsOneWidget);
+      expect(find.text('Choose account'), findsOneWidget);
+      expect(find.text('Choose category'), findsOneWidget);
       // The old vocabulary is gone from this form.
+      expect(find.text('Not set'), findsNothing);
       expect(find.text('None'), findsNothing);
     });
   });

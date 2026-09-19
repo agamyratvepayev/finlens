@@ -1525,7 +1525,9 @@ class _BudgetTargetsSheetState extends State<_BudgetTargetsSheet> {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(Insets.xl),
-          child: Text(AppLocalizations.of(context).eaNotSet,
+          // Not "Not set": an empty list is not an unset value. The picker has
+          // nothing to offer, which is a different sentence (task 043 §3).
+          child: Text(AppLocalizations.of(context).pkNothingYet,
               style: AppText.caption.copyWith(color: AppColors.textSecondary)),
         ),
       );
@@ -3622,8 +3624,14 @@ class _AddCurrencyFormState extends State<_AddCurrencyForm> {
                 ),
               const SizedBox(height: Insets.lg),
               // Preview row — reflects code, symbol, position and decimals live.
+              // It is a row like the ones above it and takes their height, stated
+              // the same way (task 043 §5): `EdgeInsets.all(Insets.md)` made it
+              // 44 against the format card's 48.
               Container(
-                padding: const EdgeInsets.all(Insets.md),
+                constraints:
+                    const BoxConstraints(minHeight: RowMetrics.height),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: RowMetrics.padding),
                 decoration: BoxDecoration(
                   color: AppColors.sheetCard,
                   borderRadius: BorderRadius.circular(11),
@@ -3632,14 +3640,15 @@ class _AddCurrencyFormState extends State<_AddCurrencyForm> {
                   children: [
                     Text(l.curPreview,
                         style: const TextStyle(
-                            fontSize: 14.5, color: AppColors.textSecondary)),
+                            fontSize: RowMetrics.labelSize,
+                            color: AppColors.textSecondary)),
                     const Spacer(),
                     // 14.5, not 16: weight and colour carry the emphasis, so the
                     // sheet's most important figure is not also its tallest row
                     // (§1).
                     Text(preview,
                         style: const TextStyle(
-                            fontSize: 14.5,
+                            fontSize: RowMetrics.valueSize,
                             fontWeight: FontWeight.w600,
                             color: AppColors.textPrimary)),
                   ],
@@ -3864,11 +3873,15 @@ class _AddCurrencyFormState extends State<_AddCurrencyForm> {
       Container(height: 1, color: Colors.white.withValues(alpha: 0.07));
 
   /// A single-line editable row inside the format card, the same height as a
-  /// [FormRow] (§1/§2): the label on the left, a right-aligned field on the
-  /// right, sharing FormRow's `Insets.md` padding, 14.5pt text and `accentSoft`
+  /// [FormRow] (task 042, task 043 §5): the label on the left, a right-aligned
+  /// field on the right, sharing FormRow's padding, 14.5pt text and `accentSoft`
   /// cursor. It replaces the old caption-over-value `_miniField`, which stood
   /// twice as tall. Locked fields are plain [FormRow]s, so this never needs a
   /// read-only branch.
+  ///
+  /// The height is stated, not inferred from `Insets.md` padding around an
+  /// intrinsic TextField — that arithmetic produced 44, not 48, and made this
+  /// card run four different heights down five consecutive rows.
   Widget _inlineTextRow({
     Key? rowKey,
     required String label,
@@ -3877,65 +3890,80 @@ class _AddCurrencyFormState extends State<_AddCurrencyForm> {
     List<TextInputFormatter>? formatters,
     TextCapitalization textCapitalization = TextCapitalization.none,
   }) {
-    return Padding(
+    return ConstrainedBox(
       key: rowKey,
-      padding: const EdgeInsets.symmetric(
-          horizontal: Insets.md, vertical: Insets.md),
-      child: Row(
-        children: [
-          Text(label,
-              style: AppText.body
-                  .copyWith(fontSize: 14.5, color: AppColors.textPrimary)),
-          const SizedBox(width: Insets.md),
-          Expanded(
-            child: TextField(
-              controller: controller,
-              inputFormatters: formatters,
-              textCapitalization: textCapitalization,
-              textAlign: TextAlign.right,
-              style: AppText.body.copyWith(fontSize: 14.5),
-              cursorColor: AppColors.accentSoft,
-              decoration: InputDecoration(
-                isCollapsed: true,
-                border: InputBorder.none,
-                hintText: hint,
-                hintStyle: const TextStyle(color: AppColors.textTertiary),
+      constraints: const BoxConstraints(minHeight: RowMetrics.height),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: RowMetrics.padding),
+        child: Row(
+          children: [
+            Text(label,
+                style: AppText.body.copyWith(
+                    fontSize: RowMetrics.labelSize,
+                    color: AppColors.textPrimary)),
+            const SizedBox(width: RowMetrics.iconGap),
+            Expanded(
+              child: TextField(
+                controller: controller,
+                inputFormatters: formatters,
+                textCapitalization: textCapitalization,
+                textAlign: TextAlign.right,
+                style: AppText.body.copyWith(fontSize: RowMetrics.labelSize),
+                cursorColor: AppColors.accentSoft,
+                decoration: InputDecoration(
+                  isCollapsed: true,
+                  border: InputBorder.none,
+                  hintText: hint,
+                  hintStyle: const TextStyle(color: AppColors.textTertiary),
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
-  /// The Position row (§1): the label plus the existing [SegmentedPicker],
-  /// right-aligned. The picker carries its own ~40pt height, so this row takes a
-  /// reduced 2pt vertical padding to land level with the FormRows around it —
-  /// equal height, not equal padding.
+  /// The Position row (task 043 §2): the label on the left, the existing
+  /// [SegmentedPicker] hard against the right edge.
+  ///
+  /// `Expanded`, not `Flexible`. A Flexible label takes only the width it needs
+  /// and the Row's default `MainAxisAlignment.start` then parks the picker right
+  /// after the text, which is what made this the one control on the card that
+  /// did not line up with the values above it.
+  ///
+  /// The height is stated, not inferred. The picker carries its own ~41pt, so a
+  /// vertical padding chosen to "land level" is a guess — and it was 3pt short.
+  /// A [ConstrainedBox] at [RowMetrics.height] with no vertical padding makes
+  /// this row exactly as tall as every [FormRow] beside it (task 042's contract).
   Widget _positionRow(AppLocalizations l) {
-    return Padding(
+    return ConstrainedBox(
       key: const Key('curRowPosition'),
-      padding: const EdgeInsets.symmetric(horizontal: Insets.md, vertical: 2),
-      child: Row(
-        children: [
-          Flexible(
-            child: Text(l.curPosition,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: AppText.body
-                    .copyWith(fontSize: 14.5, color: AppColors.textPrimary)),
-          ),
-          const SizedBox(width: Insets.md),
-          SizedBox(
-            width: 168,
-            child: SegmentedPicker<bool>(
-              values: const [true, false],
-              labelOf: (v) => v ? l.curPosBefore : l.curPosAfter,
-              selected: _before,
-              onChanged: (v) => setState(() => _before = v),
+      constraints: const BoxConstraints(minHeight: RowMetrics.height),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: RowMetrics.padding),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(l.curPosition,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppText.body.copyWith(
+                      fontSize: RowMetrics.labelSize,
+                      color: AppColors.textPrimary)),
             ),
-          ),
-        ],
+            const SizedBox(width: RowMetrics.iconGap),
+            SizedBox(
+              width: 168,
+              child: SegmentedPicker<bool>(
+                values: const [true, false],
+                labelOf: (v) => v ? l.curPosBefore : l.curPosAfter,
+                selected: _before,
+                onChanged: (v) => setState(() => _before = v),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

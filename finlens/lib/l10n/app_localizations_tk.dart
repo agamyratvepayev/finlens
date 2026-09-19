@@ -1500,7 +1500,37 @@ class AppLocalizationsTk extends AppLocalizations {
   String get eaPaymentDue => 'Töleg möhleti';
 
   @override
-  String get eaNotSet => 'Bellenmedik';
+  String get emptyChooseAccount => 'Hasap saýla';
+
+  @override
+  String get emptyChooseCategory => 'Kategoriýa saýla';
+
+  @override
+  String get emptyChooseCategories => 'Kategoriýalary saýla';
+
+  @override
+  String get emptyChooseTags => 'Bellikleri saýla';
+
+  @override
+  String get emptyChooseSource => 'Çeşme saýla';
+
+  @override
+  String get emptyEnterAmount => 'Möçber giriziň';
+
+  @override
+  String get emptyPickMonth => 'Aý saýla';
+
+  @override
+  String get emptyPickDay => 'Gün saýla';
+
+  @override
+  String get emptyPickDates => 'Seneleri saýla';
+
+  @override
+  String get emptySetBalance => 'Balans giriziň';
+
+  @override
+  String get pkNothingYet => 'Heniz hiç zat ýok';
 
   @override
   String get eaHideFromBalance => 'Balansdan gizle';
@@ -3231,9 +3261,6 @@ class AppLocalizationsTk extends AppLocalizations {
 
   @override
   String get ssAddLine => 'Setir goş';
-
-  @override
-  String get ssChooseCategory => 'Kategoriýa saýla';
 
   @override
   String get ssSplitEvenly => 'Deň böl';

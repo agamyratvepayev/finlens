@@ -114,7 +114,7 @@ void main() {
     expect(fontSize, closeTo(17 * s * 1.0, 0.01));
   });
 
-  testWidgets('the chip keeps one identical width at \$0.00 and twelve digits',
+  testWidgets('the chip keeps one identical width at \$0 and twelve digits',
       (tester) async {
     await _pump(tester, _s320);
     final empty = _chipSize(tester);
@@ -165,7 +165,7 @@ void main() {
   });
 
   testWidgets("the label's global x equals From's global x", (tester) async {
-    // Default $0.00: the label is present, so the columns can be compared.
+    // Default $0: the label is present, so the columns can be compared.
     await _pump(tester, _s393);
     final amountX = tester.getRect(find.text('Amount')).left;
     final fromX = tester.getRect(find.text('From')).left;

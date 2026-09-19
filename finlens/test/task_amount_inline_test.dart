@@ -11,8 +11,10 @@ import 'package:finlens/theme/app_colors.dart';
 /// Task 007 — the New-task amount is typed in place, on the docked keypad, not
 /// on a bottom-sheet text prompt.
 
-/// The old `_StartingBalanceRow._parts()` verbatim, kept here so the parity test
-/// proves [AmountEntry.splitPlain] reproduces it byte for byte.
+/// A reference implementation of the task 043 §4 rule, kept here so the parity
+/// test proves [AmountEntry.splitPlain] reproduces it byte for byte: no decimal
+/// point typed means no decimals at all; a point typed completes the field to
+/// the currency's width with dim zeros.
 ({String typed, String rest}) legacyParts(String raw, String currency) {
   String group(String digits) {
     final buf = StringBuffer();
@@ -27,13 +29,11 @@ import 'package:finlens/theme/app_colors.dart';
     'JPY' => 0,
     _ => 2,
   };
-  final zeros = decimals > 0 ? '.${'0' * decimals}' : '';
-  if (raw.isEmpty) return (typed: '', rest: '0$zeros');
+  if (raw.isEmpty) return (typed: '', rest: '0');
   final dot = raw.indexOf('.');
-  final whole = group((dot < 0 ? raw : raw.substring(0, dot)).isEmpty
-      ? '0'
-      : (dot < 0 ? raw : raw.substring(0, dot)));
-  if (dot < 0) return (typed: whole, rest: zeros);
+  final wholeSrc = dot < 0 ? raw : raw.substring(0, dot);
+  final whole = group(wholeSrc.isEmpty ? '0' : wholeSrc);
+  if (dot < 0) return (typed: whole, rest: '');
   final decs = raw.substring(dot + 1);
   final pad = decimals - decs.length;
   return (typed: '$whole.$decs', rest: pad > 0 ? '0' * pad : '');
@@ -62,16 +62,18 @@ TextSpan _valueSpan(WidgetTester tester) {
 
 void main() {
   group('AmountEntry.splitPlain', () {
-    test('USD groups thousands and pads to two decimals', () {
+    test('USD groups thousands; decimals appear only after a point is typed', () {
       ({String typed, String rest}) s(String raw) =>
           AmountEntry.splitPlain(raw, 'USD');
-      expect(s(''), (typed: '', rest: '0.00'));
-      expect(s('0'), (typed: '0', rest: '.00'));
+      // No point typed → no decimals; empty field is a bare dim 0 (task 043 §4).
+      expect(s(''), (typed: '', rest: '0'));
+      expect(s('0'), (typed: '0', rest: ''));
+      expect(s('12'), (typed: '12', rest: ''));
+      expect(s('1234567'), (typed: '1,234,567', rest: ''));
+      // A point typed → the field exists and is completed with dim zeros.
       expect(s('0.'), (typed: '0.', rest: '00'));
-      expect(s('12'), (typed: '12', rest: '.00'));
       expect(s('12.3'), (typed: '12.3', rest: '0'));
       expect(s('12.34'), (typed: '12.34', rest: ''));
-      expect(s('1234567'), (typed: '1,234,567', rest: '.00'));
     });
 
     test('JPY pads nothing (zero decimals)', () {
@@ -83,7 +85,7 @@ void main() {
       expect(s('1234567'), (typed: '1,234,567', rest: ''));
     });
 
-    test('reproduces the old _StartingBalanceRow._parts() output', () {
+    test('matches the task 043 §4 reference implementation', () {
       for (final currency in ['USD', 'JPY']) {
         for (final raw in ['', '0', '0.', '12', '12.3', '12.34', '1234567']) {
           expect(AmountEntry.splitPlain(raw, currency), legacyParts(raw, currency),
@@ -130,21 +132,21 @@ void main() {
       expect(find.textContaining('120', findRichText: true), findsOneWidget);
     });
 
-    testWidgets('the four states show Not set and the chip correctly',
+    testWidgets('the four states show Enter amount and the chip correctly',
         (tester) async {
       await tester.pumpWidget(_taskApp(buildSeedStore()));
       await _settle(tester);
 
-      // empty, unfocused
-      expect(find.text('Not set'), findsOneWidget);
+      // empty, unfocused — the imperative names the action (task 043 §3)
+      expect(find.text('Enter amount'), findsOneWidget);
       expect(find.byType(CurrencyChip), findsNothing);
 
-      // empty, focused
+      // empty, focused — a bare dim 0, no `.00` before a point is typed (§4)
       await tester.tap(find.text('Amount'));
       await _settle(tester);
-      expect(find.text('Not set'), findsNothing);
+      expect(find.text('Enter amount'), findsNothing);
       expect(find.byType(CurrencyChip), findsOneWidget);
-      expect(find.textContaining('0.00', findRichText: true), findsOneWidget);
+      expect(_valueSpan(tester).toPlainText(), '0');
 
       // filled, focused
       await tester.tap(find.text('1'));
@@ -156,7 +158,7 @@ void main() {
       await _settle(tester);
       expect(find.byType(CurrencyChip), findsOneWidget);
       expect(find.byType(NumericKeypad), findsNothing);
-      expect(find.text('Not set'), findsNothing);
+      expect(find.text('Enter amount'), findsNothing);
     });
 
     testWidgets('dim rule: filled+unfocused is all bright, focused keeps a pale tail',
@@ -166,7 +168,9 @@ void main() {
 
       await tester.tap(find.text('Amount'));
       await _settle(tester);
-      for (final k in ['1', '2']) {
+      // A decimal point opens the field; the completion behind it is dim (§4) —
+      // "12." typed, "00" untyped. Without the point there is no tail at all.
+      for (final k in ['1', '2', '.']) {
         await tester.tap(find.text(k));
         await tester.pump();
       }
@@ -176,8 +180,8 @@ void main() {
           .children!
           .whereType<TextSpan>()
           .toList();
-      expect(spans.first.style!.color, AppColors.textPrimary); // typed "12"
-      expect(spans.last.style!.color, AppColors.textTertiary); // ".00" pale
+      expect(spans.first.style!.color, AppColors.textPrimary); // typed "12."
+      expect(spans.last.style!.color, AppColors.textTertiary); // "00" pale
 
       // Unfocused: the whole number is bright.
       await tester.tap(find.byType(TextField).first);

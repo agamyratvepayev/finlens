@@ -2314,11 +2314,71 @@ abstract class AppLocalizations {
   /// **'Payment due'**
   String get eaPaymentDue;
 
-  /// No description provided for @eaNotSet.
+  /// Empty-row placeholder for a required account field, imperative, no article.
   ///
   /// In en, this message translates to:
-  /// **'Not set'**
-  String get eaNotSet;
+  /// **'Choose account'**
+  String get emptyChooseAccount;
+
+  /// Empty-row placeholder for a required single-category field, imperative, no article.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose category'**
+  String get emptyChooseCategory;
+
+  /// Empty-row placeholder for a required multi-category field, imperative, no article.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose categories'**
+  String get emptyChooseCategories;
+
+  /// Empty-row placeholder for a required tags field, imperative, no article.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose tags'**
+  String get emptyChooseTags;
+
+  /// Empty-row placeholder for a required source field (goal funding), imperative, no article.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose source'**
+  String get emptyChooseSource;
+
+  /// Empty-row placeholder for a required amount field, imperative, no article.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter amount'**
+  String get emptyEnterAmount;
+
+  /// Empty-row placeholder for a required month field, imperative, no article.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick month'**
+  String get emptyPickMonth;
+
+  /// Empty-row placeholder for a required day field, imperative, no article.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick day'**
+  String get emptyPickDay;
+
+  /// Empty-row placeholder for a required date-range field, imperative, no article.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick dates'**
+  String get emptyPickDates;
+
+  /// Empty-row placeholder for a required opening-balance field, imperative, no article.
+  ///
+  /// In en, this message translates to:
+  /// **'Set balance'**
+  String get emptySetBalance;
+
+  /// Shown inside a picker that has no items to list — an empty list, not an unset value.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing here yet'**
+  String get pkNothingYet;
 
   /// No description provided for @eaHideFromBalance.
   ///
@@ -4375,7 +4435,7 @@ abstract class AppLocalizations {
   /// No description provided for @qaAddNote.
   ///
   /// In en, this message translates to:
-  /// **'Add a note'**
+  /// **'Add note'**
   String get qaAddNote;
 
   /// No description provided for @qaNotePlaceholder.
@@ -5115,12 +5175,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Add a line'**
   String get ssAddLine;
-
-  /// No description provided for @ssChooseCategory.
-  ///
-  /// In en, this message translates to:
-  /// **'Choose a category'**
-  String get ssChooseCategory;
 
   /// No description provided for @ssSplitEvenly.
   ///

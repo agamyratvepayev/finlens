@@ -1499,7 +1499,37 @@ class AppLocalizationsTr extends AppLocalizations {
   String get eaPaymentDue => 'Son ödeme günü';
 
   @override
-  String get eaNotSet => 'Ayarlanmadı';
+  String get emptyChooseAccount => 'Hesap seç';
+
+  @override
+  String get emptyChooseCategory => 'Kategori seç';
+
+  @override
+  String get emptyChooseCategories => 'Kategorileri seç';
+
+  @override
+  String get emptyChooseTags => 'Etiketleri seç';
+
+  @override
+  String get emptyChooseSource => 'Kaynak seç';
+
+  @override
+  String get emptyEnterAmount => 'Tutar gir';
+
+  @override
+  String get emptyPickMonth => 'Ay seç';
+
+  @override
+  String get emptyPickDay => 'Gün seç';
+
+  @override
+  String get emptyPickDates => 'Tarihleri seç';
+
+  @override
+  String get emptySetBalance => 'Bakiye gir';
+
+  @override
+  String get pkNothingYet => 'Henüz bir şey yok';
 
   @override
   String get eaHideFromBalance => 'Bakiye\'den gizle';
@@ -3229,9 +3259,6 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get ssAddLine => 'Satır ekle';
-
-  @override
-  String get ssChooseCategory => 'Kategori seç';
 
   @override
   String get ssSplitEvenly => 'Eşit böl';

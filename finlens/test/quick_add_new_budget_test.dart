@@ -56,13 +56,13 @@ Widget _flowHost(AppStore store, {Locale? locale}) => _host(
     );
 
 /// Open the create screen and then its category picker by tapping the Category
-/// row (its value reads "Not set" until one is chosen).
+/// row (its value reads "Choose categories" until one is chosen).
 Future<void> _openPicker(WidgetTester tester, AppStore store,
     {Locale? locale}) async {
   await tester.pumpWidget(_flowHost(store, locale: locale));
   await tester.tap(find.text('start'));
   await tester.pumpAndSettle();
-  await tester.tap(find.text('Not set'));
+  await tester.tap(find.text('Choose categories'));
   await tester.pumpAndSettle();
 }
 
@@ -116,7 +116,7 @@ void main() {
     // The create screen is up, category unset.
     expect(find.byType(EditBudgetScreen), findsOneWidget);
     expect(find.text('Budget'), findsOneWidget); // Task 029: the type pill, now "Budget"
-    expect(find.text('Not set'), findsOneWidget); // the Category value
+    expect(find.text('Choose categories'), findsOneWidget); // the Category value
     // The old step is gone — no picker on screen at this moment.
     expect(find.text('Budget which category?'), findsNothing);
     // Nothing was created yet.
@@ -148,10 +148,10 @@ void main() {
     await tester.pumpAndSettle();
 
     // Back on the create screen, the Category row now reads the chosen name and
-    // "Not set" is gone.
+    // "Choose categories" is gone.
     expect(find.byType(EditBudgetScreen), findsOneWidget);
     expect(find.text('TripFundZZ'), findsOneWidget);
-    expect(find.text('Not set'), findsNothing);
+    expect(find.text('Choose categories'), findsNothing);
   });
 
   // ── §4 · New Budget from an open Quick Add closes it, opens create screen ──
@@ -264,7 +264,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // Still on the picker (the row is inert); the create screen behind it still
-    // reads "Not set".
+    // reads "Choose categories".
     expect(find.text('New category'), findsOneWidget);
   });
 

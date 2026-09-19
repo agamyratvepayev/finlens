@@ -906,7 +906,7 @@ class _QuickAddScreenState extends State<QuickAddScreen>
             icon: Icons.account_balance_wallet_rounded,
             label: AppLocalizations.of(context).qaFrom,
             value: from?.name,
-            emptyText: AppLocalizations.of(context).eaNotSet,
+            emptyText: AppLocalizations.of(context).emptyChooseAccount,
             flashId: 'from',
             // _pickAccountInto raises the account bottom sheet.
             opensSheet: true,
@@ -992,7 +992,7 @@ class _QuickAddScreenState extends State<QuickAddScreen>
             icon: Icons.account_balance_wallet_rounded,
             label: AppLocalizations.of(context).qaTo,
             value: to?.name,
-            emptyText: AppLocalizations.of(context).eaNotSet,
+            emptyText: AppLocalizations.of(context).emptyChooseAccount,
             flashId: 'to',
             // _pickAccountInto raises the account bottom sheet.
             opensSheet: true,
@@ -1052,7 +1052,7 @@ class _QuickAddScreenState extends State<QuickAddScreen>
             icon: Icons.north_east_rounded,
             label: l.qaFrom,
             value: from?.name,
-            emptyText: l.eaNotSet,
+            emptyText: l.emptyChooseAccount,
             flashId: 'from',
             // _pickAccountInto raises the account bottom sheet.
             opensSheet: true,
@@ -1069,7 +1069,7 @@ class _QuickAddScreenState extends State<QuickAddScreen>
             icon: Icons.south_west_rounded,
             label: l.qaTo,
             value: to?.name,
-            emptyText: l.eaNotSet,
+            emptyText: l.emptyChooseAccount,
             flashId: 'to',
             // _pickAccountInto raises the account bottom sheet.
             opensSheet: true,
@@ -1211,7 +1211,7 @@ class _QuickAddScreenState extends State<QuickAddScreen>
             iconColor: category?.color,
             label: l.fieldCategory,
             value: category?.name,
-            emptyText: l.eaNotSet,
+            emptyText: l.emptyChooseCategory,
             opensSheet: true,
             onTap: _pickFeeCategory,
           ),
@@ -1408,7 +1408,7 @@ class _QuickAddScreenState extends State<QuickAddScreen>
             icon: Icons.donut_large_rounded,
             label: l.qaAccount,
             value: account?.name,
-            emptyText: l.eaNotSet,
+            emptyText: l.emptyChooseAccount,
             // _pickAccountInto raises the account bottom sheet.
             opensSheet: true,
             onTap: () => _pickAccountInto(
@@ -1531,7 +1531,7 @@ class _QuickAddScreenState extends State<QuickAddScreen>
             label: AppLocalizations.of(context).qaAmount,
             raw: _raw,
             currency: _currency,
-            emptyText: AppLocalizations.of(context).eaNotSet,
+            emptyText: AppLocalizations.of(context).emptyEnterAmount,
             slotKey: _amountRowKey,
             onTap: _focusAmount,
             onCurrencyTap: _pickTaskCurrency,
@@ -1550,7 +1550,7 @@ class _QuickAddScreenState extends State<QuickAddScreen>
             icon: Icons.account_balance_wallet_rounded,
             label: AppLocalizations.of(context).qaAccount,
             value: account?.name,
-            emptyText: AppLocalizations.of(context).eaNotSet,
+            emptyText: AppLocalizations.of(context).emptyChooseAccount,
             // _pickAccountInto raises the account bottom sheet.
             opensSheet: true,
             onTap: () =>
@@ -1564,7 +1564,7 @@ class _QuickAddScreenState extends State<QuickAddScreen>
             // keeps today's default — a pay-out (see [_taskIsPayIn]).
             label: AppLocalizations.of(context).fieldCategory,
             value: store.categoryById(_fromRef)?.name,
-            emptyText: AppLocalizations.of(context).eaNotSet,
+            emptyText: AppLocalizations.of(context).emptyChooseCategory,
             // _pickCategoryInto raises the two-sided category sheet; Expense
             // opens first, so the common case costs no extra tap (§2).
             opensSheet: true,

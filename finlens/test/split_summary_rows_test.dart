@@ -347,7 +347,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 400));
 
     // Give it two real lines so Remove appears on the second open.
-    await tester.tap(find.text('Choose a category').last);
+    await tester.tap(find.text('Choose category').last);
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
     await tester.tap(find.text('Grocery').last);

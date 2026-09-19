@@ -1510,7 +1510,37 @@ class AppLocalizationsEn extends AppLocalizations {
   String get eaPaymentDue => 'Payment due';
 
   @override
-  String get eaNotSet => 'Not set';
+  String get emptyChooseAccount => 'Choose account';
+
+  @override
+  String get emptyChooseCategory => 'Choose category';
+
+  @override
+  String get emptyChooseCategories => 'Choose categories';
+
+  @override
+  String get emptyChooseTags => 'Choose tags';
+
+  @override
+  String get emptyChooseSource => 'Choose source';
+
+  @override
+  String get emptyEnterAmount => 'Enter amount';
+
+  @override
+  String get emptyPickMonth => 'Pick month';
+
+  @override
+  String get emptyPickDay => 'Pick day';
+
+  @override
+  String get emptyPickDates => 'Pick dates';
+
+  @override
+  String get emptySetBalance => 'Set balance';
+
+  @override
+  String get pkNothingYet => 'Nothing here yet';
 
   @override
   String get eaHideFromBalance => 'Hide from Balance';
@@ -2836,7 +2866,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get qaNote => 'Note';
 
   @override
-  String get qaAddNote => 'Add a note';
+  String get qaAddNote => 'Add note';
 
   @override
   String get qaNotePlaceholder => 'What was this for?';
@@ -3244,9 +3274,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get ssAddLine => 'Add a line';
-
-  @override
-  String get ssChooseCategory => 'Choose a category';
 
   @override
   String get ssSplitEvenly => 'Split evenly';

@@ -1544,7 +1544,37 @@ class AppLocalizationsRu extends AppLocalizations {
   String get eaPaymentDue => 'Срок платежа';
 
   @override
-  String get eaNotSet => 'Не задано';
+  String get emptyChooseAccount => 'Выберите счёт';
+
+  @override
+  String get emptyChooseCategory => 'Выберите категорию';
+
+  @override
+  String get emptyChooseCategories => 'Выберите категории';
+
+  @override
+  String get emptyChooseTags => 'Выберите метки';
+
+  @override
+  String get emptyChooseSource => 'Выберите источник';
+
+  @override
+  String get emptyEnterAmount => 'Введите сумму';
+
+  @override
+  String get emptyPickMonth => 'Выберите месяц';
+
+  @override
+  String get emptyPickDay => 'Выберите день';
+
+  @override
+  String get emptyPickDates => 'Выберите даты';
+
+  @override
+  String get emptySetBalance => 'Укажите баланс';
+
+  @override
+  String get pkNothingYet => 'Пока ничего нет';
 
   @override
   String get eaHideFromBalance => 'Скрыть с Баланса';
@@ -3301,9 +3331,6 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get ssAddLine => 'Добавить строку';
-
-  @override
-  String get ssChooseCategory => 'Выберите категорию';
 
   @override
   String get ssSplitEvenly => 'Поровну';

@@ -16,7 +16,10 @@ import 'package:finlens/theme/app_theme.dart';
 //       ($2,000.50 / 2,000.50 ₽); a code-only currency shows nothing there when
 //       a chip names it (2,000.50), and its code (spaced) when there is no chip
 //       (BAM 2,000).
-//   §2  the field shows only the digits typed — no '.00' padding, ever.
+//   §2  the *typed* span shows only the digits typed. Decimal completion lives
+//       in the dim `rest`, and only once a decimal point is typed (task 043 §4
+//       reverses the original "no padding, ever": a point opens the field, and
+//       the field completes to the currency's width with dim zeros).
 
 const _accent = Color(0xFFAA0000);
 const _accentDim = Color(0xFF002200);
@@ -110,18 +113,22 @@ void main() {
       expect(p.rest, isEmpty);
     });
 
-    test('the five typing states show exactly what was typed (§2)', () {
-      // Empty is the only state with a (dim) rest — the placeholder `$0`.
+    test('the typed span shows what was typed; the rest completes it (§4)', () {
+      // Empty is a bare placeholder `$0`; a whole number has no rest; a decimal
+      // point opens a field the dim rest completes to the currency's width
+      // (task 043 §4).
       expect(s('', 'USD'), (typed: '', rest: r'$0'));
-      expect(s('2000', 'USD').typed, r'$2,000');
-      expect(s('2000.', 'USD').typed, r'$2,000.');
-      expect(s('2000.5', 'USD').typed, r'$2,000.5');
-      expect(s('2000.50', 'USD').typed, r'$2,000.50');
-      // None of them pad to two places.
+      expect(s('2000', 'USD'), (typed: r'$2,000', rest: ''));
+      expect(s('2000.', 'USD'), (typed: r'$2,000.', rest: '00'));
+      expect(s('2000.5', 'USD'), (typed: r'$2,000.5', rest: '0'));
+      expect(s('2000.50', 'USD'), (typed: r'$2,000.50', rest: ''));
+      // The typed span itself never carries padding — padding is the dim rest.
       for (final raw in ['2000', '2000.', '2000.5']) {
-        expect('${s(raw, 'USD').typed}${s(raw, 'USD').rest}',
-            isNot(contains('.00')));
+        expect(s(raw, 'USD').typed, isNot(contains('.00')));
       }
+      // A whole number with no point shows no decimals at all, dim or bright.
+      expect('${s('2000', 'USD').typed}${s('2000', 'USD').rest}',
+          isNot(contains('.')));
     });
 
     test('the empty placeholder follows §1 across the three classes', () {
@@ -152,23 +159,25 @@ void main() {
         r'$2,000');
   });
 
-  // ── §2 · widget — no .00 until you type it ────────────────────────────────
+  // ── §4 · widget — the decimal field completes with dim zeros after a dot ────
 
-  testWidgets('the hero shows no .00 until a dot then a digit are pressed',
+  testWidgets('the hero shows decimals only once a dot is typed (task 043 §4)',
       (tester) async {
     await _pumpAt(tester, _host(raw: '', currency: 'USD', focused: true));
-    expect(_heroPlain(tester, r'$0'), isNot(contains('.00')));
+    // Empty: a bare `$0`, no decimals.
+    expect(_heroPlain(tester, r'$0'), isNot(contains('.')));
 
     await _pumpAt(tester, _host(raw: '2000', currency: 'USD', focused: true));
+    // A whole number: no decimals until a point is typed.
     expect(_heroPlain(tester, '2,000'), isNot(contains('.')));
 
     await _pumpAt(tester, _host(raw: '2000.', currency: 'USD', focused: true));
-    expect(_heroPlain(tester, '2,000.'), isNot(contains('.00')));
+    // The point opens the field: it completes to `$2,000.00`, the `00` dim.
+    expect(_heroPlain(tester, '2,000.'), r'$2,000.00');
 
     await _pumpAt(tester, _host(raw: '2000.5', currency: 'USD', focused: true));
-    final t = _heroPlain(tester, '2,000.5');
-    expect(t, contains(r'$2,000.5'));
-    expect(t, isNot(contains('2,000.50')));
+    // One decimal typed → completed to `$2,000.50`, the final `0` dim.
+    expect(_heroPlain(tester, '2,000.5'), r'$2,000.50');
   });
 
   // ── §2 · widget — an edited record ────────────────────────────────────────

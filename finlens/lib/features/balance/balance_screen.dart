@@ -385,12 +385,25 @@ class _BalanceScreenState extends State<BalanceScreen> {
       curve: Curves.easeOut,
       alignment: Alignment.topCenter,
       child: Padding(
-        // 6 above row 1, 14 below the amount row — the largest gap is the last,
-        // because the header-ends / list-begins boundary is the most important
-        // one on the screen. `height: 1.0` even-leading on the amount (see
-        // [_amountStyle]) strips the font's own dead space, so these render at
-        // the value specified rather than ~7pt larger.
-        padding: const EdgeInsets.fromLTRB(Insets.gutter, 6, Insets.gutter, 14),
+        // 8 above row 1, 12 below the amount row. The top is `Insets.sm` — the
+        // same value the Ledger's title row, the Planner's ScreenHeader and
+        // Insight's header open with — because the + is one affordance and must
+        // land in the same rectangle on all five screens (task 043 §1). It was
+        // 6, which drew Balance's + two points above the other four; the bottom
+        // absorbs those two points, so the header's total height, and therefore
+        // everything under it, is unchanged.
+        //
+        // 12 is still the largest gap in the header: the header-ends /
+        // list-begins boundary is the most important one on the screen. And
+        // `height: 1.0` even-leading on the amount (see [_amountStyle]) strips
+        // the font's own dead space, so these render at the value specified
+        // rather than ~7pt larger.
+        padding: const EdgeInsets.fromLTRB(
+          Insets.gutter,
+          Insets.sm,
+          Insets.gutter,
+          Insets.md,
+        ),
         child: Stack(
           children: [
             AnimatedSwitcher(

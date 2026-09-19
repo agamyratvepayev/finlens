@@ -340,7 +340,7 @@ class _EditGoalScreenState extends State<EditGoalScreen> {
                 controller: _monthly,
                 focusNode: _monthlyFocus,
                 dim: _primary != _Pair.monthly,
-                hint: l.eaNotSet,
+                hint: l.emptyEnterAmount,
                 token: _currencyCode(code),
               ),
             ),
@@ -434,7 +434,7 @@ class _EditGoalScreenState extends State<EditGoalScreen> {
   Widget _dateValue(AppLocalizations l, {required bool derived}) {
     final d = _effectiveTargetDate;
     return Text(
-      d == null ? l.eaNotSet : monthYear(d, l),
+      d == null ? l.emptyPickMonth : monthYear(d, l),
       textAlign: TextAlign.right,
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
@@ -581,7 +581,7 @@ class _EditGoalScreenState extends State<EditGoalScreen> {
       // account and carries no chip elsewhere on this screen.
       text = _store.refName(_source!.id);
     } else {
-      text = l.eaNotSet;
+      text = l.emptyChooseSource;
     }
     return Text(
       text,

@@ -61,7 +61,7 @@ class _SplitChildRow extends StatelessWidget {
     // the warning colour and the fallback glyph, never a blank or a crash.
     final missing = category == null;
     final color = category?.color ?? AppColors.warning;
-    final name = missing ? l.ssChooseCategory : category.name;
+    final name = missing ? l.emptyChooseCategory : category.name;
 
     return InkWell(
       onTap: onTap,

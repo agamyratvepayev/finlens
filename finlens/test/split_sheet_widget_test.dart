@@ -205,8 +205,8 @@ void main() {
           total: 200,
           initial: [SplitLine(amount: 120), _line('c2', 80)]);
       // The row names the fault, in amber.
-      expect(find.text('Choose a category'), findsOneWidget);
-      expect(_textColor(tester, 'Choose a category'), AppColors.warning);
+      expect(find.text('Choose category'), findsOneWidget);
+      expect(_textColor(tester, 'Choose category'), AppColors.warning);
       // No status line at all (sum is exact) and Done is disabled.
       expect(find.text('Left to assign'), findsNothing);
       expect(find.text('Over the total by'), findsNothing);
