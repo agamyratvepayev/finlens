@@ -64,8 +64,11 @@ void main() {
           final sp = AmountEntry.splitPlain(raw, cur);
           expect(digitsOf(sc), digitsOf(sp),
               reason: 'split vs splitPlain digits for "$raw" $cur');
-          // TMT/USD/JPY all carry the symbol *before* the number, so `post` is
-          // empty and the dim rest is exactly the completion, nothing more.
+          // USD/JPY carry their glyph *before* the number and TMT (a letter
+          // symbol) drops its token entirely beside the default chip (task 045
+          // §1); either way `post` is empty, so the dim rest is exactly the
+          // completion, nothing more. A symbol-after currency would append its
+          // token to `post` and this equality would not hold — none is used here.
           expect(sc.rest, sp.rest,
               reason: 'the dim rest is the completion only, for "$raw" $cur');
         }

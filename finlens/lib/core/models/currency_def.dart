@@ -10,12 +10,14 @@
 ///     the user's data, and registered at load through [setCustomCurrencies] so
 ///     the dependency-free [money] formatter can reach them without a store.
 ///
-/// Formatting rules (spec §7a):
+/// Formatting rules (spec §7a, task 033 §4, task 045 §2):
 ///   - the displayed token is [symbol] when present, else the [code];
-///   - **spacing depends on the token, not its position**: a symbol sits flush
-///     against the number (`m9,850`, `9,850m`); a code takes a space
-///     (`TMT 9,850`, `9,850 TMT`);
-///   - [symbolBefore] governs the token's side;
+///   - **spacing depends on the token's characters, not on whether it is a
+///     symbol or a code**: a glyph sits flush against the number (`$570`,
+///     `570₽`); anything containing a letter takes a space (`m 9,850`,
+///     `9,850 TMT`, `CHF 9,850`). [tokenHugs] is that rule, and the only
+///     implementation of it;
+///   - [symbolBefore] governs the token's side, for symbols and codes alike;
 ///   - [decimals] is fixed per currency (0 for JPY-like, 3 for dinar-like).
 class CurrencyDef {
   const CurrencyDef({
@@ -48,9 +50,25 @@ class CurrencyDef {
   /// code (spec §7a: an absent symbol falls back to the code).
   String get token => (symbol != null && symbol!.isNotEmpty) ? symbol! : code;
 
-  /// Whether the rendered token is a bare symbol (flush against the number) or a
-  /// code (spaced from it) — spec §7a's spacing rule.
+  /// Whether the rendered token is a bare symbol or a code. Kept for
+  /// [currencySymbol]'s legacy prefix path; it is **not** the spacing rule —
+  /// see [tokenHugs], which is.
   bool get tokenIsSymbol => symbol != null && symbol!.isNotEmpty;
+
+  /// Whether [token] sits flush against the number.
+  ///
+  /// The question is the token's characters, not its kind: `$`, `€` and `₽` hug,
+  /// while `m`, `Kč`, `zł` and every code take a space. A letter against a digit
+  /// reads as one word — `2,000TMT` — and a glyph does not.
+  ///
+  /// This rule lived as a private helper in `formatters.dart`, so the display
+  /// path obeyed it and the entry path did not: the same amount printed
+  /// `2,000 TMT` in a list and `2,000TMT` in the editor. One getter, one answer
+  /// (task 045 §2).
+  bool get tokenHugs => !_tokenLetter.hasMatch(token);
+
+  /// Any Unicode letter. A token containing one takes a space.
+  static final _tokenLetter = RegExp(r'\p{L}', unicode: true);
 
   CurrencyDef copyWith({
     String? code,

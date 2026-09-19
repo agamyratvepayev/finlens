@@ -38,50 +38,58 @@ abstract final class AmountEntry {
     return buf.toString();
   }
 
-  /// The typed amount, with the currency's **symbol** in the position that
-  /// currency defines — and nothing at all when it has none, because then the
-  /// chip beside the field is already showing its code and repeating it here
-  /// costs four characters on the tightest line in the app (§1).
+  /// The typed amount, with the currency's token attached in the position that
+  /// currency defines — or with no token at all, when a chip beside the field is
+  /// already naming the unit in words (task 045 §1).
   ///
-  /// [hasChip] is false only where the field is rendered without a currency
-  /// control; there a code-only currency still shows its code (spaced), since
-  /// nothing else states the unit. A currency that has a symbol always shows
-  /// the symbol, chip or no chip.
+  /// Three questions, each answered in exactly one place:
+  ///
+  ///   - **Is there a token?** A chip names the currency in words, so a token
+  ///     that also contains letters would state the unit twice — `2,000TMT` next
+  ///     to a `TMT` chip, `m2,000` next to it. That token drops. A glyph (`$`,
+  ///     `€`, `₽`) is not a repetition of the code, reads as part of the figure,
+  ///     and stays. With no chip the number always carries its token, because
+  ///     nothing else on the row states the unit.
+  ///   - **Which side?** [CurrencyDef.symbolBefore] — the user's own Position
+  ///     choice, for symbols and codes alike, the same field `money()` reads.
+  ///   - **Flush or spaced?** [CurrencyDef.tokenHugs], the same getter `money()`
+  ///     reads. This function used to decide it itself and printed `2,000TMT`
+  ///     where `money()` printed `2,000 TMT` (task 045 §2).
   ///
   /// Decimals follow one rule, shared with [splitPlain] (task 043 §4): no
-  /// decimal point typed means no decimals at all, and a decimal point typed
-  /// means the field is completed to the currency's own width with dim zeros.
-  /// Dim has always meant "not typed yet" here, and that is exactly what those
-  /// zeros are. `rest` carries the empty field's placeholder `0`, or that dim
-  /// completion; the tuple shape is kept so the caret still sits between the two
-  /// spans.
+  /// decimal point typed means no decimals at all; a decimal point typed means
+  /// the field is completed to the currency's own width with dim zeros.
   static ({String typed, String rest}) split(
     String raw,
     String currency, {
     bool hasChip = true,
   }) {
     final def = currencyDef(currency);
-    // The unit against the number: a symbol flush on its own side; nothing when
-    // the currency is code-only and a chip already names it; otherwise the code,
-    // spaced, so a bare number never lacks a unit.
+
+    // The unit against the number. `def.token` is the symbol when the currency
+    // has one and the code otherwise, so a code-only currency's Position choice
+    // is honoured here exactly as it is in money().
+    final token = def.token;
+    // A non-breaking space, exactly as money()/_moneyCustom uses (spec §3): the
+    // number never wraps away from its unit, and the two paths print the same
+    // gap byte-for-byte.
+    final gap = def.tokenHugs ? '' : ' ';
     final String pre;
     final String post;
-    if (def.tokenIsSymbol) {
-      // A symbol sits flush against the number on both sides — the app's law
-      // (CurrencyDef: `m9,850` / `9,850m`, and _moneyCustom). §1 says "flush"
-      // too; its `2,000.50 ₼` example carries a stray space we do not follow.
-      pre = def.symbolBefore ? def.symbol! : '';
-      post = def.symbolBefore ? '' : def.symbol!;
-    } else if (hasChip) {
+    if (hasChip && !def.tokenHugs) {
+      // Said once, and the chip is what says it.
       pre = '';
       post = '';
-    } else {
-      pre = '$currency ';
+    } else if (def.symbolBefore) {
+      pre = '$token$gap';
       post = '';
+    } else {
+      pre = '';
+      post = '$gap$token';
     }
 
-    // Empty: the whole placeholder is the dim `rest` — `$0`, `0₼`, `0`. No
-    // point has been typed, so there are no decimals to show (§4).
+    // Empty: the whole placeholder is the dim `rest` — `$0`, `0 TMT`, `0`. No
+    // point has been typed, so there are no decimals to show (task 043 §4).
     if (raw.isEmpty) return (typed: '', rest: '${pre}0$post');
 
     final dot = raw.indexOf('.');
@@ -100,10 +108,10 @@ abstract final class AmountEntry {
     if (padding.isEmpty) {
       return (typed: '$pre$grouped.$decimals$post', rest: '');
     }
-    // A trailing symbol joins the dim run rather than being stranded bright on
+    // A trailing token joins the dim run rather than being stranded bright on
     // the far side of it — the hero paints two spans, not three, and the empty
-    // placeholder above already dims its token for the same reason. The symbol
-    // returns to full brightness the moment the number is complete.
+    // placeholder above already dims its token for the same reason. It returns
+    // to full brightness the moment the number is complete.
     return (typed: '$pre$grouped.$decimals', rest: '$padding$post');
   }
 
@@ -184,9 +192,10 @@ class NumericHeroCard extends StatelessWidget {
             locked: currencyLocked,
           );
 
-    // The number carries its currency's symbol when it has one, either side
-    // (§1); a code-only currency shows nothing here because the chip beside it
-    // already names the unit. With no chip the number carries the code instead.
+    // Whether a chip sits beside the number is the only thing this widget knows
+    // that [AmountEntry.split] does not, so it is the only thing it passes. What
+    // the number then shows — a glyph, a spaced token, or nothing — is split's
+    // decision, taken the same way for every amount in the app (task 045 §1).
     final hasChip = chip != null;
 
     // The whole amount string, caret aside — the caret is a fixed-width column

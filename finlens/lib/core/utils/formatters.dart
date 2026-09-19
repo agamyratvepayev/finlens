@@ -15,17 +15,6 @@ import '../models/currency_def.dart';
 
 const _minus = '−';
 
-/// True when [token] can sit flush against a number.
-///
-/// A token made of letters cannot: `$570` reads as an amount, `570TMT` and
-/// `Kč570` read as one word. A glyph can, and always has. Position is
-/// irrelevant — `TMT 560,00` and `560,00 TMT` are both spaced (task 033 §4).
-///
-/// The test is Unicode-aware on purpose: `ł` in `zł`, `č` in `Kč` and the
-/// Cyrillic in `лв` are letters, and an ASCII-only check would glue all three.
-bool _tokenHugs(String token) => !_letter.hasMatch(token);
-final _letter = RegExp(r'\p{L}', unicode: true);
-
 /// The currency an omitted [money]/[moneyCompact] `currency` argument falls
 /// back to. It mirrors `AppStore.baseCurrency` — the store keeps it current via
 /// [setFormatterBaseCurrency] — so a bare `money(x)` renders in the store's
@@ -100,11 +89,12 @@ String _moneyCustom(
   // redundant; drop it and print the bare number (Rebalance §2c).
   if (!withSymbol) return '$sign$number';
   // The gap follows the token's characters, not whether it is a symbol or a
-  // code. Codes are all letters and so keep the space they already had; a
-  // letter symbol (`TMT`, `Kč`, `zł`) now takes one too, a glyph (`$`) none
-  // (task 033 §4).
+  // code: codes keep the space they always had, a letter symbol (`TMT`, `Kč`,
+  // `zł`) takes one too, a glyph (`$`) none. The rule is [CurrencyDef.tokenHugs]
+  // — stated once so the entry path cannot drift from this one again (task 033
+  // §4, task 045 §2).
   final token = def.token;
-  final gap = _tokenHugs(token) ? '' : ' ';
+  final gap = def.tokenHugs ? '' : ' ';
   return def.symbolBefore
       ? '$sign$token$gap$number'
       : '$sign$number$gap$token';

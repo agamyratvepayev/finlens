@@ -11,11 +11,14 @@ import 'package:finlens/theme/app_theme.dart';
 // here. Verify with `flutter analyze` and run it yourself:
 //   flutter test test/task008_amount_token_test.dart
 //
-// The rules (Task 008 §1/§2):
-//   §1  a symbol currency keeps its symbol on the number, on its own side
-//       ($2,000.50 / 2,000.50 ₽); a code-only currency shows nothing there when
-//       a chip names it (2,000.50), and its code (spaced) when there is no chip
-//       (BAM 2,000).
+// The rules (Task 008 §1/§2, as amended by task 045 §1):
+//   §1  a *glyph* currency keeps its glyph on the number, on its own side
+//       ($2,000.50 / 2,000.50 ₽), chip or no chip; a code-only currency shows
+//       nothing there when a chip names it (2,000.50), and its code (spaced)
+//       when there is no chip (BAM 2,000). Every currency in this file is either
+//       a glyph ($, ₽) or code-only (BAM), so task 045's letter-symbol rule
+//       leaves each of these assertions unchanged; the letter-symbol case (`m`,
+//       an overridden `TMT`) is covered in task045_currency_token_test.dart.
 //   §2  the *typed* span shows only the digits typed. Decimal completion lives
 //       in the dim `rest`, and only once a decimal point is typed (task 043 §4
 //       reverses the original "no padding, ever": a point opens the field, and
@@ -106,8 +109,9 @@ void main() {
     });
 
     test('a symbol-after currency renders the symbol flush on the right', () {
-      // RUB is ₽ with symbolBefore: false. Flush, per the app's symbol law
-      // (CurrencyDef: `9,850m`) — not the spaced form the §1 example shows.
+      // RUB is ₽ with symbolBefore: false. ₽ is a glyph, so it hugs the number
+      // (task 045 §2: the gap follows the token's characters, not its kind — a
+      // letter symbol would take a space, a glyph none).
       final p = s('2000.50', 'RUB');
       expect(p.typed, '2,000.50₽');
       expect(p.rest, isEmpty);
