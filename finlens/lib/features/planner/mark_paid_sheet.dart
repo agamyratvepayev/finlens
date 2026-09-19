@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/models/models.dart';
 import '../../core/store/app_store.dart';
+import '../../core/utils/arithmetic.dart';
 import '../../core/utils/formatters.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/app_card.dart';
@@ -66,7 +67,8 @@ class _MarkPaidSheetState extends State<_MarkPaidSheet> {
   late final Task _task = widget.task;
   late final bool _payOut = _task.isPayOut;
 
-  late String _raw = AmountEntry.fromDouble(_task.expectedAmount.abs());
+  late Expression _expr =
+      Expression.ofRaw(AmountEntry.fromDouble(_task.expectedAmount.abs()));
   late DateTime _date = _store.today;
 
   /// The account the money leaves (pay-out) or lands in (pay-in).
@@ -80,7 +82,14 @@ class _MarkPaidSheetState extends State<_MarkPaidSheet> {
 
   bool _remember = false;
 
-  double get _amount => AmountEntry.value(_raw);
+  int get _precision => currencyDef(_currency).decimals;
+
+  /// The committed amount, resolving a pending expression silently (spec §5).
+  double get _amount => _expr.value(_precision) ?? 0;
+
+  /// While an operator is pending the field shows the expression, never the
+  /// answer (spec decision #1 — no live result strip).
+  bool get _showExpr => _expr.hasOperator;
 
   String get _currency =>
       _store.accountById(_fromAccountId)?.currency ?? _store.baseCurrency;
@@ -129,15 +138,26 @@ class _MarkPaidSheetState extends State<_MarkPaidSheet> {
               ),
               const SizedBox(height: Insets.lg),
               // The numeric hero — centred, editable, in the source currency.
-              Center(
-                child: Text(
-                  money(_amount, currency: _currency,
-                      forceDecimals: _amount % 1 != 0, masked: _store.masked),
-                  style: const TextStyle(
-                    fontSize: 38,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: -1.1,
-                    fontFeatures: [FontFeature.tabularFigures()],
+              // A pending expression shows as typed and scrolls; `=` resolves it.
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                reverse: true,
+                physics: const ClampingScrollPhysics(),
+                padding: const EdgeInsets.symmetric(horizontal: Insets.gutter),
+                child: Center(
+                  child: Text(
+                    _showExpr
+                        ? expressionDisplay(_expr)
+                        : money(_amount,
+                            currency: _currency,
+                            forceDecimals: _amount % 1 != 0,
+                            masked: _store.masked),
+                    style: const TextStyle(
+                      fontSize: 38,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -1.1,
+                      fontFeatures: [FontFeature.tabularFigures()],
+                    ),
                   ),
                 ),
               ),
@@ -154,9 +174,14 @@ class _MarkPaidSheetState extends State<_MarkPaidSheet> {
               ],
               const SizedBox(height: Insets.md),
               NumericKeypad(
-                onKey: (k) => setState(() => _raw = AmountEntry.press(_raw, k)),
-                onBackspace: () =>
-                    setState(() => _raw = AmountEntry.backspace(_raw)),
+                onKey: (k) => setState(
+                    () => _expr = _expr.pressDigit(k, maxDecimals: 2)),
+                onBackspace: () => setState(() => _expr = _expr.backspace()),
+                onOperator: (op) =>
+                    setState(() => _expr = _expr.pressOperator(op)),
+                onEquals: () =>
+                    setState(() => _expr = _expr.evaluated(_precision)),
+                canResolve: _expr.canResolve(_precision),
               ),
               const SizedBox(height: Insets.md),
               _fieldCard(context, l),
@@ -251,7 +276,9 @@ class _MarkPaidSheetState extends State<_MarkPaidSheet> {
           activeThumbColor: AppColors.accent,
           contentPadding: const EdgeInsets.symmetric(horizontal: 14),
           title: Text(
-            l.mpRemember(money(_amount, currency: _currency, masked: _store.masked)),
+            l.mpRemember(_showExpr
+                ? expressionDisplay(_expr)
+                : money(_amount, currency: _currency, masked: _store.masked)),
             style: AppText.rowTitle.copyWith(fontSize: 14),
           ),
         ),
@@ -276,7 +303,9 @@ class _MarkPaidSheetState extends State<_MarkPaidSheet> {
                 borderRadius: BorderRadius.circular(Radii.md)),
           ),
           child: Text(
-            l.mpConfirm(money(_amount, currency: _currency, masked: _store.masked)),
+            l.mpConfirm(_showExpr
+                ? expressionDisplay(_expr)
+                : money(_amount, currency: _currency, masked: _store.masked)),
             style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
           ),
         ),

@@ -1,6 +1,7 @@
 import '../../../l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 
+import '../../../core/utils/arithmetic.dart';
 import '../../../shared/widgets/form_fields.dart';
 import '../../../theme/app_colors.dart';
 import 'amount_hero.dart';
@@ -31,6 +32,7 @@ class FieldSpec {
     this.maxLength,
     this.counterThreshold,
     this.raw,
+    this.expression,
     this.currency,
     this.onCurrencyTap,
     this.slotKey,
@@ -91,6 +93,11 @@ class FieldSpec {
   ///
   /// Mutually exclusive with [controller] (the Note row's hatch).
   final String? raw;
+
+  /// The full keypad expression backing an inline amount row. Carries an
+  /// operator → the row renders the expression (spec §7); plain → renders [raw]
+  /// exactly as before. Set alongside [raw] on every inline amount field.
+  final Expression? expression;
   final String? currency;
   final VoidCallback? onCurrencyTap;
 
@@ -113,14 +120,21 @@ sealed class HeroSpec {
 class NumericHero extends HeroSpec {
   const NumericHero({
     required this.label,
-    required this.raw,
+    required this.expression,
     required this.currency,
     this.onCurrencyTap,
     this.currencyLocked = false,
   });
 
   final String label;
-  final String raw;
+
+  /// The full keypad expression. The plain single-operand case renders exactly
+  /// as the old raw string did; an operator switches the hero to expression
+  /// mode (spec §7).
+  final Expression expression;
+
+  /// The single-operand raw text, for the legacy plain-number render path.
+  String get raw => expression.pending;
   final String currency;
   final VoidCallback? onCurrencyTap;
 
@@ -259,6 +273,9 @@ class TransactionFormShell extends StatelessWidget {
     required this.onKey,
     required this.onBackspace,
     required this.onDismissKeypad,
+    this.onOperator,
+    this.onEquals,
+    this.canResolve = false,
     this.typeLocked = false,
     this.flashTarget,
     this.flashPulse,
@@ -273,6 +290,11 @@ class TransactionFormShell extends StatelessWidget {
   final ValueChanged<String> onKey;
   final VoidCallback onBackspace;
   final VoidCallback onDismissKeypad;
+
+  /// Arithmetic keys — an operator pressed, and `=` (enabled per [canResolve]).
+  final ValueChanged<Op>? onOperator;
+  final VoidCallback? onEquals;
+  final bool canResolve;
   final bool typeLocked;
 
   /// The field currently flagged as missing (spec §3): 'amount' for the hero,
@@ -347,7 +369,13 @@ class TransactionFormShell extends StatelessWidget {
             if (keypadOpen)
               Padding(
                 padding: EdgeInsets.only(top: 10 * s),
-                child: NumericKeypad(onKey: onKey, onBackspace: onBackspace),
+                child: NumericKeypad(
+                  onKey: onKey,
+                  onBackspace: onBackspace,
+                  onOperator: onOperator,
+                  onEquals: onEquals,
+                  canResolve: canResolve,
+                ),
               ),
             SizedBox(height: bottomInset + 8 * s),
           ],
@@ -362,6 +390,7 @@ class TransactionFormShell extends StatelessWidget {
       NumericHero() => NumericHeroCard(
           label: hero.label,
           raw: hero.raw,
+          expression: hero.expression,
           currency: hero.currency,
           accent: config.accent,
           accentDim: config.accentDim,
@@ -482,6 +511,7 @@ Widget _fieldRow(FieldSpec f, String? flashTarget, bool keypadOpen) {
       icon: f.icon,
       label: f.label,
       raw: f.raw!,
+      expression: f.expression,
       currency: f.currency!,
       emptyText: f.emptyText ?? '',
       // The task form has no numeric hero, so keypadOpen names this row

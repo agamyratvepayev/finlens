@@ -19,6 +19,7 @@ class EditScaffold extends StatelessWidget {
     this.header,
     this.type,
     this.onTypeTap,
+    this.footer,
   }) : assert((type == null) == (onTypeTap == null),
             'a pill is a type and a way to change it, or neither');
 
@@ -37,6 +38,10 @@ class EditScaffold extends StatelessWidget {
   /// switch to, so those screens keep the plain title.
   final QuickAddType? type;
   final VoidCallback? onTypeTap;
+
+  /// Pinned below the scrolling list — the docked numeric keypad when an amount
+  /// field on the form holds focus. Null keeps the old full-height list.
+  final Widget? footer;
 
   @override
   Widget build(BuildContext context) {
@@ -102,6 +107,7 @@ class EditScaffold extends StatelessWidget {
                 children: children,
               ),
             ),
+            ?footer,
           ],
         ),
       ),

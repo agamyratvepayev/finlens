@@ -5029,4 +5029,25 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get syncEmailInvalid => 'Введите корректный email';
+
+  @override
+  String get keypadPlus => 'плюс';
+
+  @override
+  String get keypadMinus => 'минус';
+
+  @override
+  String get keypadMultiply => 'умножить';
+
+  @override
+  String get keypadDivide => 'разделить';
+
+  @override
+  String get keypadEquals => 'равно';
+
+  @override
+  String get keypadIncomplete => 'Незавершённое выражение';
+
+  @override
+  String get keypadDivideByZero => 'Деление на ноль невозможно';
 }

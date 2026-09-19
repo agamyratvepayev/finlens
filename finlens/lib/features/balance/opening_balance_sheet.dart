@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/models/models.dart';
 import '../../core/store/app_store.dart';
+import '../../core/utils/arithmetic.dart';
 import '../../core/utils/formatters.dart';
 import '../../l10n/app_localizations.dart';
 import '../../theme/app_colors.dart';
@@ -54,11 +55,13 @@ class _OpeningBalanceSheetState extends State<_OpeningBalanceSheet> {
     _account.openingDate ?? _store.today,
   );
 
-  // The amount is held as the literal keys the user pressed ("500", "500.",
-  // "500.5") rather than a double, so the display can tell typed digits apart
-  // from the decimal padding they have not reached yet (the task-11 dim rule).
-  // Seeded from the existing floor via [AmountEntry.fromDouble].
-  late String _amountRaw = AmountEntry.fromDouble(_originalAmount);
+  // The amount is a keypad [Expression] — a plain number behaves exactly as the
+  // old raw string did, and `+ − × ÷` resolve in place. Seeded from the existing
+  // floor via [AmountEntry.fromDouble]. A negative result is valid here (a
+  // liability starts owed, spec §6) and shown with a minus.
+  late Expression _expr = Expression.ofRaw(AmountEntry.fromDouble(_originalAmount));
+
+  int get _precision => currencyDef(_account.currency).decimals;
 
   /// Whether the docked keypad is open and writing to the amount. Starts closed
   /// so a seeded value shows all-bright from the first frame (§4), never pale.
@@ -68,11 +71,11 @@ class _OpeningBalanceSheetState extends State<_OpeningBalanceSheet> {
 
   static DateTime _dayOf(DateTime d) => DateTime(d.year, d.month, d.day);
 
-  /// The entered magnitude, or null when nothing has been typed. The keypad has
-  /// no minus key, so the value can never be negative; the empty guard is what
-  /// keeps `_canSave` off until a figure exists (same as the old field).
+  /// The entered value, or null when nothing has been typed **or** an
+  /// expression is still incomplete (so `_canSave` stays off). A resolved
+  /// expression may be negative — that is valid for a starting balance (§6).
   double? get _enteredAmount =>
-      _amountRaw.isEmpty ? null : AmountEntry.value(_amountRaw);
+      _expr.isEmpty ? null : _expr.value(_precision);
 
   /// The earliest transaction on the account — the ceiling the opening date may
   /// not exceed (spec §5). Null when the account has no transactions.
@@ -100,15 +103,24 @@ class _OpeningBalanceSheetState extends State<_OpeningBalanceSheet> {
   }
 
   void _pressKey(String key) =>
-      setState(() => _amountRaw = AmountEntry.press(_amountRaw, key));
+      setState(() => _expr = _expr.pressDigit(key, maxDecimals: 2));
 
-  void _backspace() =>
-      setState(() => _amountRaw = AmountEntry.backspace(_amountRaw));
+  void _backspace() => setState(() => _expr = _expr.backspace());
+
+  void _pressOperator(Op op) =>
+      setState(() => _expr = _expr.pressOperator(op));
+
+  void _equals() => setState(() => _expr = _expr.evaluated(_precision));
 
   Future<void> _pickDate() async {
     // The keypad and the date picker are never up together (§4): opening the
-    // picker closes the keypad first.
-    if (_amountFocused) setState(() => _amountFocused = false);
+    // picker closes the keypad first, resolving any pending expression (§5).
+    if (_amountFocused) {
+      setState(() {
+        _expr = _expr.evaluated(_precision);
+        _amountFocused = false;
+      });
+    }
     final picked = await showDatePicker(
       context: context,
       initialDate: _date,
@@ -198,7 +210,8 @@ class _OpeningBalanceSheetState extends State<_OpeningBalanceSheet> {
                         children: [
                           _AmountField(
                             label: l.qaAmount,
-                            raw: _amountRaw,
+                            raw: _expr.pending,
+                            expression: _expr,
                             currency: _account.currency,
                             focused: _amountFocused,
                             onTap: _focusAmount,
@@ -263,7 +276,13 @@ class _OpeningBalanceSheetState extends State<_OpeningBalanceSheet> {
               ),
             ),
             if (_amountFocused) ...[
-              NumericKeypad(onKey: _pressKey, onBackspace: _backspace),
+              NumericKeypad(
+                onKey: _pressKey,
+                onBackspace: _backspace,
+                onOperator: _pressOperator,
+                onEquals: _equals,
+                canResolve: _expr.canResolve(_precision),
+              ),
               // The home-indicator inset below the keys is the sheet shell's.
               const SizedBox(height: Insets.sm),
             ],
@@ -327,10 +346,15 @@ class _AmountField extends StatefulWidget {
     required this.currency,
     required this.focused,
     required this.onTap,
+    this.expression,
   });
 
   final String label;
   final String raw;
+
+  /// The keypad expression. An operator switches the row to a scrolling
+  /// expression view; a plain number renders [raw] exactly as before.
+  final Expression? expression;
   final String currency;
   final bool focused;
   final VoidCallback onTap;
@@ -481,12 +505,49 @@ class _AmountFieldState extends State<_AmountField>
       if (parts.rest.isNotEmpty) TextSpan(text: parts.rest, style: restStyle),
     ];
 
+    final exprMode =
+        widget.expression != null && widget.expression!.showsAsExpression;
+
     final amount = Text.rich(
       TextSpan(children: _tokenAround(def, number)),
       textAlign: TextAlign.right,
       maxLines: 1,
       softWrap: false,
       overflow: TextOverflow.clip,
+    );
+
+    // Expression mode: the typed expression, scrolling horizontally, no currency
+    // token (the sheet header names the currency). `=` resolves it (spec §7).
+    final exprAmount = SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      reverse: true,
+      physics: const ClampingScrollPhysics(),
+      child: Text.rich(
+        TextSpan(children: [
+          TextSpan(text: expressionDisplay(widget.expression ?? Expression.empty),
+              style: typedStyle),
+          if (focused)
+            WidgetSpan(
+              alignment: PlaceholderAlignment.middle,
+              child: AnimatedBuilder(
+                animation: _blink,
+                builder: (context, _) => Opacity(
+                  opacity: _blink.value < 0.5 ? 1 : 0,
+                  child: Container(
+                    width: 2,
+                    height: 17,
+                    margin: const EdgeInsets.symmetric(horizontal: 1),
+                    color: AppColors.accent,
+                  ),
+                ),
+              ),
+            ),
+        ]),
+        maxLines: 1,
+        softWrap: false,
+        overflow: TextOverflow.clip,
+        textAlign: TextAlign.right,
+      ),
     );
 
     return Semantics(
@@ -513,6 +574,16 @@ class _AmountFieldState extends State<_AmountField>
               horizontal: focused ? 14 - 3 : 14, vertical: focused ? 9 : 12),
           child: LayoutBuilder(
             builder: (context, c) {
+              // An expression always takes the one-line, scrolling path (§7).
+              if (exprMode) {
+                return Row(
+                  children: [
+                    Text(widget.label, style: _labelStyle),
+                    const SizedBox(width: 16),
+                    Expanded(child: exprAmount),
+                  ],
+                );
+              }
               final scaler = MediaQuery.textScalerOf(context);
               final labelW = _measure(widget.label, _labelStyle, scaler);
               final amountW = _measure(_plain(parts, def), restStyle, scaler) +

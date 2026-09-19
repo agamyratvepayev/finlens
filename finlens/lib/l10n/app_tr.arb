@@ -1319,5 +1319,12 @@
   "syncJoinWarnTitle": "Verileriniz değiştirilsin mi?",
   "syncJoinWarnMsg": "Mevcut kayıtlarınız önce bir yedek dosyasına kaydedilir, ardından grubun ortak kayıtlarıyla değiştirilir.",
   "syncJoinAction": "Katıl",
-  "syncEmailInvalid": "Geçerli bir e-posta girin"
+  "syncEmailInvalid": "Geçerli bir e-posta girin",
+  "keypadPlus": "artı",
+  "keypadMinus": "eksi",
+  "keypadMultiply": "çarpı",
+  "keypadDivide": "bölü",
+  "keypadEquals": "eşittir",
+  "keypadIncomplete": "Tamamlanmamış işlem",
+  "keypadDivideByZero": "Sıfıra bölünemez"
 }

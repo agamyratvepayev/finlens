@@ -4898,4 +4898,25 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get syncEmailInvalid => 'Geçerli bir e-posta girin';
+
+  @override
+  String get keypadPlus => 'artı';
+
+  @override
+  String get keypadMinus => 'eksi';
+
+  @override
+  String get keypadMultiply => 'çarpı';
+
+  @override
+  String get keypadDivide => 'bölü';
+
+  @override
+  String get keypadEquals => 'eşittir';
+
+  @override
+  String get keypadIncomplete => 'Tamamlanmamış işlem';
+
+  @override
+  String get keypadDivideByZero => 'Sıfıra bölünemez';
 }

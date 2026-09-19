@@ -1319,5 +1319,12 @@
   "syncJoinWarnTitle": "Maglumatlaryňyz çalşylsynmy?",
   "syncJoinWarnMsg": "Häzirki ýazgylaryňyz ilki ätiýaçlyk faýlyna saklanar, soňra toparyň umumy ýazgylary bilen çalşylar.",
   "syncJoinAction": "Goşul",
-  "syncEmailInvalid": "Dogry email giriziň"
+  "syncEmailInvalid": "Dogry email giriziň",
+  "keypadPlus": "goşmak",
+  "keypadMinus": "aýyrmak",
+  "keypadMultiply": "köpeltmek",
+  "keypadDivide": "bölmek",
+  "keypadEquals": "deň",
+  "keypadIncomplete": "Tamamlanmadyk aňlatma",
+  "keypadDivideByZero": "Nola bölüp bolmaýar"
 }

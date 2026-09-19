@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/models/models.dart';
 import '../../core/store/app_store.dart';
+import '../../core/utils/arithmetic.dart';
 import '../../core/utils/formatters.dart';
 import '../../l10n/app_localizations.dart';
 import '../../theme/app_colors.dart';
@@ -141,9 +142,16 @@ class _SplitSheetState extends State<_SplitSheet> {
   ///
   /// Empty string ⇒ the line is unassigned and renders `—` (spec §9). `'0'` is
   /// an assigned zero and renders `$0.00`; the two are deliberately different.
-  late final List<String> _raw = [
+  late final List<Expression> _raw = [
     for (final l in _lines) _rawOf(l.amount),
   ];
+
+  int get _precision => currencyDef(widget.currency).decimals;
+
+  /// A line's committed value, resolving a pending expression silently (spec
+  /// §5); null when the line is empty or an expression is still incomplete, so
+  /// the line reads as unassigned until it is a real number.
+  double? _valueOf(int i) => _raw[i].isEmpty ? null : _raw[i].value(_precision);
 
   /// The line being typed into, or null in list mode (spec §1).
   int? _active;
@@ -181,8 +189,8 @@ class _SplitSheetState extends State<_SplitSheet> {
 
   /// `AmountEntry.fromDouble` returns '' for zero, which would render an
   /// assigned zero as unassigned. An assigned zero is '0'.
-  static String _rawOf(double? v) =>
-      v == null ? '' : (v == 0 ? '0' : AmountEntry.fromDouble(v));
+  static Expression _rawOf(double? v) => Expression.ofRaw(
+      v == null ? '' : (v == 0 ? '0' : AmountEntry.fromDouble(v)));
 
   /// Writes a line's amount through the raw entry state, so the two can never
   /// disagree.
@@ -195,9 +203,8 @@ class _SplitSheetState extends State<_SplitSheet> {
     final i = _active;
     if (i == null) return;
     setState(() {
-      _raw[i] = AmountEntry.press(_raw[i], k);
-      _lines[i].amount =
-          _raw[i].isEmpty ? null : AmountEntry.value(_raw[i]);
+      _raw[i] = _raw[i].pressDigit(k, maxDecimals: 2);
+      _lines[i].amount = _valueOf(i);
     });
   }
 
@@ -205,15 +212,44 @@ class _SplitSheetState extends State<_SplitSheet> {
     final i = _active;
     if (i == null) return;
     setState(() {
-      _raw[i] = AmountEntry.backspace(_raw[i]);
-      _lines[i].amount =
-          _raw[i].isEmpty ? null : AmountEntry.value(_raw[i]);
+      _raw[i] = _raw[i].backspace();
+      _lines[i].amount = _valueOf(i);
     });
   }
 
-  /// Opens the keypad on [i], or closes it when [i] is already active.
+  void _onOperator(Op op) {
+    final i = _active;
+    if (i == null) return;
+    setState(() {
+      _raw[i] = _raw[i].pressOperator(op);
+      _lines[i].amount = _valueOf(i);
+    });
+  }
+
+  void _onEquals() {
+    final i = _active;
+    if (i == null) return;
+    setState(() {
+      _raw[i] = _raw[i].evaluated(_precision);
+      _lines[i].amount = _valueOf(i);
+    });
+  }
+
+  /// Opens the keypad on [i], or closes it when [i] is already active. Leaving a
+  /// line resolves any pending expression on it (spec §5).
   void _activate(int? i) {
-    setState(() => _active = (i != null && i == _active) ? null : i);
+    setState(() {
+      final leaving = _active;
+      if (leaving != null && leaving != i) {
+        _raw[leaving] = _raw[leaving].evaluated(_precision);
+        _lines[leaving].amount = _valueOf(leaving);
+      }
+      _active = (i != null && i == _active) ? null : i;
+      if (_active == null && leaving != null) {
+        _raw[leaving] = _raw[leaving].evaluated(_precision);
+        _lines[leaving].amount = _valueOf(leaving);
+      }
+    });
     if (_active != null) _scrollActiveIntoView();
   }
 
@@ -307,7 +343,14 @@ class _SplitSheetState extends State<_SplitSheet> {
               if (_entryMode) ...[
                 _doneButton(),
                 const SizedBox(height: 8),
-                NumericKeypad(onKey: _onKey, onBackspace: _onBackspace),
+                NumericKeypad(
+                  onKey: _onKey,
+                  onBackspace: _onBackspace,
+                  onOperator: _onOperator,
+                  onEquals: _onEquals,
+                  canResolve:
+                      _active != null && _raw[_active!].canResolve(_precision),
+                ),
               ] else ...[
                 _splitEvenlyButton(),
                 _doneButton(),
@@ -459,11 +502,17 @@ class _SplitSheetState extends State<_SplitSheet> {
     final lineMasked = masked && !active;
     // `—` means *not filled in yet*; `$0.00` is a claim that this category was
     // assigned zero, and the two are different things (spec §9).
-    final amountText = line.isBlank
-        ? '—'
-        : money(line.amount!, currency: widget.currency,
-            forceDecimals: true, masked: lineMasked);
-    final amountLabel = line.isBlank ? l.ssUnassignedA11y : amountText;
+    // While a line is active and an operator is pending, the row shows the
+    // expression as typed — never the answer (decision #1). `=` resolves it.
+    final exprMode = active && _raw[index].hasOperator;
+    final amountText = exprMode
+        ? expressionDisplay(_raw[index])
+        : line.isBlank
+            ? '—'
+            : money(line.amount!, currency: widget.currency,
+                forceDecimals: true, masked: lineMasked);
+    final amountLabel =
+        line.isBlank && !exprMode ? l.ssUnassignedA11y : amountText;
     final name = missing ? l.emptyChooseCategory : category.name;
 
     return Semantics(
@@ -649,7 +698,7 @@ class _SplitSheetState extends State<_SplitSheet> {
     if (c == null || !mounted) return;
     setState(() {
       _lines.add(SplitLine(categoryId: c.id));
-      _raw.add('');
+      _raw.add(Expression.empty);
       _active = _lines.length - 1;
     });
     _scrollActiveIntoView();

@@ -4943,4 +4943,25 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get syncEmailInvalid => 'Enter a valid email';
+
+  @override
+  String get keypadPlus => 'plus';
+
+  @override
+  String get keypadMinus => 'minus';
+
+  @override
+  String get keypadMultiply => 'multiply';
+
+  @override
+  String get keypadDivide => 'divide';
+
+  @override
+  String get keypadEquals => 'equals';
+
+  @override
+  String get keypadIncomplete => 'Incomplete expression';
+
+  @override
+  String get keypadDivideByZero => 'Cannot divide by zero';
 }

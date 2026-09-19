@@ -3,16 +3,17 @@ import 'package:flutter/material.dart';
 import '../../core/l10n/enum_labels.dart';
 import '../../core/models/models.dart';
 import '../../core/store/app_store.dart';
+import '../../core/utils/arithmetic.dart';
 import '../../core/utils/formatters.dart';
 import '../../core/utils/repeat_labels.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/form_fields.dart';
 import '../../shared/widgets/screen_header.dart';
 import '../../theme/app_colors.dart';
-import '../../theme/app_typography.dart';
 import '../quick_add/icon_picker_sheet.dart';
 import '../quick_add/pickers.dart';
 import '../quick_add/repeat_sheet.dart';
+import '../quick_add/widgets/amount_hero.dart';
 import 'edit_scaffold.dart';
 import 'mark_paid_sheet.dart';
 
@@ -37,11 +38,14 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
 
   late final TextEditingController _title =
       TextEditingController(text: _task.title);
-  late final TextEditingController _amount = TextEditingController(
-    text: _task.expectedAmount.abs() % 1 == 0
-        ? _task.expectedAmount.abs().toStringAsFixed(0)
-        : _task.expectedAmount.abs().toStringAsFixed(2),
-  );
+
+  /// The expected amount, typed on the app keypad (task moved off the system
+  /// keyboard so `+ − × ÷` are available like every other amount field). The
+  /// stored sign comes from the pay-out/pay-in direction, not the keypad.
+  late Expression _amountExpr =
+      Expression.ofRaw(AmountEntry.fromDouble(_task.expectedAmount.abs()));
+  bool _keypadOpen = false;
+
   late final TextEditingController _note =
       TextEditingController(text: _task.note ?? '');
 
@@ -65,12 +69,34 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
   @override
   void dispose() {
     _title.dispose();
-    _amount.dispose();
     _note.dispose();
     super.dispose();
   }
 
-  double get _amountValue => double.tryParse(_amount.text.trim()) ?? 0;
+  String get _currency =>
+      _store.accountById(_accountId)?.currency ?? _store.baseCurrency;
+  int get _precision => currencyDef(_currency).decimals;
+
+  /// The committed amount, resolving a pending expression silently (spec §5).
+  double get _amountValue => _amountExpr.value(_precision) ?? 0;
+
+  /// Focuses the amount row and opens the keypad, closing the system keyboard so
+  /// the two are never up together.
+  void _focusAmount() {
+    FocusManager.instance.primaryFocus?.unfocus();
+    setState(() => _keypadOpen = true);
+  }
+
+  /// Closes the keypad, resolving any pending expression first (spec §5). Called
+  /// before opening a picker or saving.
+  void _closeKeypad() {
+    if (_keypadOpen) {
+      setState(() {
+        _amountExpr = _amountExpr.evaluated(_precision);
+        _keypadOpen = false;
+      });
+    }
+  }
 
   List<DateTime> get _preview {
     if (_repeats == RepeatFrequency.none) return const [];
@@ -99,6 +125,19 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
       title: l.etTitle,
       onSave:
           _title.text.trim().isNotEmpty && _amountValue > 0 ? _save : null,
+      footer: _keypadOpen
+          ? NumericKeypad(
+              onKey: (k) => setState(
+                  () => _amountExpr = _amountExpr.pressDigit(k, maxDecimals: 2)),
+              onBackspace: () =>
+                  setState(() => _amountExpr = _amountExpr.backspace()),
+              onOperator: (op) =>
+                  setState(() => _amountExpr = _amountExpr.pressOperator(op)),
+              onEquals: () => setState(
+                  () => _amountExpr = _amountExpr.evaluated(_precision)),
+              canResolve: _amountExpr.canResolve(_precision),
+            )
+          : null,
       children: [
         FormSection(
           children: [
@@ -122,6 +161,7 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
               // pickAccount raises a bottom sheet.
               opensSheet: true,
               onTap: () async {
+                _closeKeypad();
                 final a = await pickAccount(context, title: l.etLinkedAccount);
                 if (a != null) setState(() => _accountId = a.id);
               },
@@ -143,17 +183,18 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
                 ),
               ),
             ),
-            TextFieldRow(
+            TxnAmountFieldRow(
               icon: Icons.attach_money_rounded,
               label: l.etExpectedAmount,
-              controller: _amount,
-              hint: '0',
-              trailing: Text(
-                // The chosen account's currency; before one is picked, fall
-                // back to the base rather than a fixed dollar.
-                currencySymbol(account?.currency ?? store.baseCurrency),
-                style: AppText.amount.copyWith(color: AppColors.textSecondary),
-              ),
+              raw: _amountExpr.pending,
+              expression: _amountExpr,
+              currency: account?.currency ?? store.baseCurrency,
+              emptyText: '0',
+              focused: _keypadOpen,
+              onTap: _focusAmount,
+              // The task's currency follows its account; the chip is a label
+              // here, so its tap re-focuses the amount rather than picking.
+              onCurrencyTap: _focusAmount,
             ),
             FormRow(
               icon: Icons.category_rounded,
@@ -221,6 +262,7 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
   }
 
   Future<void> _pickDestination() async {
+    _closeKeypad();
     if (!_payOut) {
       final c = await pickCategory(context, type: CategoryType.income);
       if (c != null) {
@@ -247,6 +289,7 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
   }
 
   Future<void> _pickIcon() async {
+    _closeKeypad();
     final picked = await showCategoryIconPicker(
       context,
       color: AppColors.task,
@@ -256,6 +299,7 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
   }
 
   Future<void> _pickDue() async {
+    _closeKeypad();
     final picked = await showDatePicker(
       context: context,
       initialDate: _due,
@@ -279,6 +323,7 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
   }
 
   Future<void> _pickRepeat() async {
+    _closeKeypad();
     final sel = await showRepeatSheet(
       context,
       current: _repeats,

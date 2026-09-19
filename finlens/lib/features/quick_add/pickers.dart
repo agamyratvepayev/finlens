@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import '../../core/l10n/enum_labels.dart';
 import '../../core/models/models.dart';
 import '../../core/store/app_store.dart';
+import '../../core/utils/arithmetic.dart';
 import '../../core/utils/formatters.dart';
 import '../../core/utils/search_fold.dart';
 import '../../l10n/app_localizations.dart';
@@ -2113,14 +2114,28 @@ class _NewAccountFormState extends State<_NewAccountForm> {
   int? _colorValue;
   bool _iconExplicit = false;
 
-  // Starting balance and (type-specific) credit limit are held as the raw typed
-  // strings the docked keypad drives; payment day is a 1..31 day-of-month.
-  String _amountRaw = '';
-  String _limitRaw = '';
+  // Starting balance and (type-specific) credit limit are keypad [Expression]s —
+  // a plain number behaves as the old raw string did, and `+ − × ÷` resolve in
+  // place; payment day is a 1..31 day-of-month.
+  Expression _amountExpr = Expression.empty;
+  Expression _limitExpr = Expression.empty;
   int? _paymentDay;
 
   /// Which numeric row the docked keypad writes to; null = keypad closed.
   _NumField? _numFocus;
+
+  int get _precision => currencyDef(_currency).decimals;
+
+  /// The expression the keypad currently drives, or the balance's when closed.
+  Expression get _focusedExpr =>
+      _numFocus == _NumField.limit ? _limitExpr : _amountExpr;
+  void _setFocusedExpr(Expression e) {
+    if (_numFocus == _NumField.limit) {
+      _limitExpr = e;
+    } else {
+      _amountExpr = e;
+    }
+  }
 
   @override
   void initState() {
@@ -2141,7 +2156,10 @@ class _NewAccountFormState extends State<_NewAccountForm> {
   /// field taking focus — however focus arrived — closes the keypad.
   void _onNameFocus() {
     if (_nameFocus.hasFocus && _numFocus != null) {
-      setState(() => _numFocus = null);
+      setState(() {
+        _resolveFocused();
+        _numFocus = null;
+      });
     }
   }
 
@@ -2163,8 +2181,8 @@ class _NewAccountFormState extends State<_NewAccountForm> {
     final g = _group;
     return _name.text.trim().isNotEmpty ||
         g != widget.initialGroup ||
-        _amountRaw.isNotEmpty ||
-        _limitRaw.isNotEmpty ||
+        !_amountExpr.isEmpty ||
+        !_limitExpr.isEmpty ||
         _paymentDay != null ||
         _iconExplicit;
   }
@@ -2250,7 +2268,11 @@ class _NewAccountFormState extends State<_NewAccountForm> {
   void _focusNum(_NumField field) {
     _nameFocus.unfocus();
     if (_numFocus == field) return;
-    setState(() => _numFocus = field);
+    // Leaving a field resolves its pending expression before the keypad retargets.
+    setState(() {
+      _resolveFocused();
+      _numFocus = field;
+    });
     // A sighted user gets the outline; a screen reader is told which field
     // the keypad now feeds.
     SemanticsService.sendAnnouncement(
@@ -2266,29 +2288,29 @@ class _NewAccountFormState extends State<_NewAccountForm> {
       };
 
   void _pressKey(String key) {
-    setState(() {
-      switch (_numFocus) {
-        case _NumField.balance:
-          _amountRaw = AmountEntry.press(_amountRaw, key);
-        case _NumField.limit:
-          _limitRaw = AmountEntry.press(_limitRaw, key);
-        case null:
-          break;
-      }
-    });
+    if (_numFocus == null) return;
+    setState(() => _setFocusedExpr(_focusedExpr.pressDigit(key, maxDecimals: 2)));
   }
 
   void _backspace() {
-    setState(() {
-      switch (_numFocus) {
-        case _NumField.balance:
-          _amountRaw = AmountEntry.backspace(_amountRaw);
-        case _NumField.limit:
-          _limitRaw = AmountEntry.backspace(_limitRaw);
-        case null:
-          break;
-      }
-    });
+    if (_numFocus == null) return;
+    setState(() => _setFocusedExpr(_focusedExpr.backspace()));
+  }
+
+  void _pressOperator(Op op) {
+    if (_numFocus == null) return;
+    setState(() => _setFocusedExpr(_focusedExpr.pressOperator(op)));
+  }
+
+  void _equals() {
+    if (_numFocus == null) return;
+    setState(() => _setFocusedExpr(_focusedExpr.evaluated(_precision)));
+  }
+
+  /// Resolves the focused field's pending expression (spec §5) — called when the
+  /// keypad leaves it (focus switch, name field, type change).
+  void _resolveFocused() {
+    if (_numFocus != null) _setFocusedExpr(_focusedExpr.evaluated(_precision));
   }
 
   Future<void> _changeCurrency() async {
@@ -2346,7 +2368,8 @@ class _NewAccountFormState extends State<_NewAccountForm> {
               _card([
                 _StartingBalanceRow(
                   label: _isLiability ? l.qaAmountOwed : l.eaStartingBalance,
-                  raw: _amountRaw,
+                  raw: _amountExpr.pending,
+                  expression: _amountExpr,
                   currency: _currency,
                   focused: _numFocus == _NumField.balance,
                   onTap: () => _focusNum(_NumField.balance),
@@ -2356,7 +2379,8 @@ class _NewAccountFormState extends State<_NewAccountForm> {
                   _hair(),
                   _StartingBalanceRow(
                     label: l.eaCreditLimit,
-                    raw: _limitRaw,
+                    raw: _limitExpr.pending,
+                    expression: _limitExpr,
                     currency: _currency,
                     focused: _numFocus == _NumField.limit,
                     onTap: () => _focusNum(_NumField.limit),
@@ -2416,10 +2440,11 @@ class _NewAccountFormState extends State<_NewAccountForm> {
               group: group!,
               currency: _currency,
               // addAccount signs liabilities negative; the user enters positive.
-              startingBalance: AmountEntry.value(_amountRaw),
+              // A pending expression resolves silently here (spec §5).
+              startingBalance: _amountExpr.value(_precision) ?? 0,
               creditLimit:
-                  group == AccountGroup.creditCards && _limitRaw.isNotEmpty
-                      ? AmountEntry.value(_limitRaw)
+                  group == AccountGroup.creditCards && !_limitExpr.isEmpty
+                      ? _limitExpr.value(_precision)
                       : null,
               paymentDue:
                   group == AccountGroup.bankLoans ? _paymentDay : null,
@@ -2431,7 +2456,13 @@ class _NewAccountFormState extends State<_NewAccountForm> {
           },
         ),
         if (_numFocus != null) ...[
-          NumericKeypad(onKey: _pressKey, onBackspace: _backspace),
+          NumericKeypad(
+            onKey: _pressKey,
+            onBackspace: _backspace,
+            onOperator: _pressOperator,
+            onEquals: _equals,
+            canResolve: _focusedExpr.canResolve(_precision),
+          ),
           // The home-indicator inset below the keys is the sheet shell's now.
           const SizedBox(height: Insets.sm),
         ],
@@ -2672,10 +2703,15 @@ class _StartingBalanceRow extends StatefulWidget {
     required this.focused,
     required this.onTap,
     required this.onCurrencyTap,
+    this.expression,
   });
 
   final String label;
   final String raw;
+
+  /// The keypad expression. An operator switches the row to a scrolling
+  /// expression view; a plain number renders [raw] exactly as before.
+  final Expression? expression;
   final String currency;
   final bool focused;
   final VoidCallback onTap;
@@ -2738,7 +2774,9 @@ class _StartingBalanceRowState extends State<_StartingBalanceRow>
   Widget build(BuildContext context) {
     final def = currencyDef(widget.currency);
     final focused = widget.focused;
-    final filled = widget.raw.isNotEmpty;
+    final exprMode =
+        widget.expression != null && widget.expression!.showsAsExpression;
+    final filled = widget.raw.isNotEmpty || exprMode;
     final parts = AmountEntry.splitPlain(widget.raw, widget.currency);
 
     // Task 11: the typed digits are always bright; the untyped decimal padding
@@ -2775,6 +2813,43 @@ class _StartingBalanceRowState extends State<_StartingBalanceRow>
       textAlign: TextAlign.right,
       maxLines: 1,
       softWrap: false,
+    );
+
+    // Expression mode: the typed expression scrolls horizontally, never shrinks
+    // or wraps; `=` resolves it (spec §7). No currency token — the code beside
+    // the row still names the unit.
+    final exprAmount = SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      reverse: true,
+      physics: const ClampingScrollPhysics(),
+      child: Text.rich(
+        TextSpan(children: [
+          TextSpan(
+              text:
+                  expressionDisplay(widget.expression ?? Expression.empty),
+              style: _numStyle(AppColors.textPrimary)),
+          if (focused)
+            WidgetSpan(
+              alignment: PlaceholderAlignment.middle,
+              child: AnimatedBuilder(
+                animation: _blink,
+                builder: (context, _) => Opacity(
+                  opacity: _blink.value < 0.5 ? 1 : 0,
+                  child: Container(
+                    width: 2,
+                    height: 17,
+                    margin: const EdgeInsets.symmetric(horizontal: 1),
+                    color: AppColors.accent,
+                  ),
+                ),
+              ),
+            ),
+        ]),
+        maxLines: 1,
+        softWrap: false,
+        overflow: TextOverflow.clip,
+        textAlign: TextAlign.right,
+      ),
     );
     // The currency code doubles as the currency control now that the amount
     // sheet (whose chip used to open the picker) is gone.
@@ -2819,6 +2894,22 @@ class _StartingBalanceRowState extends State<_StartingBalanceRow>
               vertical: focused ? 6 : 9),
           child: LayoutBuilder(
             builder: (context, c) {
+              // An expression always takes the one-line, scrolling path (§7).
+              if (exprMode) {
+                return Row(
+                  children: [
+                    Flexible(
+                      child: Text(widget.label,
+                          style: _labelStyle,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(child: exprAmount),
+                    code,
+                  ],
+                );
+              }
               final scaler = MediaQuery.textScalerOf(context);
               final labelW = _measure(widget.label, _labelStyle, scaler);
               final amountW = _measure(parts.typed + parts.rest,

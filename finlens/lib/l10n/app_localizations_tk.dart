@@ -4867,4 +4867,25 @@ class AppLocalizationsTk extends AppLocalizations {
 
   @override
   String get syncEmailInvalid => 'Dogry email giriziň';
+
+  @override
+  String get keypadPlus => 'goşmak';
+
+  @override
+  String get keypadMinus => 'aýyrmak';
+
+  @override
+  String get keypadMultiply => 'köpeltmek';
+
+  @override
+  String get keypadDivide => 'bölmek';
+
+  @override
+  String get keypadEquals => 'deň';
+
+  @override
+  String get keypadIncomplete => 'Tamamlanmadyk aňlatma';
+
+  @override
+  String get keypadDivideByZero => 'Nola bölüp bolmaýar';
 }

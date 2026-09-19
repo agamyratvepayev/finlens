@@ -1319,5 +1319,12 @@
   "syncJoinWarnTitle": "Заменить ваши данные?",
   "syncJoinWarnMsg": "Текущие записи сначала сохранятся в файл резервной копии, затем будут заменены общими записями группы.",
   "syncJoinAction": "Присоединиться",
-  "syncEmailInvalid": "Введите корректный email"
+  "syncEmailInvalid": "Введите корректный email",
+  "keypadPlus": "плюс",
+  "keypadMinus": "минус",
+  "keypadMultiply": "умножить",
+  "keypadDivide": "разделить",
+  "keypadEquals": "равно",
+  "keypadIncomplete": "Незавершённое выражение",
+  "keypadDivideByZero": "Деление на ноль невозможно"
 }

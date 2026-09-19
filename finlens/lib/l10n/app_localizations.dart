@@ -7641,6 +7641,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Enter a valid email'**
   String get syncEmailInvalid;
+
+  /// No description provided for @keypadPlus.
+  ///
+  /// In en, this message translates to:
+  /// **'plus'**
+  String get keypadPlus;
+
+  /// No description provided for @keypadMinus.
+  ///
+  /// In en, this message translates to:
+  /// **'minus'**
+  String get keypadMinus;
+
+  /// No description provided for @keypadMultiply.
+  ///
+  /// In en, this message translates to:
+  /// **'multiply'**
+  String get keypadMultiply;
+
+  /// No description provided for @keypadDivide.
+  ///
+  /// In en, this message translates to:
+  /// **'divide'**
+  String get keypadDivide;
+
+  /// No description provided for @keypadEquals.
+  ///
+  /// In en, this message translates to:
+  /// **'equals'**
+  String get keypadEquals;
+
+  /// No description provided for @keypadIncomplete.
+  ///
+  /// In en, this message translates to:
+  /// **'Incomplete expression'**
+  String get keypadIncomplete;
+
+  /// No description provided for @keypadDivideByZero.
+  ///
+  /// In en, this message translates to:
+  /// **'Cannot divide by zero'**
+  String get keypadDivideByZero;
 }
 
 class _AppLocalizationsDelegate

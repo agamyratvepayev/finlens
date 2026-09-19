@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import '../../core/l10n/enum_labels.dart';
 import '../../core/models/models.dart';
 import '../../core/store/app_store.dart';
+import '../../core/utils/arithmetic.dart';
 import '../../core/utils/formatters.dart';
 import '../../core/utils/fx.dart';
 import '../../l10n/app_localizations.dart';
@@ -230,7 +231,7 @@ class _QuickAddScreenState extends State<QuickAddScreen>
 
   /// The literal characters typed into the hero, not a double — the display
   /// has to tell entered digits from decimals not yet reached.
-  String _raw = '';
+  Expression _expr = Expression.empty;
 
   final _note = TextEditingController();
   final _noteFocus = FocusNode();
@@ -334,9 +335,9 @@ class _QuickAddScreenState extends State<QuickAddScreen>
       // (Rebalance §1b): seed it with the account's resulting balance —
       // baseline + delta, i.e. its current balance magnitude — so reopening a
       // saved rebalance shows the balance it was set to, never the raw delta.
-      _raw = source.type == TxnType.rebalance
+      _expr = Expression.ofRaw(source.type == TxnType.rebalance
           ? AmountEntry.fromDouble(store.balanceOf(source.toRef).abs())
-          : AmountEntry.fromDouble(source.amount);
+          : AmountEntry.fromDouble(source.amount));
       _currency = source.currency;
       // Seed the rate row from the entry's own frozen rate (021b §4) so an edit
       // shows what it froze and a plain amount edit keeps it. A copy re-proposes.
@@ -481,7 +482,7 @@ class _QuickAddScreenState extends State<QuickAddScreen>
           // The transfer stores the NET; the Amount field is the GROSS. Rebuild
           // it as net + fee so the hero shows what left the source, and Save's
           // `gross − fee` recovers the same net rather than deducting twice.
-          _raw = AmountEntry.fromDouble(src.amount + fee.amount);
+          _expr = Expression.ofRaw(AmountEntry.fromDouble(src.amount + fee.amount));
         }
       }
       // Mark the loaded pair as already primed so the rate the transfer was
@@ -508,7 +509,13 @@ class _QuickAddScreenState extends State<QuickAddScreen>
     super.dispose();
   }
 
-  double get _amount => AmountEntry.value(_raw);
+  /// The amount field's rounding precision — the currency's decimal places
+  /// (spec §6). Only affects a resolved expression; a plain number is parsed
+  /// verbatim, exactly as before.
+  int get _amountPrecision => currencyDef(_currency).decimals;
+
+  /// The committed amount, resolving a pending expression silently (spec §5).
+  double get _amount => _expr.value(_amountPrecision) ?? 0;
 
   /// A scheduled task's direction comes from its category (task 030 §3): an
   /// income category means the money arrives. Without a category there is
@@ -615,16 +622,32 @@ class _QuickAddScreenState extends State<QuickAddScreen>
         setState(() => _keypadOpen = true);
       },
       onKey: (k) => setState(() {
-        _raw = AmountEntry.press(_raw, k);
+        // The amount field's typed precision stays 2 (unchanged from the old
+        // AmountEntry); a resolved expression rounds to the currency (§6).
+        _expr = _expr.pressDigit(k, maxDecimals: 2);
         // A changed amount can flip the difference's sign, which changes which
         // category list applies; drop a category that no longer fits (§4).
         if (_type == QuickAddType.rebalance) _reconcileRebalanceCategory(store);
       }),
       onBackspace: () => setState(() {
-        _raw = AmountEntry.backspace(_raw);
+        _expr = _expr.backspace();
         if (_type == QuickAddType.rebalance) _reconcileRebalanceCategory(store);
       }),
-      onDismissKeypad: () => setState(() => _keypadOpen = false),
+      onOperator: (op) => setState(() {
+        _expr = _expr.pressOperator(op);
+        if (_type == QuickAddType.rebalance) _reconcileRebalanceCategory(store);
+      }),
+      onEquals: () => setState(() {
+        _expr = _expr.evaluated(_amountPrecision);
+        if (_type == QuickAddType.rebalance) _reconcileRebalanceCategory(store);
+      }),
+      canResolve: _expr.canResolve(_amountPrecision),
+      onDismissKeypad: () => setState(() {
+        // Leaving the keypad resolves a pending expression, so the figure the
+        // form carries is the one on screen (spec §5).
+        _expr = _expr.evaluated(_amountPrecision);
+        _keypadOpen = false;
+      }),
     );
   }
 
@@ -645,7 +668,7 @@ class _QuickAddScreenState extends State<QuickAddScreen>
 
   NumericHero _amountHero([String? label]) => NumericHero(
         label: label ?? AppLocalizations.of(context).qaAmount,
-        raw: _raw,
+        expression: _expr,
         currency: _currency,
         onCurrencyTap: () async {
           final c = await pickCurrency(context, _currency);
@@ -1364,7 +1387,7 @@ class _QuickAddScreenState extends State<QuickAddScreen>
       _fromRef = null; // a price change files under no category
       return;
     }
-    if (_raw.isEmpty) return; // no difference yet — nothing to reconcile against
+    if (_expr.isEmpty) return; // no difference yet — nothing to reconcile against
     final baseline = _baselineBalance(store, account.id);
     final signed = account.group.isAsset ? _amount : -_amount;
     final diff = signed - baseline;
@@ -1380,7 +1403,7 @@ class _QuickAddScreenState extends State<QuickAddScreen>
     // balanceOf minus the editing record on edit (§1a). Rendered by `Current`.
     final baseline =
         account == null ? 0.0 : _baselineBalance(store, account.id);
-    final entered = _raw.isEmpty ? null : _amount; // a magnitude (§1d)
+    final entered = _expr.isEmpty ? null : _amount; // a magnitude (§1d)
     // The keypad cannot type a minus, so the account gives the balance its side:
     // an asset is positive, a liability negative (§1d).
     final newBalance = entered == null || account == null
@@ -1398,7 +1421,7 @@ class _QuickAddScreenState extends State<QuickAddScreen>
       // account's property, so the chip is locked (§2a).
       hero: NumericHero(
         label: l.qaNewBalance,
-        raw: _raw,
+        expression: _expr,
         currency: currency,
         currencyLocked: true,
       ),
@@ -1485,9 +1508,9 @@ class _QuickAddScreenState extends State<QuickAddScreen>
           : ((diff != null && diff < 0) ? l.qaSaveExpense : l.qaSaveIncome),
       blockers: [
         Blocker(unmet: _toRef == null, label: l.qaBlockAccount),
-        Blocker(unmet: _raw.isEmpty, label: l.qaEnterNewBalance),
+        Blocker(unmet: _expr.isEmpty, label: l.qaEnterNewBalance),
         Blocker(
-          unmet: _raw.isNotEmpty && diff == 0,
+          unmet: !_expr.isEmpty && diff == 0,
           label: l.qaBlockBalanceUnchanged,
         ),
         // Non-revaluation only: a real entry needs a category (§4). Never blocks
@@ -1529,7 +1552,8 @@ class _QuickAddScreenState extends State<QuickAddScreen>
           FieldSpec(
             icon: Icons.numbers_rounded,
             label: AppLocalizations.of(context).qaAmount,
-            raw: _raw,
+            raw: _expr.pending,
+            expression: _expr,
             currency: _currency,
             emptyText: AppLocalizations.of(context).emptyEnterAmount,
             slotKey: _amountRowKey,

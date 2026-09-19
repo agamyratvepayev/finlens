@@ -1706,5 +1706,12 @@
   "syncJoinWarnTitle": "Replace your data?",
   "syncJoinWarnMsg": "Your current records will be saved to a backup file first, then replaced by the group's shared records.",
   "syncJoinAction": "Join",
-  "syncEmailInvalid": "Enter a valid email"
+  "syncEmailInvalid": "Enter a valid email",
+  "keypadPlus": "plus",
+  "keypadMinus": "minus",
+  "keypadMultiply": "multiply",
+  "keypadDivide": "divide",
+  "keypadEquals": "equals",
+  "keypadIncomplete": "Incomplete expression",
+  "keypadDivideByZero": "Cannot divide by zero"
 }

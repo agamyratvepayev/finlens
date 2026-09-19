@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/models/currency_def.dart';
+import '../../../core/utils/arithmetic.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../theme/app_colors.dart';
@@ -14,24 +15,10 @@ import 'form_kit.dart';
 abstract final class AmountEntry {
   static const _maxWhole = 12;
 
-  static String press(String raw, String key) {
-    if (key == '.') {
-      if (raw.contains('.')) return raw;
-      return raw.isEmpty ? '0.' : '$raw.';
-    }
-    final dot = raw.indexOf('.');
-    if (dot >= 0) {
-      // Two decimal places is the most any supported currency needs.
-      if (raw.length - dot - 1 >= 2) return raw;
-      return '$raw$key';
-    }
-    if (raw.length >= _maxWhole) return raw;
-    if (raw == '0') return key;
-    return '$raw$key';
-  }
+  static String press(String raw, String key) =>
+      appendDigit(raw, key, maxDecimals: 2, maxWhole: _maxWhole);
 
-  static String backspace(String raw) =>
-      raw.isEmpty ? raw : raw.substring(0, raw.length - 1);
+  static String backspace(String raw) => backspaceDigit(raw);
 
   static double value(String raw) =>
       raw.isEmpty ? 0 : (double.tryParse(raw) ?? 0);
@@ -155,11 +142,19 @@ class NumericHeroCard extends StatelessWidget {
     required this.onTap,
     this.onCurrencyTap,
     this.currencyLocked = false,
+    this.expression,
   });
 
   final String label;
   final String raw;
   final String currency;
+
+  /// The full expression the keypad is building. When it carries an operator the
+  /// card renders the expression (grouped operands, spaced operators, a
+  /// horizontal scroll) instead of the single-number path; a plain number
+  /// (`!hasOperator`) renders exactly as [raw] always did. Null keeps the legacy
+  /// single-number behaviour untouched (callers that have not adopted it).
+  final Expression? expression;
   final Color accent;
   final Color accentDim;
   final bool focused;
@@ -267,6 +262,59 @@ class NumericHeroCard extends StatelessWidget {
               child: LayoutBuilder(
                 builder: (context, constraints) {
                   final rowWidth = constraints.maxWidth;
+
+                  // An active expression (an operator is pending) renders as a
+                  // horizontally-scrolling line at full size — it never shrinks,
+                  // wraps or truncates (spec §7). The label keeps its full cap,
+                  // the chip stays on the line beside it.
+                  final expr = expression;
+                  if (expr != null && expr.showsAsExpression) {
+                    return Row(
+                      children: [
+                        SizedBox(
+                          width: iconW,
+                          child: Icon(
+                            Icons.payments_rounded,
+                            size: 18 * s,
+                            color: focused ? accent : AppColors.formDim2,
+                          ),
+                        ),
+                        SizedBox(width: gap),
+                        ConstrainedBox(
+                          constraints: BoxConstraints(maxWidth: 150 * s),
+                          child: Text(
+                            label,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 15 * s * t,
+                              fontWeight: FontWeight.w400,
+                              height: 1.2,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                        ),
+                        SizedBox(width: gap),
+                        Expanded(
+                          child: Semantics(
+                            label: spokenExpression(
+                                expr, AppLocalizations.of(context)),
+                            excludeSemantics: true,
+                            child: _ExpressionText(
+                              expression: expr,
+                              accent: accent,
+                              focused: focused,
+                              fontSize: baseSize,
+                            ),
+                          ),
+                        ),
+                        if (chip != null) ...[
+                          SizedBox(width: chipGap),
+                          chip,
+                        ],
+                      ],
+                    );
+                  }
 
                   // Everything on the amount's line except the label and the
                   // amount: the icon column, the two gaps, and the chip when it
@@ -426,6 +474,25 @@ class NumericHeroCard extends StatelessWidget {
   }
 }
 
+/// The expression spoken as words for a screen reader — `569 plus 30`, not a
+/// run of bare glyphs (spec §8). The operators use the localised keypad labels;
+/// a resolved negative keeps its minus.
+String spokenExpression(Expression e, AppLocalizations l) {
+  String word(Op op) => switch (op) {
+        Op.add => l.keypadPlus,
+        Op.subtract => l.keypadMinus,
+        Op.multiply => l.keypadMultiply,
+        Op.divide => l.keypadDivide,
+      };
+  final nums = [...e.operands, if (e.pending.isNotEmpty) e.pending];
+  final parts = <String>[];
+  for (var i = 0; i < nums.length; i++) {
+    parts.add(nums[i].startsWith('-') ? '−${nums[i].substring(1)}' : nums[i]);
+    if (i < e.operators.length) parts.add(word(e.operators[i]));
+  }
+  return parts.join(' ');
+}
+
 /// The amount's glyph style at a given [size]. Shared by [_AmountText] and the
 /// measurement pass in [NumericHeroCard] so the width the card fits the number
 /// into is the exact width the number paints at — letterSpacing rides on the
@@ -552,6 +619,82 @@ class _AmountTextState extends State<_AmountText>
   }
 }
 
+/// Renders an active expression (`569 + 30`) on one line. The operands are
+/// grouped like plain numbers and the operators spaced (spec §7); the whole line
+/// scrolls horizontally when it outgrows the field, keeping the caret at the
+/// right edge visible, and it never shrinks the font, wraps or truncates.
+class _ExpressionText extends StatefulWidget {
+  const _ExpressionText({
+    required this.expression,
+    required this.accent,
+    required this.focused,
+    required this.fontSize,
+  });
+
+  final Expression expression;
+  final Color accent;
+  final bool focused;
+  final double fontSize;
+
+  @override
+  State<_ExpressionText> createState() => _ExpressionTextState();
+}
+
+class _ExpressionTextState extends State<_ExpressionText>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _blink = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1050),
+  )..repeat();
+
+  @override
+  void dispose() {
+    _blink.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = formScale(context);
+    final size = widget.fontSize;
+    final style = _amountStyle(size).copyWith(color: widget.accent);
+    // reverse:true pins the line to the right when it fits and keeps the caret
+    // (its right end) visible when it overflows — a right-aligned scroll.
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      reverse: true,
+      physics: const ClampingScrollPhysics(),
+      child: Text.rich(
+        TextSpan(
+          children: [
+            TextSpan(text: expressionDisplay(widget.expression), style: style),
+            if (widget.focused)
+              WidgetSpan(
+                alignment: PlaceholderAlignment.middle,
+                child: AnimatedBuilder(
+                  animation: _blink,
+                  builder: (context, _) => Opacity(
+                    opacity: _blink.value < 0.5 ? 1 : 0,
+                    child: Container(
+                      width: 2,
+                      height: size * 1.05,
+                      margin: EdgeInsets.symmetric(horizontal: 1 * s),
+                      color: widget.accent,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+        maxLines: 1,
+        softWrap: false,
+        overflow: TextOverflow.clip,
+        textAlign: TextAlign.right,
+      ),
+    );
+  }
+}
+
 /// The currency control: the code, a chevron, and a tap that opens the picker.
 /// Shared by the numeric hero and [TxnAmountFieldRow] — one chip, two callers,
 /// so a change to either shows up in both.
@@ -635,6 +778,7 @@ class TxnAmountFieldRow extends StatefulWidget {
     required this.onCurrencyTap,
     this.sign = '',
     this.valueColor,
+    this.expression,
   });
 
   final IconData icon;
@@ -642,6 +786,10 @@ class TxnAmountFieldRow extends StatefulWidget {
 
   /// The literal characters typed, straight from the form's `_raw`.
   final String raw;
+
+  /// The full keypad expression. An operator switches the row to expression
+  /// mode (a scrolling `1,234 + 30`); a plain number renders [raw] unchanged.
+  final Expression? expression;
   final String currency;
 
   /// A leading sign glyph shown before the figure once a direction is known
@@ -713,7 +861,9 @@ class _TxnAmountFieldRowState extends State<TxnAmountFieldRow>
     final scaler = MediaQuery.textScalerOf(context);
 
     final focused = widget.focused;
-    final filled = widget.raw.isNotEmpty;
+    final exprMode =
+        widget.expression != null && widget.expression!.showsAsExpression;
+    final filled = widget.raw.isNotEmpty || exprMode;
     // The chip is a property of an amount: absent until there is one, or until
     // the row is focused and there is about to be (§1).
     final showChip = focused || filled;
@@ -748,7 +898,14 @@ class _TxnAmountFieldRowState extends State<TxnAmountFieldRow>
     final restColor = widget.valueColor ??
         ((filled && !focused) ? AppColors.textPrimary : AppColors.textTertiary);
 
-    final Widget value = showEmpty
+    final Widget value = exprMode
+        ? _ExpressionText(
+            expression: widget.expression!,
+            accent: numColor,
+            focused: focused,
+            fontSize: 14.5 * s * t,
+          )
+        : showEmpty
         ? Text(
             widget.emptyText,
             textAlign: TextAlign.right,
@@ -826,8 +983,9 @@ class _TxnAmountFieldRowState extends State<TxnAmountFieldRow>
         final iconW = kIconColumn * s;
         final gaps = kIconGap * s * 2;
         // One line only if the label and the amount unit both fit with a little
-        // breathing room between them.
-        final oneLine =
+        // breathing room between them. An expression always takes the one-line
+        // path — its value scrolls horizontally rather than wrapping (spec §7).
+        final oneLine = exprMode ||
             iconW + gaps + labelW + 16 * s + valueW + chipW <= c.maxWidth;
 
         if (oneLine) {
@@ -915,8 +1073,11 @@ class _TxnAmountFieldRowState extends State<TxnAmountFieldRow>
       excludeSemantics: true,
       label: showEmpty
           ? '${widget.label} ${widget.emptyText}'
-          : '${widget.label} '
-              '${money(AmountEntry.value(widget.raw), currency: widget.currency)}',
+          : exprMode
+              ? '${widget.label} '
+                  '${spokenExpression(widget.expression!, AppLocalizations.of(context))}'
+              : '${widget.label} '
+                  '${money(AmountEntry.value(widget.raw), currency: widget.currency)}',
       child: InkWell(
         onTap: widget.onTap,
         borderRadius: BorderRadius.circular(14 * s),
@@ -931,15 +1092,35 @@ class _TxnAmountFieldRowState extends State<TxnAmountFieldRow>
 /// The amount is the field users touch first and the only numeric one, so it
 /// gets a keypad rather than the system keyboard: no keyboard-height jump, a
 /// full-size decimal key, and Save stays in thumb reach directly above it.
+///
+/// An operator row (`+ − × ÷ =`) sits above the digit grid, always visible so
+/// the arithmetic is discoverable (spec §2). The **digit grid below is
+/// untouched** — same 8·s gaps, 12·s radius, 52·s keys. [onOperator] and
+/// [onEquals] are optional so a field that has not adopted the expression model
+/// simply gets an inert operator row; [canResolve] drives the `=` key's two
+/// states (accent when it resolves, muted otherwise — spec §4).
 class NumericKeypad extends StatelessWidget {
   const NumericKeypad({
     super.key,
     required this.onKey,
     required this.onBackspace,
+    this.onOperator,
+    this.onEquals,
+    this.canResolve = false,
   });
 
   final ValueChanged<String> onKey;
   final VoidCallback onBackspace;
+
+  /// Fires with the operator pressed. Null leaves the row visible but inert.
+  final ValueChanged<Op>? onOperator;
+
+  /// Fires when `=` is pressed and [canResolve] is true.
+  final VoidCallback? onEquals;
+
+  /// Whether a pending expression can be resolved right now — the `=` key's
+  /// enabled state and its only on-screen error report (spec §4).
+  final bool canResolve;
 
   static const _rows = [
     ['1', '2', '3'],
@@ -962,6 +1143,33 @@ class NumericKeypad extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            // The operator row. The buttons are deliberately shorter than the
+            // digit keys (34·s visible) — a full key-row of height would push
+            // the form off a small screen; the tap target is expanded to 44
+            // instead, into the transparent space around the pill (spec §2.1).
+            Row(
+              children: [
+                for (final op in Op.values) ...[
+                  Expanded(
+                    child: _OpKey(
+                      glyph: op.glyph,
+                      semanticsLabel: _opLabel(context, op),
+                      onTap: onOperator == null ? null : () => onOperator!(op),
+                    ),
+                  ),
+                  SizedBox(width: 8 * s),
+                ],
+                Expanded(
+                  child: _EqualsKey(
+                    enabled: canResolve,
+                    onTap: canResolve ? onEquals : null,
+                    label: _equalsLabel(context),
+                  ),
+                ),
+              ],
+            ),
+            // The one gap the spec sets between the operator row and the grid.
+            SizedBox(height: 6 * s),
             for (var r = 0; r < _rows.length; r++) ...[
               if (r > 0) SizedBox(height: 8 * s),
               Row(
@@ -980,6 +1188,150 @@ class NumericKeypad extends StatelessWidget {
               ),
             ],
           ],
+        ),
+      ),
+    );
+  }
+
+  static String _opLabel(BuildContext context, Op op) {
+    final l = AppLocalizations.of(context);
+    return switch (op) {
+      Op.add => l.keypadPlus,
+      Op.subtract => l.keypadMinus,
+      Op.multiply => l.keypadMultiply,
+      Op.divide => l.keypadDivide,
+    };
+  }
+
+  static String _equalsLabel(BuildContext context) =>
+      AppLocalizations.of(context).keypadEquals;
+}
+
+/// An operator key (`+ − × ÷`). Visible height 34·s; the tap target is a 44·s
+/// [SizedBox] with the pill centred inside it, so the hit area reaches 44
+/// without the pill growing (spec §2.1 / §8).
+class _OpKey extends StatefulWidget {
+  const _OpKey({
+    required this.glyph,
+    required this.semanticsLabel,
+    required this.onTap,
+  });
+
+  final String glyph;
+  final String semanticsLabel;
+  final VoidCallback? onTap;
+
+  @override
+  State<_OpKey> createState() => _OpKeyState();
+}
+
+class _OpKeyState extends State<_OpKey> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = formScale(context);
+    final hit = 44 * s < 44 ? 44.0 : 44 * s;
+    return Semantics(
+      button: true,
+      label: widget.semanticsLabel,
+      excludeSemantics: true,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTapDown: (_) => setState(() => _pressed = true),
+        onTapUp: (_) => setState(() => _pressed = false),
+        onTapCancel: () => setState(() => _pressed = false),
+        onTap: widget.onTap,
+        child: SizedBox(
+          height: hit,
+          child: Center(
+            child: Container(
+              height: 34 * s,
+              decoration: BoxDecoration(
+                color: _pressed ? AppColors.keyPressed : AppColors.sheetCard,
+                borderRadius: BorderRadius.circular(12 * s),
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                widget.glyph,
+                style: TextStyle(
+                  fontSize: 15 * s,
+                  fontWeight: FontWeight.w500,
+                  height: 1.0,
+                  color: AppColors.accentLight,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The `=` key. Accent when [enabled], muted otherwise — the only thing on
+/// screen that says an expression is pending (spec §4). Same 34·s visible /
+/// 44·s hit-target geometry as [_OpKey].
+class _EqualsKey extends StatefulWidget {
+  const _EqualsKey({
+    required this.enabled,
+    required this.onTap,
+    required this.label,
+  });
+
+  final bool enabled;
+  final VoidCallback? onTap;
+  final String label;
+
+  @override
+  State<_EqualsKey> createState() => _EqualsKeyState();
+}
+
+class _EqualsKeyState extends State<_EqualsKey> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final s = formScale(context);
+    final hit = 44 * s < 44 ? 44.0 : 44 * s;
+    final bg = !widget.enabled
+        ? AppColors.surfaceAlt
+        : (_pressed ? AppColors.keyPressed : AppColors.accent);
+    final fg = widget.enabled ? AppColors.textPrimary : AppColors.sheetGrabber;
+    return Semantics(
+      button: true,
+      enabled: widget.enabled,
+      label: widget.label,
+      excludeSemantics: true,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTapDown: widget.enabled ? (_) => setState(() => _pressed = true) : null,
+        onTapUp: widget.enabled ? (_) => setState(() => _pressed = false) : null,
+        onTapCancel: () => setState(() => _pressed = false),
+        onTap: widget.onTap,
+        child: SizedBox(
+          height: hit,
+          child: Center(
+            child: Container(
+              height: 34 * s,
+              decoration: BoxDecoration(
+                color: bg,
+                borderRadius: BorderRadius.circular(12 * s),
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                '=',
+                style: TextStyle(
+                  fontSize: 15 * s,
+                  fontWeight: FontWeight.w600,
+                  height: 1.0,
+                  color: fg,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
+            ),
+          ),
         ),
       ),
     );
