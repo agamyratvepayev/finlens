@@ -227,13 +227,16 @@ void main() {
       expect(_amountText(tester, '500').textSpan!.toPlainText(), '500.00₽');
     });
 
-    testWidgets('TMT renders from its def (symbol m, before, flush)',
+    testWidgets('TMT renders from its def (code after, spaced)',
         (tester) async {
-      // The shipped TMT def carries symbol "m", symbolBefore true — so the row
-      // reads "m500.00", the def-driven form, not the spec prose's "500.00 TMT".
+      // The shipped TMT def (task 24) carries no symbol and symbolBefore false —
+      // so the token falls back to the code and follows the number: "500.00 TMT",
+      // a non-breaking space between them, the def-driven form.
       final tmt = _store([_asset('a1', 'Main', 500, currency: 'TMT')]);
       await _open(tester, tmt, 'a1');
-      expect(_amountText(tester, '500').textSpan!.toPlainText(), 'm500.00');
+      expect(
+          _amountText(tester, '500').textSpan!.toPlainText(),
+          '500.00 TMT');
     });
   });
 

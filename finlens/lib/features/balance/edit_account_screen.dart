@@ -171,7 +171,7 @@ class _EditAccountScreenState extends State<EditAccountScreen> {
                             controller: _limit,
                             hint: '0',
                             trailing: Text(
-                              currencySymbol(_currency),
+                              currencyDef(_currency).token,
                               style: AppText.amount.copyWith(
                                 color: AppColors.textSecondary,
                               ),

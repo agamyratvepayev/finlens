@@ -15,6 +15,12 @@ import '../models/currency_def.dart';
 
 const _minus = '−';
 
+/// The non-breaking space (U+00A0) placed between a spaced token and the digits,
+/// so an amount never wraps between its unit and its number. The same character
+/// `_moneyCustom`/`currencySymbol`/`AmountEntry.split` already use — named here
+/// so the built-in path in [money]/[moneyCompact] cannot drift to a plain space.
+const _nbsp = ' ';
+
 /// The currency an omitted [money]/[moneyCompact] `currency` argument falls
 /// back to. It mirrors `AppStore.baseCurrency` — the store keeps it current via
 /// [setFormatterBaseCurrency] — so a bare `money(x)` renders in the store's
@@ -181,8 +187,20 @@ String money(
         withSymbol: withSymbol);
   }
 
-  final symbol = withSymbol ? currencySymbol(code) : '';
-  if (masked) return '$symbol••••';
+  // Token placement follows the currency's own metadata — the same three reads
+  // [_moneyCustom] makes: the token from [CurrencyDef.token] (the symbol when
+  // present, else the code), its side from [CurrencyDef.symbolBefore], and its
+  // spacing from [CurrencyDef.tokenHugs] (a glyph flush, a letter symbol or a
+  // code separated by [_nbsp] so a figure never wraps away from its unit).
+  // Built-ins stay on this legacy path rather than routing through _moneyCustom,
+  // so the value-driven decimal rule below is untouched and USD is byte-identical.
+  final def = currencyDef(code);
+  final token = def.token;
+  final gap = def.tokenHugs ? '' : _nbsp;
+  if (masked) {
+    if (!withSymbol) return '••••';
+    return def.symbolBefore ? '$token$gap••••' : '••••$gap$token';
+  }
 
   final negative = value < 0;
   var abs = value.abs();
@@ -211,7 +229,10 @@ String money(
   final sign = (signless || displaysZero)
       ? ''
       : (negative ? _minus : (showSign ? '+' : ''));
-  return '$sign$symbol$text';
+  if (!withSymbol) return '$sign$text';
+  return def.symbolBefore
+      ? '$sign$token$gap$text'
+      : '$sign$text$gap$token';
 }
 
 /// Which kind of number an amount is (spec §1). There is no default: every call
@@ -258,18 +279,25 @@ String formatAmount(
 
 /// Compact form for dense captions ("$8.4K/yr").
 String moneyCompact(double value, {String? currency}) {
-  final symbol = currencySymbol(currency ?? _baseCurrency);
+  // Same token placement as [money] (side from [symbolBefore], gap from
+  // [tokenHugs]); the sign always leads: `−$8.4K`, `−8.4K TMT`.
+  final def = currencyDef(currency ?? _baseCurrency);
+  final token = def.token;
+  final gap = def.tokenHugs ? '' : _nbsp;
   final abs = value.abs();
   final sign = value < 0 ? _minus : '';
+  String withToken(String body) => def.symbolBefore
+      ? '$sign$token$gap$body'
+      : '$sign$body$gap$token';
   if (abs >= 1000000) {
-    return '$sign$symbol${(abs / 1000000).toStringAsFixed(1)}M';
+    return withToken('${(abs / 1000000).toStringAsFixed(1)}M');
   }
   if (abs >= 1000) {
     final v = abs / 1000;
     final s = v >= 10 ? v.toStringAsFixed(0) : v.toStringAsFixed(1);
-    return '$sign$symbol${s}K';
+    return withToken('${s}K');
   }
-  return '$sign$symbol${abs.toStringAsFixed(0)}';
+  return withToken(abs.toStringAsFixed(0));
 }
 
 /// An exchange rate for display (spec 021a §1a): stored with 6 decimals, shown

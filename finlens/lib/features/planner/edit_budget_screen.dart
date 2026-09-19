@@ -501,7 +501,7 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
           ),
           const SizedBox(width: 5),
           Text(
-            currencySymbol(store.baseCurrency),
+            currencyDef(store.baseCurrency).token,
             style: AppText.amount.copyWith(color: AppColors.textSecondary),
           ),
         ],

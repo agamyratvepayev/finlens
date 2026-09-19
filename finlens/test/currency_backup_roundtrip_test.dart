@@ -56,7 +56,7 @@ void main() {
 
     // Land in a fresh process: no registry, no store.
     setCustomCurrencies(const []);
-    expect(money(9850, currency: 'TMT'), 'm9,850',
+    expect(money(9850, currency: 'TMT'), '9,850 TMT',
         reason: 'the built-in is back until the backup is restored');
 
     final restored = decodeBackup(json).source;
@@ -78,7 +78,7 @@ void main() {
         decodeBackup(encodeBackup(store, exportedAt: DateTime(2026, 9, 8)))
             .source;
     expect(restored.snapshotCustomCurrencies, isEmpty);
-    expect(money(9850, currency: 'TMT'), 'm9,850',
+    expect(money(9850, currency: 'TMT'), '9,850 TMT',
         reason: 'the shipped definition is in charge again');
   });
 

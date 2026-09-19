@@ -119,10 +119,10 @@ void main() {
       await tester.pumpWidget(_host(store, EditBudgetScreen(categoryId: cat.id)));
       await tester.pumpAndSettle();
 
-      // The trailing marker names the base (TMT → "m"); no dollar marker
-      // survives anywhere on the screen.
-      expect(find.text(currencySymbol('TMT')), findsWidgets);
-      expect(find.text(currencySymbol('USD')), findsNothing); // a bare '$'
+      // The trailing marker names the base (TMT → "TMT", the def's token); no
+      // dollar marker survives anywhere on the screen.
+      expect(find.text(currencyDef('TMT').token), findsWidgets);
+      expect(find.text(currencyDef('USD').token), findsNothing); // a bare '$'
     });
   });
 
@@ -141,8 +141,8 @@ void main() {
       await tester.pumpWidget(_host(store, const EditTaskScreen(taskId: 't1')));
       await tester.pumpAndSettle();
 
-      expect(find.text(currencySymbol('TMT')), findsWidgets);
-      expect(find.text(currencySymbol('USD')), findsNothing);
+      expect(find.text(currencyDef('TMT').token), findsWidgets);
+      expect(find.text(currencyDef('USD').token), findsNothing);
     });
   });
 
@@ -174,7 +174,7 @@ void main() {
       await tester.tap(find.text('open'));
       await tester.pumpAndSettle();
 
-      // The hero renders the amount in the base (TMT → an "m…" figure); a
+      // The hero renders the amount in the base (TMT → a "0 TMT" figure); a
       // dollar figure would mean the old `?? 'USD'` fallback survived.
       expect(find.text(money(0, currency: 'TMT')), findsOneWidget);
       expect(find.text(money(0, currency: 'USD')), findsNothing);

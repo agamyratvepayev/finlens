@@ -166,7 +166,7 @@ const List<CurrencyDef> kBuiltInCurrencies = [
   CurrencyDef(code: 'SGD', name: 'Singapore Dollar', symbol: r'$'),
   CurrencyDef(code: 'THB', name: 'Thai Baht', symbol: '฿'),
   CurrencyDef(code: 'TJS', name: 'Tajikistani Somoni'),
-  CurrencyDef(code: 'TMT', name: 'Turkmen Manat', symbol: 'm'),
+  CurrencyDef(code: 'TMT', name: 'Turkmen Manat', symbolBefore: false),
   CurrencyDef(code: 'TND', name: 'Tunisian Dinar', decimals: 3),
   CurrencyDef(code: 'TRY', name: 'Turkish Lira', symbol: '₺'),
   CurrencyDef(code: 'TWD', name: 'New Taiwan Dollar', symbol: r'NT$'),

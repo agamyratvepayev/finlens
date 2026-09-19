@@ -8,11 +8,13 @@ import 'package:finlens/core/store/app_store.dart';
 import 'package:finlens/core/utils/clock.dart';
 import 'package:finlens/core/utils/formatters.dart';
 
-/// Currency editing (spec §0–§2). A user in Turkmenistan wants `9,850.00 TMT`;
-/// the shipped built-in renders `m9,850.00`, and nothing about any currency
-/// could be edited once it existed — so they invented a currency under `MNT`
-/// (the Mongolian tugrik) purely to get the formatting they wanted. A formatting
-/// limitation produced semantically wrong data.
+/// Currency editing (spec §0–§2). Historically a user in Turkmenistan wanting
+/// `9,850.00 TMT` was stuck: the shipped built-in rendered `m9,850`, and nothing
+/// about any currency could be edited once it existed — so they invented a
+/// currency under `MNT` (the Mongolian tugrik) purely to get the formatting they
+/// wanted. A formatting limitation produced semantically wrong data. (Task 24
+/// later gave shipped TMT its code-after form directly; editing still owns the
+/// finer knobs — fixed cents, a custom decimal count, any other currency.)
 ///
 /// The resolution order needed for the fix already existed: `currencyDef`
 /// prefers a custom entry over a built-in of the same code, and
@@ -38,12 +40,12 @@ void main() {
 
   // ── The headline: an override beats the built-in ───────────────────────────
   test('a custom def under a built-in code wins, and money() follows it', () {
-    // Shipped TMT: symbol `m`, before the amount. Note the *legacy* formatter
-    // drops cents on a whole value, so this is `m9,850` — §0 quotes it as
-    // `m9,850.00`, but the symbol-first shape it is really about is the same,
-    // and §6's own `CODE 1,234` example shows the same rule.
-    expect(money(9850, currency: 'TMT'), 'm9,850');
-    expect(currencyDef('TMT').symbol, 'm');
+    // Shipped TMT (task 24): no symbol, Position = After — the legacy path
+    // renders `9,850 TMT`, code after the number (and drops cents on a whole
+    // value >= 1,000, so no `.00`). The override below keeps that same
+    // code-after shape but forces the metadata branch, whose mark is fixed cents.
+    expect(money(9850, currency: 'TMT'), '9,850 TMT');
+    expect(currencyDef('TMT').symbol, isNull);
 
     final store = emptyStore();
     // What the edit sheet writes: symbol cleared, Position = After (§6).
@@ -88,9 +90,10 @@ void main() {
     expect(back.custom, isFalse);
     expect(customCurrencyDef('TMT'), isNull,
         reason: 'the metadata branch is off again');
-    // Back on the legacy value-driven path, cents and all.
-    expect(money(9850, currency: 'TMT'), 'm9,850');
-    expect(money(15.99, currency: 'TMT'), 'm15.99');
+    // Back on the legacy value-driven path: code after, no cents on a whole
+    // value >= 1,000, cents kept on a small fractional one.
+    expect(money(9850, currency: 'TMT'), '9,850 TMT');
+    expect(money(15.99, currency: 'TMT'), '15.99 TMT');
   });
 
   test('kBuiltInCurrencies is never mutated by an override or a reset', () {
@@ -103,7 +106,8 @@ void main() {
     expect(during.symbolBefore, before.symbolBefore);
     expect(during.name, before.name);
     store.removeCustomCurrency('TMT');
-    expect(kBuiltInCurrencies.firstWhere((c) => c.code == 'TMT').symbol, 'm');
+    expect(
+        kBuiltInCurrencies.firstWhere((c) => c.code == 'TMT').symbol, isNull);
   });
 
   // ── The guard: create stays guarded, edit does not ─────────────────────────
