@@ -4919,4 +4919,13 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get keypadDivideByZero => 'Sıfıra bölünemez';
+
+  @override
+  String get dateFieldHint => 'gg.aa.yyyy';
+
+  @override
+  String get dateErrorNotReal => 'Böyle bir tarih yok';
+
+  @override
+  String get dateErrorOutOfRange => 'Tarih izin verilen aralıkta değil';
 }

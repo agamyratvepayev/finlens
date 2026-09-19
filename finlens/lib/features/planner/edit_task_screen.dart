@@ -9,6 +9,7 @@ import '../../core/utils/repeat_labels.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/form_fields.dart';
 import '../../shared/widgets/screen_header.dart';
+import '../../shared/widgets/typed_date_sheet.dart';
 import '../../theme/app_colors.dart';
 import '../quick_add/icon_picker_sheet.dart';
 import '../quick_add/pickers.dart';
@@ -322,13 +323,15 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
 
   Future<void> _pickDue() async {
     _closeKeypad();
-    final picked = await showDatePicker(
-      context: context,
+    final picked = await showTypedDateSheet(
+      context,
       initialDate: _due,
       firstDate: DateTime(2024),
       lastDate: DateTime(2035),
     );
     if (picked == null || !mounted) return;
+    // A task's time is a separate question — the stock time picker still follows
+    // the date (Task 25 §3).
     final time = await showTimePicker(
       context: context,
       initialTime: TimeOfDay.fromDateTime(_due),

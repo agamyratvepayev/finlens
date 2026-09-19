@@ -1326,5 +1326,8 @@
   "keypadDivide": "разделить",
   "keypadEquals": "равно",
   "keypadIncomplete": "Незавершённое выражение",
-  "keypadDivideByZero": "Деление на ноль невозможно"
+  "keypadDivideByZero": "Деление на ноль невозможно",
+  "dateFieldHint": "дд.мм.гггг",
+  "dateErrorNotReal": "Такой даты нет",
+  "dateErrorOutOfRange": "Дата вне диапазона"
 }

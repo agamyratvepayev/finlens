@@ -1326,5 +1326,8 @@
   "keypadDivide": "bölü",
   "keypadEquals": "eşittir",
   "keypadIncomplete": "Tamamlanmamış işlem",
-  "keypadDivideByZero": "Sıfıra bölünemez"
+  "keypadDivideByZero": "Sıfıra bölünemez",
+  "dateFieldHint": "gg.aa.yyyy",
+  "dateErrorNotReal": "Böyle bir tarih yok",
+  "dateErrorOutOfRange": "Tarih izin verilen aralıkta değil"
 }

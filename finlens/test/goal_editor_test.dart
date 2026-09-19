@@ -8,6 +8,7 @@ import 'package:finlens/core/utils/clock.dart';
 import 'package:finlens/features/planner/edit_goal_screen.dart';
 import 'package:finlens/l10n/app_localizations.dart';
 import 'package:finlens/shared/widgets/form_fields.dart';
+import 'package:finlens/shared/widgets/typed_date_field.dart';
 import 'package:finlens/theme/app_colors.dart';
 
 /// The goal editor (`EditGoalScreen`) and its source picker. `flutter test`
@@ -102,10 +103,20 @@ void main() {
     await tester.enterText(fieldInRow('Target amount'), '12000');
     await tester.pump();
 
-    // Open the platform date picker and accept its initial date.
+    // Open the app's typed-date sheet (Task 25 — replaced the platform picker),
+    // type a date and confirm. An empty field leaves Confirm disabled, so a
+    // value must be entered before it can be accepted.
     await tester.tap(find.text('Target date'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('OK'));
+    await tester.enterText(
+      find.descendant(
+        of: find.byType(TypedDateField),
+        matching: find.byType(TextField),
+      ),
+      '15062027',
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Done'));
     await tester.pumpAndSettle();
 
     expect(find.text('Monthly follows the target date.'), findsOneWidget);

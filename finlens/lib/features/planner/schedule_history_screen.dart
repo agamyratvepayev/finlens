@@ -7,6 +7,7 @@ import '../../core/utils/formatters.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/app_card.dart';
 import '../../shared/widgets/screen_header.dart';
+import '../../shared/widgets/typed_date_sheet.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/app_typography.dart';
@@ -377,8 +378,8 @@ class _ScheduleHistoryScreenState extends State<ScheduleHistoryScreen> {
     if (picked == null || !mounted) return;
     if (picked == 'since') {
       final today = StoreScope.read(context).today;
-      final date = await showDatePicker(
-        context: context,
+      final date = await showTypedDateSheet(
+        context,
         initialDate: today,
         firstDate: DateTime(2024),
         lastDate: today,

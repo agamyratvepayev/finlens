@@ -1326,5 +1326,8 @@
   "keypadDivide": "bölmek",
   "keypadEquals": "deň",
   "keypadIncomplete": "Tamamlanmadyk aňlatma",
-  "keypadDivideByZero": "Nola bölüp bolmaýar"
+  "keypadDivideByZero": "Nola bölüp bolmaýar",
+  "dateFieldHint": "gg.aa.ýýýý",
+  "dateErrorNotReal": "Beýle sene ýok",
+  "dateErrorOutOfRange": "Sene rugsat berlen aralykda däl"
 }

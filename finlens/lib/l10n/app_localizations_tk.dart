@@ -4888,4 +4888,13 @@ class AppLocalizationsTk extends AppLocalizations {
 
   @override
   String get keypadDivideByZero => 'Nola bölüp bolmaýar';
+
+  @override
+  String get dateFieldHint => 'gg.aa.ýýýý';
+
+  @override
+  String get dateErrorNotReal => 'Beýle sene ýok';
+
+  @override
+  String get dateErrorOutOfRange => 'Sene rugsat berlen aralykda däl';
 }

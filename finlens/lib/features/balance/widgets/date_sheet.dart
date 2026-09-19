@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/utils/formatters.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../shared/widgets/month_calendar.dart';
 import '../../../theme/app_colors.dart';
 import '../../../theme/app_theme.dart';
-import '../../../theme/app_typography.dart';
 
 /// Reporting-date picker.
 ///
@@ -45,9 +44,6 @@ class _DateSheetState extends State<_DateSheet> {
 
   DateTime get _today => widget.today;
 
-  bool get _canGoNext =>
-      _month.isBefore(DateTime(widget.today.year, widget.today.month));
-
   @override
   Widget build(BuildContext context) {
     return SafeArea(
@@ -70,34 +66,17 @@ class _DateSheetState extends State<_DateSheet> {
               ),
             ),
             const SizedBox(height: Insets.lg),
-            Row(
-              children: [
-                Expanded(
-                  child: Text(monthYearLong(_month, AppLocalizations.of(context)),
-                      style: AppText.rowTitle),
-                ),
-                _NavArrow(
-                  icon: Icons.chevron_left_rounded,
-                  onTap: () => setState(
-                    () => _month = DateTime(_month.year, _month.month - 1),
-                  ),
-                ),
-                const SizedBox(width: Insets.sm),
-                _NavArrow(
-                  icon: Icons.chevron_right_rounded,
-                  // Never navigate past the current month.
-                  onTap: _canGoNext
-                      ? () => setState(
-                            () => _month = DateTime(_month.year, _month.month + 1),
-                          )
-                      : null,
-                ),
-              ],
+            MonthCalendar(
+              month: _month,
+              selected: _picked,
+              today: _today,
+              // Never navigate past the current month.
+              lastMonth: DateTime(_today.year, _today.month),
+              // A balance sheet looks backward — future days are inert.
+              isEnabled: (d) => !d.isAfter(_today),
+              onMonthChanged: (m) => setState(() => _month = m),
+              onPick: (d) => setState(() => _picked = d),
             ),
-            const SizedBox(height: Insets.lg),
-            const _WeekdayRow(),
-            const SizedBox(height: Insets.sm),
-            _grid(),
             const SizedBox(height: Insets.xl),
             Row(
               children: [
@@ -133,118 +112,6 @@ class _DateSheetState extends State<_DateSheet> {
               ],
             ),
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget _grid() {
-    final first = DateTime(_month.year, _month.month, 1);
-    // Monday-first: DateTime.weekday is 1..7 starting Monday already.
-    final leading = first.weekday - 1;
-    final days = DateTime(_month.year, _month.month + 1, 0).day;
-    final cells = <Widget>[
-      for (var i = 0; i < leading; i++) const SizedBox.shrink(),
-      for (var d = 1; d <= days; d++) _day(DateTime(_month.year, _month.month, d)),
-    ];
-
-    return GridView.count(
-      crossAxisCount: 7,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      mainAxisSpacing: 4,
-      crossAxisSpacing: 4,
-      children: cells,
-    );
-  }
-
-  Widget _day(DateTime date) {
-    final isFuture = date.isAfter(_today);
-    final isToday = date == _today;
-    final isPicked = date.year == _picked.year &&
-        date.month == _picked.month &&
-        date.day == _picked.day;
-
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: isFuture ? null : () => setState(() => _picked = date),
-      child: Center(
-        child: Container(
-          width: 36,
-          height: 36,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: isPicked ? AppColors.accent : null,
-            shape: BoxShape.circle,
-            border: isToday && !isPicked
-                ? Border.all(color: AppColors.accent, width: 1.5)
-                : null,
-          ),
-          child: Text(
-            '${date.day}',
-            style: TextStyle(
-              fontSize: 14,
-              height: 1.2,
-              fontWeight: isPicked ? FontWeight.w700 : FontWeight.w500,
-              color: isFuture
-                  ? AppColors.textTertiary.withValues(alpha: 0.45)
-                  : (isPicked ? Colors.white : AppColors.textPrimary),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _WeekdayRow extends StatelessWidget {
-  const _WeekdayRow();
-
-  static const _labels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        for (final l in _labels)
-          Expanded(
-            child: Center(
-              child: Text(
-                l,
-                style: AppText.listSectionLabel.copyWith(letterSpacing: 0),
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-}
-
-class _NavArrow extends StatelessWidget {
-  const _NavArrow({required this.icon, this.onTap});
-
-  final IconData icon;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final enabled = onTap != null;
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: Container(
-        width: 32,
-        height: 32,
-        decoration: const BoxDecoration(
-          color: AppColors.surfaceHigh,
-          shape: BoxShape.circle,
-        ),
-        child: Icon(
-          icon,
-          size: 20,
-          color: enabled
-              ? AppColors.textPrimary
-              : AppColors.textTertiary.withValues(alpha: 0.4),
         ),
       ),
     );

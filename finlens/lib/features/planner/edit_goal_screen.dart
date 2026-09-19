@@ -9,6 +9,7 @@ import '../../shared/widgets/amount_text.dart';
 import '../../shared/widgets/app_card.dart';
 import '../../shared/widgets/destructive_sheet.dart';
 import '../../shared/widgets/form_fields.dart';
+import '../../shared/widgets/typed_date_sheet.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/app_typography.dart';
@@ -653,11 +654,14 @@ class _EditGoalScreenState extends State<EditGoalScreen> {
   // ── Target date / rate ─────────────────────────────────────────────────────
 
   Future<void> _pickTargetDate() async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: _effectiveTargetDate ?? DateTime(_today.year + 1),
+    final picked = await showTypedDateSheet(
+      context,
+      // Seed the field with the target if one is set; otherwise leave it empty
+      // and open the calendar on next year (the old picker's initialDate).
+      initialDate: _effectiveTargetDate,
       firstDate: _today,
       lastDate: DateTime(2040),
+      initialMonth: DateTime(_today.year + 1),
     );
     if (picked == null || !mounted) return;
     _monthlyFocus.unfocus();

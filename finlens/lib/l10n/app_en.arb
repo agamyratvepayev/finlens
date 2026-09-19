@@ -1713,5 +1713,8 @@
   "keypadDivide": "divide",
   "keypadEquals": "equals",
   "keypadIncomplete": "Incomplete expression",
-  "keypadDivideByZero": "Cannot divide by zero"
+  "keypadDivideByZero": "Cannot divide by zero",
+  "dateFieldHint": "dd.mm.yyyy",
+  "dateErrorNotReal": "Not a real date",
+  "dateErrorOutOfRange": "Date out of range"
 }

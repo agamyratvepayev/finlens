@@ -7683,6 +7683,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Cannot divide by zero'**
   String get keypadDivideByZero;
+
+  /// No description provided for @dateFieldHint.
+  ///
+  /// In en, this message translates to:
+  /// **'dd.mm.yyyy'**
+  String get dateFieldHint;
+
+  /// No description provided for @dateErrorNotReal.
+  ///
+  /// In en, this message translates to:
+  /// **'Not a real date'**
+  String get dateErrorNotReal;
+
+  /// No description provided for @dateErrorOutOfRange.
+  ///
+  /// In en, this message translates to:
+  /// **'Date out of range'**
+  String get dateErrorOutOfRange;
 }
 
 class _AppLocalizationsDelegate

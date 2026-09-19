@@ -6,6 +6,7 @@ import '../../core/utils/arithmetic.dart';
 import '../../core/utils/formatters.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/app_card.dart';
+import '../../shared/widgets/typed_date_sheet.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/app_typography.dart';
@@ -320,8 +321,8 @@ class _MarkPaidSheetState extends State<_MarkPaidSheet> {
   }
 
   Future<void> _pickDate() async {
-    final picked = await showDatePicker(
-      context: context,
+    final picked = await showTypedDateSheet(
+      context,
       initialDate: _date,
       firstDate: DateTime(2024),
       lastDate: DateTime(2035),

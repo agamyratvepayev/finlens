@@ -5050,4 +5050,13 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get keypadDivideByZero => 'Деление на ноль невозможно';
+
+  @override
+  String get dateFieldHint => 'дд.мм.гггг';
+
+  @override
+  String get dateErrorNotReal => 'Такой даты нет';
+
+  @override
+  String get dateErrorOutOfRange => 'Дата вне диапазона';
 }

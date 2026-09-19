@@ -5,6 +5,7 @@ import '../../core/store/app_store.dart';
 import '../../core/utils/arithmetic.dart';
 import '../../core/utils/formatters.dart';
 import '../../l10n/app_localizations.dart';
+import '../../shared/widgets/typed_date_sheet.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
 import '../quick_add/widgets/amount_hero.dart';
@@ -121,8 +122,8 @@ class _OpeningBalanceSheetState extends State<_OpeningBalanceSheet> {
         _amountFocused = false;
       });
     }
-    final picked = await showDatePicker(
-      context: context,
+    final picked = await showTypedDateSheet(
+      context,
       initialDate: _date,
       firstDate: DateTime(2015),
       // An opening balance cannot be dated into the future; the app's reference

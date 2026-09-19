@@ -4964,4 +4964,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get keypadDivideByZero => 'Cannot divide by zero';
+
+  @override
+  String get dateFieldHint => 'dd.mm.yyyy';
+
+  @override
+  String get dateErrorNotReal => 'Not a real date';
+
+  @override
+  String get dateErrorOutOfRange => 'Date out of range';
 }
