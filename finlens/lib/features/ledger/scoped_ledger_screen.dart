@@ -1092,7 +1092,8 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
     );
   }
 
-  /// Prefilled with the scope's account where there is exactly one.
+  /// Prefilled — not locked — with the scope's account where there is exactly
+  /// one. The user can still pick a different account, `+ New` included (§1).
   Widget _addButton(AppStore store) {
     final accounts = _scope.accountsIn(store);
     return Padding(
@@ -1108,7 +1109,8 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
         child: FilledButton(
           onPressed: () => showQuickAdd(
             context,
-            fixedFromAccountId: accounts.length == 1 ? accounts.first.id : null,
+            initialFromAccountId:
+                accounts.length == 1 ? accounts.first.id : null,
           ),
           style: FilledButton.styleFrom(
             backgroundColor: AppColors.accent,

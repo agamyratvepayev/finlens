@@ -41,6 +41,7 @@ Future<void> showQuickAdd(
   QuickAddType type = QuickAddType.expense,
   String? fixedFromAccountId,
   String? fixedToAccountId,
+  String? initialFromAccountId,
   Txn? editing,
   Txn? copyOf,
 }) {
@@ -62,6 +63,7 @@ Future<void> showQuickAdd(
         initialType: type,
         fixedFromAccountId: fixedFromAccountId,
         fixedToAccountId: fixedToAccountId,
+        initialFromAccountId: initialFromAccountId,
         editing: editing,
         copyOf: copyOf,
       ),
@@ -200,16 +202,25 @@ class QuickAddScreen extends StatefulWidget {
     required this.initialType,
     this.fixedFromAccountId,
     this.fixedToAccountId,
+    this.initialFromAccountId,
     this.editing,
     this.copyOf,
   });
 
   final QuickAddType initialType;
 
-  /// Set by "Add expense" / "Pay card" on Account Detail (spec 1.4), which
-  /// pre-fill one side so the user skips the account-picking step.
+  /// Pre-fill **and lock** one account side, for a flow that must use exactly
+  /// that account — the archive → move-money transfer (which fixes the source).
+  /// The locked row renders grey with no chevron and cannot open the picker.
+  /// For a plain suggestion the user may override, use [initialFromAccountId].
   final String? fixedFromAccountId;
   final String? fixedToAccountId;
+
+  /// Prefills From with an account the entry point suggests (the scoped
+  /// ledger's `+ Add`), and leaves it editable: the row opens the account
+  /// picker, `+ New` included. Contrast [fixedFromAccountId], which also locks
+  /// the row, for flows that must use one account (archive → move money).
+  final String? initialFromAccountId;
 
   /// Spec 2.3 — editing an existing entry; the type is locked.
   final Txn? editing;
@@ -366,7 +377,9 @@ class _QuickAddScreenState extends State<QuickAddScreen>
     } else {
       _date = today;
       _type = widget.initialType;
-      _fromRef = widget.fixedFromAccountId;
+      // A prefill (initialFromAccountId) seeds From exactly as a fixed id does;
+      // only the row's lock differs (§1). If both are given, the fixed id wins.
+      _fromRef = widget.fixedFromAccountId ?? widget.initialFromAccountId;
       _toRef = widget.fixedToAccountId;
     }
     // A text hero takes the system keyboard; a numeric one takes the keypad.
@@ -428,7 +441,10 @@ class _QuickAddScreenState extends State<QuickAddScreen>
     if (!_currencyPrimed && widget.editing == null && widget.copyOf == null) {
       _currencyPrimed = true;
       final store = StoreScope.read(context);
-      final fixedId = widget.fixedFromAccountId ?? widget.fixedToAccountId;
+      // A prefilled From primes the currency the same way a fixed one does (§1).
+      final fixedId = widget.fixedFromAccountId ??
+          widget.initialFromAccountId ??
+          widget.fixedToAccountId;
       final fixed = fixedId != null ? store.accountById(fixedId) : null;
       _currency = fixed?.currency ?? store.baseCurrency;
       // Prime the rate for any pre-filled accounts (a scoped Quick Add, or both
@@ -591,6 +607,15 @@ class _QuickAddScreenState extends State<QuickAddScreen>
     }
   }
 
+  /// The three types whose From/To hold plain accounts (not categories, not the
+  /// polymorphic rebalance/task refs). An account may be carried between any two
+  /// of these when a switch would otherwise drop it (§2, task 054).
+  static const _carriesAccount = {
+    QuickAddType.expense,
+    QuickAddType.income,
+    QuickAddType.transfer,
+  };
+
   void _switchType(QuickAddType next) {
     final store = StoreScope.read(context);
     // The note unfocuses cleanly on a type change (inline-note spec §6): its
@@ -598,11 +623,41 @@ class _QuickAddScreenState extends State<QuickAddScreen>
     // back — the keyboard must not linger under it.
     _noteFocus.unfocus();
     setState(() {
-      _fromRef = _keepRef(store, _fromRef, _fromSlot(next));
-      _toRef = _keepRef(store, _toRef, _toSlot(next));
+      final oldFrom = _fromRef;
+      final oldTo = _toRef;
+      var newFrom = _keepRef(store, _fromRef, _fromSlot(next));
+      var newTo = _keepRef(store, _toRef, _toSlot(next));
+      // An account the old type held but the new type has no place for in the
+      // same slot moves into the new type's EMPTY account slot — Expense's From
+      // becomes Income's To and back. It never overwrites a slot that kept its
+      // own ref, never moves a category, and never applies to rebalance or task
+      // (whose refs mean something else — see _refResolves). Task 054.
+      if (_carriesAccount.contains(_type) && _carriesAccount.contains(next)) {
+        final dropped = [oldFrom, oldTo].firstWhere(
+          (id) =>
+              id != null &&
+              store.accountById(id) != null &&
+              id != newFrom &&
+              id != newTo,
+          orElse: () => null,
+        );
+        if (dropped != null) {
+          if (_fromSlot(next) == _Slot.account && newFrom == null) {
+            newFrom = dropped;
+          } else if (_toSlot(next) == _Slot.account && newTo == null) {
+            newTo = dropped;
+          }
+        }
+      }
+      _fromRef = newFrom;
+      _toRef = newTo;
       _type = next;
       _keypadOpen = next != QuickAddType.newTask;
       if (next == QuickAddType.newTask) _titleFocus.requestFocus();
+      // A carry into (or out of) Transfer changes the currency pair the rate
+      // row defaults for; keep it in step exactly as a pick does (§2). Harmless
+      // when either side is still empty.
+      if (next == QuickAddType.transfer) _syncTransferRateField();
     });
   }
 
