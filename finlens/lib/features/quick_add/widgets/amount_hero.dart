@@ -1107,7 +1107,8 @@ class _TxnAmountFieldRowState extends State<TxnAmountFieldRow>
 /// untouched** — same 8·s gaps, 12·s radius, 52·s keys. [onOperator] and
 /// [onEquals] are optional so a field that has not adopted the expression model
 /// simply gets an inert operator row; [canResolve] drives the `=` key's two
-/// states (accent when it resolves, muted otherwise — spec §4).
+/// states (an accent fill when it resolves, otherwise the operator pill with a
+/// grey glyph — spec §4).
 class NumericKeypad extends StatelessWidget {
   const NumericKeypad({
     super.key,
@@ -1279,9 +1280,10 @@ class _OpKeyState extends State<_OpKey> {
   }
 }
 
-/// The `=` key. Accent when [enabled], muted otherwise — the only thing on
-/// screen that says an expression is pending (spec §4). Same 34·s visible /
-/// 44·s hit-target geometry as [_OpKey].
+/// The `=` key. Active it is an accent fill (tap to resolve); passive it wears
+/// the same operator pill as `+ − × ÷` (sheetCard) with a grey glyph — five
+/// equal keys, the glyph colour alone saying an expression is pending (spec §4).
+/// Same 34·s visible / 44·s hit-target geometry as [_OpKey].
 class _EqualsKey extends StatefulWidget {
   const _EqualsKey({
     required this.enabled,
@@ -1304,10 +1306,16 @@ class _EqualsKeyState extends State<_EqualsKey> {
   Widget build(BuildContext context) {
     final s = formScale(context);
     final hit = 44 * s < 44 ? 44.0 : 44 * s;
+    // Passive `=` wears the same pill as `+ − × ÷` (sheetCard), so the operator
+    // row reads as five keys on every host — on a surfaceAlt sheet the old
+    // surfaceAlt pill vanished into the body. The glyph is neutral grey, not the
+    // operators' accentLight: grey says "nothing to resolve yet", the accent
+    // fill says "tap to resolve".
     final bg = !widget.enabled
-        ? AppColors.surfaceAlt
+        ? AppColors.sheetCard
         : (_pressed ? AppColors.keyPressed : AppColors.accent);
-    final fg = widget.enabled ? AppColors.textPrimary : AppColors.sheetGrabber;
+    final fg =
+        widget.enabled ? AppColors.textPrimary : AppColors.textSecondary;
     return Semantics(
       button: true,
       enabled: widget.enabled,

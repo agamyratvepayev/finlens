@@ -195,6 +195,18 @@ class Expression {
     return this; // already empty
   }
 
+  /// The expression with a dangling operator dropped — `52 +` → `52`,
+  /// `52 + 8 −` → `52 + 8`, `−50 +` (continued after `=`) → `−50`. Anything that
+  /// does not end on an operator is returned unchanged. A commit reads this, so
+  /// stopping mid-expression saves the figure before the operator — never 0.
+  Expression withoutTrailingOperator() {
+    if (afterEquals || !_endsOnOperator) return this;
+    final ops = [...operators]..removeLast();
+    final nums = [...operands];
+    final reopened = nums.removeLast();
+    return Expression(operands: nums, operators: ops, pending: reopened);
+  }
+
   /// `=`. Evaluates to [precision] decimals and replaces the whole expression
   /// with the result. A no-op when the expression cannot resolve.
   Expression evaluated(int precision) {

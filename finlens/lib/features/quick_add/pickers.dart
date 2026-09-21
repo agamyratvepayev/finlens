@@ -2303,6 +2303,14 @@ class _NewAccountFormState extends State<_NewAccountForm> {
   bool _valid(AppStore store) {
     if (_name.text.trim().isEmpty || _group == null) return false;
     if (_duplicateName(store)) return false;
+    // A row that cannot resolve even with its dangling operator dropped (`52 ÷ 0`)
+    // has no number to save; 0 would be a guess (task 047).
+    if (_committed(_amountExpr) == null) return false;
+    if (_group == AccountGroup.creditCards &&
+        !_limitExpr.isEmpty &&
+        _committed(_limitExpr) == null) {
+      return false;
+    }
     return true;
   }
 
@@ -2397,10 +2405,20 @@ class _NewAccountFormState extends State<_NewAccountForm> {
     setState(() => _setFocusedExpr(_focusedExpr.evaluated(_precision)));
   }
 
+  /// What a numeric row commits: the dangling operator dropped, the rest resolved.
+  /// Null only when the remainder still cannot resolve (`52 ÷ 0`).
+  double? _committed(Expression e) =>
+      e.withoutTrailingOperator().value(_precision);
+
   /// Resolves the focused field's pending expression (spec §5) — called when the
-  /// keypad leaves it (focus switch, name field, type change).
+  /// keypad leaves it (focus switch, name field, type change). Trims a dangling
+  /// operator first, so the row shows the number that will be saved the moment
+  /// focus leaves it (task 047).
   void _resolveFocused() {
-    if (_numFocus != null) _setFocusedExpr(_focusedExpr.evaluated(_precision));
+    if (_numFocus != null) {
+      _setFocusedExpr(
+          _focusedExpr.withoutTrailingOperator().evaluated(_precision));
+    }
   }
 
   Future<void> _changeCurrency() async {
@@ -2530,11 +2548,13 @@ class _NewAccountFormState extends State<_NewAccountForm> {
               group: group!,
               currency: _currency,
               // addAccount signs liabilities negative; the user enters positive.
-              // A pending expression resolves silently here (spec §5).
-              startingBalance: _amountExpr.value(_precision) ?? 0,
+              // A dangling operator is dropped, not read as 0 (task 047). The `!`
+              // is safe: _valid() disables the footer when either row cannot
+              // resolve, so onPressed only fires when _committed is non-null.
+              startingBalance: _committed(_amountExpr)!,
               creditLimit:
                   group == AccountGroup.creditCards && !_limitExpr.isEmpty
-                      ? _limitExpr.value(_precision)
+                      ? _committed(_limitExpr)
                       : null,
               paymentDue:
                   group == AccountGroup.bankLoans ? _paymentDay : null,

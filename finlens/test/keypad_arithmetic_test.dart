@@ -149,6 +149,44 @@ void main() {
     });
   });
 
+  group('withoutTrailingOperator — commit drops the dangling operator (task 047)', () {
+    test('52 + → 52, and commits 52 not 0', () {
+      final e = build('52+').withoutTrailingOperator();
+      expect(e.pending, '52');
+      expect(e.operators, isEmpty);
+      expect(e.value(2), 52);
+    });
+    test('52 + 8 − → value 60', () {
+      expect(build('52+8-').withoutTrailingOperator().value(2), 60);
+    });
+    test('52 (no operator) is returned unchanged, value 52', () {
+      final e = build('52').withoutTrailingOperator();
+      expect(e.pending, '52');
+      expect(e.operators, isEmpty);
+      expect(e.value(2), 52);
+    });
+    test('a complete expression is unchanged (52 + 8 → 60)', () {
+      expect(build('52+8').withoutTrailingOperator().value(2), 60);
+    });
+    test('empty is unchanged', () {
+      expect(Expression.empty.withoutTrailingOperator().value(2), 0);
+    });
+    test('after = is unchanged (2 + 3 = → 5)', () {
+      final e = build('2+3=').withoutTrailingOperator();
+      expect(e.afterEquals, isTrue);
+      expect(e.value(2), 5);
+    });
+    test('100 − 150 = then + → drops the +, value −50', () {
+      // Continued after =, ends on an operator (−50 +); the trailing operator
+      // drops back to the signed result.
+      final e = build('100-150=+').withoutTrailingOperator();
+      expect(e.value(2), -50);
+    });
+    test('52 ÷ 0 + → value null (÷0 still cannot resolve)', () {
+      expect(build('52/0+').withoutTrailingOperator().value(2), isNull);
+    });
+  });
+
   group('display', () {
     test('operators are spaced one each; operands grouped', () {
       expect(expressionDisplay(build('1234+30')), '1,234 + 30');
