@@ -7,6 +7,7 @@ import '../../shared/widgets/app_card.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/app_typography.dart';
+import 'creation_host.dart';
 import 'pickers.dart';
 import 'quick_add_sheet.dart';
 
@@ -88,18 +89,22 @@ Widget _typeOption(
   );
 }
 
-/// Replace this creation screen with the one for [next].
+/// Show the form for [next]. Inside a creation session (task 056) the host
+/// swaps forms and every form keeps its input until the session closes.
+/// Outside one — a creation form pushed directly, e.g. New budget from the
+/// Budgets tab's per-category Set — the old behaviour stands: pop this screen
+/// and open the next.
 ///
-/// The current screen is popped first, so `Cancel` on the new screen returns
-/// where the old one came from rather than to a half-filled form the user just
-/// left. [showQuickAdd] then routes: the four transaction types and New task
-/// open the Quick Add shell, New goal opens the goal editor, New budget asks
-/// for a category first.
-///
-/// Runs off the root navigator's overlay context, which is a descendant of the
-/// root navigator (so `Navigator.of` and `showModalBottomSheet` resolve to it)
-/// and outlives the popped screen — the screen's own context does not.
+/// The legacy path runs off the root navigator's overlay context, which is a
+/// descendant of the root navigator (so `Navigator.of` and
+/// `showModalBottomSheet` resolve to it) and outlives the popped screen — the
+/// screen's own context does not.
 Future<void> switchCreationType(BuildContext context, QuickAddType next) {
+  final session = CreationSession.maybeOf(context);
+  if (session != null) {
+    session.switchTo(next);
+    return Future<void>.value();
+  }
   final nav = Navigator.of(context, rootNavigator: true);
   final overlay = nav.overlay!.context;
   nav.pop();

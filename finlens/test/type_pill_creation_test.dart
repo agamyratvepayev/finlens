@@ -236,7 +236,7 @@ void main() {
 
   // ── §6 · switching type off a creation screen ─────────────────────────────
 
-  testWidgets('from Goal, picking Expense pops the goal screen and lands on '
+  testWidgets('from Goal, picking Expense hides the goal screen and shows '
       'QuickAddScreen (expense)', (tester) async {
     _size(tester, 390, 844);
     await tester.pumpWidget(_goalFlowHost(AppStore.empty(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)))));
@@ -249,8 +249,8 @@ void main() {
     await tester.tap(find.text('Expense'));
     await tester.pumpAndSettle();
 
-    // The goal screen is gone from the stack (not underneath), and the expense
-    // form is what's on screen.
+    // Task 056: the goal screen is hidden (offstage, so absent to find.byType)
+    // rather than popped, and the expense form is what's on screen.
     expect(find.byType(EditGoalScreen), findsNothing);
     expect(find.byType(QuickAddScreen), findsOneWidget);
     // Its pill reads the expense type.
@@ -258,7 +258,7 @@ void main() {
         findsOneWidget);
   });
 
-  testWidgets('from Goal, picking Budget lands on the budget screen',
+  testWidgets('from Goal, picking Budget shows the budget screen',
       (tester) async {
     _size(tester, 390, 844);
     final store = AppStore.empty(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)));
@@ -300,8 +300,8 @@ void main() {
     expect(find.text('Holiday'), findsOneWidget);
   });
 
-  testWidgets('a half-filled goal name is discarded silently when the type is '
-      'switched — no confirmation dialog', (tester) async {
+  testWidgets('a half-filled goal name survives a switch away and back, and is '
+      'gone after Cancel', (tester) async {
     _size(tester, 390, 844);
     await tester.pumpWidget(_goalFlowHost(AppStore.empty(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)))));
     await tester.tap(find.text('open'));
@@ -310,15 +310,33 @@ void main() {
     await tester.enterText(find.byType(TextField).first, 'Half typed');
     await tester.pump();
 
+    // Switching away never asks and never confirms (task 056 keeps input, so
+    // there is nothing to discard).
     await tester.tap(find.byType(TypePill));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Expense'));
     await tester.pumpAndSettle();
-
-    // No confirmation, no draft — the goal screen is simply gone.
     expect(find.byType(AlertDialog), findsNothing);
     expect(find.byType(EditGoalScreen), findsNothing);
     expect(find.byType(QuickAddScreen), findsOneWidget);
+
+    // Switching back shows the goal form with the name still there.
+    await tester.tap(find.byType(TypePill));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Goal'));
+    await tester.pumpAndSettle();
+    expect(find.byType(EditGoalScreen), findsOneWidget);
+    expect(find.text('Half typed'), findsOneWidget);
+
+    // Cancel closes the whole session; a fresh open is empty.
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    expect(find.byType(EditGoalScreen), findsNothing);
+    expect(find.byType(QuickAddScreen), findsNothing);
+
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+    expect(find.text('Half typed'), findsNothing);
   });
 
   // ── §6 · Quick Add's pill still lives inside FormNavBar ────────────────────

@@ -14,15 +14,24 @@ import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/app_typography.dart';
 import '../balance/balance_screen.dart' show EmptyState;
+import '../quick_add/creation_host.dart';
 import '../quick_add/pickers.dart';
 import '../quick_add/type_menu.dart';
 import 'edit_scaffold.dart';
 import 'goal_presentation.dart';
 
 /// Opens the unified goal form (§3) — create when [goalId] is null, edit
-/// otherwise. Both the Planner "+" and Quick Add's newGoal route here; the
-/// numeric-hero sheet cannot host the WATCHING picker or the target↔date pair.
+/// otherwise. The numeric-hero sheet cannot host the WATCHING picker or the
+/// target↔date pair, so a goal always lives on this full-screen form.
+///
+/// Creating a goal opens a creation session (task 056): one route hosts the goal
+/// editor alongside Quick Add and the budget editor, so switching type keeps
+/// every form's input. Editing an existing goal has nothing to switch to, so it
+/// is pushed directly.
 Future<void> openGoalEditor(BuildContext context, {String? goalId}) {
+  if (goalId == null) {
+    return openCreationSession(context, type: QuickAddType.newGoal);
+  }
   return Navigator.of(context, rootNavigator: true).push<void>(
     MaterialPageRoute(builder: (_) => EditGoalScreen(goalId: goalId)),
   );

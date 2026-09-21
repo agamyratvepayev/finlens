@@ -154,8 +154,8 @@ void main() {
     expect(find.text('Choose categories'), findsNothing);
   });
 
-  // ── §4 · New Budget from an open Quick Add closes it, opens create screen ──
-  testWidgets('New Budget from an open Quick Add closes it, opens the screen',
+  // ── §4 · New Budget from an open Quick Add hides it, shows create screen ───
+  testWidgets('New Budget from an open Quick Add hides it, opens the screen',
       (tester) async {
     tester.view.physicalSize = _defaultSize;
     tester.view.devicePixelRatio = 1.0;
@@ -188,7 +188,8 @@ void main() {
     await tester.tap(find.text('New Budget'));
     await tester.pumpAndSettle();
 
-    // Quick Add closed; the create screen — not a picker — is what's on screen.
+    // Quick Add hidden (task 056 keeps it offstage); the create screen — not a
+    // picker — is what's on screen.
     expect(find.byType(QuickAddScreen), findsNothing);
     expect(find.byType(EditBudgetScreen), findsOneWidget);
     expect(find.text('Budget which category?'), findsNothing);

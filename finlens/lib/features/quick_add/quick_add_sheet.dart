@@ -14,8 +14,7 @@ import '../../shared/widgets/txn_row.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/app_typography.dart';
-import '../planner/edit_budget_screen.dart';
-import '../planner/edit_goal_screen.dart';
+import 'creation_host.dart';
 import 'date_time_sheet.dart';
 import 'icon_picker_sheet.dart';
 import 'pickers.dart';
@@ -45,45 +44,44 @@ Future<void> showQuickAdd(
   Txn? editing,
   Txn? copyOf,
 }) {
-  // A goal is created and edited on its own full-screen form (§3), not in the
-  // numeric-hero sheet — the WATCHING picker and target↔date pair don't fit here.
-  if (type == QuickAddType.newGoal && editing == null && copyOf == null) {
-    return openGoalEditor(context);
-  }
-  // A budget is created on EditBudgetScreen, which requires a category — so like
-  // a goal it leaves the sheet, but it asks a category first (§3). Editing an
-  // existing transaction can never become a budget, hence the same guard.
-  if (type == QuickAddType.newBudget && editing == null && copyOf == null) {
-    return startNewBudgetFlow(context);
-  }
-  return Navigator.of(context, rootNavigator: true).push<void>(
-    MaterialPageRoute(
-      fullscreenDialog: true,
-      builder: (_) => QuickAddScreen(
-        initialType: type,
-        fixedFromAccountId: fixedFromAccountId,
-        fixedToAccountId: fixedToAccountId,
-        initialFromAccountId: initialFromAccountId,
-        editing: editing,
-        copyOf: copyOf,
+  // Editing an existing entry has a locked type and no session (§4): push the
+  // sheet directly, exactly as before. A goal/budget can never be an edit.
+  if (editing != null) {
+    return Navigator.of(context, rootNavigator: true).push<void>(
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (_) => QuickAddScreen(
+          initialType: type,
+          fixedFromAccountId: fixedFromAccountId,
+          fixedToAccountId: fixedToAccountId,
+          initialFromAccountId: initialFromAccountId,
+          editing: editing,
+          copyOf: copyOf,
+        ),
       ),
-    ),
+    );
+  }
+  // Any creation opens a session (task 056): one route hosts Quick Add, the
+  // goal editor and the budget editor, so switching type keeps every form's
+  // input. The host shows the right form for [type], newGoal / newBudget
+  // included — a goal is not in the numeric-hero sheet (its WATCHING picker and
+  // target↔date pair don't fit) and a budget is on its own screen.
+  return openCreationSession(
+    context,
+    type: type,
+    fixedFromAccountId: fixedFromAccountId,
+    fixedToAccountId: fixedToAccountId,
+    initialFromAccountId: initialFromAccountId,
+    copyOf: copyOf,
   );
 }
 
-/// New Budget leaves the Quick Add sheet the way New Goal does (§4), landing on
-/// [EditBudgetScreen] in create mode with no category chosen. The category is
-/// picked *on that screen* now — the old category-first sheet is gone, and the
-/// picker it used is reached from the screen's Category row instead (spec §3/§4).
-///
-/// [context] must stay valid after any open Quick Add screen has been popped and
-/// must resolve to the root navigator; the type-menu caller pops Quick Add first
-/// and passes the navigator's overlay context (a descendant of the root
-/// navigator that outlives the pop) for exactly this reason.
+/// New Budget lands on the budget editor in create mode with no category chosen
+/// (the category is picked on that screen's Category row now). Task 056 opens it
+/// inside a creation session so switching type keeps every form's input; the
+/// host hides the other forms rather than popping this one.
 Future<void> startNewBudgetFlow(BuildContext context) {
-  return Navigator.of(context, rootNavigator: true).push(
-    MaterialPageRoute(builder: (_) => const EditBudgetScreen()),
-  );
+  return openCreationSession(context, type: QuickAddType.newBudget);
 }
 
 /// The single throwaway [Txn] that represents what a save of the given form
@@ -205,9 +203,15 @@ class QuickAddScreen extends StatefulWidget {
     this.initialFromAccountId,
     this.editing,
     this.copyOf,
+    this.typeRequests,
   });
 
   final QuickAddType initialType;
+
+  /// Task 056 — set by [CreationHost]; the host asks this screen to change type
+  /// in place when the user returns from the goal or budget form. Null outside a
+  /// creation session (a directly-pushed edit).
+  final QuickAddTypeRequests? typeRequests;
 
   /// Pre-fill **and lock** one account side, for a flow that must use exactly
   /// that account — the archive → move-money transfer (which fixes the source).
@@ -239,6 +243,11 @@ enum _Slot { none, account, expenseCategory, incomeCategory }
 class _QuickAddScreenState extends State<QuickAddScreen>
     with SingleTickerProviderStateMixin {
   late QuickAddType _type;
+
+  /// Task 056 — the refs each type last held in this session, so Expense →
+  /// Income → Expense brings Expense's category back. Session-only: it lives in
+  /// this State and dies with the route.
+  final Map<QuickAddType, ({String? from, String? to})> _refsByType = {};
 
   /// The literal characters typed into the hero, not a double — the display
   /// has to tell entered digits from decimals not yet reached.
@@ -406,6 +415,11 @@ class _QuickAddScreenState extends State<QuickAddScreen>
     // this change only the note needed the backstop, because the title only ever
     // appeared on a form with no keypad.
     _titleFocus.addListener(_onTitleFocus);
+    // Task 056 — the host drives a type change in place when the user returns to
+    // an already-built Quick Add from the goal or budget form.
+    widget.typeRequests?.attach((t) {
+      if (mounted && t != _type) _switchType(t);
+    });
   }
 
   void _onNoteFocus() {
@@ -513,6 +527,7 @@ class _QuickAddScreenState extends State<QuickAddScreen>
 
   @override
   void dispose() {
+    widget.typeRequests?.detach();
     _pulse.dispose();
     _note.dispose();
     _noteFocus.dispose();
@@ -625,8 +640,19 @@ class _QuickAddScreenState extends State<QuickAddScreen>
     setState(() {
       final oldFrom = _fromRef;
       final oldTo = _toRef;
+      // Remember what the outgoing type held, so returning to it later restores
+      // its own refs (task 056 §3).
+      _refsByType[_type] = (from: _fromRef, to: _toRef);
       var newFrom = _keepRef(store, _fromRef, _fromSlot(next));
       var newTo = _keepRef(store, _toRef, _toSlot(next));
+      // What `next` itself last held in this session wins over what the old type
+      // carried in, as long as it still resolves (it may have been deleted
+      // meanwhile). Task 056.
+      final remembered = _refsByType[next];
+      if (remembered != null) {
+        newFrom = _keepRef(store, remembered.from, _fromSlot(next)) ?? newFrom;
+        newTo = _keepRef(store, remembered.to, _toSlot(next)) ?? newTo;
+      }
       // An account the old type held but the new type has no place for in the
       // same slot moves into the new type's EMPTY account slot — Expense's From
       // becomes Income's To and back. It never overwrites a slot that kept its
