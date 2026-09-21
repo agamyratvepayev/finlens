@@ -2451,6 +2451,26 @@ class _NewAccountFormState extends State<_NewAccountForm> {
   /// Focuses a numeric row: the accent outline and caret move to it, the
   /// docked keypad opens (or retargets) and keys land here. The system
   /// keyboard goes first — keypad and keyboard are never up together.
+  // ── Task 052 — the footer rides on top of the system keyboard ──────────────
+
+  /// [_SheetFooter]'s fixed height: 0.5 hairline + 12 + 50 (button) + 12.
+  static const double _footerHeight = 0.5 + Insets.md + 50 + Insets.md;
+
+  /// How much of this sheet the system keyboard covers.
+  ///
+  /// New account is the only form sheet on [showAppSheet]'s draggable
+  /// (fixed-fraction) path, and that path reserves only the part of the nav bar
+  /// the keyboard leaves exposed (`_navBarInset`), never the keyboard itself.
+  /// The content-sized sheets (New category, Add/Edit currency) are padded for
+  /// it by the shell. The name field autofocuses, so on first open the keyboard
+  /// covered the sheet's foot, and the Create & select footer with it.
+  static double _keyboardOverlap(double keyboard, double navBarPadding) {
+    // Mirrors _AppSheetBodyState._navBarInset: the shell lifts the sheet by the
+    // nav-bar part the keyboard leaves exposed; the keyboard covers the rest.
+    final navBarInset = math.max(0.0, navBarPadding - keyboard);
+    return math.max(0.0, keyboard - navBarInset);
+  }
+
   void _focusNum(_NumField field) {
     _nameFocus.unfocus();
     if (_numFocus == field) return;
@@ -2532,12 +2552,33 @@ class _NewAccountFormState extends State<_NewAccountForm> {
     final l = AppLocalizations.of(context);
     final group = _group;
     final duplicate = _duplicateName(store);
+    final keyboard = _keyboardOverlap(
+      MediaQuery.viewInsetsOf(context).bottom,
+      MediaQuery.paddingOf(context).bottom,
+    );
 
-    return Column(
-      children: [
-        Expanded(
-          child: ListView(
-            controller: widget.controller,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Task 052 — lift the footer by exactly the part of the sheet the
+        // system keyboard covers, so Create & select is visible from the first
+        // frame. The sheet itself does not move: only the list above the footer
+        // gives up the room. Clamped so that a keyboard-up sheet dragged toward
+        // its 0.4 minimum shrinks the list to nothing first and never
+        // overflows. Zero while the docked keypad is up: keypad and keyboard
+        // are never open together, and during the hand-over the keypad already
+        // holds the footer above the sheet's foot.
+        final lift = _numFocus != null
+            ? 0.0
+            : math.min(
+                keyboard,
+                math.max(0.0, constraints.maxHeight - _footerHeight),
+              );
+
+        return Column(
+          children: [
+            Expanded(
+              child: ListView(
+                controller: widget.controller,
             // Bottom padding clears the footer so the last row is never flush
             // against it (§8b); the footer is a sibling below, not floating, so
             // it can never overlap content.
@@ -2664,7 +2705,11 @@ class _NewAccountFormState extends State<_NewAccountForm> {
           // The home-indicator inset below the keys is the sheet shell's now.
           const SizedBox(height: Insets.sm),
         ],
-      ],
+        // Task 052 — the room the system keyboard takes at the sheet's foot.
+        SizedBox(height: lift),
+          ],
+        );
+      },
     );
   }
 
