@@ -1763,38 +1763,44 @@ class _RatioBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Task 050: the bar always spans the header's full content width. The
+    // header column is `CrossAxisAlignment.start`, so it hands its children a
+    // loose width (min 0). The two-sided Row expanded to the max on its own,
+    // but a childless DecoratedBox sizes to `constraints.smallest` — the
+    // one-sided and empty branches drew at 0 width and the bar vanished for a
+    // single account. `width: double.infinity` makes every branch tight to
+    // the available width, so all four states share one geometry.
+    return SizedBox(
+      width: double.infinity,
+      height: 3,
+      child: _fill(),
+    );
+  }
+
+  Widget _fill() {
     final total = assets + liabilities;
     // Everything hidden: no ratio to draw — a flat neutral track (spec §5),
     // and the guard that keeps the division below safe.
-    if (total <= 0) {
-      return SizedBox(height: 3, child: _seg(AppColors.surfaceHigh));
-    }
+    if (total <= 0) return _seg(AppColors.surfaceHigh);
     // One side fully hidden reads as a single solid bar, not a bar with a
     // 1-flex sliver of the other colour.
-    if (liabilities <= 0) {
-      return SizedBox(height: 3, child: _seg(AppColors.positive));
-    }
-    if (assets <= 0) {
-      return SizedBox(height: 3, child: _seg(AppColors.negative));
-    }
+    if (liabilities <= 0) return _seg(AppColors.positive);
+    if (assets <= 0) return _seg(AppColors.negative);
 
     final ratio = (liabilities / total).clamp(0.0, 1.0);
-    return SizedBox(
-      height: 3,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Expanded(
-            flex: ((1 - ratio) * 1000).round().clamp(1, 1000),
-            child: _seg(AppColors.positive),
-          ),
-          const SizedBox(width: 1.5),
-          Expanded(
-            flex: (ratio * 1000).round().clamp(1, 1000),
-            child: _seg(AppColors.negative),
-          ),
-        ],
-      ),
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Expanded(
+          flex: ((1 - ratio) * 1000).round().clamp(1, 1000),
+          child: _seg(AppColors.positive),
+        ),
+        const SizedBox(width: 1.5),
+        Expanded(
+          flex: (ratio * 1000).round().clamp(1, 1000),
+          child: _seg(AppColors.negative),
+        ),
+      ],
     );
   }
 

@@ -429,4 +429,89 @@ void main() {
       }
     });
   });
+
+  group('Task 050 — the ratio bar spans the full width on one side too', () {
+    // Header content width on a 390pt screen: 390 − 2 × Insets.gutter (20).
+    const contentWidth = 390.0 - 2 * 20.0;
+
+    Finder seg(Color c) => find.descendant(
+          of: _ratioBar(),
+          matching: find.byWidgetPredicate((w) =>
+              w is DecoratedBox &&
+              (w.decoration as BoxDecoration).color == c),
+        );
+
+    testWidgets('assets only: one full-width green segment', (tester) async {
+      _setSize(tester, 390, 844);
+      await tester.pumpWidget(_host(_store(wallet: 28596)));
+      await tester.pumpAndSettle();
+
+      expect(tester.getRect(_ratioBar()).width, closeTo(contentWidth, 0.5));
+      expect(seg(AppColors.positive), findsOneWidget);
+      expect(seg(AppColors.negative), findsNothing);
+      final r = tester.getRect(seg(AppColors.positive));
+      expect(r.width, closeTo(contentWidth, 0.5));
+      expect(r.height, closeTo(3, 0.01));
+    });
+
+    testWidgets('liabilities only: one full-width red segment', (tester) async {
+      _setSize(tester, 390, 844);
+      // Both spendable accounts at 0, one credit card owing 1,200.
+      final store = _store(
+        wallet: 0,
+        extra: [
+          Account(
+            id: 'cc',
+            name: 'Card',
+            group: AccountGroup.creditCards,
+            currency: 'USD',
+            startingBalance: -1200,
+          ),
+        ],
+      );
+      await tester.pumpWidget(_host(store));
+      await tester.pumpAndSettle();
+
+      expect(seg(AppColors.negative), findsOneWidget);
+      expect(seg(AppColors.positive), findsNothing);
+      final r = tester.getRect(seg(AppColors.negative));
+      expect(r.width, closeTo(contentWidth, 0.5));
+      expect(r.height, closeTo(3, 0.01));
+    });
+
+    testWidgets('zero total: one full-width neutral track', (tester) async {
+      _setSize(tester, 390, 844);
+      await tester.pumpWidget(_host(_store(wallet: 0)));
+      await tester.pumpAndSettle();
+
+      expect(seg(AppColors.positive), findsNothing);
+      expect(seg(AppColors.negative), findsNothing);
+      final r = tester.getRect(seg(AppColors.surfaceHigh));
+      expect(r.width, closeTo(contentWidth, 0.5));
+      expect(r.height, closeTo(3, 0.01));
+    });
+
+    testWidgets('both sides: the split still fills the full width',
+        (tester) async {
+      _setSize(tester, 390, 844);
+      final store = _store(
+        wallet: 4998,
+        extra: [
+          Account(
+            id: 'pay',
+            name: 'Card',
+            group: AccountGroup.payables,
+            currency: 'USD',
+            startingBalance: -800,
+          ),
+        ],
+      );
+      await tester.pumpWidget(_host(store));
+      await tester.pumpAndSettle();
+
+      final pos = tester.getRect(seg(AppColors.positive)).width;
+      final neg = tester.getRect(seg(AppColors.negative)).width;
+      expect(pos + 1.5 + neg, closeTo(contentWidth, 0.5));
+    });
+  });
 }
