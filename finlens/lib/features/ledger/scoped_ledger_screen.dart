@@ -10,6 +10,7 @@ import '../../core/models/models.dart';
 import '../../core/store/app_store.dart';
 import '../../core/utils/date_range.dart';
 import '../../core/utils/formatters.dart';
+import '../../shared/widgets/range_calendar.dart';
 import '../../shared/widgets/rate_missing.dart';
 import '../../core/utils/search_fold.dart';
 import '../../l10n/app_localizations.dart';
@@ -19,6 +20,7 @@ import '../../shared/widgets/swipe_actions.dart';
 import '../../shared/widgets/swipe_back_route.dart';
 import '../../shared/widgets/undo_bar.dart';
 import '../../theme/app_colors.dart';
+import '../../theme/app_theme.dart';
 import '../balance/edit_account_screen.dart';
 import '../balance/opening_balance_sheet.dart';
 import '../balance/same_transactions_screen.dart';
@@ -375,6 +377,10 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
               _hero(store, query),
               PeriodRow(
                 range: _range,
+                // Task 051: All time names where this scope's data begins.
+                firstEver: _range.preset == RangePreset.allTime
+                    ? _scopeFloor(store)
+                    : null,
                 totalIn: totalIn,
                 totalOut: totalOut,
                 filter: _filter,
@@ -1366,96 +1372,65 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
 
   // ── Sheets ────────────────────────────────────────────────────────────────
 
+  /// Task 051 — the earliest date this scope holds anything: its oldest
+  /// transaction or an account's opening date, whichever comes first. Only
+  /// ever used as `firstEver` for All time's label (`Since Sep 2026`); the All
+  /// time *range* keeps its 1 Jan 2000 start, so a back-dated entry added later
+  /// still shows. Today when the scope holds nothing.
+  DateTime _scopeFloor(AppStore store) {
+    DateTime? earliest;
+    for (final t in store.txnsForAccounts(_scopeAccountIds(store))) {
+      if (earliest == null || t.date.isBefore(earliest)) earliest = t.date;
+    }
+    for (final a in _scope.accountsIn(store)) {
+      final od = a.openingDate;
+      if (od != null && (earliest == null || od.isBefore(earliest))) {
+        earliest = od;
+      }
+    }
+    return earliest ?? store.today;
+  }
+
   Future<void> _pickRange(AppStore store) async {
     setState(() => _rangeSheetOpen = true);
-    final today = store.today;
-    final picked = await showModalBottomSheet<RangePreset>(
+    final ids = _scopeAccountIds(store);
+    // Day-only set of every day this scope has a transaction on — built once
+    // per open from the per-account index, never a per-cell scan. Drives the
+    // calendar's bright / dim day cells.
+    final daysWithTxn = <DateTime>{
+      for (final t in store.txnsForAccounts(ids))
+        if (!_pendingDelete.contains(t.id))
+          DateTime(t.date.year, t.date.month, t.date.day),
+    };
+    final picked = await showModalBottomSheet<DateRange>(
       context: context,
       backgroundColor: AppColors.surfaceAlt,
-      // Scrollable so seven rows never overflow the box, even at 320×568 / 130%.
+      // Scrollable so the rows and the calendar never overflow the box, even
+      // at 320×568 / 130%.
       isScrollControlled: true,
-      builder: (sheetContext) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 8),
-            Container(
-              width: 36,
-              height: 4,
-              decoration: BoxDecoration(
-                color: AppColors.surfaceHigh,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  AppLocalizations.of(context).ldgPeriod,
-                  style: TextStyle(
-                    fontSize: 16.5,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-              ),
-            ),
-            Flexible(
-              child: ListView(
-                shrinkWrap: true,
-                padding: EdgeInsets.zero,
-                children: [
-                  // One shared preset list (spec §1.4), so this sheet and
-                  // Insight's calendar-shaped one never disagree on order.
-                  for (final p in rangePresetOrder)
-                    _rangeRow(sheetContext, p, today),
-                ],
-              ),
-            ),
-            const SizedBox(height: 8),
-          ],
-        ),
+      builder: (_) => _ScopedPeriodSheet(
+        current: _range,
+        today: store.today,
+        firstEver: _scopeFloor(store),
+        hasData: daysWithTxn.contains,
+        // The same query the list runs, so Apply's count is the toolbar's
+        // `N transactions` after Apply.
+        countBetween: (from, to) => LedgerQuery(
+          store: store,
+          scope: _scope,
+          start: DateTime(from.year, from.month, from.day),
+          end: DateTime(to.year, to.month, to.day, 23, 59, 59, 999),
+        ).rows().where((r) => !_pendingDelete.contains(r.txn.id)).length,
       ),
     );
     if (mounted) setState(() => _rangeSheetOpen = false);
     if (picked != null) {
-      setState(() => _range = picked.resolve(today));
-      final unit = picked.unit;
+      setState(() => _range = picked);
+      // A preset persists its unit (All time has none); a custom range is a
+      // question, not a setting, and persists nothing.
+      final unit = picked.preset?.unit;
       if (unit != null) _saveUnit(store, unit);
     }
-  }
-
-  Widget _rangeRow(BuildContext sheetContext, RangePreset p, DateTime today) {
-    final resolved = p.resolve(today);
-    final active = resolved.start == _range.start && resolved.end == _range.end;
-    return ListTile(
-      // A left check slot the app uses on its other option sheets; inactive
-      // rows keep the same-width empty slot so labels stay aligned.
-      leading: SizedBox(
-        width: 22,
-        child: active
-            ? const Icon(
-                Icons.check_rounded,
-                size: 18,
-                color: AppColors.accentLight,
-              )
-            : null,
-      ),
-      title: Text(
-        p.label(AppLocalizations.of(sheetContext)),
-        style: TextStyle(
-          fontSize: 15,
-          fontWeight: active ? FontWeight.w600 : FontWeight.w400,
-          color: AppColors.textPrimary,
-        ),
-      ),
-      trailing: Text(
-        resolved.label(today, AppLocalizations.of(sheetContext)),
-        style: const TextStyle(fontSize: 12.5, color: AppColors.textTertiary),
-      ),
-      onTap: () => Navigator.of(sheetContext).pop(p),
-    );
   }
 
   Future<void> _pickScope(AppStore store) async {
@@ -1574,3 +1549,307 @@ class _ScopedLedgerScreenState extends State<ScopedLedgerScreen> {
 
 /// Why the list area is empty — each renders a different message (spec §6).
 enum _EmptyReason { period, filter, search }
+
+/// Task 051 — the scoped ledger's Period sheet: the seven preset rows as
+/// before, then a hairline and a `Custom range…` row that slides the same sheet
+/// to the shared [RangeCalendar].
+///
+/// Pops the chosen [DateRange]: a preset range carries its preset (the caller
+/// persists the unit); a custom range carries `preset: null` and persists
+/// nothing. Null when dismissed.
+class _ScopedPeriodSheet extends StatefulWidget {
+  const _ScopedPeriodSheet({
+    required this.current,
+    required this.today,
+    required this.firstEver,
+    required this.hasData,
+    required this.countBetween,
+  });
+
+  final DateRange current;
+  final DateTime today;
+
+  /// The scope's first data date — All time's `Since …` label.
+  final DateTime firstEver;
+
+  final bool Function(DateTime day) hasData;
+  final int Function(DateTime from, DateTime to) countBetween;
+
+  @override
+  State<_ScopedPeriodSheet> createState() => _ScopedPeriodSheetState();
+}
+
+class _ScopedPeriodSheetState extends State<_ScopedPeriodSheet> {
+  bool _onCalendar = false;
+
+  /// A custom window is a range with no preset — including one stepped with
+  /// ‹ › and one handed in by Insight.
+  bool get _isCustom => widget.current.preset == null;
+
+  void _applyCustom(DateTime from, DateTime to) {
+    // TO is inclusive: extend it to end-of-day so the query counts the whole
+    // final day (the Ledger tab's _applyRange rule).
+    Navigator.of(context).pop(DateRange(
+      DateTime(from.year, from.month, from.day),
+      DateTime(to.year, to.month, to.day, 23, 59, 59, 999),
+    ));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const SizedBox(height: 8),
+          Container(
+            width: 36,
+            height: 4,
+            decoration: BoxDecoration(
+              color: AppColors.surfaceHigh,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          // Flexible so either page scrolls inside the sheet's max height.
+          Flexible(
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 160),
+              transitionBuilder: (child, animation) {
+                final incoming = child.key == const ValueKey('calendar');
+                final begin = Offset(incoming ? 1 : -1, 0);
+                return ClipRect(
+                  child: SlideTransition(
+                    position: Tween(begin: begin, end: Offset.zero).animate(
+                        CurvedAnimation(
+                            parent: animation, curve: Curves.easeOutCubic)),
+                    child: child,
+                  ),
+                );
+              },
+              layoutBuilder: (currentChild, previousChildren) => Stack(
+                alignment: Alignment.topCenter,
+                children: [
+                  ...previousChildren,
+                  ?currentChild,
+                ],
+              ),
+              child: _onCalendar ? _calendarPage(context) : _presetPage(context),
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
+      ),
+    );
+  }
+
+  // ── Preset page (the old sheet body, moved) ──────────────────────────────
+
+  Widget _presetPage(BuildContext context) {
+    return Column(
+      key: const ValueKey('period'),
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              AppLocalizations.of(context).ldgPeriod,
+              style: TextStyle(
+                fontSize: 16.5,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary,
+              ),
+            ),
+          ),
+        ),
+        Flexible(
+          child: ListView(
+            shrinkWrap: true,
+            padding: EdgeInsets.zero,
+            children: [
+              // One shared preset list (spec §1.4), so this sheet and
+              // Insight's calendar-shaped one never disagree on order.
+              for (final p in rangePresetOrder) _presetRow(context, p),
+              // Task 051: above the hairline one tap finishes; below it a
+              // second page (the calendar) opens — Insight's rule.
+              const Divider(height: 1, thickness: 1, color: AppColors.hairline),
+              _customRow(context),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _presetRow(BuildContext context, RangePreset p) {
+    final today = widget.today;
+    final resolved = p.resolve(today);
+    // Task 051: a custom range never checks a preset row, even when its dates
+    // coincide with one — the check belongs to the Custom range row alone.
+    final active = !_isCustom &&
+        resolved.start == widget.current.start &&
+        resolved.end == widget.current.end;
+    return ListTile(
+      // A left check slot the app uses on its other option sheets; inactive
+      // rows keep the same-width empty slot so labels stay aligned.
+      leading: SizedBox(
+        width: 22,
+        child: active
+            ? const Icon(
+                Icons.check_rounded,
+                size: 18,
+                color: AppColors.accentLight,
+              )
+            : null,
+      ),
+      title: Text(
+        p.label(AppLocalizations.of(context)),
+        style: TextStyle(
+          fontSize: 15,
+          fontWeight: active ? FontWeight.w600 : FontWeight.w400,
+          color: AppColors.textPrimary,
+        ),
+      ),
+      trailing: Text(
+        // Task 051: firstEver makes All time read `Since Sep 2026` instead of
+        // the preset's 1 Jan 2000 floor; every other preset ignores it.
+        resolved.label(today, AppLocalizations.of(context),
+            firstEver: widget.firstEver),
+        style: const TextStyle(fontSize: 12.5, color: AppColors.textTertiary),
+      ),
+      // Task 051: pops the resolved range (was: the RangePreset).
+      onTap: () => Navigator.of(context).pop(resolved),
+    );
+  }
+
+  /// Task 051 — the same ListTile geometry as a preset row, in the link colour.
+  /// While a custom range is live it states which one, so the active window is
+  /// readable without opening the calendar.
+  Widget _customRow(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final active = _isCustom;
+    return ListTile(
+      leading: SizedBox(
+        width: 22,
+        child: active
+            ? const Icon(
+                Icons.check_rounded,
+                size: 18,
+                color: AppColors.accentLight,
+              )
+            : null,
+      ),
+      title: Text(
+        active ? l.ldgCustomRange : '${l.ldgCustomRange}…',
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(
+          fontSize: 15,
+          fontWeight: active ? FontWeight.w600 : FontWeight.w400,
+          color: AppColors.accentLight,
+        ),
+      ),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (active) ...[
+            // Never truncated: a cut-off date range is read wrong.
+            Text(
+              widget.current.label(widget.today, l),
+              style: const TextStyle(
+                  fontSize: 12.5, color: AppColors.textTertiary),
+            ),
+            const SizedBox(width: Insets.sm),
+          ],
+          const Icon(
+            Icons.chevron_right_rounded,
+            size: 18,
+            color: AppColors.accentLight,
+          ),
+        ],
+      ),
+      onTap: () => setState(() => _onCalendar = true),
+    );
+  }
+
+  // ── Calendar page ─────────────────────────────────────────────────────────
+
+  Widget _calendarPage(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final today = widget.today;
+    final todayDay = DateTime(today.year, today.month, today.day);
+    final current = widget.current;
+    // A stepped custom window can reach past today; seed TO no later than
+    // today, since the calendar's future days are inert.
+    final seedTo =
+        current.end.isAfter(todayDay) ? todayDay : current.end;
+
+    return Column(
+      key: const ValueKey('calendar'),
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Lifted from the Ledger tab's calendar page (ledger_period_sheet.dart).
+        Padding(
+          padding: const EdgeInsets.fromLTRB(
+              Insets.sm, Insets.md, Insets.gutter, 0),
+          child: Row(
+            children: [
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => setState(() => _onCalendar = false),
+                child: Padding(
+                  padding: const EdgeInsets.all(4),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.chevron_left_rounded,
+                          size: 20, color: AppColors.accent),
+                      Text(l.ldgPeriod,
+                          style: const TextStyle(
+                              fontSize: 15, color: AppColors.accent)),
+                    ],
+                  ),
+                ),
+              ),
+              const Spacer(),
+              Text(
+                l.ldgCustomRange.toUpperCase(),
+                style: const TextStyle(
+                  fontSize: 11,
+                  height: 1.2,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.66,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              const Spacer(),
+              // Balances the back control so the title stays centred.
+              const SizedBox(width: 72),
+            ],
+          ),
+        ),
+        const SizedBox(height: Insets.md),
+        Flexible(
+          child: SingleChildScrollView(
+            child: RangeCalendar(
+              today: today,
+              // Seeded only when a custom range is live; from a preset the
+              // fields open empty so the first tap starts a fresh window.
+              initialFrom: _isCustom ? current.start : null,
+              initialTo: _isCustom ? seedTo : null,
+              // A ledger has no future.
+              disableFuture: true,
+              // Verifying that a stretch is empty is a legitimate question.
+              applyEnabledAtZero: true,
+              hasData: widget.hasData,
+              countBetween: widget.countBetween,
+              onApply: _applyCustom,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}

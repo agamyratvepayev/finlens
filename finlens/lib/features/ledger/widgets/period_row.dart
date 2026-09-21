@@ -29,11 +29,17 @@ class PeriodRow extends StatelessWidget {
     required this.onPickRange,
     required this.onFilter,
     this.highlighted = false,
+    this.firstEver,
   });
 
   final DateRange range;
   final double totalIn;
   final double totalOut;
+
+  /// Task 051 — the scope's first data date, passed only while All time is
+  /// active so the label reads `Since Sep 2026`, not the preset's 1 Jan 2000
+  /// floor. Every other range ignores it (see [DateRange.label]).
+  final DateTime? firstEver;
 
   /// Tinted while the period sheet is open (spec §4).
   final bool highlighted;
@@ -82,7 +88,7 @@ class PeriodRow extends StatelessWidget {
                 Flexible(
                   child: Semantics(
                     button: true,
-                    label: 'Period, ${range.label(today, AppLocalizations.of(context))}',
+                    label: 'Period, ${range.label(today, AppLocalizations.of(context), firstEver: firstEver)}',
                     child: InkWell(
                       onTap: onPickRange,
                       borderRadius: BorderRadius.circular(7),
@@ -96,7 +102,7 @@ class PeriodRow extends StatelessWidget {
                             children: [
                               Flexible(
                                 child: Text(
-                                  range.label(today, AppLocalizations.of(context)),
+                                  range.label(today, AppLocalizations.of(context), firstEver: firstEver),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                   style: const TextStyle(
