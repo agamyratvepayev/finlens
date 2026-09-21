@@ -1539,6 +1539,12 @@ class AppLocalizationsTk extends AppLocalizations {
   String get eaHideDesc => 'Jemlerde galýar, sanawlardan ýitýär';
 
   @override
+  String get eaInactive => 'Işjeň däl';
+
+  @override
+  String get eaInactiveDesc => 'Hasap saýlanyňda görünmeýär';
+
+  @override
   String get eaRemoveThisAccount => 'Bu hasaby aýyr';
 
   @override
@@ -3161,6 +3167,17 @@ class AppLocalizationsTk extends AppLocalizations {
   String qaAccountSearchNoMatch(Object query) {
     return '$query bilen gabat gelýän hasap ýok.';
   }
+
+  @override
+  String qaShowInactive(int count) {
+    return 'Işjeň däl hasaplary görkez ($count)';
+  }
+
+  @override
+  String get qaHideInactive => 'Işjeň däl hasaplary gizle';
+
+  @override
+  String get qaInactiveSection => 'Işjeň däl';
 
   @override
   String qaNoCategoryMatch(Object query) {

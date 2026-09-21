@@ -144,6 +144,7 @@ Account _withOpening(Account a, double opening) => Account(
       paymentDue: a.paymentDue,
       hidden: a.hidden,
       archived: a.archived,
+      inactive: a.inactive,
       countAsSpendable: a.countAsSpendable,
       icon: a.icon,
       openedOn: a.openedOn,

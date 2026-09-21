@@ -1583,6 +1583,12 @@ class AppLocalizationsRu extends AppLocalizations {
   String get eaHideDesc => 'Остаётся в итогах, но исчезает из списков';
 
   @override
+  String get eaInactive => 'Неактивен';
+
+  @override
+  String get eaInactiveDesc => 'Скрыт при выборе счёта';
+
+  @override
   String get eaRemoveThisAccount => 'Удалить этот счёт';
 
   @override
@@ -3230,6 +3236,17 @@ class AppLocalizationsRu extends AppLocalizations {
   String qaAccountSearchNoMatch(Object query) {
     return 'Нет счёта по запросу $query.';
   }
+
+  @override
+  String qaShowInactive(int count) {
+    return 'Показать неактивные ($count)';
+  }
+
+  @override
+  String get qaHideInactive => 'Скрыть неактивные';
+
+  @override
+  String get qaInactiveSection => 'Неактивные';
 
   @override
   String qaNoCategoryMatch(Object query) {

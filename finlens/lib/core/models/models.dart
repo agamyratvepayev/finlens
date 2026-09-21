@@ -29,6 +29,7 @@ class Account {
     this.paymentDue,
     this.hidden = false,
     this.archived = false,
+    this.inactive = false,
     this.countAsSpendable = true,
     this.icon,
     this.emoji,
@@ -53,6 +54,12 @@ class Account {
   /// Spec 1.5 — hidden accounts leave the list but stay in the totals.
   bool hidden;
   bool archived;
+
+  /// Task 048 — an account the user no longer reaches for. It stays in every
+  /// list, total and report; only the account picker leaves it out, behind a
+  /// "Show inactive" row. Independent of [hidden] (Balance visibility) and
+  /// [archived] (gone everywhere).
+  bool inactive;
   bool countAsSpendable;
   IconData? icon;
 
@@ -107,6 +114,7 @@ class Account {
     int? paymentDue,
     bool? hidden,
     bool? archived,
+    bool? inactive,
     bool? countAsSpendable,
   }) {
     return Account(
@@ -120,6 +128,7 @@ class Account {
       paymentDue: paymentDue ?? this.paymentDue,
       hidden: hidden ?? this.hidden,
       archived: archived ?? this.archived,
+      inactive: inactive ?? this.inactive,
       countAsSpendable: countAsSpendable ?? this.countAsSpendable,
       icon: icon,
       emoji: emoji,

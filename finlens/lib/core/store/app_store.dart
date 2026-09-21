@@ -3774,6 +3774,7 @@ class AppStore extends ChangeNotifier {
     int? statementDay,
     int? paymentDue,
     bool? hidden,
+    bool? inactive,
   }) {
     account
       ..name = name ?? account.name
@@ -3782,7 +3783,8 @@ class AppStore extends ChangeNotifier {
       ..creditLimit = creditLimit ?? account.creditLimit
       ..statementDay = statementDay ?? account.statementDay
       ..paymentDue = paymentDue ?? account.paymentDue
-      ..hidden = hidden ?? account.hidden;
+      ..hidden = hidden ?? account.hidden
+      ..inactive = inactive ?? account.inactive;
     notifyListeners();
   }
 

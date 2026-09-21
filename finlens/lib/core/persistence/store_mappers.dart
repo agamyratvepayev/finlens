@@ -35,6 +35,7 @@ Map<String, Object?> accountToMap(Account a) => {
       'payment_due': a.paymentDue,
       'hidden': _b(a.hidden),
       'archived': _b(a.archived),
+      'inactive': _b(a.inactive),
       'count_as_spendable': _b(a.countAsSpendable),
       ..._iconColumns(a.icon),
       'icon_emoji': a.emoji,
@@ -54,6 +55,7 @@ Account accountFromMap(Map<String, Object?> m) => Account(
       paymentDue: m['payment_due'] as int?,
       hidden: _bf(m['hidden']),
       archived: _bf(m['archived']),
+      inactive: _bf(m['inactive']),
       countAsSpendable: _bf(m['count_as_spendable']),
       icon: _iconFromRow(m),
       emoji: (m['icon_emoji'] as String?)?.isEmpty ?? true

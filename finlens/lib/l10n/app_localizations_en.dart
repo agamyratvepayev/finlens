@@ -1549,6 +1549,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get eaHideDesc => 'Kept in totals, hidden from lists';
 
   @override
+  String get eaInactive => 'Inactive';
+
+  @override
+  String get eaInactiveDesc => 'Hidden when picking an account';
+
+  @override
   String get eaRemoveThisAccount => 'Remove this account';
 
   @override
@@ -3174,6 +3180,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String qaAccountSearchNoMatch(Object query) {
     return 'No account matches $query.';
   }
+
+  @override
+  String qaShowInactive(int count) {
+    return 'Show inactive ($count)';
+  }
+
+  @override
+  String get qaHideInactive => 'Hide inactive';
+
+  @override
+  String get qaInactiveSection => 'Inactive';
 
   @override
   String qaNoCategoryMatch(Object query) {

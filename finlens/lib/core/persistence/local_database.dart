@@ -40,7 +40,7 @@ class LocalDatabase {
   // The bump is one-way and additive: a newer build reads an older file (the new
   // columns simply come back empty/null), while an older build rejects a newer
   // backup. See [_onUpgrade].
-  static const int schemaVersion = 8;
+  static const int schemaVersion = 9;
 
   static const String accountsTable = 'accounts';
   static const String categoriesTable = 'categories';
@@ -122,6 +122,7 @@ class LocalDatabase {
         payment_due INTEGER,
         hidden INTEGER NOT NULL,
         archived INTEGER NOT NULL,
+        inactive INTEGER,
         count_as_spendable INTEGER NOT NULL,
         icon_code_point INTEGER,
         icon_font_family TEXT,
@@ -360,6 +361,11 @@ class LocalDatabase {
       await db.execute('ALTER TABLE $txnsTable ADD COLUMN amount_base REAL');
       await db.execute('ALTER TABLE $budgetsTable ADD COLUMN currency TEXT');
       await db.execute('ALTER TABLE $goalsTable ADD COLUMN currency TEXT');
+    }
+    if (oldVersion < 9) {
+      // Task 048 — inactive accounts. Nullable: a pre-9 row reads back null,
+      // which accountFromMap maps to false (active).
+      await db.execute('ALTER TABLE $accountsTable ADD COLUMN inactive INTEGER');
     }
   }
 }

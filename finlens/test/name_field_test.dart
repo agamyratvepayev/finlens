@@ -24,11 +24,12 @@ import 'package:finlens/theme/app_theme.dart';
 //
 // The six call sites: goal name, task title (edit), account name, category name,
 // New account, New category, task title (create). Every one is a NameField: no
-// caption, hint-as-label, focus border, built-in clear. Its height is NOT a
-// constant (§2): in the four editors it is intrinsic — the same Insets.md padding
-// the value rows beside it use, so it tracks them at every text scale rather than
-// pinning 48. Quick Add's create-task hero (fixed neighbours) and the two
-// creation sheets (a 44pt glyph tile) still pin `48`.
+// caption, hint-as-label, focus border, built-in clear. In the four editors the
+// row sits on the FormRow grid (task 048 §1): at least RowMetrics.height, its
+// glyph at RowMetrics.padding and its text at RowMetrics.textStart — the x the
+// value rows below use — and it stays that tall with a name, empty, focused or
+// cleared. Quick Add's create-task hero (fixed neighbours) and the two creation
+// sheets (a 44pt glyph tile) still pin `48`.
 
 void main() {
   Widget wrap(AppStore store, Widget child, {double scale = 1.0}) => StoreScope(
@@ -133,10 +134,9 @@ void main() {
     await t.pumpWidget(wrap(AppStore.empty(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32))), const EditGoalScreen()));
     expect(find.byType(NameField), findsOneWidget);
     expect(find.text('Goal name'), findsNothing);
-    // Intrinsic now (§2): shorter than the old pinned 48, but a real line tall.
+    // The FormRow grid now (task 048 §1): a real 48pt row.
     final h = t.getSize(find.byType(NameField)).height;
-    expect(h, lessThan(48));
-    expect(h, greaterThan(40));
+    expect(h, closeTo(RowMetrics.height, 0.5));
   });
 
   testWidgets('edit task: one NameField, no "Item title" caption', (t) async {
@@ -147,8 +147,7 @@ void main() {
     // Task 029: etTaskTitle is now "Item title"; the hint-not-caption rule holds.
     expect(find.text('Item title'), findsNothing);
     final h = t.getSize(find.byType(NameField)).height;
-    expect(h, lessThan(48));
-    expect(h, greaterThan(40));
+    expect(h, closeTo(RowMetrics.height, 0.5));
   });
 
   testWidgets('account editor: one NameField, no "Account name"/"Name" caption',
@@ -161,8 +160,7 @@ void main() {
     // "Name" (eaName) is now only a semantics label, never visible text.
     expect(find.text('Account name'), findsNothing);
     final h = t.getSize(find.byType(NameField)).height;
-    expect(h, lessThan(48));
-    expect(h, greaterThan(40));
+    expect(h, closeTo(RowMetrics.height, 0.5));
   });
 
   testWidgets('category editor: one NameField, no "Category name" caption',
@@ -174,8 +172,7 @@ void main() {
     expect(find.byType(NameField), findsOneWidget);
     expect(find.text('Category name'), findsNothing);
     final h = t.getSize(find.byType(NameField)).height;
-    expect(h, lessThan(48));
-    expect(h, greaterThan(40));
+    expect(h, closeTo(RowMetrics.height, 0.5));
   });
 
   testWidgets('New account sheet: captionless NameField with a glyph tile',
@@ -393,7 +390,7 @@ void main() {
             of: find.byType(NameField), matching: find.byType(EditableText)))
         .left;
     final groupLabelLeft = t.getRect(find.text('Group')).left;
-    expect(nameLeft, closeTo(groupLabelLeft, 1.5));
+    expect(nameLeft, closeTo(groupLabelLeft, 0.5));
   });
 
   // ── §5 · the task glyph ────────────────────────────────────────────────────
@@ -574,7 +571,7 @@ void main() {
     expect(find.byIcon(Icons.local_florist_rounded), findsWidgets);
   });
 
-  // ── §2 · the editor name row tracks the value row beside it ─────────────────
+  // ── §1 · the editor name row is the same 48pt grid as the value row below ───
 
   testWidgets(
       'account name height tracks the Group row across widths and text scales',
@@ -594,16 +591,44 @@ void main() {
                 of: find.text('Group'), matching: find.byType(FormRow)))
             .height;
 
-        // Close, but not identical: the name row carries a 1pt focus border
-        // (≈2px of height) the value rows do not, and its line is 17pt vs the
-        // label's 14.5pt. The point is they *track* — both grow with the scale,
-        // and the name never pins the old 48 (§2). Report the residual.
-        expect((name - group).abs(), lessThan(4),
+        // Same grid now (task 048 §1): both are RowMetrics.height, and the name
+        // row no longer stands taller or shorter than the value rows beside it.
+        expect(name, closeTo(group, 0.5),
             reason: 'w=$w scale=$scale name=$name group=$group');
-        expect(name, lessThan(52 * scale),
-            reason: 'intrinsic, not a pinned 48·scale');
       }
     }
+  });
+
+  // ── §1 · clearing the name does not move anything ──────────────────────────
+
+  testWidgets('clearing the name keeps the row at 48', (t) async {
+    final s = accountStore();
+    phone(t);
+    await t.pumpWidget(wrap(s, EditAccountScreen(accountId: firstAccountId(s))));
+    await t.pump();
+
+    final before = t.getSize(find.byType(NameField)).height;
+    expect(before, closeTo(RowMetrics.height, 0.5));
+
+    await t.tap(find.byIcon(Icons.close_rounded));
+    await t.pump();
+
+    final after = t.getSize(find.byType(NameField)).height;
+    expect(after, closeTo(before, 0.01));
+    expect(after, closeTo(RowMetrics.height, 0.5));
+  });
+
+  // ── §1 · the name glyph sits in the FormRow icon column ─────────────────────
+
+  testWidgets('the name glyph sits in the FormRow icon column', (t) async {
+    final s = accountStore();
+    phone(t);
+    await t.pumpWidget(wrap(s, EditAccountScreen(accountId: firstAccountId(s))));
+    await t.pump();
+
+    final nameGlyphLeft = t.getRect(find.byIcon(Icons.badge_rounded)).left;
+    final groupGlyphLeft = t.getRect(find.byIcon(Icons.folder_rounded)).left;
+    expect(nameGlyphLeft, closeTo(groupGlyphLeft, 0.5));
   });
 
   // ── §5 · two-line rows are capped and tightened; single-line rows do not move ─

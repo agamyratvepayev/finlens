@@ -7,6 +7,7 @@ import 'package:finlens/core/utils/clock.dart';
 import 'package:finlens/features/balance/opening_balance_sheet.dart';
 import 'package:finlens/features/quick_add/widgets/amount_hero.dart';
 import 'package:finlens/l10n/app_localizations.dart';
+import 'package:finlens/shared/widgets/form_fields.dart';
 import 'package:finlens/theme/app_colors.dart';
 import 'package:finlens/theme/app_theme.dart';
 
@@ -177,14 +178,15 @@ void main() {
   });
 
   group('the inline field renders', () {
-    testWidgets('a filled, unfocused amount shows no dim (not-yet-typed) span',
+    testWidgets('a filled, unfocused amount shows no dim span and no .00 padding',
         (tester) async {
-      // Seeded 500 → the display carries a `.00` padding that MUST be bright
-      // once the row is filled and unfocused (task 11), never the pale tertiary.
+      // Seeded 500, no point typed → no decimals at all (task 048 §3): the
+      // display is the whole `$500`, all bright, never the pale tertiary.
       final store = _store([_asset('a1', 'Main Checking', 500)]);
       await _open(tester, store, 'a1');
 
       final amount = _amountText(tester, '500');
+      expect(amount.textSpan!.toPlainText(), r'$500');
       final colors = _spans(amount).map((s) => s.style?.color).toList();
       expect(colors, isNot(contains(AppColors.textTertiary)));
       expect(colors, contains(AppColors.textPrimary));
@@ -194,49 +196,101 @@ void main() {
         (tester) async {
       final store = _store([_asset('a1', 'Main Checking', 0)]);
       await _open(tester, store, 'a1');
-      await _type(tester, ['5', '0', '0']); // "500" typed, ".00" is padding
+      // A point is typed, so the field completes to `.00` — the padding dim.
+      await _type(tester, ['5', '0', '0', '.']);
 
       final amount = _amountText(tester, '500');
+      expect(amount.textSpan!.toPlainText(), r'$500.00');
       final colors = _spans(amount).map((s) => s.style?.color).toList();
       expect(colors, contains(AppColors.textTertiary)); // the ".00" padding
       expect(colors, contains(AppColors.textPrimary)); // the typed "500"
     });
 
+    testWidgets('no point typed means no decimals (task 048 §3)',
+        (tester) async {
+      final store = _store([_asset('a1', 'Main Checking', 0)]);
+      await _open(tester, store, 'a1');
+      await _type(tester, ['5', '0', '0']); // no point → no `.00`
+
+      final amount = _amountText(tester, '500');
+      expect(amount.textSpan!.toPlainText(), r'$500');
+      final colors = _spans(amount).map((s) => s.style?.color).toList();
+      expect(colors, isNot(contains(AppColors.textTertiary)));
+    });
+
     testWidgets('the token side follows the currency def, no prefix symbol',
         (tester) async {
-      // USD: symbol, before, flush → "$500.00".
+      // USD: symbol, before, flush, no padding → "$500".
       final usd = _store([_asset('a1', 'Main', 500)]);
       await _open(tester, usd, 'a1');
-      expect(_amountText(tester, '500').textSpan!.toPlainText(), r'$500.00');
+      expect(_amountText(tester, '500').textSpan!.toPlainText(), r'$500');
     });
 
     testWidgets('a code-only currency spaces the code from the number',
         (tester) async {
-      // CHF has no symbol → token is the code, spaced (symbolBefore defaults
-      // true) → "CHF 500.00". No bare "$" prefix; the token follows the def.
+      // CHF has no symbol → token is the code, spaced with a non-breaking space
+      // (symbolBefore defaults true) → "CHF 500". No bare "$" prefix.
       final chf = _store([_asset('a1', 'Main', 500, currency: 'CHF')]);
       await _open(tester, chf, 'a1');
-      expect(_amountText(tester, '500').textSpan!.toPlainText(), 'CHF\u00A0500.00');
+      expect(_amountText(tester, '500').textSpan!.toPlainText(), 'CHF\u00A0500');
     });
 
     testWidgets('a symbol-after currency renders the symbol flush after',
         (tester) async {
-      // RUB: symbol "₽", symbolBefore false → "500.00₽" (after, flush).
+      // RUB: symbol "₽", symbolBefore false → "500₽" (after, flush).
       final rub = _store([_asset('a1', 'Main', 500, currency: 'RUB')]);
       await _open(tester, rub, 'a1');
-      expect(_amountText(tester, '500').textSpan!.toPlainText(), '500.00₽');
+      expect(_amountText(tester, '500').textSpan!.toPlainText(), '500₽');
     });
 
-    testWidgets('TMT renders from its def (code after, spaced)',
+    testWidgets('TMT renders from its def (code after, non-breaking space)',
         (tester) async {
-      // The shipped TMT def (task 24) carries no symbol and symbolBefore false —
-      // so the token falls back to the code and follows the number: "500.00 TMT",
-      // a non-breaking space between them, the def-driven form.
+      // The shipped TMT def carries no symbol and symbolBefore false — the token
+      // falls back to the code and follows the number: no `.00` padding, a
+      // non-breaking space between number and code.
       final tmt = _store([_asset('a1', 'Main', 500, currency: 'TMT')]);
       await _open(tester, tmt, 'a1');
       expect(
           _amountText(tester, '500').textSpan!.toPlainText(),
-          '500.00 TMT');
+          '500 TMT');
+    });
+
+    testWidgets('TMT with cents keeps the seeded decimals', (tester) async {
+      final tmt = _store([_asset('a1', 'Main', 90.56, currency: 'TMT')]);
+      await _open(tester, tmt, 'a1');
+      // A non-breaking space between the number and the code (task 048 §3).
+      expect(_amountText(tester, '90.56').textSpan!.toPlainText(),
+          '90.56 TMT');
+    });
+
+    testWidgets('the whole amount is one value metric (14.5, <=w400)',
+        (tester) async {
+      final tmt = _store([_asset('a1', 'Main', 90.56, currency: 'TMT')]);
+      await _open(tester, tmt, 'a1');
+      final spans = _spans(_amountText(tester, '90.56'));
+      expect(spans, isNotEmpty);
+      for (final s in spans) {
+        expect(s.style?.fontSize, RowMetrics.valueSize);
+        final w = s.style?.fontWeight;
+        expect(w == null || w.value <= FontWeight.w400.value, isTrue,
+            reason: 'the amount uses one regular-weight value style');
+      }
+    });
+
+    testWidgets(
+        'the amount and date values end on the same right edge, no chevron',
+        (tester) async {
+      final store = _store([_asset('a1', 'Main', 500, currency: 'TMT')]);
+      await _open(tester, store, 'a1');
+
+      final amountRight =
+          tester.getRect(find.byWidget(_amountText(tester, '500'))).right;
+      final dateRight = tester.getRect(find.textContaining('2026')).right;
+      expect(dateRight, closeTo(amountRight, 0.5));
+
+      // A fixed label column meant a chevron before; both are gone (§3).
+      expect(find.byIcon(Icons.chevron_right_rounded), findsNothing);
+      expect(find.byIcon(Icons.keyboard_arrow_down_rounded), findsNothing);
     });
   });
 

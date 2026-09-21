@@ -472,13 +472,14 @@ class NoteRow extends StatelessWidget {
 /// there quietly, opens the icon picker, or (for the two task titles) is a
 /// plain-but-tappable glyph in the icon column.
 ///
-/// Its height is **not** a constant (§2): it takes [verticalPadding] from the
-/// rows it sits beside, so it matches them at every text scale. In the editors
-/// that is `Insets.md` — the same value `FormRow` uses — and [fixedHeight] stays
-/// null, so the height is intrinsic and tracks its neighbours. Quick Add's
-/// neighbour is a hard `48 * s` `TxnFieldRow`, and the creation sheets carry a
-/// 44 pt glyph tile that must not float in a taller box, so those two hosts pass
-/// [fixedHeight] instead.
+/// It sits on the same grid as every other row (task 048 §1). In the editors
+/// [fixedHeight] is null and the row is the `FormRow` contract — at least
+/// [RowMetrics.height], growing only when a large text scale needs it — with the
+/// glyph at [RowMetrics.padding] and the text at [RowMetrics.textStart], the x
+/// the Group / Currency labels below it use. Quick Add's neighbour is a hard
+/// `48 * s` `TxnFieldRow`, and the creation sheets carry a 44 pt glyph tile that
+/// must not float in a taller box, so those two hosts pass [fixedHeight] and
+/// keep their own [horizontalPadding] instead.
 ///
 /// This is deliberately **not** [TextFieldRow], which also draws amounts, limits
 /// and notes, where the caption is the only thing that says what the value means.
@@ -500,10 +501,9 @@ class NameField extends StatefulWidget {
     this.scale = 1.0,
     this.textScale = 1.0,
     this.horizontalPadding = Insets.md,
-    this.verticalPadding = Insets.md,
     this.fixedHeight,
-    this.iconColumn = 24.0,
-    this.iconGap = 12.0,
+    this.iconColumn = RowMetrics.iconColumn,
+    this.iconGap = RowMetrics.iconGap,
   })  : assert(leadingIcon == null || leadingTile == null,
             'a quiet glyph or a tappable tile, never both'),
         assert(onLeadingTap == null || leadingIcon != null,
@@ -550,17 +550,18 @@ class NameField extends StatefulWidget {
   /// beside it — the *design* is identical, the grid it sits on is the host's.
   final double scale;
   final double textScale;
+
+  /// Horizontal padding applied **only on the pinned path** ([fixedHeight] set)
+  /// — Quick Add's hero and the two creation sheets keep their own row inset.
+  /// On the unpinned (editor) path this is ignored: the row sits on the
+  /// [RowMetrics] grid so the glyph lines up with the rows below it (task 048 §1).
   final double horizontalPadding;
 
-  /// Vertical padding around the single line, applied **only when the row is
-  /// intrinsic** ([fixedHeight] null). Defaults to `Insets.md`, matching
-  /// `FormRow`, so an editor name row is as tall as the value rows beside it.
-  final double verticalPadding;
-
-  /// When set, the row is exactly this tall and [verticalPadding] is ignored —
-  /// the hosts whose neighbours are a fixed height (Quick Add's `48 * s`
-  /// `TxnFieldRow`) or that carry the 44 pt glyph tile (the creation sheets).
-  /// Null in the editors, where the height follows the neighbours' padding (§2).
+  /// When set, the row is exactly this tall — the hosts whose neighbours are a
+  /// fixed height (Quick Add's `48 * s` `TxnFieldRow`) or that carry the 44 pt
+  /// glyph tile (the creation sheets). Null in the editors, where the row is the
+  /// [RowMetrics] grid: at least [RowMetrics.height], growing only when a large
+  /// text scale needs it (task 048 §1).
   final double? fixedHeight;
 
   final double iconColumn;
@@ -571,6 +572,8 @@ class NameField extends StatefulWidget {
 }
 
 class _NameFieldState extends State<NameField> {
+  static const double _border = 1;
+
   FocusNode? _own;
   FocusNode get _node => widget.focusNode ?? (_own ??= FocusNode());
 
@@ -602,26 +605,34 @@ class _NameFieldState extends State<NameField> {
         behavior: HitTestBehavior.opaque,
         onTap: _focus,
         child: Container(
-          // Null in the editors: the row shrink-wraps its single line plus the
-          // padding below, matching the value rows beside it (§2). Set in Quick
-          // Add and the creation sheets, whose neighbours or glyph tile fix it.
+          // Pinned (Quick Add's hero, the two creation sheets): exactly this
+          // tall. Unpinned (the four editors): the FormRow contract — at least
+          // RowMetrics.height, growing only when a large text scale needs it.
+          // The 44pt clear button fits inside it, so the row no longer grows to
+          // 70 with a name and falls to 46 when cleared (task 048 §1).
           height: widget.fixedHeight,
+          constraints: widget.fixedHeight == null
+              ? const BoxConstraints(minHeight: RowMetrics.height)
+              : null,
           decoration: BoxDecoration(
             color: widget.surface,
             borderRadius: BorderRadius.circular(widget.radius * s),
             // Always one point, transparent when unfocused: the card cannot
             // change size when focus arrives.
             border: Border.all(
-              width: 1,
+              width: _border,
               color: _node.hasFocus ? AppColors.accent : Colors.transparent,
             ),
           ),
           padding: EdgeInsets.symmetric(
-            horizontal: widget.horizontalPadding * s,
-            // Intrinsic rows carry their own vertical padding; a fixed-height row
-            // centres its line in the given box instead.
-            vertical:
-                widget.fixedHeight == null ? widget.verticalPadding * s : 0,
+            // Container insets the child by the border as well as the padding.
+            // The editors give that point back, so the glyph starts at
+            // RowMetrics.padding and the text at RowMetrics.textStart — the x
+            // every FormRow label below uses. Pinned hosts are unchanged.
+            horizontal: widget.fixedHeight == null
+                ? RowMetrics.padding - _border
+                : widget.horizontalPadding * s,
+            vertical: 0,
           ),
           child: Row(
             children: [

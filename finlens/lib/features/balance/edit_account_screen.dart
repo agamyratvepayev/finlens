@@ -46,6 +46,7 @@ class _EditAccountScreenState extends State<EditAccountScreen> {
   late AccountGroup _group = _account.group;
   late String _currency = _account.currency;
   late bool _hidden = _account.hidden;
+  late bool _inactive = _account.inactive;
   late int? _statementDay = _account.statementDay;
   late int? _paymentDue = _account.paymentDue;
 
@@ -219,6 +220,16 @@ class _EditAccountScreenState extends State<EditAccountScreen> {
                         value: _hidden,
                         onChanged: (v) => setState(() => _hidden = v),
                       ),
+                      // Task 048 — out of the account picker, kept everywhere
+                      // else. Separate from Hide: Hide is about Balance, this is
+                      // about choosing an account.
+                      ToggleRow(
+                        icon: Icons.pause_circle_outline_rounded,
+                        label: l.eaInactive,
+                        subtitle: l.eaInactiveDesc,
+                        value: _inactive,
+                        onChanged: (v) => setState(() => _inactive = v),
+                      ),
                     ],
                   ),
                   // The label follows the case, as the sub-label already does:
@@ -332,6 +343,7 @@ class _EditAccountScreenState extends State<EditAccountScreen> {
       statementDay: _statementDay,
       paymentDue: _paymentDue,
       hidden: _hidden,
+      inactive: _inactive,
     );
     Navigator.of(context).pop(EditAccountOutcome.saved);
   }

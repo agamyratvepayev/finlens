@@ -1538,6 +1538,12 @@ class AppLocalizationsTr extends AppLocalizations {
   String get eaHideDesc => 'Toplamlarda kalır, listelerden kaybolur';
 
   @override
+  String get eaInactive => 'Kullanım dışı';
+
+  @override
+  String get eaInactiveDesc => 'Hesap seçerken gizlenir';
+
+  @override
   String get eaRemoveThisAccount => 'Bu hesabı kaldır';
 
   @override
@@ -3159,6 +3165,17 @@ class AppLocalizationsTr extends AppLocalizations {
   String qaAccountSearchNoMatch(Object query) {
     return '$query ile eşleşen hesap yok.';
   }
+
+  @override
+  String qaShowInactive(int count) {
+    return 'Kullanım dışıları göster ($count)';
+  }
+
+  @override
+  String get qaHideInactive => 'Kullanım dışıları gizle';
+
+  @override
+  String get qaInactiveSection => 'Kullanım dışı';
 
   @override
   String qaNoCategoryMatch(Object query) {

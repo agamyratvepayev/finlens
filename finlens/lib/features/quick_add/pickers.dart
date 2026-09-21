@@ -507,31 +507,37 @@ class _AccountPickerBody extends StatefulWidget {
 
 class _AccountPickerBodyState extends State<_AccountPickerBody> {
   String _query = '';
+  bool _showInactive = false;
 
   @override
   Widget build(BuildContext context) {
     final store = StoreScope.of(context);
     final l = AppLocalizations.of(context);
 
-    // The list this sheet draws from, before any query. Empty here means the
-    // store has nothing to offer — state 1 — which is a different thing from a
-    // query that matched nothing, and the two must never be confused (§1).
-    final source = store.visibleAccounts
+    // Everything this sheet may offer before any query — visible (not hidden,
+    // not archived, not after the cutoff), minus the excluded id, through the
+    // caller's filter — split by `inactive` (task 048). Both halves obey the
+    // same excludeId/filter.
+    final offered = store.visibleAccounts
         .where((a) => a.id != widget.excludeId)
         .where((a) => widget.filter?.call(a) ?? true)
         .toList();
+    final source = offered.where((a) => !a.inactive).toList();
+    final inactiveSource = offered.where((a) => a.inactive).toList();
 
-    // State 1: no accounts at all. No search field, no header action, no
-    // keyboard — just the title and an empty state whose button is the sole
-    // create affordance (§2). Not scrollable: there is nothing to scroll (§4).
-    if (source.isEmpty) return _emptyState(context, l);
+    // State 1: nothing to offer at all, active or inactive. No search field, no
+    // header action, no keyboard — just the title and an empty state whose
+    // button is the sole create affordance (§2).
+    if (source.isEmpty && inactiveSource.isEmpty) {
+      return _emptyState(context, l);
+    }
 
     final rawQuery = _query.trim();
     final hasQuery = rawQuery.isNotEmpty;
     final q = rawQuery.toLowerCase();
-    final matches = source
-        .where((a) => !hasQuery || a.name.toLowerCase().contains(q))
-        .toList();
+    bool hit(Account a) => !hasQuery || a.name.toLowerCase().contains(q);
+    final matches = source.where(hit).toList();
+    final inactiveMatches = inactiveSource.where(hit).toList();
 
     final grouped = <AccountGroup, List<Account>>{};
     for (final a in matches) {
@@ -565,10 +571,10 @@ class _AccountPickerBodyState extends State<_AccountPickerBody> {
               Insets.xxl,
             ),
             children: [
-              // State 4 — and ONLY state 4: accounts exist, a real query was
-              // typed, and it matched nothing. An empty/whitespace query can
-              // never reach here (§1, §7).
-              if (hasQuery && matches.isEmpty) _noMatchLine(context, l, rawQuery),
+              // State 4: a real query matched nothing, active or inactive. An
+              // empty/whitespace query can never reach here (§1, §7).
+              if (hasQuery && matches.isEmpty && inactiveMatches.isEmpty)
+                _noMatchLine(context, l, rawQuery),
               for (final entry in grouped.entries) ...[
                 Padding(
                   padding: const EdgeInsets.fromLTRB(4, Insets.md, 4, Insets.sm),
@@ -590,6 +596,34 @@ class _AccountPickerBodyState extends State<_AccountPickerBody> {
                   ),
                 ),
               ],
+              // Task 048 — the inactive accounts, behind a Show inactive (N) row
+              // that only appears when the query leaves at least one. Expanded
+              // state is local to this open sheet and starts collapsed.
+              if (inactiveMatches.isNotEmpty) ...[
+                _inactiveToggle(l, inactiveMatches.length),
+                if (_showInactive) ...[
+                  Padding(
+                    padding:
+                        const EdgeInsets.fromLTRB(4, Insets.md, 4, Insets.sm),
+                    child: Text(l.qaInactiveSection.toUpperCase(),
+                        style: AppText.label),
+                  ),
+                  AppCard(
+                    clipBehavior: Clip.antiAlias,
+                    child: Column(
+                      children: [
+                        for (var i = 0; i < inactiveMatches.length; i++) ...[
+                          if (i > 0)
+                            const RowDivider(indent: _accountRowTextStart),
+                          _accountSwipeRow(
+                              context, store, l, inactiveMatches[i],
+                              dim: true),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
+              ],
             ],
           ),
         ),
@@ -605,22 +639,25 @@ class _AccountPickerBodyState extends State<_AccountPickerBody> {
     BuildContext context,
     AppStore store,
     AppLocalizations l,
-    Account account,
-  ) {
+    Account account, {
+    bool dim = false,
+  }) {
     final row = _pickRow(
       context,
       icon: account.displayIcon,
       color: account.color,
       title: account.name,
+      dim: dim,
       // Spec 3.2 — the current balance is previewed on the right so the user
       // picks with context. Onto the row contract's value size, keeping its
-      // tabular figures (copyWith preserves fontFeatures) and its colour.
+      // tabular figures (copyWith preserves fontFeatures) and its colour. An
+      // inactive row dims one step further (task 048).
       trailing: AmountText(
         store.balanceOf(account.id),
         currency: account.currency,
         style: AppText.amount.copyWith(
           fontSize: RowMetrics.valueSize,
-          color: AppColors.textSecondary,
+          color: dim ? AppColors.textTertiary : AppColors.textSecondary,
         ),
       ),
       onTap: () => Navigator.of(context).pop(account),
@@ -644,6 +681,53 @@ class _AccountPickerBodyState extends State<_AccountPickerBody> {
           ),
         ],
         child: row,
+      ),
+    );
+  }
+
+  /// Task 048 — reveals / hides the inactive accounts. Link-coloured like the
+  /// header's `+ New` (accentLight passes AA on surfaceAlt; accent does not).
+  Widget _inactiveToggle(AppLocalizations l, int count) {
+    final open = _showInactive;
+    return Padding(
+      padding: const EdgeInsets.only(top: Insets.xs),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: Semantics(
+          button: true,
+          expanded: open,
+          child: InkWell(
+            onTap: () => setState(() => _showInactive = !open),
+            borderRadius: BorderRadius.circular(Radii.sm),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 44),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      open ? l.qaHideInactive : l.qaShowInactive(count),
+                      style: const TextStyle(
+                        fontSize: RowMetrics.labelSize,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.accentLight,
+                      ),
+                    ),
+                    const SizedBox(width: RowMetrics.valueToChevron),
+                    Icon(
+                      open
+                          ? Icons.keyboard_arrow_up_rounded
+                          : Icons.keyboard_arrow_down_rounded,
+                      size: RowMetrics.chevronSize,
+                      color: AppColors.accentLight,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -1719,10 +1803,13 @@ Widget _pickRow(
   required String title,
   Widget? trailing,
   required VoidCallback onTap,
+  bool dim = false,
 }) {
   // Announce as a button (§6) without touching the row's dot, name, balance,
   // alignment or tap behaviour (hard boundary): the label is composed from the
-  // row's own descendants.
+  // row's own descendants. An inactive row dims its glyph and name (task 048).
+  Widget glyph = IconTile(icon, color: color, size: _accountRowGlyph);
+  if (dim) glyph = Opacity(opacity: 0.5, child: glyph);
   return Semantics(
     button: true,
     child: InkWell(
@@ -1734,7 +1821,7 @@ Widget _pickRow(
         ),
         child: Row(
           children: [
-            IconTile(icon, color: color, size: _accountRowGlyph),
+            glyph,
             const SizedBox(width: RowMetrics.iconGap),
             Expanded(
               child: Text(
@@ -1742,6 +1829,7 @@ Widget _pickRow(
                 style: AppText.rowTitle.copyWith(
                   fontSize: RowMetrics.labelSize,
                   fontWeight: FontWeight.w500,
+                  color: dim ? AppColors.textSecondary : null,
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,

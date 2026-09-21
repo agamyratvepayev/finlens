@@ -2392,6 +2392,18 @@ abstract class AppLocalizations {
   /// **'Kept in totals, hidden from lists'**
   String get eaHideDesc;
 
+  /// No description provided for @eaInactive.
+  ///
+  /// In en, this message translates to:
+  /// **'Inactive'**
+  String get eaInactive;
+
+  /// No description provided for @eaInactiveDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Hidden when picking an account'**
+  String get eaInactiveDesc;
+
   /// No description provided for @eaRemoveThisAccount.
   ///
   /// In en, this message translates to:
@@ -4983,6 +4995,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No account matches {query}.'**
   String qaAccountSearchNoMatch(Object query);
+
+  /// No description provided for @qaShowInactive.
+  ///
+  /// In en, this message translates to:
+  /// **'Show inactive ({count})'**
+  String qaShowInactive(int count);
+
+  /// No description provided for @qaHideInactive.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide inactive'**
+  String get qaHideInactive;
+
+  /// No description provided for @qaInactiveSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Inactive'**
+  String get qaInactiveSection;
 
   /// No description provided for @qaNoCategoryMatch.
   ///

@@ -5,6 +5,7 @@ import '../../core/store/app_store.dart';
 import '../../core/utils/arithmetic.dart';
 import '../../core/utils/formatters.dart';
 import '../../l10n/app_localizations.dart';
+import '../../shared/widgets/form_fields.dart';
 import '../../shared/widgets/typed_date_sheet.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
@@ -294,37 +295,38 @@ class _OpeningBalanceSheetState extends State<_OpeningBalanceSheet> {
   }
 
   Widget _dateRow(AppLocalizations l) {
+    // Task 048 §3 — the date answers on the right edge, exactly where the
+    // amount above it ends: no fixed label column, no chevron. The whole row
+    // stays the tap target (it opens the typed date sheet).
     return InkWell(
       onTap: _pickDate,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        child: Row(
-          children: [
-            SizedBox(
-              width: 78,
-              child: Text(
-                l.qaDate,
-                style: const TextStyle(
-                  fontSize: 14,
-                  color: AppColors.textSecondary,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 44),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  l.qaDate,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: AppColors.textSecondary,
+                  ),
                 ),
               ),
-            ),
-            Expanded(
-              child: Text(
+              const SizedBox(width: 16),
+              Text(
                 dayMonthYear(_date, l),
                 style: const TextStyle(
-                  fontSize: 15,
+                  fontSize: RowMetrics.valueSize,
                   color: AppColors.textPrimary,
                 ),
               ),
-            ),
-            const Icon(
-              Icons.chevron_right_rounded,
-              size: 18,
-              color: AppColors.formChevron,
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -337,7 +339,8 @@ class _OpeningBalanceSheetState extends State<_OpeningBalanceSheet> {
 /// rather than an editable code chip — the currency is fixed to the account's.
 ///
 /// The dim rule (task 11): pale means "not yet typed".
-///   - empty            → the whole `0.00` placeholder is dim;
+///   - empty            → the whole `0` placeholder is dim (no `.00` padding
+///                        until a point is typed — task 048 §3);
 ///   - focused + typed  → typed digits bright, the decimal padding still dim;
 ///   - filled, unfocused → all bright.
 class _AmountField extends StatefulWidget {
@@ -375,8 +378,10 @@ class _AmountFieldState extends State<_AmountField>
 
   static const _labelStyle =
       TextStyle(fontSize: 14, color: AppColors.textSecondary);
-  static const _tokenStyle = TextStyle(
-      fontSize: 14, fontWeight: FontWeight.w500, color: AppColors.textSecondary);
+
+  /// A non-breaking space, so the number never wraps away from its unit — the
+  /// same character money()/_moneyCustom uses (task 048 §3 / task 045).
+  static const _nbsp = ' ';
 
   @override
   void initState() {
@@ -397,15 +402,6 @@ class _AmountFieldState extends State<_AmountField>
     super.dispose();
   }
 
-  static String _group(String digits) {
-    final buf = StringBuffer();
-    for (var i = 0; i < digits.length; i++) {
-      if (i > 0 && (digits.length - i) % 3 == 0) buf.write(',');
-      buf.write(digits[i]);
-    }
-    return buf.toString();
-  }
-
   static double _measure(String s, TextStyle style, TextScaler scaler) {
     final tp = TextPainter(
       text: TextSpan(text: s, style: style),
@@ -417,46 +413,24 @@ class _AmountFieldState extends State<_AmountField>
     return w;
   }
 
-  /// Splits the display into what the user actually typed (grouped) and the
-  /// decimal remainder that is only there to hold the column, using the
-  /// currency's own [CurrencyDef.decimals]. The caret lands between the two.
-  ({String typed, String rest}) _parts(CurrencyDef def) {
-    final raw = widget.raw;
-    final zeros = def.decimals > 0 ? '.${'0' * def.decimals}' : '';
-    if (raw.isEmpty) return (typed: '', rest: '0$zeros');
-    final dot = raw.indexOf('.');
-    final wholeSrc = dot < 0 ? raw : raw.substring(0, dot);
-    final whole = _group(wholeSrc.isEmpty ? '0' : wholeSrc);
-    if (dot < 0) return (typed: whole, rest: zeros);
-    final decs = raw.substring(dot + 1);
-    final pad = def.decimals - decs.length;
-    return (typed: '$whole.$decs', rest: pad > 0 ? '0' * pad : '');
-  }
-
-  /// The token side ([CurrencyDef.symbolBefore]) and spacing (symbol flush, code
-  /// spaced) both come from the def — never a hard-coded currency (spec §7a).
+  /// Task 048 §3 — side from [CurrencyDef.symbolBefore], flush-or-spaced from
+  /// [CurrencyDef.tokenHugs], and the space is a non-breaking one: the same
+  /// three reads money() makes (task 045). The gap belongs to the token span,
+  /// which shares the figure's style.
   List<InlineSpan> _tokenAround(
     CurrencyDef def,
     List<InlineSpan> number,
+    TextStyle tokenStyle,
   ) {
-    final gap = def.tokenIsSymbol ? '' : ' ';
-    final token = TextSpan(text: def.token, style: _tokenStyle);
+    final gap = def.tokenHugs ? '' : _nbsp;
     return def.symbolBefore
-        ? [
-            token,
-            if (gap.isNotEmpty) TextSpan(text: gap, style: _tokenStyle),
-            ...number,
-          ]
-        : [
-            ...number,
-            if (gap.isNotEmpty) TextSpan(text: gap, style: _tokenStyle),
-            token,
-          ];
+        ? [TextSpan(text: '${def.token}$gap', style: tokenStyle), ...number]
+        : [...number, TextSpan(text: '$gap${def.token}', style: tokenStyle)];
   }
 
   String _plain(({String typed, String rest}) parts, CurrencyDef def) {
     final number = '${parts.typed}${parts.rest}';
-    final gap = def.tokenIsSymbol ? '' : ' ';
+    final gap = def.tokenHugs ? '' : _nbsp;
     return def.symbolBefore
         ? '${def.token}$gap$number'
         : '$number$gap${def.token}';
@@ -467,22 +441,25 @@ class _AmountFieldState extends State<_AmountField>
     final def = currencyDef(widget.currency);
     final focused = widget.focused;
     final filled = widget.raw.isNotEmpty;
-    final parts = _parts(def);
+    // Task 048 §3 — the same typed/untyped split every other row uses; no point
+    // typed means no decimals (task 043 §4).
+    final parts = AmountEntry.splitPlain(widget.raw, widget.currency);
 
     // Task 11 brightness. The typed digits are always bright once present; the
     // decimal padding is dim while typing and bright once the row is unfocused.
     final restColor =
         (filled && !focused) ? AppColors.textPrimary : AppColors.textTertiary;
+    // One value metric, shared with the account picker and the date below
+    // (task 048 §3): RowMetrics.valueSize, regular weight, tabular figures.
     const typedStyle = TextStyle(
-        fontSize: 16,
-        fontWeight: FontWeight.w600,
+        fontSize: RowMetrics.valueSize,
         color: AppColors.textPrimary,
         fontFeatures: [FontFeature.tabularFigures()]);
-    final restStyle = TextStyle(
-        fontSize: 16,
-        fontWeight: FontWeight.w600,
-        color: restColor,
-        fontFeatures: const [FontFeature.tabularFigures()]);
+    final restStyle = typedStyle.copyWith(color: restColor);
+    // The token wears the colour of the run it touches (§3a).
+    final tokenDim = !filled || (!def.symbolBefore && parts.rest.isNotEmpty);
+    final tokenStyle =
+        typedStyle.copyWith(color: tokenDim ? restColor : AppColors.textPrimary);
 
     final number = <InlineSpan>[
       if (parts.typed.isNotEmpty)
@@ -510,7 +487,7 @@ class _AmountFieldState extends State<_AmountField>
         widget.expression != null && widget.expression!.showsAsExpression;
 
     final amount = Text.rich(
-      TextSpan(children: _tokenAround(def, number)),
+      TextSpan(children: _tokenAround(def, number, tokenStyle)),
       textAlign: TextAlign.right,
       maxLines: 1,
       softWrap: false,
