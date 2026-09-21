@@ -930,13 +930,6 @@ class OpeningBalanceRow extends StatelessWidget {
       signless: true,
       masked: store.masked,
     );
-    // The figure beneath follows the running-balance column's convention: signed,
-    // so a liability floor reads negative just like the column above it (§2.4).
-    final balanceStr = money(
-      entry.runningBalance,
-      currency: account.currency,
-      masked: store.masked,
-    );
 
     // Identical to the transaction row's styles so height and rhythm match.
     const titleStyle = TextStyle(
@@ -958,12 +951,6 @@ class OpeningBalanceRow extends StatelessWidget {
       // Neutral: the opening balance has no direction, so it never borrows the
       // green/red the ledger uses to carry one (spec §2.3).
       color: AppColors.transferAmount,
-      fontFeatures: [FontFeature.tabularFigures()],
-    );
-    const balanceStyle = TextStyle(
-      fontSize: 11,
-      height: 1.2,
-      color: AppColors.runningBalance,
       fontFeatures: [FontFeature.tabularFigures()],
     );
 
@@ -1063,21 +1050,15 @@ class OpeningBalanceRow extends StatelessWidget {
                             const SizedBox(height: 2),
                             // The subtitle slot always carries the account name —
                             // never left empty, which would change the row height
-                            // (§2.2). The running balance pairs with it on the
-                            // right, as it does under a noted transaction row.
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    account.name,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: subtitleStyle,
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                Text(balanceStr, style: balanceStyle),
-                              ],
+                            // (§2.2). The running balance that used to pair with it
+                            // on the right is dropped: on the floor row it always
+                            // equals the opening amount already shown above, so it
+                            // only doubled the same figure (a liability's sign aside).
+                            Text(
+                              account.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: subtitleStyle,
                             ),
                           ],
                         ),
