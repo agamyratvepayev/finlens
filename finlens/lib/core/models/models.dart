@@ -1048,6 +1048,62 @@ class Task {
     return out;
   }
 
+  /// Every occurrence of this series that falls inside `[from, to]`, inclusive,
+  /// at day granularity (task 057 §2). A non-repeating task yields its own
+  /// [dueDate] when it is in range. Honours [repeatEndDate] / [repeatEndCount]
+  /// exactly as [boundedSeries] does — [dueDate] is occurrence #1 of the live
+  /// series — and drops [skippedDates]. Pure, and bounded: it walks with
+  /// [nextOccurrence] and stops at [to], at the end condition, or after [cap]
+  /// **in-range** occurrences.
+  ///
+  /// Occurrences before [from] are skipped without counting against [cap], so a
+  /// slightly-overdue recurring task still fills the window; a large hard
+  /// ceiling guards the pathological case (a long-unpaid high-frequency series)
+  /// so the walk always terminates. On a daily rule over a 3-month window this
+  /// collects ~90 dates (well under the default cap); on a never-ending weekly
+  /// rule it stops at [to] far sooner, and only an unbounded window would reach
+  /// the cap.
+  List<DateTime> occurrencesIn(DateTime from, DateTime to, {int cap = 400}) {
+    final fromDay = DateTime(from.year, from.month, from.day);
+    final toDay = DateTime(to.year, to.month, to.day);
+    final out = <DateTime>[];
+    if (toDay.isBefore(fromDay)) return out;
+
+    bool isSkipped(DateTime d) => skippedDates
+        .any((s) => s.year == d.year && s.month == d.month && s.day == d.day);
+    void keep(DateTime d) {
+      final day = DateTime(d.year, d.month, d.day);
+      if (!isSkipped(day)) out.add(day);
+    }
+
+    if (!isRecurring) {
+      final day = DateTime(dueDate.year, dueDate.month, dueDate.day);
+      if (!day.isBefore(fromDay) && !day.isAfter(toDay)) keep(day);
+      return out;
+    }
+
+    var d = dueDate; // occurrence #1 of the live series
+    var index = 1; // toward repeatEndCount
+    var collected = 0; // in-range occurrences, toward cap
+    // Pathological-termination guard: bounds the pre-[from] walk of a
+    // long-overdue high-frequency series, which does not spend [cap].
+    for (var iters = 0; iters < 20000; iters++) {
+      final day = DateTime(d.year, d.month, d.day);
+      if (day.isAfter(toDay)) break;
+      if (repeatEndCount != null && index > repeatEndCount!) break;
+      if (!day.isBefore(fromDay)) {
+        keep(day);
+        if (++collected >= cap) break;
+      }
+      final next = nextOccurrence(d);
+      if (repeatEndDate != null && next.isAfter(repeatEndDate!)) break;
+      if (!next.isAfter(d)) break; // no forward progress — stop
+      d = next;
+      index++;
+    }
+    return out;
+  }
+
   /// The next 3 dates shown as a preview in New/Edit Task (spec 3.7 / 5.7).
   List<DateTime> upcomingPreview([int count = 3]) {
     final out = <DateTime>[];

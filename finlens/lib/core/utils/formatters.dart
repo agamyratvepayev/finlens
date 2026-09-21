@@ -277,8 +277,11 @@ String formatAmount(
       withSymbol: withSymbol,
     );
 
-/// Compact form for dense captions ("$8.4K/yr").
-String moneyCompact(double value, {String? currency}) {
+/// Compact form for dense captions ("$8.4K/yr"). [withSymbol] drops the
+/// currency token entirely (no symbol, no code) while keeping the sign and
+/// grouping — for a figure whose unit is named elsewhere (the Planner forecast
+/// row, task 057 §3e). Defaults true, so every existing call site is unchanged.
+String moneyCompact(double value, {String? currency, bool withSymbol = true}) {
   // Same token placement as [money] (side from [symbolBefore], gap from
   // [tokenHugs]); the sign always leads: `−$8.4K`, `−8.4K TMT`.
   final def = currencyDef(currency ?? _baseCurrency);
@@ -286,9 +289,9 @@ String moneyCompact(double value, {String? currency}) {
   final gap = def.tokenHugs ? '' : _nbsp;
   final abs = value.abs();
   final sign = value < 0 ? _minus : '';
-  String withToken(String body) => def.symbolBefore
-      ? '$sign$token$gap$body'
-      : '$sign$body$gap$token';
+  String withToken(String body) => !withSymbol
+      ? '$sign$body'
+      : (def.symbolBefore ? '$sign$token$gap$body' : '$sign$body$gap$token');
   if (abs >= 1000000) {
     return withToken('${(abs / 1000000).toStringAsFixed(1)}M');
   }

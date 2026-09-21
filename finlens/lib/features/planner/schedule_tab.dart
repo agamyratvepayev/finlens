@@ -120,19 +120,15 @@ class ScheduleSummary extends StatelessWidget {
     final today = store.today;
     final h = horizon.range(today);
 
-    final projection = store.projection(h);
-    final short = projection < 0;
-    final breach = store.firstShortfall(h);
+    // The forecast hero, bar and shortfall line moved to the Planner-wide
+    // forecast row above the tabs (task 057 §5). What stays is the
+    // `coming in · going out` caption — the sum of the rows in the list, not a
+    // forecast — and the overdue banner. The block keeps its padding so the
+    // list below does not jump.
     final inSum = store.comingIn(h);
     final outSum = store.goingOut(h);
     final overdue = store.overdueTasks;
-
-    final span = horizon.spanDays(today);
-    final barValue = breach == null
-        ? 1.0
-        : (breach.day.difference(h.start).inDays / (span == 0 ? 1 : span))
-            .clamp(0.0, 1.0);
-    final barColor = breach == null ? AppColors.positive : AppColors.negative;
+    final hasCaption = inSum > 0 || outSum > 0;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(
@@ -140,49 +136,15 @@ class ScheduleSummary extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerLeft,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.baseline,
-              textBaseline: TextBaseline.alphabetic,
-              children: [
-                AmountText(
-                  short ? -projection : projection,
-                  style: AppText.hero.copyWith(fontSize: 32, height: 1.0),
-                  color: short ? AppColors.negative : null,
-                ),
-                const SizedBox(width: Insets.sm),
-                Text(
-                  short ? l.schShortAfter : l.schLeftAfter,
-                  style: AppText.caption.copyWith(
-                      color: short
-                          ? AppColors.negative
-                          : AppColors.textSecondary),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 9),
-          ProgressBar(value: barValue, color: barColor, height: 8),
-          const SizedBox(height: Insets.sm),
-          if (inSum > 0 || outSum > 0)
+          if (hasCaption)
             Text(
               _caption(l, inSum, outSum),
               style: AppText.caption.copyWith(fontSize: 11.5),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
-          if (breach != null) ...[
-            const SizedBox(height: 4),
-            Text(
-              _shortfallLine(l, breach, today),
-              style: AppText.caption.copyWith(color: AppColors.negative),
-            ),
-          ],
           if (overdue.isNotEmpty) ...[
-            const SizedBox(height: Insets.sm),
+            if (hasCaption) const SizedBox(height: Insets.sm),
             NoticeBanner(
               margin: EdgeInsets.zero,
               color: AppColors.negative,
@@ -202,17 +164,6 @@ class ScheduleSummary extends StatelessWidget {
       if (outSum > 0) l.schCaptionOut(money(outSum, masked: store.masked)),
     ];
     return parts.join(' · ');
-  }
-
-  String _shortfallLine(
-      AppLocalizations l, ({DateTime day, double amount}) breach, DateTime today) {
-    final amount = money(breach.amount, masked: store.masked);
-    final onToday = breach.day.year == today.year &&
-        breach.day.month == today.month &&
-        breach.day.day == today.day;
-    return onToday
-        ? l.schShortToday(amount)
-        : l.schShortOnDay(amount, dayMonth(breach.day, l));
   }
 
   String _bannerCopy(AppLocalizations l) {

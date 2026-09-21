@@ -11,6 +11,7 @@ import '../../features/balance/same_transactions.dart';
 import '../../features/ledger/trans_filter.dart';
 import '../utils/clock.dart';
 import '../utils/date_range.dart';
+import '../models/forecast.dart';
 import '../models/models.dart';
 import '../utils/formatters.dart';
 import '../utils/fx.dart';
@@ -3116,8 +3117,13 @@ class AppStore extends ChangeNotifier {
 
   /// The hero figure (§2.1): what is left after everything already committed —
   /// spendable cash, plus horizon inflows, minus horizon and overdue outflows.
-  /// The projection is the only figure in Planner that converts currency; the
-  /// app-wide FX gap in budgets/insight is out of this spec's scope.
+  ///
+  /// **No longer rendered as the Schedule hero (task 057):** the Planner's one
+  /// forecast row above the tabs now answers "what will I have on a chosen date"
+  /// through [forecastTo], which counts budgets and goals too and respects the
+  /// account kind. This one-occurrence, spendable-only figure is retained as
+  /// tested API (and 058 may reuse [firstShortfall]'s shape); the cash-flow
+  /// picker in the horizon sheet is its remaining caller.
   double projection(DateRange h) => _spendableOr + comingIn(h) - goingOut(h);
 
   /// [spendable] with a native fallback for the projection's day-by-day run
@@ -3131,6 +3137,11 @@ class AppStore extends ChangeNotifier {
   /// much — the highest-value output on the tab (§2.4). Overdue outflows land at
   /// day 0; inflows are applied before outflows on the same day. Only the first
   /// breach is reported.
+  ///
+  /// **No longer the Schedule summary's shortfall line (task 057):** the summary
+  /// dropped its projection block. This still drives the list's breach-row
+  /// highlight and the cash-flow picker; [forecastTo] carries the forecast-row
+  /// forecast, with its own [ForecastResult.spendableBelowZero].
   ({DateTime day, double amount})? firstShortfall(DateRange h) {
     var running = _spendableOr - overdueOutAmount;
     final inRange = tasksInHorizon(h);
@@ -3180,6 +3191,289 @@ class AppStore extends ChangeNotifier {
       if (running < 0) out.add(DateTime(d.year, d.month, d.day));
     }
     return out;
+  }
+
+  // ── The Planner forecast (task 057) ───────────────────────────────────────
+
+  /// The forecast from today to [end] (inclusive), in the reporting currency:
+  /// two lenses — Spendable (cash you can actually use) and Net worth
+  /// (everything owned minus owed) — walked day by day so the curve, the two
+  /// end figures, and the first below-zero day can never disagree (§1b).
+  ///
+  /// It counts every planned thing: scheduled tasks (every occurrence, §1f),
+  /// budgets at their planned daily pace (§1d), goals due inside the window
+  /// (§1e), and overdue pay-outs on day 0 (§1c). Where the money lands decides
+  /// which lens moves (the §1c table). A rate missing anywhere inside a lens
+  /// silences **that lens only** — it is null for every day and its code lands
+  /// in [ForecastResult.missingRateCodes] (§1h); a lens that can be computed
+  /// still is. [end] before today yields today's figures unchanged (§1a).
+  ForecastResult forecastTo(DateTime end) {
+    final startDay = _todayDay;
+    final endDay = DateTime(end.year, end.month, end.day);
+
+    // Today's figures — null-propagating, exactly like balanceInBase.
+    final spendToday = spendable;
+    final nwToday = netWorth;
+
+    // [end] before today: an empty forecast whose lenses equal today (§1a).
+    if (endDay.isBefore(startDay)) {
+      final missing = (spendToday == null || nwToday == null)
+          ? missingRateCodes()
+          : const <String>[];
+      return ForecastResult(
+        start: startDay,
+        end: endDay,
+        spendableToday: spendToday,
+        netWorthToday: nwToday,
+        spendable: spendToday,
+        netWorth: nwToday,
+        spendableBelowZero: null,
+        spendableByDay: [spendToday],
+        netWorthByDay: [nwToday],
+        lines: const [],
+        missingRateCodes: missing,
+      );
+    }
+
+    final n = endDay.difference(startDay).inDays + 1; // days, inclusive
+    final spendDaily = List<double>.filled(n, 0);
+    final nwDaily = List<double>.filled(n, 0);
+    final lines = <ForecastLine>[];
+    final missing = <String>{};
+
+    // A lens is silenced the moment an input it depends on cannot convert. Seed
+    // from today: if today's figure is already null, that lens is silenced.
+    var spendSilenced = spendToday == null;
+    var nwSilenced = nwToday == null;
+    if (spendSilenced || nwSilenced) missing.addAll(missingRateCodes());
+
+    int idxOf(DateTime d) =>
+        DateTime(d.year, d.month, d.day).difference(startDay).inDays;
+
+    bool isSpendable(Account? a) =>
+        a != null && a.group == AccountGroup.spendable && a.countAsSpendable;
+
+    // Scheduled outflow (base) booked against a budget category, per day — used
+    // to keep a bill inside a budgeted category from being counted twice (§1d).
+    final schedByCatDay = <String, List<double>>{};
+
+    // ── Scheduled tasks — every occurrence (§1f) ──────────────────────────────
+    for (final t in openTasks) {
+      final occ = t.occurrencesIn(startDay, endDay);
+      if (occ.isEmpty) continue;
+      final acc = accountById(t.linkedAccountId);
+      final cur = acc?.currency ?? baseCurrency;
+      final amt = convertToBase(t.expectedAmount.abs(), cur);
+      final fromSpendable = isSpendable(acc);
+
+      // Which lenses this occurrence moves, and by how much per occurrence.
+      final double spendPer;
+      final double nwPer;
+      if (t.isPayOut) {
+        if (t.isTransfer) {
+          spendPer = fromSpendable ? -1.0 : 0.0; // leaves spendable; NW nets 0
+          nwPer = 0.0;
+        } else {
+          spendPer = fromSpendable ? -1.0 : 0.0; // card pay-out: spendable 0
+          nwPer = -1.0;
+        }
+      } else {
+        spendPer = fromSpendable ? 1.0 : 0.0; // pay-in into non-cash: spendable 0
+        nwPer = 1.0;
+      }
+      final touchesSpend = spendPer != 0;
+      final touchesNw = nwPer != 0;
+
+      if (amt == null) {
+        // The figure is shown, so a missing rate silences the lenses it touches
+        // (not _toBaseOr, which is for intermediates — §1f).
+        if (touchesSpend) spendSilenced = true;
+        if (touchesNw) nwSilenced = true;
+        if (cur != baseCurrency) missing.add(cur);
+        continue;
+      }
+
+      for (final day in occ) {
+        final i = idxOf(day);
+        if (i < 0 || i >= n) continue;
+        spendDaily[i] += spendPer * amt;
+        nwDaily[i] += nwPer * amt;
+      }
+      // A pay-out with a category feeds the budget-pace de-duplication (§1d).
+      if (t.isPayOut && !t.isTransfer && t.categoryId != null) {
+        final byDay = schedByCatDay.putIfAbsent(
+            t.categoryId!, () => List<double>.filled(n, 0));
+        for (final day in occ) {
+          final i = idxOf(day);
+          if (i >= 0 && i < n) byDay[i] += amt;
+        }
+      }
+      lines.add(ForecastLine(
+        kind: ForecastKind.scheduled,
+        refId: t.id,
+        name: t.title,
+        amount: (t.isPayOut ? -amt : amt) * occ.length,
+        count: occ.length,
+        inSpendable: touchesSpend,
+        inNetWorth: touchesNw,
+      ));
+    }
+
+    // ── Overdue pay-outs — day 0, both lenses (§1c) ───────────────────────────
+    for (final t in overdueOutflows) {
+      final acc = accountById(t.linkedAccountId);
+      final cur = acc?.currency ?? baseCurrency;
+      final amt = convertToBase(t.expectedAmount.abs(), cur);
+      if (amt == null) {
+        spendSilenced = true;
+        nwSilenced = true;
+        if (cur != baseCurrency) missing.add(cur);
+        continue;
+      }
+      spendDaily[0] -= amt;
+      nwDaily[0] -= amt;
+      lines.add(ForecastLine(
+        kind: ForecastKind.overdue,
+        refId: t.id,
+        name: t.title,
+        amount: -amt,
+        count: 1,
+        inSpendable: true,
+        inNetWorth: true,
+      ));
+    }
+
+    // ── Budgets — planned pace, not actual pace (§1d) ─────────────────────────
+    for (final b in _budgets) {
+      if (!_isRunning(b)) continue;
+      // A budget scoped to a non-spendable account leaves cash on the
+      // card-payment day instead, so it is not paced here.
+      if (b.scope == BudgetScope.account) {
+        final target =
+            b.targets.isEmpty ? null : accountById(b.targets.first);
+        if (!isSpendable(target)) continue;
+      }
+      final cur = budgetCurrencyOf(b);
+      final limitBase = convertToBase(b.limit, cur); // never rollover carry
+      if (limitBase == null) {
+        // A missing rate silences both lenses (§1d).
+        spendSilenced = true;
+        nwSilenced = true;
+        if (cur != baseCurrency) missing.add(cur);
+        continue;
+      }
+      final catDays = <String, List<double>>{
+        for (final id in b.targets)
+          if (schedByCatDay[id] != null) id: schedByCatDay[id]!,
+      };
+      var lineTotal = 0.0;
+      var lineDays = 0;
+      // From tomorrow to end: today's pace is already in the balance.
+      for (var i = 1; i < n; i++) {
+        final day = startDay.add(Duration(days: i));
+        // A non-repeating budget contributes nothing past its window's end.
+        if (!b.repeats && b.endedAt != null && day.isAfter(b.endedAt!)) break;
+        final window = budgetWindow(b, day);
+        final windowLen = window.end.difference(window.start).inDays + 1;
+        var pace = windowLen <= 0 ? 0.0 : limitBase / windowLen;
+        // A bill in a budgeted category is subtracted from that day's share,
+        // never below zero, so it is not counted twice (§1d).
+        if (b.scope == BudgetScope.categories && catDays.isNotEmpty) {
+          var claimed = 0.0;
+          for (final list in catDays.values) {
+            claimed += list[i];
+          }
+          pace -= claimed;
+          if (pace < 0) pace = 0;
+        }
+        if (pace == 0) continue;
+        spendDaily[i] -= pace;
+        nwDaily[i] -= pace;
+        lineTotal += pace;
+        lineDays++;
+      }
+      if (lineTotal > 0) {
+        lines.add(ForecastLine(
+          kind: ForecastKind.budget,
+          refId: b.id,
+          name: b.name,
+          amount: -lineTotal,
+          count: lineDays,
+          inSpendable: true,
+          inNetWorth: true,
+        ));
+      }
+    }
+
+    // ── Goals — by target date, Spendable only (§1e) ──────────────────────────
+    for (final g in goals) {
+      final m = goalMetrics(g);
+      if (m.reached) continue;
+      if (m.section == GoalSection.earning ||
+          m.section == GoalSection.waitingOn) {
+        continue;
+      }
+      final td = m.targetDate;
+      if (td == null) continue;
+      final tdDay = DateTime(td.year, td.month, td.day);
+      if (tdDay.isBefore(startDay) || tdDay.isAfter(endDay)) continue;
+      final cur = goalCurrencyOf(g);
+      final remainingBase = convertToBase(m.remaining, cur);
+      if (remainingBase == null) {
+        // A goal moves only Spendable, so only that lens is silenced (§1h).
+        spendSilenced = true;
+        if (cur != baseCurrency) missing.add(cur);
+        continue;
+      }
+      if (remainingBase <= 0) continue;
+      final targetIdx = idxOf(tdDay); // 0..n-1
+      final span = targetIdx + 1; // today..target inclusive
+      final perDay = remainingBase / span;
+      for (var i = 0; i <= targetIdx; i++) {
+        spendDaily[i] -= perDay;
+      }
+      lines.add(ForecastLine(
+        kind: ForecastKind.goal,
+        refId: g.id,
+        name: g.name,
+        amount: -remainingBase,
+        count: span,
+        inSpendable: true,
+        inNetWorth: false,
+      ));
+    }
+
+    // ── Walk the days, accumulating both running lenses (§1b) ──────────────────
+    final spendByDay = List<double?>.filled(n, null);
+    final nwByDay = List<double?>.filled(n, null);
+    var runS = spendToday ?? 0;
+    var runN = nwToday ?? 0;
+    DateTime? belowZero;
+    for (var i = 0; i < n; i++) {
+      runS += spendDaily[i];
+      runN += nwDaily[i];
+      if (!spendSilenced) {
+        spendByDay[i] = runS;
+        if (belowZero == null && runS < 0) {
+          belowZero = startDay.add(Duration(days: i));
+        }
+      }
+      if (!nwSilenced) nwByDay[i] = runN;
+    }
+
+    return ForecastResult(
+      start: startDay,
+      end: endDay,
+      spendableToday: spendSilenced ? null : spendToday,
+      netWorthToday: nwSilenced ? null : nwToday,
+      spendable: spendSilenced ? null : runS,
+      netWorth: nwSilenced ? null : runN,
+      spendableBelowZero: belowZero,
+      spendableByDay: spendByDay,
+      netWorthByDay: nwByDay,
+      lines: lines,
+      missingRateCodes: missing.toList(growable: false),
+    );
   }
 
   /// The count of open, non-overdue tasks due in each of [ranges], in ONE pass

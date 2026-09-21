@@ -23,6 +23,7 @@ import 'goal_detail_screen.dart';
 import 'goal_presentation.dart';
 import 'schedule_horizon.dart';
 import 'schedule_tab.dart';
+import 'widgets/forecast_row.dart';
 import 'widgets/goal_scope_sheet.dart';
 import 'widgets/month_picker_sheet.dart';
 import 'widgets/planner_empty.dart';
@@ -128,6 +129,35 @@ class _PlannerScreenState extends State<PlannerScreen> {
       store.goals.isEmpty &&
       store.openTasks.isEmpty &&
       store.archivedCount == 0;
+
+  /// The forecast row's date — the end of the period the header already names,
+  /// so the row and the header can never disagree (task 057 §4). The window
+  /// always starts today; a **past** Budgets month returns null (row hidden).
+  DateTime? _forecastDate(AppStore store) {
+    final today = store.today;
+    switch (_tab) {
+      case 0: // Budgets — that month's last day; a past month hides the row.
+        final monthStart = DateTime(_month.year, _month.month);
+        final curStart = DateTime(today.year, today.month);
+        if (monthStart.isBefore(curStart)) return null;
+        return DateTime(_month.year, _month.month + 1, 0);
+      case 2: // Schedule — the horizon's end date.
+        return _horizon.range(today).end;
+      default: // Goals — earliest upcoming target date the filter shows.
+        final todayDay = DateTime(today.year, today.month, today.day);
+        DateTime? earliest;
+        for (final section in store.activeGoalSections(filter: _goalFilter)) {
+          for (final g in store.sortedGoalsInSection(section, filter: _goalFilter)) {
+            final td = g.targetDate;
+            if (td == null) continue;
+            final tdDay = DateTime(td.year, td.month, td.day);
+            if (tdDay.isBefore(todayDay)) continue;
+            if (earliest == null || tdDay.isBefore(earliest)) earliest = tdDay;
+          }
+        }
+        return earliest ?? DateTime(today.year, today.month + 1, 0);
+    }
+  }
 
   /// Row 1's leading control per tab. Budgets shows the month; Schedule shows
   /// the horizon; Goals shows the filter scope. Each slot collapses to empty when
@@ -254,6 +284,17 @@ class _PlannerScreenState extends State<PlannerScreen> {
                         ),
                       ),
               ),
+              // The one forecast row (task 057 §3/§4): identical on all three
+              // tabs, hidden on a never-touched Planner and on a past Budgets
+              // month. Its date is the header period's end; it carries no
+              // control and no tap.
+              if (!untouched)
+                Builder(builder: (context) {
+                  final date = _forecastDate(store);
+                  return date == null
+                      ? const SizedBox.shrink()
+                      : ForecastRow(store: store, date: date);
+                }),
               // Row 2 вЂ” a segmented control, above the summary (spec В§1). Margin 14
               // each side (not the 20 gutter) per the container spec.
               Padding(
