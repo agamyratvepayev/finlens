@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../../l10n/app_localizations.dart';
@@ -193,6 +195,18 @@ class _IconPickerSheetState extends State<_IconPickerSheet> {
   void _selectEmoji(String emoji) => Navigator.of(context)
       .pop(IconSelection(emoji: emoji, colorValue: _colorValue));
 
+  /// Task 053 — the sheet runs edge-to-edge under the system navigation bar,
+  /// so the lists end 24pt above it rather than 24pt above the screen edge.
+  /// With the keyboard up the outer Padding already lifts the sheet by the
+  /// keyboard, which covers the bar, so only the uncovered part counts.
+  double get _listBottom =>
+      24 +
+      math.max(
+        0.0,
+        MediaQuery.paddingOf(context).bottom -
+            MediaQuery.viewInsetsOf(context).bottom,
+      );
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
@@ -354,12 +368,12 @@ class _IconPickerSheetState extends State<_IconPickerSheet> {
       // During search, group headings are removed and results render as one set
       // (spec §6) — a null label draws the grid with no heading.
       return ListView(
-        padding: const EdgeInsets.only(bottom: 24),
+        padding: EdgeInsets.only(bottom: _listBottom),
         children: [_iconSection(null, results)],
       );
     }
     return ListView(
-      padding: const EdgeInsets.only(bottom: 24),
+      padding: EdgeInsets.only(bottom: _listBottom),
       children: [
         // Every glyph in every group is rendered — no truncation, no "see all"
         // (spec §6); the sheet scrolls.
@@ -375,14 +389,14 @@ class _IconPickerSheetState extends State<_IconPickerSheet> {
       entries.length,
       [
         for (final e in entries)
-          AccountGlyphTile(
-            icon: e.icon,
-            name: e.name,
-            color: _effectiveColor,
-            size: 42,
-            selected: e.icon == widget.icon && widget.emoji == null,
-            onTap: () => _selectIcon(e.icon),
-          ),
+          (double size) => AccountGlyphTile(
+                icon: e.icon,
+                name: e.name,
+                color: _effectiveColor,
+                size: size,
+                selected: e.icon == widget.icon && widget.emoji == null,
+                onTap: () => _selectIcon(e.icon),
+              ),
       ],
     );
   }
@@ -394,12 +408,12 @@ class _IconPickerSheetState extends State<_IconPickerSheet> {
         return _noMatchMessage(l.qaNoEmojiMatch);
       }
       return ListView(
-        padding: const EdgeInsets.only(bottom: 24),
+        padding: EdgeInsets.only(bottom: _listBottom),
         children: [_emojiSection(null, results)],
       );
     }
     return ListView(
-      padding: const EdgeInsets.only(bottom: 24),
+      padding: EdgeInsets.only(bottom: _listBottom),
       children: [
         for (final entry in emojiGroups.entries)
           _emojiSection(entry.key, entry.value),
@@ -413,14 +427,14 @@ class _IconPickerSheetState extends State<_IconPickerSheet> {
       entries.length,
       [
         for (final e in entries)
-          AccountGlyphTile(
-            emoji: e.emoji,
-            name: e.emoji,
-            color: _effectiveColor,
-            size: 42,
-            selected: e.emoji == widget.emoji,
-            onTap: () => _selectEmoji(e.emoji),
-          ),
+          (double size) => AccountGlyphTile(
+                emoji: e.emoji,
+                name: e.emoji,
+                color: _effectiveColor,
+                size: size,
+                selected: e.emoji == widget.emoji,
+                onTap: () => _selectEmoji(e.emoji),
+              ),
       ],
     );
   }
@@ -429,7 +443,15 @@ class _IconPickerSheetState extends State<_IconPickerSheet> {
   /// glyph [count] — `HEALTH · 7` — so the user is not left wondering whether the
   /// group continues below (spec §6). A null label (search results) draws no
   /// heading at all.
-  Widget _gridSection(String? label, int count, List<Widget> tiles) {
+  /// Task 053 — seven columns on every phone; the tiles share the width.
+  static const int _columns = 7;
+  static const double _gap = 7;
+
+  Widget _gridSection(
+    String? label,
+    int count,
+    List<Widget Function(double size)> tiles,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -448,7 +470,30 @@ class _IconPickerSheetState extends State<_IconPickerSheet> {
           ),
         Padding(
           padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
-          child: Wrap(spacing: 7, runSpacing: 7, children: tiles),
+          child: LayoutBuilder(
+            builder: (context, c) {
+              final size = (c.maxWidth - _gap * (_columns - 1)) / _columns;
+              return Column(
+                children: [
+                  for (var r = 0; r * _columns < tiles.length; r++) ...[
+                    if (r > 0) const SizedBox(height: _gap),
+                    Row(
+                      children: [
+                        for (var i = 0; i < _columns; i++) ...[
+                          if (i > 0) const SizedBox(width: _gap),
+                          Expanded(
+                            child: r * _columns + i < tiles.length
+                                ? tiles[r * _columns + i](size)
+                                : SizedBox(height: size),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ],
+                ],
+              );
+            },
+          ),
         ),
       ],
     );

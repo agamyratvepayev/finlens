@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -374,6 +376,55 @@ void main() {
           find.byType(AccountGlyphTile).first, const Offset(0, -400), 1000);
       await tester.pumpAndSettle();
       expect(find.text('COLOUR'), findsOneWidget);
+    });
+
+    // Task 053 — seven columns, equal tile widths, 14pt margins on any phone.
+    for (final size in const [Size(390, 844), Size(320, 568)]) {
+      testWidgets('seven tiles per row with equal margins @ ${size.width.toInt()}pt',
+          (tester) async {
+        _setSize(tester, size.width, size.height);
+        await openIconPicker(tester);
+        final tiles = find.byType(AccountGlyphTile);
+        // First row: tiles 0..6 share a top; tile 7 starts a new row.
+        final top0 = tester.getTopLeft(tiles.at(0)).dy;
+        for (var i = 1; i < 7; i++) {
+          expect(tester.getTopLeft(tiles.at(i)).dy, closeTo(top0, 0.5),
+              reason: 'tile $i');
+        }
+        expect(tester.getTopLeft(tiles.at(7)).dy, greaterThan(top0 + 1));
+        // Equal widths across the row.
+        final w0 = tester.getSize(tiles.at(0)).width;
+        for (var i = 1; i < 7; i++) {
+          expect(tester.getSize(tiles.at(i)).width, closeTo(w0, 0.5),
+              reason: 'tile $i width');
+        }
+        // 14pt margins: tile 0 left edge and tile 6 right edge.
+        expect(tester.getTopLeft(tiles.at(0)).dx, closeTo(14, 0.5));
+        expect(tester.getTopRight(tiles.at(6)).dx, closeTo(size.width - 14, 0.5));
+      });
+    }
+
+    // Task 053 — the last row clears the system navigation bar.
+    testWidgets('the list ends above the navigation bar', (tester) async {
+      const w = 390.0, h = 844.0, bar = 48.0;
+      _setSize(tester, w, h);
+      tester.view.padding = const FakeViewPadding(bottom: bar);
+      tester.view.viewPadding = const FakeViewPadding(bottom: bar);
+      addTearDown(tester.view.resetPadding);
+      addTearDown(tester.view.resetViewPadding);
+      await openIconPicker(tester);
+      // Scroll to the very end.
+      final scrollable = find.byType(Scrollable).last;
+      await tester.fling(scrollable, const Offset(0, -4000), 3000);
+      await tester.pumpAndSettle();
+      await tester.fling(scrollable, const Offset(0, -4000), 3000);
+      await tester.pumpAndSettle();
+      final tiles = find.byType(AccountGlyphTile);
+      var lastBottom = 0.0;
+      for (var i = 0; i < tester.widgetList(tiles).length; i++) {
+        lastBottom = math.max(lastBottom, tester.getBottomLeft(tiles.at(i)).dy);
+      }
+      expect(lastBottom, lessThanOrEqualTo(h - bar - 24 + 0.5));
     });
   });
 
