@@ -1269,7 +1269,7 @@
   "tdNote": "NOT",
   "tdUpcoming": "YAKLAŞAN",
   "tdPaymentHistory": "ÖDEME GEÇMİŞİ",
-  "tdNoPayments": "Henüz ödeme kaydı yok",
+  "tdNoPayments": "Bir ödemeyi işaretlediğinizde ödemeler burada görünür.",
   "tdPaymentsSince": "{month} tarihinden beri {count} ödeme · toplam {total}",
   "tdResume": "Sürdür",
   "tdMarkPaid": "Ödendi olarak işaretle",

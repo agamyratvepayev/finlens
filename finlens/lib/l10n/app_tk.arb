@@ -1269,7 +1269,7 @@
   "tdNote": "BELLIK",
   "tdUpcoming": "GELJEKKI",
   "tdPaymentHistory": "TÖLEG TARYHY",
-  "tdNoPayments": "Heniz töleg ýok",
+  "tdNoPayments": "Bir tölegi bellän badyňyza tölegler şu ýerde peýda bolar.",
   "tdPaymentsSince": "{month} senesinden {count} töleg · jemi {total}",
   "tdResume": "Dowam et",
   "tdMarkPaid": "Tölenen diýip belle",

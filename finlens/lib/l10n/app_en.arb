@@ -1652,7 +1652,7 @@
   "tdNote": "NOTE",
   "tdUpcoming": "UPCOMING",
   "tdPaymentHistory": "PAYMENT HISTORY",
-  "tdNoPayments": "No payments recorded yet",
+  "tdNoPayments": "Payments show up here once you mark one as paid.",
   "tdPaymentsSince": "{count} payments since {month} · {total} total",
   "@tdPaymentsSince": { "placeholders": { "count": { "type": "int" }, "month": {}, "total": {} } },
   "tdResume": "Resume",

@@ -7369,7 +7369,7 @@ abstract class AppLocalizations {
   /// No description provided for @tdNoPayments.
   ///
   /// In en, this message translates to:
-  /// **'No payments recorded yet'**
+  /// **'Payments show up here once you mark one as paid.'**
   String get tdNoPayments;
 
   /// No description provided for @tdPaymentsSince.

@@ -4748,7 +4748,8 @@ class AppLocalizationsTr extends AppLocalizations {
   String get tdPaymentHistory => 'ÖDEME GEÇMİŞİ';
 
   @override
-  String get tdNoPayments => 'Henüz ödeme kaydı yok';
+  String get tdNoPayments =>
+      'Bir ödemeyi işaretlediğinizde ödemeler burada görünür.';
 
   @override
   String tdPaymentsSince(int count, Object month, Object total) {

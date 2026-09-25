@@ -4793,7 +4793,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tdPaymentHistory => 'PAYMENT HISTORY';
 
   @override
-  String get tdNoPayments => 'No payments recorded yet';
+  String get tdNoPayments => 'Payments show up here once you mark one as paid.';
 
   @override
   String tdPaymentsSince(int count, Object month, Object total) {

@@ -17,6 +17,7 @@ import '../balance/balance_screen.dart' show EmptyState;
 import '../quick_add/creation_host.dart';
 import '../quick_add/pickers.dart';
 import '../quick_add/type_menu.dart';
+import '../quick_add/widgets/form_kit.dart';
 import 'edit_scaffold.dart';
 import 'goal_presentation.dart';
 
@@ -269,6 +270,14 @@ class _EditGoalScreenState extends State<EditGoalScreen> {
     final code = _sourceCurrency;
     final effective = _effectivePair;
 
+    // In creation the name field is the session's hero — one 48·s line under the
+    // nav bar (§5b) — and the cards below it sit at [kFormMargin] so the whole
+    // screen shares one edge (§5c). Editing keeps the name as a row in the first
+    // card and every card at the standard gutter.
+    final cardMargin = _isEditing
+        ? null
+        : const EdgeInsets.fromLTRB(kFormMargin, 0, kFormMargin, Insets.md);
+
     return EditScaffold(
       title: _isEditing ? l.egTitle : l.goalNewTitle,
       // Creating a goal is reachable from the type menu, so it must be able to
@@ -277,22 +286,44 @@ class _EditGoalScreenState extends State<EditGoalScreen> {
       onTypeTap: _isEditing ? null : _showTypeMenu,
       onSave: _canSave ? _save : null,
       header: _isEditing ? _progressHeader(l) : null,
-      children: [
-        // ── Name ──
-        FormSection(
-          children: [
-            NameField(
+      hero: _isEditing
+          ? null
+          : NameField(
               controller: _name,
               focusNode: _nameFocus,
               hint: l.qaExampleGoal,
               semanticsLabel: l.egGoalName,
               leadingIcon: Icons.flag_rounded,
+              // Quick Add's pinned geometry, so the field is byte-identical to
+              // the one Schedule / the transaction types draw (§5b).
+              surface: AppColors.surfaceAlt,
+              radius: 14,
+              scale: formScale(context),
+              textScale: formTextScale(context),
+              fixedHeight: 48 * formScale(context),
+              horizontalPadding: kRowPadding,
+              iconColumn: kIconColumn,
+              iconGap: kIconGap,
             ),
-          ],
-        ),
+      children: [
+        // ── Name (edit only — creation draws it as the hero above) ──
+        if (_isEditing)
+          FormSection(
+            margin: cardMargin,
+            children: [
+              NameField(
+                controller: _name,
+                focusNode: _nameFocus,
+                hint: l.qaExampleGoal,
+                semanticsLabel: l.egGoalName,
+                leadingIcon: Icons.flag_rounded,
+              ),
+            ],
+          ),
 
         // ── Source (§2/§3) ──
         FormSection(
+          margin: cardMargin,
           children: [
             if (_isEditing)
               FormRow(
@@ -320,10 +351,14 @@ class _EditGoalScreenState extends State<EditGoalScreen> {
           ],
         ),
         if (!_isEditing && _twoGoalsWarning(l) != null)
-          NoticeBanner(text: _twoGoalsWarning(l)!),
+          NoticeBanner(
+            text: _twoGoalsWarning(l)!,
+            margin: cardMargin,
+          ),
 
         // ── Target amount · Target date · Monthly (§5) ──
         FormSection(
+          margin: cardMargin,
           children: [
             _LineRow(
               icon: Icons.adjust_rounded,
@@ -356,10 +391,13 @@ class _EditGoalScreenState extends State<EditGoalScreen> {
             ),
           ],
         ),
-        _PairCaption(text: _pairCaption(l)),
+        _PairCaption(
+            text: _pairCaption(l),
+            startInset: _isEditing ? null : kFormMargin),
 
         // ── Options ──
         FormSection(
+          margin: cardMargin,
           children: [
             NoteRow(
               icon: Icons.notes_rounded,
@@ -833,17 +871,22 @@ class _LineRow extends StatelessWidget {
 
 /// The single caption under the trio (§4): one line, one job, never two.
 class _PairCaption extends StatelessWidget {
-  const _PairCaption({required this.text});
+  const _PairCaption({required this.text, this.startInset});
 
   final String text;
 
+  /// The left edge in creation mode (§5c) — [kFormMargin] there, the default
+  /// gutter in edit. The +[Insets.xs] optical indent under the trio is kept.
+  final double? startInset;
+
   @override
   Widget build(BuildContext context) {
+    final left = (startInset ?? Insets.gutter) + Insets.xs;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        Insets.gutter + Insets.xs,
+      padding: EdgeInsets.fromLTRB(
+        left,
         0,
-        Insets.gutter,
+        startInset ?? Insets.gutter,
         Insets.md,
       ),
       child: Text(

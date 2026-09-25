@@ -4717,7 +4717,8 @@ class AppLocalizationsTk extends AppLocalizations {
   String get tdPaymentHistory => 'TÖLEG TARYHY';
 
   @override
-  String get tdNoPayments => 'Heniz töleg ýok';
+  String get tdNoPayments =>
+      'Bir tölegi bellän badyňyza tölegler şu ýerde peýda bolar.';
 
   @override
   String tdPaymentsSince(int count, Object month, Object total) {

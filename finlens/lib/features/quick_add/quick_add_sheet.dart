@@ -994,19 +994,32 @@ class _QuickAddScreenState extends State<QuickAddScreen>
     );
   }
 
-  FieldSpec _dateField({String? label}) {
+  /// [withTime] governs whether the row prints the time beside the date (task
+  /// 058.2 §7). The four transaction types keep it — a payment happens at a
+  /// moment. The Schedule task's Due passes `false`: `store.today` is midnight,
+  /// so the time was never the user's choice and printing "9 Aug, 12:00 AM" only
+  /// shows a number nobody picked. Nothing about [_pickDate] or the stored
+  /// DateTime changes — only what this row displays.
+  FieldSpec _dateField({String? label, bool withTime = true}) {
     final l = AppLocalizations.of(context);
     // A real date, never a relative word (spec §1); the year is dropped within
     // the current year. The time follows the device's 12-/24-hour setting.
-    final time = MaterialLocalizations.of(context).formatTimeOfDay(
-      TimeOfDay.fromDateTime(_date),
-      alwaysUse24HourFormat: MediaQuery.of(context).alwaysUse24HourFormat,
-    );
+    final date =
+        dateAbsolute(_date, l, now: StoreScope.read(context).today);
+    final String value;
+    if (withTime) {
+      final time = MaterialLocalizations.of(context).formatTimeOfDay(
+        TimeOfDay.fromDateTime(_date),
+        alwaysUse24HourFormat: MediaQuery.of(context).alwaysUse24HourFormat,
+      );
+      value = l.dateWithTime(date, time);
+    } else {
+      value = date;
+    }
     return FieldSpec(
       icon: Icons.event_rounded,
       label: label ?? l.qaDate,
-      value: l.dateWithTime(
-          dateAbsolute(_date, l, now: StoreScope.read(context).today), time),
+      value: value,
       onTap: _pickDate,
       // _pickDate raises the app-native date+time bottom sheet.
       opensSheet: true,
@@ -1807,8 +1820,15 @@ class _QuickAddScreenState extends State<QuickAddScreen>
         onIconTap: _pickTaskIcon,
       ),
       groups: [
-        FieldGroup(AppLocalizations.of(context).qaGroupRequired.toUpperCase(), [_dateField(label: AppLocalizations.of(context).qaDue)]),
-        FieldGroup(AppLocalizations.of(context).qaGroupOptional.toUpperCase(), [
+        // No REQUIRED / OPTIONAL labels (§6): Due is seeded to today and can
+        // never be cleared, and the only thing that can be missing — the title —
+        // sits above in the hero, so neither card holds a genuinely empty row to
+        // label. Two unlabelled cards, 12 pt apart (the shell spaces a null-title
+        // standard group). Due drops its time (§7).
+        FieldGroup(null, [
+          _dateField(label: AppLocalizations.of(context).qaDue, withTime: false)
+        ]),
+        FieldGroup(null, [
           // Demoted from Required: most tasks have no amount. When set, the
           // task can later be turned into a transaction in one tap.
           // Typed in place (task 007): the docked keypad writes here, a tap

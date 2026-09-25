@@ -250,21 +250,26 @@ void main() {
     expect(rowH, moreOrLessEquals(btnH, epsilon: 0.5));
   });
 
-  testWidgets('EditScaffold (TypePill): header height stays at the tap-target '
-      'height (centre kept)', (tester) async {
+  testWidgets('EditScaffold (creation): the header is the FormNavBar, not the '
+      'TextButton row (task 058.2 §5)', (tester) async {
     _size(tester, 390, 844);
     await tester.pumpWidget(hostScaffold(EditScaffold(
       title: 'unused',
       type: QuickAddType.newGoal,
       onTypeTap: () {},
+      hero: const SizedBox(height: 48),
       children: const [],
     )));
     await tester.pumpAndSettle();
 
-    expect(find.text('New goal'), findsOneWidget); // pill renders its label
-    final rowH = tester.getRect(_headerRow(find.text('Cancel'))).height;
-    final btnH = tester.getRect(find.widgetWithText(TextButton, 'Cancel')).height;
-    expect(rowH, moreOrLessEquals(btnH, epsilon: 0.5));
+    // Creation wears Quick Add's chrome: a FormNavBar with the pill's label, no
+    // Material TextButton, and the black formBg. Its Cancel/Save baseline is the
+    // FormNavBar's own concern (the report-only test below).
+    expect(find.byType(FormNavBar), findsOneWidget);
+    expect(find.text('Goal'), findsOneWidget); // pill renders its label
+    expect(find.widgetWithText(TextButton, 'Cancel'), findsNothing);
+    expect(tester.getSize(find.byType(FormNavBar)).height,
+        moreOrLessEquals(50, epsilon: 0.5));
   });
 
   // ── date_time_sheet — REPORT-ONLY: already aligned (same size) ───────────────

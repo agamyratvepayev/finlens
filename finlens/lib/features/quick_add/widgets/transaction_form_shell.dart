@@ -390,6 +390,7 @@ class TransactionFormShell extends StatelessWidget {
   }
 
   List<Widget> _body(BuildContext context) {
+    final s = formScale(context);
     final hero = config.hero;
     final heroWidget = switch (hero) {
       NumericHero() => NumericHeroCard(
@@ -447,7 +448,13 @@ class TransactionFormShell extends StatelessWidget {
         if (group.widget != null)
           group.widget!
         else ...[
-        if (group.title != null) FormSectionLabel(group.title!),
+        // A titled standard group carries its label (which also supplies the
+        // top gap); an unlabelled one (the Schedule form's two cards, §6) gets a
+        // 12·s spacer in the label's place so the cards do not touch.
+        if (group.title != null)
+          FormSectionLabel(group.title!)
+        else
+          SizedBox(height: 12 * s),
         TxnCard(
           children: [
             for (final f in group.fields)

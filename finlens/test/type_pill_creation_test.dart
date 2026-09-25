@@ -361,47 +361,50 @@ void main() {
     expect(r.height, lessThan(44));
   });
 
-  // ── §5 · header row height is unchanged by the pill ───────────────────────
+  // ── §5 (task 058.2) · creation and editing wear DIFFERENT chrome now ──────
+  //
+  // The old invariant — a pill must not change the EditScaffold header height —
+  // is retired. Task 058.2 gives the creation session Quick Add's chrome: a
+  // FormNavBar (50 pt) on the black formBg. Editing keeps the TextButton title
+  // row on the app bg. The new invariant lives in
+  // task058_2_detail_and_chrome_test.dart: Goal and Schedule creation match each
+  // other. Here we only pin that the two chromes are the two chromes.
 
-  testWidgets('EditScaffold header row height is equal with and without a '
-      'pill, across widths and text scales', (tester) async {
-    Widget bare({required bool withPill, double textScale = 1.0}) => MaterialApp(
+  testWidgets('creation (pill) wears the FormNavBar on formBg; editing wears '
+      'the TextButton title row', (tester) async {
+    Widget bare({required bool withPill}) => MaterialApp(
           theme: AppTheme.dark,
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
-          builder: (context, child) => MediaQuery(
-            data: MediaQuery.of(context)
-                .copyWith(textScaler: TextScaler.linear(textScale)),
-            child: child!,
-          ),
           home: EditScaffold(
             title: 'Edit goal',
             type: withPill ? QuickAddType.newGoal : null,
             onTypeTap: withPill ? () {} : null,
+            hero: withPill
+                ? const SizedBox(key: Key('goalHero'), height: 48)
+                : null,
             children: const [],
           ),
         );
 
-    double headerHeight(WidgetTester t) {
-      // The outermost Row ancestor of "Cancel" is the header row itself
-      // (nothing above it in the scaffold is a Row); any nearer Row would be an
-      // internal one, so take the last.
-      final row =
-          find.ancestor(of: find.text('Cancel'), matching: find.byType(Row));
-      return t.getSize(row.last).height;
-    }
+    _size(tester, 390, 844);
 
-    for (final w in [390.0, 360.0, 320.0]) {
-      for (final ts in [1.0, 1.3]) {
-        _size(tester, w, 844);
-        await tester.pumpWidget(bare(withPill: false, textScale: ts));
-        final without = headerHeight(tester);
-        await tester.pumpWidget(bare(withPill: true, textScale: ts));
-        final with_ = headerHeight(tester);
-        expect(with_, closeTo(without, 0.5),
-            reason: 'pill must not move the header row at ${w}pt × $ts');
-      }
-    }
+    // Creation: FormNavBar, black ground, no TextButton row.
+    await tester.pumpWidget(bare(withPill: true));
+    expect(find.byType(FormNavBar), findsOneWidget);
+    expect(find.widgetWithText(TextButton, 'Cancel'), findsNothing);
+    expect(find.byKey(const Key('goalHero')), findsOneWidget);
+    Scaffold scaffold = tester.widget(find.byType(Scaffold));
+    expect(scaffold.backgroundColor, AppColors.formBg);
+
+    // Editing: the TextButton title row, no FormNavBar, app bg (theme default).
+    await tester.pumpWidget(bare(withPill: false));
+    expect(find.byType(FormNavBar), findsNothing);
+    expect(find.widgetWithText(TextButton, 'Cancel'), findsOneWidget);
+    expect(find.text('Edit goal'), findsOneWidget);
+    scaffold = tester.widget(find.byType(Scaffold));
+    expect(scaffold.backgroundColor, isNull,
+        reason: 'editing keeps the theme scaffold bg (#0A0A0B)');
   });
 
   // ── §5 · 320pt, four locales, no overflow on either screen ────────────────

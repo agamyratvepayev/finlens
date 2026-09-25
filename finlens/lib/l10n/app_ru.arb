@@ -1269,7 +1269,7 @@
   "tdNote": "ЗАМЕТКА",
   "tdUpcoming": "ПРЕДСТОЯЩИЕ",
   "tdPaymentHistory": "ИСТОРИЯ ПЛАТЕЖЕЙ",
-  "tdNoPayments": "Платежей пока нет",
+  "tdNoPayments": "Платежи появятся здесь, как только вы отметите первый.",
   "tdPaymentsSince": "{count} платежей с {month} · всего {total}",
   "tdResume": "Возобновить",
   "tdMarkPaid": "Отметить оплаченным",

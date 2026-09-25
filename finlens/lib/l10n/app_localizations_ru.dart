@@ -4879,7 +4879,8 @@ class AppLocalizationsRu extends AppLocalizations {
   String get tdPaymentHistory => 'ИСТОРИЯ ПЛАТЕЖЕЙ';
 
   @override
-  String get tdNoPayments => 'Платежей пока нет';
+  String get tdNoPayments =>
+      'Платежи появятся здесь, как только вы отметите первый.';
 
   @override
   String tdPaymentsSince(int count, Object month, Object total) {

@@ -13,6 +13,7 @@ import '../../theme/app_typography.dart';
 import '../quick_add/date_time_sheet.dart';
 import '../quick_add/pickers.dart';
 import '../quick_add/type_menu.dart';
+import '../quick_add/widgets/form_kit.dart';
 import 'edit_scaffold.dart';
 import 'widgets/percent_input_formatter.dart';
 
@@ -283,9 +284,13 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
       ),
     ];
 
+    // Creation shares the session's 16 pt edge (§5c/§5e); editing keeps the
+    // standard gutter. The budget editor has no name hero — its identity is the
+    // scope, which lives in the first card — so EditScaffold's hero-less list
+    // carries the 12 pt above this card.
+    final side = _isNew ? kFormMargin : Insets.gutter;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(
-          Insets.gutter, 0, Insets.gutter, Insets.md),
+      padding: EdgeInsets.fromLTRB(side, 0, side, Insets.md),
       child: AppCard(
         child: Column(
           children: [
