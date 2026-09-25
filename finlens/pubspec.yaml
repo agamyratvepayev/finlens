@@ -55,7 +55,7 @@ dependencies:
   # Voice-to-transaction: record the mic to a temp file, then POST the audio to
   # our own backend (which proxies to Gemini). `record` handles the mic
   # permission; `path_provider` gives the temp path to record into.
-  record: ^5.1.2
+  record: ^7.1.1
   path_provider: ^2.1.4
 
 dev_dependencies:
@@ -73,17 +73,6 @@ dev_dependencies:
   # (see the flutter_launcher_icons: block below). Dev-only: it runs at build
   # time and ships nothing into the app bundle.
   flutter_launcher_icons: ^0.14.4
-
-# Pin the record plugin's platform interface to the 1.5.x line. The record 5.x
-# family ships platform implementations (record_android 1.5.2, record_linux
-# 0.7.2, …) that were built against interface ^1.5.0, but pub over-resolves to
-# 1.6.0 — which added `startStream` and a `hasPermission({request})` parameter
-# the older impls don't implement, so an Android build fails to compile
-# record_linux. Every impl accepts ^1.x, none require 1.6.0, so holding the
-# interface below 1.6.0 realigns the family. Remove once `record` is bumped to a
-# version whose impls target 1.6.0.
-dependency_overrides:
-  record_platform_interface: ">=1.5.0 <1.6.0"
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
