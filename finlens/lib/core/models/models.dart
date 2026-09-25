@@ -420,6 +420,7 @@ class Txn {
     this.goalId,
     this.splitGroupId,
     this.recurrenceTaskId,
+    this.recurrenceDueDate,
     this.feeTxnId,
   })  : createdAt = createdAt ?? date,
         // Both fields are conceptually non-nullable (spec 021b §1): every entry
@@ -492,6 +493,12 @@ class Txn {
   /// Repeat: the id of the Planner Task that generates this transaction's future
   /// occurrences, or null when it does not repeat (spec §1).
   String? recurrenceTaskId;
+
+  /// The occurrence a task payment closed — [Task.dueDate] at the moment
+  /// Mark-as-paid ran, at day granularity (task 058 §6). Null on every other
+  /// entry, and on task payments written before this field existed — such a
+  /// payment can still be undone, but the series is left on its current date.
+  DateTime? recurrenceDueDate;
 
   /// Transfer fee link: on a `transfer`, the id of the separate `expense` Txn
   /// that books this transfer's fee (Transfer-fee spec §4). A transfer moves

@@ -366,6 +366,7 @@
   "actionSave": "Ýatda sakla",
   "actionDelete": "Poz",
   "actionEdit": "Üýtget",
+  "actionSkip": "Geç",
   "actionCopy": "Nusgala",
   "obTitle": "Açylyş balansy",  "obShiftsNote": "Bu şu hasapdaky ähli hereket edýän balansy süýşürer.",
   "obDateTooLate": "Açylyş senesi ilkinji amaldan soň bolup bilmez.",
@@ -1160,6 +1161,8 @@
   "schCompletedIn": "{label} tamamlanan",
   "schCompletedEmpty": "Bu döwürde tamamlanan zat ýok.",
   "schCompletedLongerPeriod": "Uzynrak döwür saýlaň",
+  "schHistoryLink": "Taryh ›",
+  "schSpendableBelowFrom": "{day}-den başlap serişde 0-dan aşak",
   "schUntilTitle": "SENE ÇENLI",
   "schUntilNote": "Şu gün başlaýar — soňuny saýlaň.",
   "schUntilPickPrompt": "Tamamlanýan senäni saýlaň",
@@ -1231,6 +1234,15 @@
   "mpPayOffGroup": "BERGINI ÜZMEK",
   "mpRecorded": "{title} Depdere ýazyldy",
   "mpRecordedNext": "{title} Depdere ýazyldy · indiki {date}",
+  "mpUndoTitle": "Bu tölegi yzyna alaýyn?",
+  "mpUndoPaidLine": "{when} {account} hasabyndan tölendi · {amount}",
+  "mpUndoReceivedLine": "{when} {account} hasabyna alyndy · {amount}",
+  "mpUndoGoesBack": "{title} {date} senesine gaýdyp geler",
+  "mpUndoAccountBack": "{account} hasabyna {amount} yzyna geler",
+  "mpUndoEntryDeleted": "Depderdäki ýazgy pozular",
+  "mpUndoNoteLost": "Bellik we ýazan mukdaryňyz ýiter",
+  "mpUndoKeepsDate": "{title} häzirki senesini saklar — bu töleg üýtgeşmeden öň bolan",
+  "mpUndoConfirm": "Tölegi yzyna al",
 
   "tmEdit": "Üýtget",
   "tmEditSub": "Möçber, sene, gaýtalanma, hasap, kategoriýa, ýatladyş we bellik.",
@@ -1334,5 +1346,13 @@
   "keypadDivideByZero": "Nola bölüp bolmaýar",
   "dateFieldHint": "gg.aa.ýýýý",
   "dateErrorNotReal": "Beýle sene ýok",
-  "dateErrorOutOfRange": "Sene rugsat berlen aralykda däl"
+  "dateErrorOutOfRange": "Sene rugsat berlen aralykda däl",
+
+  "qaVoiceHint": "Ses bilen goş",
+  "qaVoiceListening": "Diňleýär… saklamak üçin basyň",
+  "qaVoiceProcessing": "Tanalýar…",
+  "qaVoiceNoMic": "Mikrofona rugsat ýok",
+  "qaVoiceFailed": "Amaly tanap bolmady",
+  "qaVoiceNetwork": "AI hyzmaty bilen baglanyşyk ýok",
+  "qaVoiceError": "Ses bilen girizmek başartmady"
 }

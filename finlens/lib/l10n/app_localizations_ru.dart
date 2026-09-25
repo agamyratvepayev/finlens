@@ -1363,6 +1363,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get actionEdit => 'Изменить';
 
   @override
+  String get actionSkip => 'Пропустить';
+
+  @override
   String get actionCopy => 'Копировать';
 
   @override
@@ -4403,6 +4406,14 @@ class AppLocalizationsRu extends AppLocalizations {
   String get schCompletedLongerPeriod => 'Выбрать более длинный период';
 
   @override
+  String get schHistoryLink => 'История ›';
+
+  @override
+  String schSpendableBelowFrom(Object day) {
+    return 'Свободные ниже 0 с $day';
+  }
+
+  @override
   String get schUntilTitle => 'ДО ДАТЫ';
 
   @override
@@ -4743,6 +4754,43 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
+  String get mpUndoTitle => 'Отменить этот платёж?';
+
+  @override
+  String mpUndoPaidLine(Object when, Object account, Object amount) {
+    return 'Оплачено $when со счёта $account · $amount';
+  }
+
+  @override
+  String mpUndoReceivedLine(Object when, Object account, Object amount) {
+    return 'Получено $when на счёт $account · $amount';
+  }
+
+  @override
+  String mpUndoGoesBack(Object title, Object date) {
+    return '$title вернётся на $date';
+  }
+
+  @override
+  String mpUndoAccountBack(Object account, Object amount) {
+    return 'На счёт $account вернётся $amount';
+  }
+
+  @override
+  String get mpUndoEntryDeleted => 'Запись в Реестре будет удалена';
+
+  @override
+  String get mpUndoNoteLost => 'Заметка и введённая сумма будут потеряны';
+
+  @override
+  String mpUndoKeepsDate(Object title) {
+    return '$title сохранит текущую дату — этот платёж старше изменения';
+  }
+
+  @override
+  String get mpUndoConfirm => 'Отменить платёж';
+
+  @override
   String get tmEdit => 'Изменить';
 
   @override
@@ -5076,4 +5124,25 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get dateErrorOutOfRange => 'Дата вне диапазона';
+
+  @override
+  String get qaVoiceHint => 'Ввести голосом';
+
+  @override
+  String get qaVoiceListening => 'Слушаю… нажмите, чтобы остановить';
+
+  @override
+  String get qaVoiceProcessing => 'Распознаю…';
+
+  @override
+  String get qaVoiceNoMic => 'Нет доступа к микрофону';
+
+  @override
+  String get qaVoiceFailed => 'Не удалось распознать операцию';
+
+  @override
+  String get qaVoiceNetwork => 'Нет связи с AI-сервисом';
+
+  @override
+  String get qaVoiceError => 'Не удалось выполнить голосовой ввод';
 }

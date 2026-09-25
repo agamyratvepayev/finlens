@@ -59,14 +59,14 @@ void main() {
   const w393 = Size(393, 852);
   const w320 = Size(320, 568);
 
-  // ── The row does not get taller (§A · acceptance) ───────────────────────────
-  // The tick's 44 pt tap target still governs; with 7+7 padding the envelope is
-  // ~58 pt. Moving the amount into the column changes no height — this asserts
-  // the concrete number so a regression that grows the row fails here.
-  testWidgets('the row envelope stays tick-driven at ~58 pt', (tester) async {
+  // ── The row is shorter now (task 058 §2d) ───────────────────────────────────
+  // The tick's 44 pt tap target still governs, but the padding dropped 7→3, so
+  // the envelope is ~50 pt (44 + 3 + 3), down from ~58. Asserted concretely so a
+  // regression that grows the row back fails here.
+  testWidgets('the row envelope is tick-driven at ~50 pt', (tester) async {
     await _pump(tester, _app(buildSeedStore()), w393);
     expect(tester.getSize(_rowOf('Monthly Salary')).height,
-        inInclusiveRange(56.0, 60.0));
+        inInclusiveRange(48.0, 54.0));
   });
 
   // ── The subtitle now spans further than the title (§A · acceptance) ─────────
@@ -76,7 +76,7 @@ void main() {
   testWidgets('the subtitle spans wider than the title line', (tester) async {
     await _pump(tester, _app(buildSeedStore()), w393);
     final row = _rowOf('Gym Subscription');
-    final titleW = tester.getSize(find.text('Gym Subscription')).width;
+    final titleW = tester.getSize(find.text('Gym Subscription').first).width;
     final subtitleW = tester
         .getSize(find.descendant(
             of: row, matching: find.textContaining('Main Checking')))
@@ -86,19 +86,21 @@ void main() {
             'old width');
   });
 
-  // ── A long account name + monthly cadence render whole at 393 (§A2) ─────────
-  testWidgets('account + monthly cadence render whole at 393', (tester) async {
+  // ── The account renders whole; the subtitle carries no frequency word (§2a) ──
+  testWidgets('account renders whole, no frequency word, glyph in front',
+      (tester) async {
     await _pump(tester, _app(buildSeedStore()), w393);
     final row = _rowOf('Monthly Salary');
     final subtitle = find.descendant(
         of: row, matching: find.textContaining('Main Checking'));
     expect(subtitle, findsOneWidget);
-    expect(
-        find.descendant(of: row, matching: find.textContaining('monthly')),
-        findsOneWidget);
+    // The frequency word is gone from the row (§2a) — the glyph in front carries
+    // "it repeats"; the word lives on the detail screen.
+    expect(find.descendant(of: row, matching: find.textContaining('monthly')),
+        findsNothing);
     final para = tester.renderObject<RenderParagraph>(subtitle);
     expect(para.didExceedMaxLines, isFalse,
-        reason: 'both the account and the cadence must fit on one line');
+        reason: 'the account must fit on one line');
   });
 
   // ── A masked amount renders whole; the title yields (§A5) ───────────────────

@@ -366,6 +366,7 @@
   "actionSave": "Сохранить",
   "actionDelete": "Удалить",
   "actionEdit": "Изменить",
+  "actionSkip": "Пропустить",
   "actionCopy": "Копировать",
   "obTitle": "Начальный баланс",  "obShiftsNote": "Это сместит каждый остаток по этому счёту.",
   "obDateTooLate": "Дата начала не может быть позже первой операции.",
@@ -1160,6 +1161,8 @@
   "schCompletedIn": "Выполнено · {label}",
   "schCompletedEmpty": "За этот период ничего не выполнено.",
   "schCompletedLongerPeriod": "Выбрать более длинный период",
+  "schHistoryLink": "История ›",
+  "schSpendableBelowFrom": "Свободные ниже 0 с {day}",
   "schUntilTitle": "ДО ДАТЫ",
   "schUntilNote": "Начинается сегодня — выберите конец.",
   "schUntilPickPrompt": "Выберите дату окончания",
@@ -1231,6 +1234,15 @@
   "mpPayOffGroup": "ПОГАСИТЬ",
   "mpRecorded": "{title} записано в Реестр",
   "mpRecordedNext": "{title} записано в Реестр · далее {date}",
+  "mpUndoTitle": "Отменить этот платёж?",
+  "mpUndoPaidLine": "Оплачено {when} со счёта {account} · {amount}",
+  "mpUndoReceivedLine": "Получено {when} на счёт {account} · {amount}",
+  "mpUndoGoesBack": "{title} вернётся на {date}",
+  "mpUndoAccountBack": "На счёт {account} вернётся {amount}",
+  "mpUndoEntryDeleted": "Запись в Реестре будет удалена",
+  "mpUndoNoteLost": "Заметка и введённая сумма будут потеряны",
+  "mpUndoKeepsDate": "{title} сохранит текущую дату — этот платёж старше изменения",
+  "mpUndoConfirm": "Отменить платёж",
 
   "tmEdit": "Изменить",
   "tmEditSub": "Сумма, дата, повтор, счёт, категория, напоминание и заметка.",
@@ -1334,5 +1346,13 @@
   "keypadDivideByZero": "Деление на ноль невозможно",
   "dateFieldHint": "дд.мм.гггг",
   "dateErrorNotReal": "Такой даты нет",
-  "dateErrorOutOfRange": "Дата вне диапазона"
+  "dateErrorOutOfRange": "Дата вне диапазона",
+
+  "qaVoiceHint": "Ввести голосом",
+  "qaVoiceListening": "Слушаю… нажмите, чтобы остановить",
+  "qaVoiceProcessing": "Распознаю…",
+  "qaVoiceNoMic": "Нет доступа к микрофону",
+  "qaVoiceFailed": "Не удалось распознать операцию",
+  "qaVoiceNetwork": "Нет связи с AI-сервисом",
+  "qaVoiceError": "Не удалось выполнить голосовой ввод"
 }

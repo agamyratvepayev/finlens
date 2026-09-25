@@ -1324,6 +1324,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get actionEdit => 'Düzenle';
 
   @override
+  String get actionSkip => 'Atla';
+
+  @override
   String get actionCopy => 'Kopyala';
 
   @override
@@ -4303,6 +4306,14 @@ class AppLocalizationsTr extends AppLocalizations {
   String get schCompletedLongerPeriod => 'Daha uzun bir dönem seçin';
 
   @override
+  String get schHistoryLink => 'Geçmiş ›';
+
+  @override
+  String schSpendableBelowFrom(Object day) {
+    return '$day tarihinden itibaren harcanabilir 0’ın altında';
+  }
+
+  @override
   String get schUntilTitle => 'BİR TARİHE KADAR';
 
   @override
@@ -4610,6 +4621,43 @@ class AppLocalizationsTr extends AppLocalizations {
   String mpRecordedNext(Object title, Object date) {
     return '$title Deftere kaydedildi · sonraki $date';
   }
+
+  @override
+  String get mpUndoTitle => 'Bu ödeme geri alınsın mı?';
+
+  @override
+  String mpUndoPaidLine(Object when, Object account, Object amount) {
+    return '$when $account hesabından ödendi · $amount';
+  }
+
+  @override
+  String mpUndoReceivedLine(Object when, Object account, Object amount) {
+    return '$when $account hesabına alındı · $amount';
+  }
+
+  @override
+  String mpUndoGoesBack(Object title, Object date) {
+    return '$title $date tarihine geri döner';
+  }
+
+  @override
+  String mpUndoAccountBack(Object account, Object amount) {
+    return '$account hesabına $amount geri döner';
+  }
+
+  @override
+  String get mpUndoEntryDeleted => 'Defter kaydı silinir';
+
+  @override
+  String get mpUndoNoteLost => 'Not ve girdiğiniz tutar kaybolur';
+
+  @override
+  String mpUndoKeepsDate(Object title) {
+    return '$title mevcut tarihini korur — bu ödeme değişiklikten önceye ait';
+  }
+
+  @override
+  String get mpUndoConfirm => 'Ödemeyi geri al';
 
   @override
   String get tmEdit => 'Düzenle';
@@ -4945,4 +4993,25 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get dateErrorOutOfRange => 'Tarih izin verilen aralıkta değil';
+
+  @override
+  String get qaVoiceHint => 'Sesle ekle';
+
+  @override
+  String get qaVoiceListening => 'Dinleniyor… durdurmak için dokunun';
+
+  @override
+  String get qaVoiceProcessing => 'Tanınıyor…';
+
+  @override
+  String get qaVoiceNoMic => 'Mikrofon erişimi kapalı';
+
+  @override
+  String get qaVoiceFailed => 'İşlem tanınamadı';
+
+  @override
+  String get qaVoiceNetwork => 'AI hizmetine bağlanılamadı';
+
+  @override
+  String get qaVoiceError => 'Sesli giriş başarısız oldu';
 }

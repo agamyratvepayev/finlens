@@ -1322,6 +1322,9 @@ class AppLocalizationsTk extends AppLocalizations {
   String get actionEdit => 'Üýtget';
 
   @override
+  String get actionSkip => 'Geç';
+
+  @override
   String get actionCopy => 'Nusgala';
 
   @override
@@ -4308,6 +4311,14 @@ class AppLocalizationsTk extends AppLocalizations {
   String get schCompletedLongerPeriod => 'Uzynrak döwür saýlaň';
 
   @override
+  String get schHistoryLink => 'Taryh ›';
+
+  @override
+  String schSpendableBelowFrom(Object day) {
+    return '$day-den başlap serişde 0-dan aşak';
+  }
+
+  @override
   String get schUntilTitle => 'SENE ÇENLI';
 
   @override
@@ -4585,6 +4596,43 @@ class AppLocalizationsTk extends AppLocalizations {
   String mpRecordedNext(Object title, Object date) {
     return '$title Depdere ýazyldy · indiki $date';
   }
+
+  @override
+  String get mpUndoTitle => 'Bu tölegi yzyna alaýyn?';
+
+  @override
+  String mpUndoPaidLine(Object when, Object account, Object amount) {
+    return '$when $account hasabyndan tölendi · $amount';
+  }
+
+  @override
+  String mpUndoReceivedLine(Object when, Object account, Object amount) {
+    return '$when $account hasabyna alyndy · $amount';
+  }
+
+  @override
+  String mpUndoGoesBack(Object title, Object date) {
+    return '$title $date senesine gaýdyp geler';
+  }
+
+  @override
+  String mpUndoAccountBack(Object account, Object amount) {
+    return '$account hasabyna $amount yzyna geler';
+  }
+
+  @override
+  String get mpUndoEntryDeleted => 'Depderdäki ýazgy pozular';
+
+  @override
+  String get mpUndoNoteLost => 'Bellik we ýazan mukdaryňyz ýiter';
+
+  @override
+  String mpUndoKeepsDate(Object title) {
+    return '$title häzirki senesini saklar — bu töleg üýtgeşmeden öň bolan';
+  }
+
+  @override
+  String get mpUndoConfirm => 'Tölegi yzyna al';
 
   @override
   String get tmEdit => 'Üýtget';
@@ -4914,4 +4962,25 @@ class AppLocalizationsTk extends AppLocalizations {
 
   @override
   String get dateErrorOutOfRange => 'Sene rugsat berlen aralykda däl';
+
+  @override
+  String get qaVoiceHint => 'Ses bilen goş';
+
+  @override
+  String get qaVoiceListening => 'Diňleýär… saklamak üçin basyň';
+
+  @override
+  String get qaVoiceProcessing => 'Tanalýar…';
+
+  @override
+  String get qaVoiceNoMic => 'Mikrofona rugsat ýok';
+
+  @override
+  String get qaVoiceFailed => 'Amaly tanap bolmady';
+
+  @override
+  String get qaVoiceNetwork => 'AI hyzmaty bilen baglanyşyk ýok';
+
+  @override
+  String get qaVoiceError => 'Ses bilen girizmek başartmady';
 }

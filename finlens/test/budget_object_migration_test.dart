@@ -18,8 +18,8 @@ import 'package:finlens/core/utils/clock.dart';
 /// flutter test hangs on the author's machine — run these yourself:
 ///   flutter test test/budget_object_migration_test.dart
 void main() {
-  test('schemaVersion is 6 (group-sync tables added)', () {
-    expect(LocalDatabase.schemaVersion, 6);
+  test('schemaVersion is 10 (task payments carry their settled occurrence)', () {
+    expect(LocalDatabase.schemaVersion, 10);
   });
 
   // ── the migration helper, in isolation ──────────────────────────────────────

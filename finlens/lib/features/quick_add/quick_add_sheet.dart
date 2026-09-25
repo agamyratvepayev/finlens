@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 
+import '../../core/ai/voice_recorder.dart';
+import '../../core/ai/voice_txn_client.dart';
 import '../../core/l10n/enum_labels.dart';
 import '../../core/models/models.dart';
 import '../../core/store/app_store.dart';
@@ -28,6 +30,7 @@ import 'widgets/amount_hero.dart';
 import 'widgets/form_kit.dart';
 import 'widgets/transaction_form_shell.dart';
 import 'widgets/transfer_sections.dart';
+import 'widgets/voice_fill_bar.dart';
 
 export 'pickers.dart' show showNewAccountSheet, showNewCategorySheet;
 
@@ -252,6 +255,14 @@ class _QuickAddScreenState extends State<QuickAddScreen>
   /// The literal characters typed into the hero, not a double — the display
   /// has to tell entered digits from decimals not yet reached.
   Expression _expr = Expression.empty;
+
+  // ── Voice entry ─────────────────────────────────────────────────────────────
+  // Records the mic and asks our backend (which proxies Gemini) to parse a spoken
+  // expense/income into field proposals. The AI never writes — it only fills the
+  // form; the user reviews, edits, and presses the normal Save.
+  final VoiceRecorder _voiceRecorder = VoiceRecorder();
+  final VoiceTxnClient _voiceClient = VoiceTxnClient();
+  VoiceFillState _voiceState = VoiceFillState.idle;
 
   final _note = TextEditingController();
   final _noteFocus = FocusNode();
@@ -537,6 +548,8 @@ class _QuickAddScreenState extends State<QuickAddScreen>
     _rateFocus.dispose();
     _feeController.dispose();
     _feeFocus.dispose();
+    _voiceRecorder.dispose();
+    _voiceClient.close();
     super.dispose();
   }
 
@@ -705,11 +718,23 @@ class _QuickAddScreenState extends State<QuickAddScreen>
     final store = StoreScope.of(context);
     // Filling a flagged field clears its flag immediately (§3).
     if (_flag != null && _flagSatisfied(_flag!)) _flag = null;
+    final config = _config(store);
+    // Voice entry targets expense/income only, and never during an edit (which
+    // would overwrite the record the user opened to change).
+    final showVoice = !_isEditing &&
+        (_type == QuickAddType.expense || _type == QuickAddType.income);
     return TransactionFormShell(
-      config: _config(store),
+      config: config,
       typeLocked: _isEditing,
       flashTarget: _flag,
       flashPulse: _pulse,
+      belowHero: showVoice
+          ? VoiceFillBar(
+              state: _voiceState,
+              accent: config.accent,
+              onTap: () => _onVoiceTap(store),
+            )
+          : null,
       // Unfocus before the pop (inline-note spec §2): otherwise the keyboard
       // stays up and the sheet animates out from behind it.
       onCancel: () {
@@ -766,6 +791,137 @@ class _QuickAddScreenState extends State<QuickAddScreen>
         QuickAddType.newGoal => _expense(store),
         QuickAddType.newTask => _task(store),
       };
+
+  // ── Voice entry ─────────────────────────────────────────────────────────────
+
+  /// The category/account names the AI may map spoken words onto. Sent with the
+  /// audio so the model returns real ids (validated server-side) rather than
+  /// guessing names — the seed names are English, the speech Turkmen/Russian.
+  Map<String, Object?> _buildVoiceCatalog(AppStore store) => {
+        'expenseCategories': [
+          for (final c in store.categoriesOfType(CategoryType.expense))
+            {'id': c.id, 'name': c.name},
+        ],
+        'incomeCategories': [
+          for (final c in store.categoriesOfType(CategoryType.income))
+            {'id': c.id, 'name': c.name},
+        ],
+        'accounts': [
+          for (final a in store.accounts)
+            {'id': a.id, 'name': a.name, 'currency': a.currency},
+        ],
+      };
+
+  /// Tap handler for the voice bar: first tap records, second tap stops and
+  /// parses. Everything it produces lands in the form as editable proposals;
+  /// nothing is saved here.
+  Future<void> _onVoiceTap(AppStore store) async {
+    final l = AppLocalizations.of(context);
+    if (_voiceState == VoiceFillState.processing) return;
+
+    // Second tap → stop, then parse.
+    if (_voiceState == VoiceFillState.recording) {
+      setState(() => _voiceState = VoiceFillState.processing);
+      VoiceClip? clip;
+      try {
+        clip = await _voiceRecorder.stop();
+      } catch (_) {
+        clip = null;
+      }
+      if (!mounted) return;
+      if (clip == null) {
+        setState(() => _voiceState = VoiceFillState.idle);
+        _showVoiceError(l.qaVoiceFailed);
+        return;
+      }
+      try {
+        final draft = await _voiceClient.parse(
+          audio: clip.bytes,
+          mimeType: clip.mimeType,
+          locale: store.locale.languageCode,
+          catalog: _buildVoiceCatalog(store),
+        );
+        if (!mounted) return;
+        _applyVoiceDraft(store, draft);
+        setState(() => _voiceState = VoiceFillState.idle);
+      } on VoiceAiException catch (e) {
+        if (!mounted) return;
+        setState(() => _voiceState = VoiceFillState.idle);
+        _showVoiceError(switch (e.kind) {
+          VoiceAiErrorKind.network => l.qaVoiceNetwork,
+          VoiceAiErrorKind.unparsable => l.qaVoiceFailed,
+          _ => l.qaVoiceError,
+        });
+      } catch (_) {
+        if (!mounted) return;
+        setState(() => _voiceState = VoiceFillState.idle);
+        _showVoiceError(l.qaVoiceError);
+      }
+      return;
+    }
+
+    // First tap → permission, then start.
+    final ok = await _voiceRecorder.hasPermission();
+    if (!mounted) return;
+    if (!ok) {
+      _showVoiceError(l.qaVoiceNoMic);
+      return;
+    }
+    try {
+      await _voiceRecorder.start();
+    } catch (_) {
+      if (!mounted) return;
+      _showVoiceError(l.qaVoiceNoMic);
+      return;
+    }
+    if (!mounted) return;
+    // The keypad and the recording must not compete for the screen.
+    setState(() {
+      _keypadOpen = false;
+      _voiceState = VoiceFillState.recording;
+    });
+  }
+
+  /// Writes the AI's proposals into the form's existing state (same fields the
+  /// pickers set). Absent fields are left as-is so the user just fills them; the
+  /// `firstUnmet` blockers still guard an incomplete Save.
+  void _applyVoiceDraft(AppStore store, VoiceTxnDraft d) {
+    final account = store.accountById(d.accountId);
+    final category = store.categoryById(d.categoryId);
+    // Only accept a category whose direction matches the heard type.
+    final wantType = d.isIncome ? CategoryType.income : CategoryType.expense;
+    final matchedCategory = category != null && category.type == wantType ? category : null;
+
+    setState(() {
+      _type = d.isIncome ? QuickAddType.income : QuickAddType.expense;
+
+      if (d.amount != null && d.amount! > 0) {
+        _expr = Expression.ofRaw(AmountEntry.fromDouble(d.amount!));
+      }
+
+      // Polymorphic refs: expense → from=Account, to=Category; income → the
+      // reverse. Leave a slot untouched when the AI didn't identify it.
+      if (d.isIncome) {
+        if (matchedCategory != null) _fromRef = matchedCategory.id;
+        if (account != null) _toRef = account.id;
+      } else {
+        if (account != null) _fromRef = account.id;
+        if (matchedCategory != null) _toRef = matchedCategory.id;
+      }
+      if (account != null) _currency = account.currency;
+
+      if (d.note.isNotEmpty) _note.text = d.note;
+      if (d.date != null) _date = d.date!;
+      _keypadOpen = false;
+    });
+  }
+
+  void _showVoiceError(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
+  }
 
   // ── Shared field builders ─────────────────────────────────────────────────
 

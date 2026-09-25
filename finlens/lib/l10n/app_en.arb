@@ -460,6 +460,7 @@
   "actionSave": "Save",
   "actionDelete": "Delete",
   "actionEdit": "Edit",
+  "actionSkip": "Skip",
   "actionCopy": "Copy",
   "obTitle": "Opening balance",  "obShiftsNote": "This shifts every running balance on this account.",
   "obDateTooLate": "The opening date can’t be after the first transaction.",
@@ -1496,6 +1497,9 @@
   "@schCompletedIn": { "placeholders": { "label": {} } },
   "schCompletedEmpty": "Nothing completed in this period.",
   "schCompletedLongerPeriod": "Choose a longer period",
+  "schHistoryLink": "History ›",
+  "schSpendableBelowFrom": "Spendable below 0 from {day}",
+  "@schSpendableBelowFrom": { "placeholders": { "day": {} } },
   "schUntilTitle": "UNTIL A DATE",
   "schUntilNote": "Starts today — pick the end.",
   "schUntilPickPrompt": "Pick an end date",
@@ -1603,6 +1607,20 @@
   "@mpRecorded": { "placeholders": { "title": {} } },
   "mpRecordedNext": "{title} recorded in your Ledger · next {date}",
   "@mpRecordedNext": { "placeholders": { "title": {}, "date": {} } },
+  "mpUndoTitle": "Undo this payment?",
+  "mpUndoPaidLine": "Paid {when} from {account} · {amount}",
+  "@mpUndoPaidLine": { "placeholders": { "when": {}, "account": {}, "amount": {} } },
+  "mpUndoReceivedLine": "Received {when} into {account} · {amount}",
+  "@mpUndoReceivedLine": { "placeholders": { "when": {}, "account": {}, "amount": {} } },
+  "mpUndoGoesBack": "{title} goes back to {date}",
+  "@mpUndoGoesBack": { "placeholders": { "title": {}, "date": {} } },
+  "mpUndoAccountBack": "{account} gets the {amount} back",
+  "@mpUndoAccountBack": { "placeholders": { "account": {}, "amount": {} } },
+  "mpUndoEntryDeleted": "The Ledger entry is deleted",
+  "mpUndoNoteLost": "The note and the amount you typed are lost",
+  "mpUndoKeepsDate": "{title} keeps its current due date — this payment predates the change",
+  "@mpUndoKeepsDate": { "placeholders": { "title": {} } },
+  "mpUndoConfirm": "Undo the payment",
 
   "tmEdit": "Edit",
   "tmEditSub": "Amount, date, repeat, account, category, reminder and note.",
@@ -1722,5 +1740,16 @@
   "keypadDivideByZero": "Cannot divide by zero",
   "dateFieldHint": "dd.mm.yyyy",
   "dateErrorNotReal": "Not a real date",
-  "dateErrorOutOfRange": "Date out of range"
+  "dateErrorOutOfRange": "Date out of range",
+
+  "qaVoiceHint": "Add by voice",
+  "@qaVoiceHint": {
+    "description": "Label on the voice-entry bar in Quick Add (expense/income): tap to start speaking."
+  },
+  "qaVoiceListening": "Listening… tap to stop",
+  "qaVoiceProcessing": "Recognizing…",
+  "qaVoiceNoMic": "Microphone access is off",
+  "qaVoiceFailed": "Couldn't recognize a transaction",
+  "qaVoiceNetwork": "No connection to the AI service",
+  "qaVoiceError": "Voice entry failed"
 }

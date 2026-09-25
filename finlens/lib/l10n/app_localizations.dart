@@ -2014,6 +2014,12 @@ abstract class AppLocalizations {
   /// **'Edit'**
   String get actionEdit;
 
+  /// No description provided for @actionSkip.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip'**
+  String get actionSkip;
+
   /// No description provided for @actionCopy.
   ///
   /// In en, this message translates to:
@@ -6742,6 +6748,18 @@ abstract class AppLocalizations {
   /// **'Choose a longer period'**
   String get schCompletedLongerPeriod;
 
+  /// No description provided for @schHistoryLink.
+  ///
+  /// In en, this message translates to:
+  /// **'History ›'**
+  String get schHistoryLink;
+
+  /// No description provided for @schSpendableBelowFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'Spendable below 0 from {day}'**
+  String schSpendableBelowFrom(Object day);
+
   /// No description provided for @schUntilTitle.
   ///
   /// In en, this message translates to:
@@ -7155,6 +7173,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{title} recorded in your Ledger · next {date}'**
   String mpRecordedNext(Object title, Object date);
+
+  /// No description provided for @mpUndoTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Undo this payment?'**
+  String get mpUndoTitle;
+
+  /// No description provided for @mpUndoPaidLine.
+  ///
+  /// In en, this message translates to:
+  /// **'Paid {when} from {account} · {amount}'**
+  String mpUndoPaidLine(Object when, Object account, Object amount);
+
+  /// No description provided for @mpUndoReceivedLine.
+  ///
+  /// In en, this message translates to:
+  /// **'Received {when} into {account} · {amount}'**
+  String mpUndoReceivedLine(Object when, Object account, Object amount);
+
+  /// No description provided for @mpUndoGoesBack.
+  ///
+  /// In en, this message translates to:
+  /// **'{title} goes back to {date}'**
+  String mpUndoGoesBack(Object title, Object date);
+
+  /// No description provided for @mpUndoAccountBack.
+  ///
+  /// In en, this message translates to:
+  /// **'{account} gets the {amount} back'**
+  String mpUndoAccountBack(Object account, Object amount);
+
+  /// No description provided for @mpUndoEntryDeleted.
+  ///
+  /// In en, this message translates to:
+  /// **'The Ledger entry is deleted'**
+  String get mpUndoEntryDeleted;
+
+  /// No description provided for @mpUndoNoteLost.
+  ///
+  /// In en, this message translates to:
+  /// **'The note and the amount you typed are lost'**
+  String get mpUndoNoteLost;
+
+  /// No description provided for @mpUndoKeepsDate.
+  ///
+  /// In en, this message translates to:
+  /// **'{title} keeps its current due date — this payment predates the change'**
+  String mpUndoKeepsDate(Object title);
+
+  /// No description provided for @mpUndoConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Undo the payment'**
+  String get mpUndoConfirm;
 
   /// No description provided for @tmEdit.
   ///
@@ -7731,6 +7803,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Date out of range'**
   String get dateErrorOutOfRange;
+
+  /// Label on the voice-entry bar in Quick Add (expense/income): tap to start speaking.
+  ///
+  /// In en, this message translates to:
+  /// **'Add by voice'**
+  String get qaVoiceHint;
+
+  /// No description provided for @qaVoiceListening.
+  ///
+  /// In en, this message translates to:
+  /// **'Listening… tap to stop'**
+  String get qaVoiceListening;
+
+  /// No description provided for @qaVoiceProcessing.
+  ///
+  /// In en, this message translates to:
+  /// **'Recognizing…'**
+  String get qaVoiceProcessing;
+
+  /// No description provided for @qaVoiceNoMic.
+  ///
+  /// In en, this message translates to:
+  /// **'Microphone access is off'**
+  String get qaVoiceNoMic;
+
+  /// No description provided for @qaVoiceFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t recognize a transaction'**
+  String get qaVoiceFailed;
+
+  /// No description provided for @qaVoiceNetwork.
+  ///
+  /// In en, this message translates to:
+  /// **'No connection to the AI service'**
+  String get qaVoiceNetwork;
+
+  /// No description provided for @qaVoiceError.
+  ///
+  /// In en, this message translates to:
+  /// **'Voice entry failed'**
+  String get qaVoiceError;
 }
 
 class _AppLocalizationsDelegate

@@ -40,7 +40,11 @@ class LocalDatabase {
   // The bump is one-way and additive: a newer build reads an older file (the new
   // columns simply come back empty/null), while an older build rejects a newer
   // backup. See [_onUpgrade].
-  static const int schemaVersion = 9;
+  // v10 (task 058 §6) adds the txns' `recurrence_due_date` column — the
+  // occurrence a task payment closed, so a completed payment can be undone at
+  // any time and the series walked back to it. Nullable: a pre-10 row reads back
+  // null and undo deletes the entry but leaves the task on its current date.
+  static const int schemaVersion = 10;
 
   static const String accountsTable = 'accounts';
   static const String categoriesTable = 'categories';
@@ -177,6 +181,7 @@ class LocalDatabase {
         goal_id TEXT,
         split_group_id TEXT,
         recurrence_task_id TEXT,
+        recurrence_due_date INTEGER,
         fee_txn_id TEXT
       )''');
     batch.execute('''
@@ -366,6 +371,13 @@ class LocalDatabase {
       // Task 048 — inactive accounts. Nullable: a pre-9 row reads back null,
       // which accountFromMap maps to false (active).
       await db.execute('ALTER TABLE $accountsTable ADD COLUMN inactive INTEGER');
+    }
+    if (oldVersion < 10) {
+      // Task 058 §6 — the occurrence a task payment closed. Nullable: a pre-10
+      // row reads back null, so undo deletes the entry and leaves the task's due
+      // date alone.
+      await db.execute(
+          'ALTER TABLE $txnsTable ADD COLUMN recurrence_due_date INTEGER');
     }
   }
 }

@@ -366,6 +366,7 @@
   "actionSave": "Kaydet",
   "actionDelete": "Sil",
   "actionEdit": "Düzenle",
+  "actionSkip": "Atla",
   "actionCopy": "Kopyala",
   "obTitle": "Açılış bakiyesi",  "obShiftsNote": "Bu, bu hesaptaki her yürüyen bakiyeyi kaydırır.",
   "obDateTooLate": "Açılış tarihi ilk işlemden sonra olamaz.",
@@ -1160,6 +1161,8 @@
   "schCompletedIn": "{label} tamamlanan",
   "schCompletedEmpty": "Bu dönemde tamamlanan bir şey yok.",
   "schCompletedLongerPeriod": "Daha uzun bir dönem seçin",
+  "schHistoryLink": "Geçmiş ›",
+  "schSpendableBelowFrom": "{day} tarihinden itibaren harcanabilir 0’ın altında",
   "schUntilTitle": "BİR TARİHE KADAR",
   "schUntilNote": "Bugün başlar — bitişi seçin.",
   "schUntilPickPrompt": "Bir bitiş tarihi seçin",
@@ -1231,6 +1234,15 @@
   "mpPayOffGroup": "BORÇ ÖDE",
   "mpRecorded": "{title} Deftere kaydedildi",
   "mpRecordedNext": "{title} Deftere kaydedildi · sonraki {date}",
+  "mpUndoTitle": "Bu ödeme geri alınsın mı?",
+  "mpUndoPaidLine": "{when} {account} hesabından ödendi · {amount}",
+  "mpUndoReceivedLine": "{when} {account} hesabına alındı · {amount}",
+  "mpUndoGoesBack": "{title} {date} tarihine geri döner",
+  "mpUndoAccountBack": "{account} hesabına {amount} geri döner",
+  "mpUndoEntryDeleted": "Defter kaydı silinir",
+  "mpUndoNoteLost": "Not ve girdiğiniz tutar kaybolur",
+  "mpUndoKeepsDate": "{title} mevcut tarihini korur — bu ödeme değişiklikten önceye ait",
+  "mpUndoConfirm": "Ödemeyi geri al",
 
   "tmEdit": "Düzenle",
   "tmEditSub": "Tutar, tarih, tekrar, hesap, kategori, hatırlatıcı ve not.",
@@ -1334,5 +1346,13 @@
   "keypadDivideByZero": "Sıfıra bölünemez",
   "dateFieldHint": "gg.aa.yyyy",
   "dateErrorNotReal": "Böyle bir tarih yok",
-  "dateErrorOutOfRange": "Tarih izin verilen aralıkta değil"
+  "dateErrorOutOfRange": "Tarih izin verilen aralıkta değil",
+
+  "qaVoiceHint": "Sesle ekle",
+  "qaVoiceListening": "Dinleniyor… durdurmak için dokunun",
+  "qaVoiceProcessing": "Tanınıyor…",
+  "qaVoiceNoMic": "Mikrofon erişimi kapalı",
+  "qaVoiceFailed": "İşlem tanınamadı",
+  "qaVoiceNetwork": "AI hizmetine bağlanılamadı",
+  "qaVoiceError": "Sesli giriş başarısız oldu"
 }

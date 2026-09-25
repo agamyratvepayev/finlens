@@ -21,11 +21,13 @@ void main() {
     expect(find.text('Next 30 days'), findsOneWidget);
   });
 
-  testWidgets('the OVERDUE section survives — Gym is the only overdue task',
+  testWidgets('the OVERDUE section survives; Gym also recurs in-window',
       (tester) async {
     await openSchedule(tester);
     expect(find.text('Overdue'), findsOneWidget);
-    expect(find.text('Gym Subscription'), findsOneWidget);
+    // Gym is overdue (7 Aug) AND recurs on 7 Sep, inside Next 30 days — so it is
+    // two rows now, one live and one dashed (task 058 §1).
+    expect(find.text('Gym Subscription'), findsNWidgets(2));
   });
 
   testWidgets('tapping a task row opens the read-only detail, never the editor',

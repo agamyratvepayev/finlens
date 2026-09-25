@@ -52,6 +52,11 @@ dependencies:
   file_picker: ^12.2.0
   google_sign_in: ^7.2.0
   http: ^1.6.0
+  # Voice-to-transaction: record the mic to a temp file, then POST the audio to
+  # our own backend (which proxies to Gemini). `record` handles the mic
+  # permission; `path_provider` gives the temp path to record into.
+  record: ^5.1.2
+  path_provider: ^2.1.4
 
 dev_dependencies:
   flutter_test:

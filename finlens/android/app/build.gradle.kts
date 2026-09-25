@@ -18,7 +18,9 @@ android {
         applicationId = "com.finlens.app"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
+        // The `record` audio plugin (voice-to-transaction) needs API 23+; keep
+        // the Flutter default when it is already higher.
+        minSdk = maxOf(flutter.minSdkVersion, 23)
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName

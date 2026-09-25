@@ -1,4 +1,7 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 
 import '../../core/l10n/enum_labels.dart';
 import '../../core/models/models.dart';
@@ -9,179 +12,147 @@ import '../../core/utils/repeat_labels.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/amount_text.dart';
 import '../../shared/widgets/app_card.dart';
-import '../../shared/widgets/form_fields.dart';
 import '../../shared/widgets/range_picker_sheet.dart';
 import '../../shared/widgets/screen_header.dart';
+import '../../shared/widgets/swipe_actions.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/app_typography.dart';
-import '../balance/same_transactions_screen.dart';
-import '../ledger/transfer_detail_screen.dart';
 import 'archive_screen.dart';
+import 'edit_task_screen.dart';
 import 'mark_paid_sheet.dart';
 import 'schedule_history_screen.dart';
 import 'schedule_horizon.dart';
+import 'task_actions.dart';
 import 'task_detail_screen.dart';
 import 'widgets/planner_empty.dart';
+
+// ── One dated event in the list (§1) ────────────────────────────────────────
+
+/// One dated event in the list: a task and the day it falls on (§1a). A one-off
+/// has exactly one; a monthly series has as many as the window holds.
+class _Occurrence {
+  const _Occurrence(this.task, this.date, {required this.isNext});
+  final Task task;
+
+  /// The day this event falls on, at day granularity.
+  final DateTime date;
+
+  /// True for the series' live occurrence — [Task.dueDate] — the only one that
+  /// can be paid, skipped or marked. Later turns are read-only (§2c).
+  final bool isNext;
+}
 
 // ── A section of the list (§3) ──────────────────────────────────────────────
 
 class _Section {
-  _Section(this.label, this.tasks, {this.isOverdue = false});
+  _Section(this.label, this.occurrences, {this.isOverdue = false});
   final String label;
-  final List<Task> tasks;
+  final List<_Occurrence> occurrences;
   final bool isOverdue;
 
-  /// Print the net only when the reader cannot get it at a glance (§3.2). The
-  /// OVERDUE section always prints its net — it is the number the banner and the
-  /// projection both hang on.
-  bool get showsSectionTotal => isOverdue || tasks.length > 2;
+  /// Print the out/in figures only when the reader cannot add them up at a
+  /// glance — three rows or more (§3b). No overdue exception any more: a section
+  /// of one or two rows never repeats its own numbers.
+  bool get showsSectionTotal => occurrences.length > 2;
 }
 
-/// Orders a section by date, then priority (high first), then amount (§3.1).
-int _compareTasks(Task a, Task b, AppStore store) {
-  final byDate = a.dueDate.compareTo(b.dueDate);
+/// Orders a section by date, then priority (high first), then amount (§1c/§3.1).
+int _compareOccurrences(_Occurrence a, _Occurrence b, AppStore store) {
+  final byDate = a.date.compareTo(b.date);
   if (byDate != 0) return byDate;
-  final byPriority = b.priority.index.compareTo(a.priority.index);
+  final byPriority = b.task.priority.index.compareTo(a.task.priority.index);
   if (byPriority != 0) return byPriority;
-  return store.taskAmountInBase(b).compareTo(store.taskAmountInBase(a));
+  return store.taskAmountInBase(b.task).compareTo(store.taskAmountInBase(a.task));
 }
 
-/// The tasks the list shows, in display order (§3.1): overdue first, then the
-/// in-horizon tasks sorted by date/priority/amount. Label-free, so the breach
-/// lookup can reuse it.
-List<Task> _orderedTasks(AppStore store, DateRange h) => [
-      ...store.overdueTasks,
-      ...(store.tasksInHorizon(h)..sort((a, b) => _compareTasks(a, b, store))),
-    ];
+/// Every occurrence the list shows for [h] (§1b): one per overdue task at its own
+/// due date, then every open task's in-horizon occurrences. Label-free, so the
+/// breach lookup can reuse it.
+List<_Occurrence> _occurrencesIn(AppStore store, DateRange h) {
+  final startDay = DateTime(h.start.year, h.start.month, h.start.day);
+  final endDay = DateTime(h.end.year, h.end.month, h.end.day);
+  final out = <_Occurrence>[];
+  // Overdue stays horizon-independent (§1b), each at its own due date.
+  for (final t in store.overdueTasks) {
+    final d = DateTime(t.dueDate.year, t.dueDate.month, t.dueDate.day);
+    out.add(_Occurrence(t, d, isNext: true));
+  }
+  for (final t in store.openTasks) {
+    final due = DateTime(t.dueDate.year, t.dueDate.month, t.dueDate.day);
+    for (final d in t.occurrencesIn(startDay, endDay)) {
+      out.add(_Occurrence(t, d, isNext: d == due));
+    }
+  }
+  return out;
+}
 
 List<_Section> _buildSections(
     AppStore store, DateRange h, DateTime today, AppLocalizations l) {
   final sections = <_Section>[];
-  final overdue = store.overdueTasks;
+  final all = _occurrencesIn(store, h);
+
+  final overdue = all
+      .where((o) => o.task.daysUntilDue(today) < 0 && o.isNext)
+      .toList()
+    ..sort((a, b) => _compareOccurrences(a, b, store));
   if (overdue.isNotEmpty) {
     sections.add(_Section(l.schOverdue, overdue, isOverdue: true));
   }
 
-  final inHorizon = store.tasksInHorizon(h)
-    ..sort((a, b) => _compareTasks(a, b, store));
+  int daysUntil(_Occurrence o) {
+    final d = DateTime(o.date.year, o.date.month, o.date.day);
+    final t = DateTime(today.year, today.month, today.day);
+    return d.difference(t).inDays;
+  }
 
-  final todayTasks =
-      inHorizon.where((t) => t.daysUntilDue(today) == 0).toList();
-  if (todayTasks.isNotEmpty) sections.add(_Section(l.schToday, todayTasks));
+  // The in-horizon occurrences (overdue ones already taken above), sorted once.
+  final inHorizon = all.where((o) => daysUntil(o) >= 0).toList()
+    ..sort((a, b) => _compareOccurrences(a, b, store));
 
-  final weekTasks = inHorizon
-      .where((t) => t.daysUntilDue(today) >= 1 && t.daysUntilDue(today) <= 7)
+  final todayOcc = inHorizon.where((o) => daysUntil(o) == 0).toList();
+  if (todayOcc.isNotEmpty) sections.add(_Section(l.schToday, todayOcc));
+
+  final weekOcc = inHorizon
+      .where((o) => daysUntil(o) >= 1 && daysUntil(o) <= 7)
       .toList();
-  if (weekTasks.isNotEmpty) sections.add(_Section(l.schThisWeek, weekTasks));
+  if (weekOcc.isNotEmpty) sections.add(_Section(l.schThisWeek, weekOcc));
 
   // Everything beyond seven days is grouped under its own calendar month, so
   // the header is true by construction (§3.1).
-  final later = inHorizon.where((t) => t.daysUntilDue(today) > 7).toList();
-  final byMonth = <String, List<Task>>{};
+  final later = inHorizon.where((o) => daysUntil(o) > 7).toList();
+  final byMonth = <String, List<_Occurrence>>{};
   final order = <String>[];
-  for (final t in later) {
-    final key = '${t.dueDate.year}-${t.dueDate.month}';
-    (byMonth[key] ??= (order..add(key), <Task>[]).$2).add(t);
+  for (final o in later) {
+    final key = '${o.date.year}-${o.date.month}';
+    (byMonth[key] ??= (order..add(key), <_Occurrence>[]).$2).add(o);
   }
   for (final key in order) {
-    final tasks = byMonth[key]!;
-    sections.add(_Section(monthLong(tasks.first.dueDate.month, l), tasks));
+    final occ = byMonth[key]!;
+    sections.add(_Section(monthLong(occ.first.date.month, l), occ));
   }
   return sections;
 }
 
-/// The single row §2.4 blames for the first breach (§4.5): the first pay-out due
-/// on the breach day, or — when the breach is on day 0 from overdue alone — the
-/// first overdue pay-out.
-Task? _breachTask(AppStore store, DateRange h, DateTime? breachDay) {
+/// The single occurrence §4e's marker blames for the first breach: the first
+/// pay-out occurrence on the breach day, or — when the breach is on day 0 from
+/// overdue alone — the first overdue pay-out. Matched by (task id, date), never
+/// by [Task] equality, since a series has many rows (§1d).
+_Occurrence? _breachOccurrence(
+    AppStore store, DateRange h, DateTime? breachDay) {
   if (breachDay == null) return null;
   bool sameDay(DateTime a, DateTime b) =>
       a.year == b.year && a.month == b.month && a.day == b.day;
-  for (final t in _orderedTasks(store, h)) {
-    if (t.isPayOut && sameDay(t.dueDate, breachDay)) return t;
+  final all = _occurrencesIn(store, h)
+    ..sort((a, b) => _compareOccurrences(a, b, store));
+  for (final o in all) {
+    if (o.task.isPayOut && sameDay(o.date, breachDay)) return o;
   }
   // A breach on day 0 from overdue alone: mark the first overdue pay-out.
-  final overdueOut = store.overdueOutflows;
-  return overdueOut.isEmpty ? null : overdueOut.first;
-}
-
-// ── Summary (§2) ────────────────────────────────────────────────────────────
-
-class ScheduleSummary extends StatelessWidget {
-  const ScheduleSummary({super.key, required this.store, required this.horizon});
-
-  final AppStore store;
-  final ScheduleHorizon horizon;
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    final today = store.today;
-    final h = horizon.range(today);
-
-    // The forecast hero, bar and shortfall line moved to the Planner-wide
-    // forecast row above the tabs (task 057 §5). What stays is the
-    // `coming in · going out` caption — the sum of the rows in the list, not a
-    // forecast — and the overdue banner. The block keeps its padding so the
-    // list below does not jump.
-    final inSum = store.comingIn(h);
-    final outSum = store.goingOut(h);
-    final overdue = store.overdueTasks;
-    final hasCaption = inSum > 0 || outSum > 0;
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-          Insets.gutter, 0, Insets.gutter, Insets.md),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (hasCaption)
-            Text(
-              _caption(l, inSum, outSum),
-              style: AppText.caption.copyWith(fontSize: 11.5),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          if (overdue.isNotEmpty) ...[
-            if (hasCaption) const SizedBox(height: Insets.sm),
-            NoticeBanner(
-              margin: EdgeInsets.zero,
-              color: AppColors.negative,
-              icon: Icons.error_outline_rounded,
-              text: _bannerCopy(l),
-              dense: true,
-            ),
-          ],
-        ],
-      ),
-    );
+  for (final o in all) {
+    if (o.task.isPayOut && o.task.daysUntilDue(store.today) < 0) return o;
   }
-
-  String _caption(AppLocalizations l, double inSum, double outSum) {
-    final parts = <String>[
-      if (inSum > 0) l.schCaptionIn(money(inSum, masked: store.masked)),
-      if (outSum > 0) l.schCaptionOut(money(outSum, masked: store.masked)),
-    ];
-    return parts.join(' · ');
-  }
-
-  String _bannerCopy(AppLocalizations l) {
-    final outN = store.overdueOutflows.length;
-    final inN = store.overdueInflows.length;
-    final masked = store.masked;
-    if (inN == 0) {
-      return l.schBannerOut(outN, money(store.overdueOutAmount, masked: masked));
-    }
-    if (outN == 0) {
-      return l.schBannerIn(inN, money(store.overdueInAmount, masked: masked));
-    }
-    return l.schBannerBoth(
-      outN + inN,
-      money(store.overdueOutAmount, masked: masked),
-      money(store.overdueInAmount, masked: masked),
-    );
-  }
+  return null;
 }
 
 // ── The list (§3–§5) ────────────────────────────────────────────────────────
@@ -225,7 +196,7 @@ class _ScheduleTabState extends State<ScheduleTab> {
 
     final sections = _buildSections(store, h, today, l);
     final breach = store.firstShortfall(h);
-    final breachTask = _breachTask(store, h, breach?.day);
+    final breachOcc = _breachOccurrence(store, h, breach?.day);
 
     // The completed section ranges over the past with its own stored control,
     // wholly independent of the forward horizon (§B2).
@@ -241,22 +212,36 @@ class _ScheduleTabState extends State<ScheduleTab> {
           for (final section in sections) ...[
             SectionLabel(
               section.label,
+              // The figures end where the row amounts do — 62 pt from the screen
+              // edge (12 pad + 44 tick + 6 gap), so 42 past the gutter (§3c).
               trailing: section.showsSectionTotal
-                  ? _sectionNet(section)
+                  ? Padding(
+                      padding: const EdgeInsets.only(right: 42),
+                      child: _sectionFigures(section),
+                    )
                   : null,
             ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: Insets.gutter),
+              // The swipe strip paints to the row's edge; clip it to the card's
+              // rounded corners (§7).
               child: AppCard(
+                clipBehavior: Clip.antiAlias,
                 child: Column(
                   children: [
-                    for (var i = 0; i < section.tasks.length; i++) ...[
+                    for (var i = 0; i < section.occurrences.length; i++) ...[
                       if (i > 0) const RowDivider(indent: 51),
-                      _TaskRow(
+                      _OccurrenceRow(
                         store: store,
-                        task: section.tasks[i],
-                        isBreach: section.tasks[i] == breachTask,
+                        occurrence: section.occurrences[i],
+                        isBreach: _isBreach(section.occurrences[i], breachOcc),
                       ),
+                      // The shortfall marker sits directly under the row it blames
+                      // (§4e), inside the card so nothing paints outside its
+                      // corners.
+                      if (breach != null &&
+                          _isBreach(section.occurrences[i], breachOcc))
+                        _ShortfallMarker(store: store, breach: breach),
                     ],
                   ],
                 ),
@@ -297,21 +282,43 @@ class _ScheduleTabState extends State<ScheduleTab> {
     store.setCompletedRange(picked);
   }
 
-  Widget _sectionNet(_Section section) {
-    var net = 0.0;
-    for (final t in section.tasks) {
-      net += t.isPayOut
-          ? -widget.store.taskAmountInBase(t)
-          : widget.store.taskAmountInBase(t);
+  /// Matches an occurrence to the breach by identity — (task id, date) — never by
+  /// [Task] equality, since one series has many rows (§1d).
+  bool _isBreach(_Occurrence o, _Occurrence? breach) =>
+      breach != null && o.task.id == breach.task.id && o.date == breach.date;
+
+  /// A section prints what leaves and what lands, never a net (§3a): `−out` in
+  /// negative at 85 %, `+in` in positive at 85 %, 8 pt apart. A side with no
+  /// amount is omitted entirely.
+  Widget _sectionFigures(_Section section) {
+    var out = 0.0, income = 0.0;
+    for (final o in section.occurrences) {
+      final amt = widget.store.taskAmountInBase(o.task);
+      if (o.task.isPayOut) {
+        out += amt;
+      } else {
+        income += amt;
+      }
     }
-    final color = net == 0
-        ? AppColors.textSecondary
-        : (net > 0 ? AppColors.positive : AppColors.negative);
-    return AmountText(
-      net,
-      kind: AmountKind.magnitude,
-      style: AppText.label.copyWith(color: color),
-      color: color,
+    final style = AppText.label.copyWith(fontSize: 11, fontWeight: FontWeight.w600);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (out > 0)
+          AmountText(
+            -out,
+            style: style,
+            color: AppColors.negative.withValues(alpha: 0.85),
+          ),
+        if (out > 0 && income > 0) const SizedBox(width: 8),
+        if (income > 0)
+          AmountText(
+            income,
+            showSign: true,
+            style: style,
+            color: AppColors.positive.withValues(alpha: 0.85),
+          ),
+      ],
     );
   }
 
@@ -337,38 +344,36 @@ class _ScheduleTabState extends State<ScheduleTab> {
   }
 }
 
-// ── Task row (§4) ───────────────────────────────────────────────────────────
+// ── The row — one occurrence (§2) ────────────────────────────────────────────
 
-class _TaskRow extends StatelessWidget {
-  const _TaskRow(
-      {required this.store, required this.task, required this.isBreach});
+class _OccurrenceRow extends StatelessWidget {
+  const _OccurrenceRow(
+      {required this.store, required this.occurrence, required this.isBreach});
 
   final AppStore store;
-  final Task task;
+  final _Occurrence occurrence;
   final bool isBreach;
+
+  Task get task => occurrence.task;
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final payOut = task.isPayOut;
     final color = payOut ? AppColors.negative : AppColors.positive;
-    final overdue = task.daysUntilDue(store.today) < 0;
+    final today = store.today;
+    final todayDay = DateTime(today.year, today.month, today.day);
+    final overdue = occurrence.date.isBefore(todayDay);
     final account = store.accountById(task.linkedAccountId)?.name;
 
     final row = InkWell(
       onTap: () => Navigator.of(context, rootNavigator: true).push(
         MaterialPageRoute(builder: (_) => TaskDetailScreen(taskId: task.id)),
       ),
-      child: Container(
-        decoration: isBreach
-            ? BoxDecoration(
-                color: AppColors.tint(AppColors.warning, 0.10),
-                border: const Border(
-                  left: BorderSide(color: AppColors.warning, width: 2.5),
-                ),
-              )
-            : null,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+      child: Padding(
+        // 3 pt vertical (§2d): the 44 pt tick still drives the row envelope to
+        // ~50 pt; the breach tint and left border are gone (§2e).
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
         child: Row(
           children: [
             IconTile(task.icon, color: color, size: 28),
@@ -377,11 +382,6 @@ class _TaskRow extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Title and amount share line one, so the amount only costs
-                  // width to the line it belongs to; the subtitle then runs the
-                  // full column width (§A1). Baseline alignment because the title
-                  // carries height:1.2 and AmountText does not — centring would
-                  // sit them a hair off each other's baseline.
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.baseline,
                     textBaseline: TextBaseline.alphabetic,
@@ -417,50 +417,101 @@ class _TaskRow extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 6),
-            _MarkPaidTick(store: store, task: task),
+            // The live occurrence is an empty ring that opens the confirm sheet;
+            // a later turn is a dashed, non-tappable ring (§2b/§2c).
+            if (occurrence.isNext)
+              _MarkPaidRing(store: store, task: task)
+            else
+              const _DashedRing(),
           ],
         ),
       ),
     );
 
-    return Semantics(
+    final semanticRow = Semantics(
       container: true,
       button: true,
       label: _semantics(l, payOut, overdue, account),
       child: ExcludeSemantics(child: row),
     );
+
+    // Edit · Skip · Delete (§7). Skip only on the live occurrence of a recurring
+    // series — a one-off has none, a later turn nothing to skip yet.
+    final canSkip = occurrence.isNext && task.isRecurring;
+    final actions = <SwipeActionItem>[
+      SwipeActionItem(
+        icon: Icons.edit_outlined,
+        label: l.actionEdit,
+        color: AppColors.surfaceHigh,
+        onTap: () => _edit(context),
+      ),
+      if (canSkip)
+        SwipeActionItem(
+          icon: Icons.skip_next_rounded,
+          label: l.actionSkip,
+          color: AppColors.info,
+          onTap: () => store.skipTask(task),
+        ),
+      SwipeActionItem(
+        icon: Icons.delete_outline_rounded,
+        label: l.actionDelete,
+        color: AppColors.negative,
+        onTap: () => _delete(context),
+      ),
+    ];
+
+    // A swipe-only action is unreachable to a screen reader; expose it as a
+    // custom action too, exactly as the account picker does.
+    return Semantics(
+      customSemanticsActions: <CustomSemanticsAction, VoidCallback>{
+        CustomSemanticsAction(label: l.actionEdit): () => _edit(context),
+        if (canSkip)
+          CustomSemanticsAction(label: l.actionSkip): () =>
+              store.skipTask(task),
+        CustomSemanticsAction(label: l.actionDelete): () => _delete(context),
+      },
+      child: SwipeActions(actions: actions, child: semanticRow),
+    );
   }
 
-  /// One unbreakable line: `date · [N late ·] account [ · won't cover] ⟳ freq`.
-  ///
-  /// It is a single [Text.rich] with [TextOverflow.ellipsis] on purpose — there
-  /// are no rigid siblings to push past the edge, so a stripe is structurally
-  /// impossible, and truncation lands at the line's end, cutting the cadence
-  /// footnote before the account name (§4.2). The cadence is the frequency word
-  /// only ([repeatShortLabel]); the long "on the 7th" form lives on the Task
-  /// detail screen.
+  void _edit(BuildContext context) {
+    Navigator.of(context, rootNavigator: true).push(
+      MaterialPageRoute(builder: (_) => EditTaskScreen(taskId: task.id)),
+    );
+  }
+
+  Future<void> _delete(BuildContext context) async {
+    final ok = await confirmDeleteTask(context, store, task);
+    if (ok) store.deleteTask(task);
+  }
+
+  /// One unbreakable line, the repeat glyph moved to the **front** so truncation
+  /// cuts the account name, never a dangling `mo…` (§2a):
+  /// `⟳␣␣{date}[ · N days][ · account][ · won't cover]`. No frequency word — the
+  /// long "on the 7th" form lives on the Task detail screen.
   Widget _subtitle(AppLocalizations l, bool overdue, String? account) {
     final subColor = overdue ? AppColors.negative : AppColors.textSecondary;
-    // Overdue paints the whole line negative, cadence included; otherwise the
-    // ⟳ run keeps its tertiary tone (as before).
-    final cadenceColor = overdue ? AppColors.negative : AppColors.textTertiary;
+    // Overdue paints the whole line negative, glyph included (§D.3); otherwise
+    // the ⟳ keeps its tertiary tone.
+    final glyphColor = overdue ? AppColors.negative : AppColors.textTertiary;
     final base = AppText.rowSubtitle
         .copyWith(fontSize: 11.5, height: 1.15, color: subColor);
-    final cadenceStyle =
-        AppText.caption.copyWith(fontSize: 10.5, color: cadenceColor);
 
-    final date = dayMonth(task.dueDate, l);
-    // Just the count here — the OVERDUE header, the negative colour and the red
-    // section total already say "late" three times over (§A3). The full "late"
-    // wording moves to the screen reader (§A4), which sees none of those.
-    final late = overdue
-        ? l.schOverdueDays(-task.daysUntilDue(store.today))
-        : null;
+    final date = dayMonth(occurrence.date, l);
+    final late =
+        overdue ? l.schOverdueDays(-task.daysUntilDue(store.today)) : null;
 
     return Text.rich(
       TextSpan(
         style: base,
         children: [
+          if (task.isRecurring) ...[
+            WidgetSpan(
+              alignment: PlaceholderAlignment.middle,
+              child: Icon(Icons.repeat_rounded, size: 10.5, color: glyphColor),
+            ),
+            const TextSpan(text: '  '),
+          ],
           TextSpan(text: date),
           if (late != null) TextSpan(text: ' · $late'),
           if (account != null) TextSpan(text: ' · $account'),
@@ -470,17 +521,6 @@ class _TaskRow extends StatelessWidget {
               style: base.copyWith(
                   fontWeight: FontWeight.w600, color: AppColors.warning),
             ),
-          if (task.isRecurring) ...[
-            const TextSpan(text: '  '),
-            WidgetSpan(
-              alignment: PlaceholderAlignment.middle,
-              child: Icon(Icons.repeat_rounded,
-                  size: 10.5, color: cadenceColor),
-            ),
-            TextSpan(
-                text: ' ${repeatShortLabel(task.repeats, l)}',
-                style: cadenceStyle),
-          ],
         ],
       ),
       maxLines: 1,
@@ -495,10 +535,7 @@ class _TaskRow extends StatelessWidget {
     final parts = <String>[
       task.title,
       '${payOut ? l.schSemPayingOut : l.schSemComingIn} $amount',
-      '${l.schSemDue} ${dayMonth(task.dueDate, l)}',
-      // The eye lost the word "late" (§A3); the screen reader, which cannot see
-      // the red header or total, gains the full phrase here — right after the
-      // due date (§A4).
+      '${l.schSemDue} ${dayMonth(occurrence.date, l)}',
       if (overdue) l.schDaysLate(-task.daysUntilDue(store.today)),
       if (account != null)
         '${payOut ? l.schSemFrom : l.schSemInto} $account',
@@ -511,11 +548,11 @@ class _TaskRow extends StatelessWidget {
   }
 }
 
-/// The mark-paid tick — a 30 pt circle inside a ≥ 44 pt tap target (§4.1). It
-/// opens the confirm sheet (§10); it never writes on tap, and its target does
-/// not trigger the row's tap.
-class _MarkPaidTick extends StatelessWidget {
-  const _MarkPaidTick({required this.store, required this.task});
+/// The mark-paid ring — an empty 24 pt circle inside a ≥ 44 pt tap target
+/// (§2b). A ✓ on an unpaid row reads as done, so the ring stays empty; the tap
+/// opens the confirm sheet and never writes on its own.
+class _MarkPaidRing extends StatelessWidget {
+  const _MarkPaidRing({required this.store, required this.task});
 
   final AppStore store;
   final Task task;
@@ -535,16 +572,117 @@ class _MarkPaidTick extends StatelessWidget {
         height: 44,
         child: Center(
           child: Container(
-            width: 30,
-            height: 30,
+            width: 24,
+            height: 24,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              border: Border.all(color: AppColors.surfaceHigh, width: 1.5),
+              border:
+                  Border.all(color: AppColors.textTertiary, width: 1.5),
             ),
-            child: const Icon(Icons.check_rounded,
-                size: 16, color: AppColors.textTertiary),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// A later occurrence of a series (§2c): a dashed, non-tappable 24 pt ring in
+/// the same 44 pt slot. Not a button — there is nothing to pay until the series
+/// reaches it.
+class _DashedRing extends StatelessWidget {
+  const _DashedRing();
+
+  @override
+  Widget build(BuildContext context) {
+    return const SizedBox(
+      width: 44,
+      height: 44,
+      child: Center(
+        child: SizedBox(
+          width: 24,
+          height: 24,
+          child: CustomPaint(painter: _DashedRingPainter()),
+        ),
+      ),
+    );
+  }
+}
+
+/// Draws a 4-on/3-off dashed circle in [AppColors.surfaceHigh], 1.5 pt (§2c),
+/// by hand rather than pulling in a package.
+class _DashedRingPainter extends CustomPainter {
+  const _DashedRingPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = AppColors.surfaceHigh
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5;
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = (size.width - 1.5) / 2;
+    const dash = 4.0, gap = 3.0;
+    final circumference = 2 * math.pi * radius;
+    final step = (dash + gap) / radius; // angular step per dash+gap
+    var a = 0.0;
+    final end = 2 * math.pi;
+    // Guard against pathological radii producing an unbounded loop.
+    if (circumference <= 0) return;
+    while (a < end) {
+      final sweep = (dash / radius).clamp(0.0, end - a);
+      canvas.drawArc(
+        Rect.fromCircle(center: center, radius: radius),
+        a,
+        sweep,
+        false,
+        paint,
+      );
+      a += step;
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _DashedRingPainter oldDelegate) => false;
+}
+
+/// The shortfall marker (§4e/§D.4): a labelled hairline `Spendable below 0 from
+/// {day} ——— −{amount}`, both ends [AppColors.warning], drawn inside the card
+/// directly under the row that causes the breach.
+class _ShortfallMarker extends StatelessWidget {
+  const _ShortfallMarker({required this.store, required this.breach});
+
+  final AppStore store;
+  final ({DateTime day, double amount}) breach;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final style = AppText.caption.copyWith(
+        fontSize: 11.5,
+        height: 1.2,
+        fontWeight: FontWeight.w600,
+        color: AppColors.warning);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 6, 12, 7),
+      child: Row(
+        children: [
+          Flexible(
+            child: Text(l.schSpendableBelowFrom(dayMonth(breach.day, l)),
+                style: style, maxLines: 1, overflow: TextOverflow.ellipsis),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Container(
+                height: 1,
+                color: AppColors.warning.withValues(alpha: 0.45)),
+          ),
+          const SizedBox(width: 8),
+          AmountText(
+            -breach.amount,
+            style: style,
+            color: AppColors.warning,
+          ),
+        ],
       ),
     );
   }
@@ -676,24 +814,32 @@ class _CompletedSection extends StatelessWidget {
     );
   }
 
-  /// Zero items: two lines, no card, no divider (§B5). A sentence, then a link
-  /// — no background, no border, no chevron — to the same sheet as the header.
+  /// Zero items: one line (§5/§D.5). A sentence, then a `History ›` link that
+  /// opens the History screen — not the period sheet: changing the period from an
+  /// empty state is a surprise, and History carries its own period control.
   Widget _emptyLines(BuildContext context, AppLocalizations l) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(Insets.gutter, 0, Insets.gutter, Insets.sm),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      padding:
+          const EdgeInsets.fromLTRB(Insets.gutter, Insets.sm, Insets.gutter, 0),
+      child: Row(
         children: [
-          Text(
-            l.schCompletedEmpty,
-            style: AppText.caption.copyWith(color: AppColors.textSecondary),
-          ),
-          const SizedBox(height: 4),
-          InkWell(
-            onTap: onPickRange,
+          Flexible(
             child: Text(
-              l.schCompletedLongerPeriod,
-              style: AppText.caption.copyWith(color: AppColors.accentLight),
+              l.schCompletedEmpty,
+              style: AppText.caption.copyWith(color: AppColors.textTertiary),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(width: 8),
+          InkWell(
+            onTap: () => Navigator.of(context, rootNavigator: true).push(
+              MaterialPageRoute(builder: (_) => const ScheduleHistoryScreen()),
+            ),
+            child: Text(
+              l.schHistoryLink,
+              style: AppText.caption.copyWith(
+                  fontWeight: FontWeight.w500, color: AppColors.accentLight),
             ),
           ),
         ],
@@ -896,17 +1042,11 @@ class ScheduleEventRow extends StatelessWidget {
       );
 
   void _open(BuildContext context) {
-    // A paid/received row opens its Ledger entry; a skipped/cancelled row has no
-    // entry, so it opens the Task detail (§5.1).
-    final txn = event.txn;
-    if (txn != null) {
-      Navigator.of(context, rootNavigator: true).push(
-        MaterialPageRoute(
-          builder: (_) => txn.type == TxnType.transfer
-              ? TransferDetailScreen(txnId: txn.id)
-              : SameTransactionsScreen(originTxnId: txn.id),
-        ),
-      );
+    // A paid/received row opens the undo sheet — a completed payment can be undone
+    // at any time, not only in the snackbar's five seconds (§6b/§6e). A
+    // skipped/cancelled row has no entry, so it opens the Task detail (§5.1).
+    if (event.txn != null) {
+      showUndoPaymentSheet(context, store, event);
     } else {
       Navigator.of(context, rootNavigator: true).push(
         MaterialPageRoute(

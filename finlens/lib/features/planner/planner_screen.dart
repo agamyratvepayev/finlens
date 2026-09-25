@@ -141,8 +141,11 @@ class _PlannerScreenState extends State<PlannerScreen> {
         final curStart = DateTime(today.year, today.month);
         if (monthStart.isBefore(curStart)) return null;
         return DateTime(_month.year, _month.month + 1, 0);
-      case 2: // Schedule — the horizon's end date.
-        return _horizon.range(today).end;
+      case 2:
+        // Schedule no longer draws the forecast row (task 058 §4d): its own
+        // summary line, inside the tab card, reports what the schedule moves. The
+        // Budgets and Goals branches keep the row exactly as task 057 left them.
+        return null;
       default: // Goals — earliest upcoming target date the filter shows.
         final todayDay = DateTime(today.year, today.month, today.day);
         DateTime? earliest;
@@ -303,6 +306,10 @@ class _PlannerScreenState extends State<PlannerScreen> {
                   labels: [l.plTabBudgets, l.plTabGoals, l.plTabSchedule],
                   index: _tab,
                   onChanged: (i) => setState(() => _tab = i),
+                  // The Schedule tab's own summary line rides inside the tab card,
+                  // under a hairline — how many payments, out, in, net (§4a). Null
+                  // (no line, no hairline) with no rows in the window.
+                  footer: _tab == 2 ? _scheduleSummaryLine(store) : null,
                 ),
               ),
               // Row 3 + content вЂ” swipe anywhere below the tabs to change tab.
@@ -338,15 +345,9 @@ class _PlannerScreenState extends State<PlannerScreen> {
     // answered by the first card. The cards are sections в†’ cards, nothing
     // else.
     1 => const SizedBox.shrink(),
-    // The projection bar reads only when there is a task to project. The
-    // gate is the Schedule tab's own empty test (`openTasks.isEmpty`), the
-    // exact condition its empty state shows on, so a projection over zero
-    // tasks can never draw (§3.2). Tasks that fall past the horizon keep the
-    // summary — the projection still describes them.
-    2 =>
-      store.openTasks.isEmpty
-          ? const SizedBox.shrink()
-          : ScheduleSummary(store: store, horizon: _horizon),
+    // Schedule's summary is no longer a block above the list — it moved into the
+    // tab card as a single line (task 058 §4). Nothing sits here now.
+    2 => const SizedBox.shrink(),
     // The hero reads only with a budget to measure. `$0 left of $0` — over
     // spending or not — is a claim about nothing, so it is absent both when
     // the tab is empty and in the spending-without-budget case, where the NO
@@ -356,6 +357,14 @@ class _PlannerScreenState extends State<PlannerScreen> {
           ? _BudgetSummary(store: store, month: _month)
           : const SizedBox.shrink(),
   };
+
+  /// The Schedule tab card's summary line (§4a), or null when the window holds no
+  /// rows (the line and its hairline both go, leaving the card as it is today).
+  Widget? _scheduleSummaryLine(AppStore store) {
+    final h = _horizon.range(store.today);
+    if (store.scheduleOccurrenceCount(h) == 0) return null;
+    return _ScheduleSummaryLine(store: store, horizon: _horizon);
+  }
 
   Widget _content(AppStore store) => switch (_tab) {
     1 => _GoalsTab(
@@ -432,11 +441,17 @@ class _SegmentedTabs extends StatelessWidget {
     required this.labels,
     required this.index,
     required this.onChanged,
+    this.footer,
   });
 
   final List<String> labels;
   final int index;
   final ValueChanged<int> onChanged;
+
+  /// An optional line that rides inside the container, under a hairline — the
+  /// Schedule tab's own summary (task 058 §4a/§D.1). Null on Budgets and Goals,
+  /// and on a Schedule window with no rows: then the card is exactly what it was.
+  final Widget? footer;
 
   static const _container = Color(0xFF141416);
   static const _activeSegment = Color(0xFF43434A);
@@ -444,13 +459,33 @@ class _SegmentedTabs extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(
         color: _container,
         borderRadius: BorderRadius.circular(10),
       ),
-      child: Row(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
+          Padding(
+            padding: const EdgeInsets.all(3),
+            child: Row(children: _segments(context)),
+          ),
+          if (footer != null) ...[
+            // One hairline, inset 9 each side (§D.1).
+            Container(
+              height: 0.5,
+              margin: const EdgeInsets.symmetric(horizontal: 9),
+              color: AppColors.surfaceHigh,
+            ),
+            footer!,
+          ],
+        ],
+      ),
+    );
+  }
+
+  List<Widget> _segments(BuildContext context) {
+    return [
           for (var i = 0; i < labels.length; i++)
             Expanded(
               child: GestureDetector(
@@ -490,6 +525,57 @@ class _SegmentedTabs extends StatelessWidget {
                 ),
               ),
             ),
+    ];
+  }
+}
+
+/// The Schedule tab's own summary line (task 058 §4a/§D.1), inside the tab card
+/// under a hairline: how many payments the list holds, then what leaves, what
+/// lands, and the net — the schedule adding up its own rows and claiming nothing
+/// else. All three figures mask with the privacy eye.
+class _ScheduleSummaryLine extends StatelessWidget {
+  const _ScheduleSummaryLine({required this.store, required this.horizon});
+
+  final AppStore store;
+  final ScheduleHorizon horizon;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final h = horizon.range(store.today);
+    final n = store.scheduleOccurrenceCount(h);
+    final out = store.goingOut(h);
+    final inSum = store.comingIn(h);
+    final net = inSum - out;
+
+    final figureStyle =
+        const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(11, 9, 11, 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.baseline,
+        textBaseline: TextBaseline.alphabetic,
+        children: [
+          Expanded(
+            child: Text(
+              l.schPaymentsCount(n),
+              style: const TextStyle(
+                  fontSize: 11.5, color: AppColors.textTertiary),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          AmountText(-out, style: figureStyle, color: AppColors.negative),
+          const SizedBox(width: 9),
+          AmountText(inSum,
+              showSign: true, style: figureStyle, color: AppColors.positive),
+          const SizedBox(width: 9),
+          AmountText(
+            net,
+            showSign: true,
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+            color: AppColors.textPrimary,
+          ),
         ],
       ),
     );

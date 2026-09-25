@@ -96,23 +96,26 @@ void main() {
     expect(store.completedRange.preset, RangePreset.thisMonth);
   });
 
-  // ── Zero items: empty lines, no chevron, link opens the sheet (§B5) ─────────
-  testWidgets('zero items shows the two empty lines and no toggle',
+  // ── Zero items: one line + a History link, no period sheet (task 058 §5) ────
+  testWidgets('zero items shows one line and a History link',
       (tester) async {
     // The seed has no completed events, so `This month` is empty.
     await tester.pumpWidget(_app(buildSeedStore()));
     await tester.pumpAndSettle();
 
     expect(find.text('Nothing completed in this period.'), findsOneWidget);
-    expect(find.text('Choose a longer period'), findsOneWidget);
+    // The empty state is one line + History ›, not the old "Choose a longer
+    // period" that reopened the range sheet (§5).
+    expect(find.text('History ›'), findsOneWidget);
+    expect(find.text('Choose a longer period'), findsNothing);
     expect(find.byType(AnimatedRotation), findsNothing,
         reason: 'no chevron when there is nothing to open');
 
-    // The link opens the same range sheet as the header.
-    await tester.tap(find.text('Choose a longer period'));
+    // The link opens the History screen — never the period sheet.
+    await tester.tap(find.text('History ›'));
     await tester.pumpAndSettle();
-    expect(find.text('Last 3 months'), findsOneWidget,
-        reason: 'the shared range-picker sheet should be open');
+    expect(find.text("DIDN'T HAPPEN"), findsOneWidget,
+        reason: 'the History screen (its summary columns) should be open');
   });
 
   // ── The count toggles the card open and closed (§B4) ────────────────────────

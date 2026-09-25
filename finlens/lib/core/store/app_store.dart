@@ -3101,18 +3101,45 @@ class AppStore extends ChangeNotifier {
   List<Task> tasksInHorizon(DateRange h) =>
       openTasks.where((t) => _dueInRange(t, h)).toList(growable: false);
 
-  /// Σ inflow in the horizon, excluding overdue inflows (§2.1/§2.3).
-  double comingIn(DateRange h) => tasksInHorizon(h)
-      .where((t) => !t.isPayOut)
-      .fold(0.0, (s, t) => s + _taskAmountInBase(t));
+  /// Σ over **every occurrence** of the open tasks matching [keep] that falls in
+  /// [h] (task 058 §4b): the same events the Schedule list counts, so the list
+  /// and the tab-card summary can never disagree. A monthly series contributes
+  /// once per occurrence, not once per series. The overdue occurrence (before the
+  /// horizon's start) is not counted here — [goingOut] adds it back for pay-outs.
+  double _occurrenceSum(DateRange h, bool Function(Task) keep) {
+    final startDay = DateTime(h.start.year, h.start.month, h.start.day);
+    final endDay = DateTime(h.end.year, h.end.month, h.end.day);
+    var sum = 0.0;
+    for (final t in openTasks) {
+      if (!keep(t)) continue;
+      sum += t.occurrencesIn(startDay, endDay).length * _taskAmountInBase(t);
+    }
+    return sum;
+  }
 
-  /// Σ outflow in the horizon **plus** every overdue outflow (§2.1/§2.3).
-  double goingOut(DateRange h) {
-    var out = tasksInHorizon(h)
-        .where((t) => t.isPayOut)
-        .fold(0.0, (s, t) => s + _taskAmountInBase(t));
-    out += overdueOutAmount;
-    return out;
+  /// Σ inflow across every in-horizon occurrence, excluding overdue inflows
+  /// (§2.1/§2.3/§4b). The overdue occurrence falls before the horizon's start, so
+  /// it is naturally left out.
+  double comingIn(DateRange h) => _occurrenceSum(h, (t) => !t.isPayOut);
+
+  /// Σ outflow across every in-horizon occurrence **plus** every overdue outflow
+  /// (§2.1/§2.3/§4b).
+  double goingOut(DateRange h) =>
+      _occurrenceSum(h, (t) => t.isPayOut) + overdueOutAmount;
+
+  /// How many rows the Schedule list shows for [h] — the tab-card summary's
+  /// `{n} payments` (§4a): one per overdue task, plus every open task's in-horizon
+  /// occurrences. No double count: an overdue task's overdue occurrence is counted
+  /// here, its future recurrences by [Task.occurrencesIn] (which skips the one
+  /// before the horizon's start).
+  int scheduleOccurrenceCount(DateRange h) {
+    final startDay = DateTime(h.start.year, h.start.month, h.start.day);
+    final endDay = DateTime(h.end.year, h.end.month, h.end.day);
+    var n = overdueTasks.length;
+    for (final t in openTasks) {
+      n += t.occurrencesIn(startDay, endDay).length;
+    }
+    return n;
   }
 
   /// The hero figure (§2.1): what is left after everything already committed —
@@ -4727,6 +4754,10 @@ class AppStore extends ChangeNotifier {
     final prevStatus = task.status;
     final prevChanged = task.statusChangedAt;
     final prevExpected = task.expectedAmount;
+    // The occurrence this payment closes — the due date before the series
+    // advances, at day granularity (§6). Stamped on the Txn so a completed
+    // payment can be undone later, walking the series back to exactly this day.
+    final occurrenceDue = DateTime(prevDue.year, prevDue.month, prevDue.day);
 
     final isPayOut = task.expectedAmount < 0;
     final toIsAccount = accountById(toRef) != null;
@@ -4772,6 +4803,8 @@ class AppStore extends ChangeNotifier {
       );
     }
 
+    txn.recurrenceDueDate = occurrenceDue;
+
     if (rememberAmount) {
       task.expectedAmount = isPayOut ? -amount : amount;
     }
@@ -4798,6 +4831,34 @@ class AppStore extends ChangeNotifier {
       ..status = r.previousStatus
       ..statusChangedAt = r.previousStatusChangedAt
       ..expectedAmount = r.previousExpected;
+    _syncGoalLatches();
+    notifyListeners();
+  }
+
+  /// Reverses a recorded task payment from its [Txn] alone (task 058 §6c) — the
+  /// durable twin of [undoMarkTaskPaid], which needs a [MarkPaidResult] only the
+  /// current session holds. Deletes the entry, and when the settled occurrence is
+  /// known ([Txn.recurrenceDueDate]) walks the series back to it, reopening a task
+  /// that this payment had closed. With a null occurrence it never guesses: it
+  /// deletes the entry and leaves the task where it is.
+  void undoTaskPayment(Txn txn) {
+    _txns.removeWhere((t) => t.id == txn.id);
+    _sameIndex = null;
+    _accountIndex = null;
+    final task = txn.recurrenceTaskId == null
+        ? null
+        : taskById(txn.recurrenceTaskId!);
+    final due = txn.recurrenceDueDate;
+    if (task != null && due != null) {
+      task.dueDate = due;
+      // If this payment is what closed the task (a one-off advances to `paid`),
+      // reopen it. A still-open recurring series just steps its due date back.
+      if (task.status == TaskStatus.paid) {
+        task
+          ..status = TaskStatus.open
+          ..statusChangedAt = null;
+      }
+    }
     _syncGoalLatches();
     notifyListeners();
   }

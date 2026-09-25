@@ -6,6 +6,7 @@ import '../../core/utils/arithmetic.dart';
 import '../../core/utils/formatters.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/app_card.dart';
+import '../../shared/widgets/destructive_sheet.dart';
 import '../../shared/widgets/typed_date_sheet.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
@@ -52,6 +53,56 @@ void showMarkPaidUndoBar(
         ),
       ),
     );
+}
+
+/// Undo a completed payment at any time (§6b) — the durable path, opened from a
+/// completed row in the tab and in History. It states in concrete figures what
+/// is undone (the ImpactLine sheet), and confirms in **accent**, not red:
+/// undoing is a correction, not a destruction. On confirm it walks the store's
+/// [AppStore.undoTaskPayment], which reverses from the [Txn] alone.
+Future<void> showUndoPaymentSheet(
+  BuildContext context,
+  AppStore store,
+  ScheduleEvent event,
+) async {
+  final txn = event.txn;
+  if (txn == null) return;
+  final l = AppLocalizations.of(context);
+  final task = event.task;
+  final received = event.outcome == ScheduleOutcome.received;
+
+  final accountId = txn.type == TxnType.income ? txn.toRef : txn.fromRef;
+  final account = store.accountById(accountId)?.name ?? '—';
+  final amountStr = money(event.amountInBase,
+      masked: store.masked, forceDecimals: event.amountInBase % 1 != 0);
+
+  final today = store.today;
+  final d = event.date;
+  final when =
+      (d.year == today.year && d.month == today.month && d.day == today.day)
+          ? l.schToday
+          : dayMonth(d, l);
+
+  final due = txn.recurrenceDueDate;
+  final impact = <ImpactLine>[
+    if (due != null) ImpactLine.kept(l.mpUndoGoesBack(task.title, dayMonth(due, l))),
+    ImpactLine.kept(l.mpUndoAccountBack(account, amountStr)),
+    ImpactLine.lost(l.mpUndoEntryDeleted),
+    ImpactLine.lost(l.mpUndoNoteLost),
+    if (due == null) ImpactLine.lost(l.mpUndoKeepsDate(task.title)),
+  ];
+
+  final ok = await showDestructiveConfirm(
+    context,
+    title: l.mpUndoTitle,
+    message: received
+        ? l.mpUndoReceivedLine(when, account, amountStr)
+        : l.mpUndoPaidLine(when, account, amountStr),
+    impact: impact,
+    confirmLabel: l.mpUndoConfirm,
+    confirmColor: AppColors.accent,
+  );
+  if (ok && context.mounted) store.undoTaskPayment(txn);
 }
 
 class _MarkPaidSheet extends StatefulWidget {

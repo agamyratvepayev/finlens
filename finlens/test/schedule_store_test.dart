@@ -84,17 +84,30 @@ void main() {
       final h = next30();
       expect(store.projection(h),
           closeTo(store.spendable! + store.comingIn(h) - store.goingOut(h), 0.01));
-      // The overdue Gym pay-out is folded into goingOut (§2.1).
-      expect(store.goingOut(h), closeTo(3115.98, 0.01));
+      // Occurrence-based (task 058 §4b): every pay-out occurrence in the window
+      // plus the overdue outflow. Gym counts twice — 7 Aug overdue and its 7 Sep
+      // recurrence — so out = 3,166, up from the old one-row-per-task 3,115.98.
+      expect(store.goingOut(h), closeTo(3165.98, 0.01));
+      // The salary lands once in the window: 5,200.
       expect(store.comingIn(h), closeTo(5200, 0.01));
     });
 
-    test('overdue inflow is excluded from the projection', () {
+    test('the tab-card payment count equals the rows the list shows', () {
       final store = buildSeedStore();
-      // Make the salary overdue: an inflow that has not arrived is not money.
-      store.taskById('k-salary')!.dueDate = DateTime(2026, 8, 1);
       final h = next30();
-      // Salary no longer counts toward comingIn.
+      // Overdue Gym + six in-horizon occurrences (Gym 7 Sep, Amex, Salary,
+      // Internet, Netflix, Spotify) = 7 (§4a, §D.1).
+      expect(store.scheduleOccurrenceCount(h), 7);
+    });
+
+    test('an overdue one-off inflow is excluded from comingIn', () {
+      final store = buildSeedStore();
+      // Make the salary an overdue one-off: an inflow that has not arrived is not
+      // money, and with no recurrence nothing lands in the window either.
+      store.taskById('k-salary')!
+        ..dueDate = DateTime(2026, 8, 1)
+        ..repeats = RepeatFrequency.none;
+      final h = next30();
       expect(store.comingIn(h), closeTo(0, 0.01));
     });
 
@@ -202,6 +215,75 @@ void main() {
       store.markTaskPaid(task,
           amount: 20, date: today, fromAccountId: 'a-checking', toRef: 'c-housing');
       expect(task.status, TaskStatus.paid);
+    });
+
+    test('stamps the settled occurrence on the Txn (§6a)', () {
+      final store = buildSeedStore();
+      final task = store.taskById('k-internet')!; // due 22 Aug
+      final r = store.markTaskPaid(task,
+          amount: 40,
+          date: today,
+          fromAccountId: 'a-checking',
+          toRef: 'c-housing');
+      expect(r.txn.recurrenceDueDate, DateTime(2026, 8, 22));
+    });
+  });
+
+  group('undoTaskPayment (§6c)', () {
+    test('restores the due date and deletes the entry', () {
+      final store = buildSeedStore();
+      final task = store.taskById('k-internet')!;
+      final due = task.dueDate;
+      final before = store.txns.length;
+      final r = store.markTaskPaid(task,
+          amount: 40,
+          date: today,
+          fromAccountId: 'a-checking',
+          toRef: 'c-housing');
+      // The series advanced past 22 Aug.
+      expect(task.dueDate.isAfter(due), isTrue);
+      store.undoTaskPayment(r.txn);
+      expect(store.txns.length, before);
+      expect(task.dueDate, due);
+    });
+
+    test('reopens a one-off it had closed', () {
+      final store = buildSeedStore();
+      final task = store.addTask(
+        title: 'One off',
+        linkedAccountId: 'a-checking',
+        expectedAmount: -20,
+        dueDate: DateTime(2026, 8, 10, 9),
+        icon: Icons.bolt_rounded,
+        categoryId: 'c-housing',
+      );
+      final r = store.markTaskPaid(task,
+          amount: 20,
+          date: today,
+          fromAccountId: 'a-checking',
+          toRef: 'c-housing');
+      expect(task.status, TaskStatus.paid);
+      store.undoTaskPayment(r.txn);
+      expect(task.status, TaskStatus.open);
+      expect(task.dueDate, DateTime(2026, 8, 10));
+    });
+
+    test('with a null occurrence it deletes the entry and leaves the date alone',
+        () {
+      final store = buildSeedStore();
+      final task = store.taskById('k-internet')!;
+      final before = store.txns.length;
+      final r = store.markTaskPaid(task,
+          amount: 40,
+          date: today,
+          fromAccountId: 'a-checking',
+          toRef: 'c-housing');
+      // A pre-§6 payment carries no occurrence stamp.
+      r.txn.recurrenceDueDate = null;
+      final advanced = task.dueDate;
+      store.undoTaskPayment(r.txn);
+      expect(store.txns.length, before);
+      expect(task.dueDate, advanced); // date untouched
     });
   });
 

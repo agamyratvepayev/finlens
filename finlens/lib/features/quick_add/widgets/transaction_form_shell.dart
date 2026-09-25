@@ -279,6 +279,7 @@ class TransactionFormShell extends StatelessWidget {
     this.typeLocked = false,
     this.flashTarget,
     this.flashPulse,
+    this.belowHero,
   });
 
   final FormConfig config;
@@ -301,6 +302,10 @@ class TransactionFormShell extends StatelessWidget {
   /// or a [FieldSpec.flashId]. Its value renders red and its background pulses.
   final String? flashTarget;
   final Animation<double>? flashPulse;
+
+  /// An optional widget rendered directly beneath the hero (the voice-fill bar
+  /// on expense/income). Null on every type that has no such affordance.
+  final Widget? belowHero;
 
   @override
   Widget build(BuildContext context) {
@@ -435,6 +440,7 @@ class TransactionFormShell extends StatelessWidget {
         radius: 16,
         child: heroWidget,
       ),
+      ?belowHero,
       for (final group in config.groups) ...[
         // A custom section renders its own widget in place (Transfer's
         // EXCHANGE / FEE / SUMMARY); the standard path builds a label + card.

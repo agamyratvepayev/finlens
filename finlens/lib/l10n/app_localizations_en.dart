@@ -1332,6 +1332,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get actionEdit => 'Edit';
 
   @override
+  String get actionSkip => 'Skip';
+
+  @override
   String get actionCopy => 'Copy';
 
   @override
@@ -4317,6 +4320,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get schCompletedLongerPeriod => 'Choose a longer period';
 
   @override
+  String get schHistoryLink => 'History ›';
+
+  @override
+  String schSpendableBelowFrom(Object day) {
+    return 'Spendable below 0 from $day';
+  }
+
+  @override
   String get schUntilTitle => 'UNTIL A DATE';
 
   @override
@@ -4656,6 +4667,43 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get mpUndoTitle => 'Undo this payment?';
+
+  @override
+  String mpUndoPaidLine(Object when, Object account, Object amount) {
+    return 'Paid $when from $account · $amount';
+  }
+
+  @override
+  String mpUndoReceivedLine(Object when, Object account, Object amount) {
+    return 'Received $when into $account · $amount';
+  }
+
+  @override
+  String mpUndoGoesBack(Object title, Object date) {
+    return '$title goes back to $date';
+  }
+
+  @override
+  String mpUndoAccountBack(Object account, Object amount) {
+    return '$account gets the $amount back';
+  }
+
+  @override
+  String get mpUndoEntryDeleted => 'The Ledger entry is deleted';
+
+  @override
+  String get mpUndoNoteLost => 'The note and the amount you typed are lost';
+
+  @override
+  String mpUndoKeepsDate(Object title) {
+    return '$title keeps its current due date — this payment predates the change';
+  }
+
+  @override
+  String get mpUndoConfirm => 'Undo the payment';
+
+  @override
   String get tmEdit => 'Edit';
 
   @override
@@ -4990,4 +5038,25 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get dateErrorOutOfRange => 'Date out of range';
+
+  @override
+  String get qaVoiceHint => 'Add by voice';
+
+  @override
+  String get qaVoiceListening => 'Listening… tap to stop';
+
+  @override
+  String get qaVoiceProcessing => 'Recognizing…';
+
+  @override
+  String get qaVoiceNoMic => 'Microphone access is off';
+
+  @override
+  String get qaVoiceFailed => 'Couldn\'t recognize a transaction';
+
+  @override
+  String get qaVoiceNetwork => 'No connection to the AI service';
+
+  @override
+  String get qaVoiceError => 'Voice entry failed';
 }

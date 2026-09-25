@@ -81,8 +81,8 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  // ── The account name is back on recurring rows (§4.2) ───────────────────────
-  testWidgets('a recurring row keeps its account and shows the short cadence',
+  // ── The account name survives; the glyph replaces the frequency word (§2a) ───
+  testWidgets('a recurring row keeps its account, glyph in front, no word',
       (tester) async {
     tester.view.physicalSize = _sizes['390x844']!;
     tester.view.devicePixelRatio = 1.0;
@@ -91,22 +91,29 @@ void main() {
     await tester.pumpWidget(_app(buildSeedStore()));
     await tester.pump(const Duration(milliseconds: 300));
 
-    // Monthly Salary — the row that lost its account to the old Row-of-pieces.
     final salaryRow = find.ancestor(
       of: find.text('Monthly Salary'),
       matching: find.byType(InkWell),
     );
-    expect(salaryRow, findsOneWidget);
+    expect(salaryRow, findsWidgets);
     expect(
       find.descendant(
-          of: salaryRow, matching: find.textContaining('Main Checking')),
+          of: salaryRow.first, matching: find.textContaining('Main Checking')),
       findsOneWidget,
       reason: 'the account name must survive on a recurring row',
     );
+    // The frequency word is gone (§2a); the ⟳ glyph in the subtitle carries it.
     expect(
-      find.descendant(of: salaryRow, matching: find.textContaining('monthly')),
+      find.descendant(
+          of: salaryRow.first, matching: find.textContaining('monthly')),
+      findsNothing,
+      reason: 'the row carries no frequency word — only the leading ⟳ glyph',
+    );
+    expect(
+      find.descendant(
+          of: salaryRow.first, matching: find.byIcon(Icons.repeat_rounded)),
       findsOneWidget,
-      reason: 'the row cadence is the frequency word, not "on the 15th"',
+      reason: 'a recurring row shows the repeat glyph at the front',
     );
   });
 
@@ -182,7 +189,7 @@ void main() {
     expect(tester.getSize(row).height, inInclusiveRange(44.0, 60.0));
   });
 
-  testWidgets('the mark-paid tick keeps a ≥44 pt tap target', (tester) async {
+  testWidgets('the mark-paid ring keeps a ≥44 pt tap target', (tester) async {
     tester.view.physicalSize = _sizes['390x844']!;
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
@@ -190,10 +197,14 @@ void main() {
     await tester.pumpWidget(_app(buildSeedStore()));
     await tester.pump(const Duration(milliseconds: 300));
 
-    final tick = find.byIcon(Icons.check_rounded).first;
-    final tapTarget =
-        find.ancestor(of: tick, matching: find.byType(GestureDetector)).first;
-    final size = tester.getSize(tapTarget);
+    // The ring lives in a 44 pt SizedBox slot (§2b). There is no ✓ any more — a
+    // check on an unpaid row reads as done.
+    expect(find.byIcon(Icons.check_rounded), findsNothing);
+    final slot = find
+        .byWidgetPredicate((w) =>
+            w is SizedBox && w.width == 44.0 && w.height == 44.0)
+        .first;
+    final size = tester.getSize(slot);
     expect(size.width, greaterThanOrEqualTo(44.0));
     expect(size.height, greaterThanOrEqualTo(44.0));
   });
