@@ -345,6 +345,12 @@ Map<String, Object?> taskToMap(Task t) => {
       'recurrence_end_count': t.repeatEndCount,
       'skipped_dates':
           jsonEncode(t.skippedDates.map((d) => d.millisecondsSinceEpoch).toList()),
+      // Task 064 §7a — per-occurrence amounts as a JSON object of epochMs →
+      // amount, following skipped_dates' encoding.
+      'amount_overrides': jsonEncode({
+        for (final e in t.amountOverrides.entries)
+          '${e.key.millisecondsSinceEpoch}': e.value,
+      }),
       'priority_name': t.priority.name,
       'reminder_days_before': t.reminderDaysBefore,
       'reminder_time_minutes': _timeOfDay(t.reminderTime),
@@ -376,6 +382,8 @@ Task taskFromMap(Map<String, Object?> m) => Task(
       skippedDates: _decodeList(m['skipped_dates'])
           .map((e) => DateTime.fromMillisecondsSinceEpoch((e as num).toInt()))
           .toList(),
+      // Pre-11 rows and old backups lack the key: coalesce to empty (§7a).
+      amountOverrides: _decodeOverrides(m['amount_overrides']),
       priority: _enumByName(Priority.values, m['priority_name'], Priority.normal),
       reminderDaysBefore: m['reminder_days_before'] as int?,
       reminderTime: _timeOfDayFrom(m['reminder_time_minutes']),
@@ -461,6 +469,24 @@ List<dynamic> _decodeList(Object? v) {
     return decoded is List ? decoded : const [];
   } on FormatException {
     return const [];
+  }
+}
+
+/// Task 064 §7a — the `amount_overrides` JSON object (epochMs → amount).
+/// Absent (pre-11 row, old backup) or malformed decodes as empty.
+Map<DateTime, double> _decodeOverrides(Object? v) {
+  if (v == null) return const {};
+  try {
+    final decoded = jsonDecode(v as String);
+    if (decoded is! Map) return const {};
+    return {
+      for (final e in decoded.entries)
+        if (int.tryParse(e.key as String) != null && e.value is num)
+          DateTime.fromMillisecondsSinceEpoch(int.parse(e.key as String)):
+              (e.value as num).toDouble(),
+    };
+  } on FormatException {
+    return const {};
   }
 }
 

@@ -44,7 +44,10 @@ class LocalDatabase {
   // occurrence a task payment closed, so a completed payment can be undone at
   // any time and the series walked back to it. Nullable: a pre-10 row reads back
   // null and undo deletes the entry but leaves the task on its current date.
-  static const int schemaVersion = 10;
+  // v11 (task 064 §7a) adds the tasks' `amount_overrides` column — per-
+  // occurrence expected amounts as a JSON object of epochMs → amount. Nullable:
+  // a pre-11 row reads back null, which the mapper coalesces to {}.
+  static const int schemaVersion = 11;
 
   static const String accountsTable = 'accounts';
   static const String categoriesTable = 'categories';
@@ -235,7 +238,8 @@ class LocalDatabase {
         recurrence_interval INTEGER,
         recurrence_unit_name TEXT,
         recurrence_end_date INTEGER,
-        recurrence_end_count INTEGER
+        recurrence_end_count INTEGER,
+        amount_overrides TEXT
       )''');
     batch.execute('''
       CREATE TABLE $metaTable(
@@ -378,6 +382,12 @@ class LocalDatabase {
       // date alone.
       await db.execute(
           'ALTER TABLE $txnsTable ADD COLUMN recurrence_due_date INTEGER');
+    }
+    if (oldVersion < 11) {
+      // Task 064 §7a — per-occurrence amounts. Nullable: a pre-11 row reads
+      // back null and the mapper coalesces it to an empty map.
+      await db.execute(
+          'ALTER TABLE $tasksTable ADD COLUMN amount_overrides TEXT');
     }
   }
 }

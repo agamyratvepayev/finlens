@@ -4881,7 +4881,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tdPaymentHistory => 'PAYMENT HISTORY';
 
   @override
-  String get tdNoPayments => 'Payments show up here once you mark one as paid.';
+  String get tdNoPayments =>
+      'Past ones show up here once you mark one as done.';
 
   @override
   String tdPaymentsSince(int count, Object month, Object total) {
@@ -4903,6 +4904,121 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String tdOwesMore(Object account, Object amount) {
     return '$account will owe you $amount more';
+  }
+
+  @override
+  String get tdMarkDone => 'Mark as done';
+
+  @override
+  String tdResultDown(Object account, Object amount) {
+    return '$account will go down by $amount';
+  }
+
+  @override
+  String tdResultUp(Object account, Object amount) {
+    return '$account will go up by $amount';
+  }
+
+  @override
+  String tdResultOweMore(Object account, Object amount) {
+    return 'You\'ll owe $account $amount more';
+  }
+
+  @override
+  String tdResultDebtDown(Object account, Object amount) {
+    return '$account\'s debt goes down by $amount';
+  }
+
+  @override
+  String tdOwedByLine(Object account) {
+    return 'Owed by $account';
+  }
+
+  @override
+  String tdEndsOn(Object date) {
+    return 'Ends $date';
+  }
+
+  @override
+  String tdStripDone(int done, int left) {
+    return 'Next · $done done · $left left';
+  }
+
+  @override
+  String tdStripDoneSoFar(int done) {
+    return 'Next · $done done so far';
+  }
+
+  @override
+  String tdStripIn(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Next · in $count days',
+      one: 'Next · in $count day',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String tdStripInLeft(int count, int left) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Next · in $count days · $left left',
+      one: 'Next · in $count day · $left left',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String tdStripDueIn(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Due · in $count days',
+      one: 'Due · in $count day',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String tdStripDueLate(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Due · $count days late',
+      one: 'Due · $count day late',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String tdStripLeft(Object amount) {
+    return '$amount left';
+  }
+
+  @override
+  String tdStripYear(Object amount) {
+    return '$amount a year';
+  }
+
+  @override
+  String tdUsually(Object amount) {
+    return 'usually $amount';
+  }
+
+  @override
+  String get tdReset => 'Reset';
+
+  @override
+  String tdOnlyThis(Object date) {
+    return 'Only $date';
+  }
+
+  @override
+  String tdThisAndAfter(Object date) {
+    return '$date and after';
   }
 
   @override

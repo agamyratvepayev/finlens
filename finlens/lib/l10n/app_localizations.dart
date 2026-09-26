@@ -7477,7 +7477,7 @@ abstract class AppLocalizations {
   /// No description provided for @tdNoPayments.
   ///
   /// In en, this message translates to:
-  /// **'Payments show up here once you mark one as paid.'**
+  /// **'Past ones show up here once you mark one as done.'**
   String get tdNoPayments;
 
   /// No description provided for @tdPaymentsSince.
@@ -7515,6 +7515,120 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{account} will owe you {amount} more'**
   String tdOwesMore(Object account, Object amount);
+
+  /// No description provided for @tdMarkDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark as done'**
+  String get tdMarkDone;
+
+  /// No description provided for @tdResultDown.
+  ///
+  /// In en, this message translates to:
+  /// **'{account} will go down by {amount}'**
+  String tdResultDown(Object account, Object amount);
+
+  /// No description provided for @tdResultUp.
+  ///
+  /// In en, this message translates to:
+  /// **'{account} will go up by {amount}'**
+  String tdResultUp(Object account, Object amount);
+
+  /// No description provided for @tdResultOweMore.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'ll owe {account} {amount} more'**
+  String tdResultOweMore(Object account, Object amount);
+
+  /// No description provided for @tdResultDebtDown.
+  ///
+  /// In en, this message translates to:
+  /// **'{account}\'s debt goes down by {amount}'**
+  String tdResultDebtDown(Object account, Object amount);
+
+  /// No description provided for @tdOwedByLine.
+  ///
+  /// In en, this message translates to:
+  /// **'Owed by {account}'**
+  String tdOwedByLine(Object account);
+
+  /// No description provided for @tdEndsOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Ends {date}'**
+  String tdEndsOn(Object date);
+
+  /// No description provided for @tdStripDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Next · {done} done · {left} left'**
+  String tdStripDone(int done, int left);
+
+  /// No description provided for @tdStripDoneSoFar.
+  ///
+  /// In en, this message translates to:
+  /// **'Next · {done} done so far'**
+  String tdStripDoneSoFar(int done);
+
+  /// No description provided for @tdStripIn.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{Next · in {count} day} other{Next · in {count} days}}'**
+  String tdStripIn(int count);
+
+  /// No description provided for @tdStripInLeft.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{Next · in {count} day · {left} left} other{Next · in {count} days · {left} left}}'**
+  String tdStripInLeft(int count, int left);
+
+  /// No description provided for @tdStripDueIn.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{Due · in {count} day} other{Due · in {count} days}}'**
+  String tdStripDueIn(int count);
+
+  /// No description provided for @tdStripDueLate.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{Due · {count} day late} other{Due · {count} days late}}'**
+  String tdStripDueLate(int count);
+
+  /// No description provided for @tdStripLeft.
+  ///
+  /// In en, this message translates to:
+  /// **'{amount} left'**
+  String tdStripLeft(Object amount);
+
+  /// No description provided for @tdStripYear.
+  ///
+  /// In en, this message translates to:
+  /// **'{amount} a year'**
+  String tdStripYear(Object amount);
+
+  /// No description provided for @tdUsually.
+  ///
+  /// In en, this message translates to:
+  /// **'usually {amount}'**
+  String tdUsually(Object amount);
+
+  /// No description provided for @tdReset.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset'**
+  String get tdReset;
+
+  /// No description provided for @tdOnlyThis.
+  ///
+  /// In en, this message translates to:
+  /// **'Only {date}'**
+  String tdOnlyThis(Object date);
+
+  /// No description provided for @tdThisAndAfter.
+  ///
+  /// In en, this message translates to:
+  /// **'{date} and after'**
+  String tdThisAndAfter(Object date);
 
   /// No description provided for @tdSkipOne.
   ///

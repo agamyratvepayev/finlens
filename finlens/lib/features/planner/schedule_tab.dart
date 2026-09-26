@@ -62,7 +62,9 @@ int _compareOccurrences(_Occurrence a, _Occurrence b, AppStore store) {
   if (byDate != 0) return byDate;
   final byPriority = b.task.priority.index.compareTo(a.task.priority.index);
   if (byPriority != 0) return byPriority;
-  return store.taskAmountInBase(b.task).compareTo(store.taskAmountInBase(a.task));
+  return store
+      .taskAmountInBaseOn(b.task, b.date)
+      .compareTo(store.taskAmountInBaseOn(a.task, a.date));
 }
 
 /// Every occurrence the list shows for [h] (§1b): one per overdue task at its own
@@ -294,7 +296,8 @@ class _ScheduleTabState extends State<ScheduleTab> {
     final store = widget.store;
     var out = 0.0, income = 0.0;
     for (final o in section.occurrences) {
-      final amt = store.taskAmountInBase(o.task);
+      // Per occurrence (task 064 §7c): an overridden month totals as itself.
+      final amt = store.taskAmountInBaseOn(o.task, o.date);
       if (o.task.isPayOut) {
         out += amt;
       } else {
@@ -457,7 +460,7 @@ class _EmptyWindow extends StatelessWidget {
       AppLocalizations l, ({Task task, DateTime date, int sameDay}) next) {
     final task = next.task;
     final account = store.accountById(task.linkedAccountId);
-    final amount = money(task.expectedAmount.abs(),
+    final amount = money(task.amountOn(next.date).abs(),
         currency: account?.currency, masked: store.masked);
     final date = next.date.year == store.today.year
         ? dayMonth(next.date, l)
@@ -524,14 +527,16 @@ class _OccurrenceRow extends StatelessWidget {
                       ),
                       const SizedBox(width: Insets.sm),
                       AmountText(
-                        task.expectedAmount,
+                        // This occurrence's own amount (task 064 §7c).
+                        task.amountOn(occurrence.date),
                         kind: AmountKind.magnitude,
                         style: const TextStyle(
                             fontSize: 14.5,
                             fontWeight: FontWeight.w600,
                             fontFeatures: [FontFeature.tabularFigures()]),
                         color: color,
-                        forceDecimals: task.expectedAmount.abs() % 1 != 0,
+                        forceDecimals:
+                            task.amountOn(occurrence.date).abs() % 1 != 0,
                       ),
                     ],
                   ),
@@ -654,7 +659,7 @@ class _OccurrenceRow extends StatelessWidget {
 
   String _semantics(
       AppLocalizations l, bool payOut, bool overdue, String? account) {
-    final amount = formatAmount(task.expectedAmount, null,
+    final amount = formatAmount(task.amountOn(occurrence.date), null,
         kind: AmountKind.magnitude, masked: store.masked);
     final parts = <String>[
       task.title,
@@ -1016,10 +1021,13 @@ class ScheduleEventRow extends StatelessWidget {
             ),
             const SizedBox(width: Insets.sm),
             Text(
-              money(didNot ? store.taskAmountInBase(task) : event.amountInBase,
+              money(
+                  didNot
+                      ? store.taskAmountInBaseOn(task, event.date)
+                      : event.amountInBase,
                   masked: store.masked,
                   forceDecimals: (didNot
-                              ? store.taskAmountInBase(task)
+                              ? store.taskAmountInBaseOn(task, event.date)
                               : event.amountInBase) %
                           1 !=
                       0),

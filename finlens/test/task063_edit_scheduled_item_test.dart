@@ -454,14 +454,17 @@ void main() {
       expect(picker.selected, isFalse, reason: 'pay-in stays selected');
     });
 
-    testWidgets('Task detail reads Record earning with the owes-more line',
+    testWidgets('Task detail button reads Mark as done with the owes-more line',
         (tester) async {
+      // Task 064 §6 superseded 063 §8e: the button is Mark as done for every
+      // kind; the receivable line still reads "will owe you … more".
       final store =
           _store(tasks: [_task('t1', amount: 20000, account: 'rhk')]);
       await tester.pumpWidget(_host(store));
       await _push(tester, const TaskDetailScreen(taskId: 't1'));
 
-      expect(find.text('Record earning'), findsOneWidget);
+      expect(find.text('Mark as done'), findsOneWidget);
+      expect(find.text('Record earning'), findsNothing);
       expect(find.text('Mark as received'), findsNothing);
       expect(find.textContaining('Rowshen HK will owe you'), findsOneWidget);
     });

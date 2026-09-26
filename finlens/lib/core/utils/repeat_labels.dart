@@ -94,6 +94,41 @@ String repeatShortLabel(RepeatFrequency freq, AppLocalizations l) {
   }
 }
 
+/// The pill-sized cadence (task 064 §3a): the frequency word, then — for a
+/// weekly or monthly rule with 1–3 chosen days — the days after a `·`
+/// (`Monthly · last day`, `Weekly · Tue & Thu`). Larger day sets and every
+/// other cadence read the frequency word alone; the full sentence stays with
+/// [repeatCadenceLabel].
+String repeatChipLabel(
+  RepeatFrequency freq,
+  Set<int> weekdays,
+  Set<int> daysOfMonth,
+  DateTime seedDate,
+  AppLocalizations l,
+) {
+  final base = repeatShortLabel(freq, l);
+  switch (freq) {
+    case RepeatFrequency.monthly:
+      final days = (daysOfMonth.isEmpty ? {seedDate.day} : daysOfMonth).toList()
+        ..sort();
+      if (days.length > 3) return base;
+      final labels = [
+        for (final d in days)
+          (d == 31 || d == kLastDayOfMonth) ? l.rcLastDay : ordinalDay(d, l),
+      ];
+      return '$base · ${_joinList(labels, l)}';
+    case RepeatFrequency.weekly:
+      final days = (weekdays.isEmpty ? {seedDate.weekday} : weekdays).toList()
+        ..sort();
+      if (days.length > 3) return base;
+      return '$base · ${_joinList([
+            for (final d in days) weekdayShort(d, l)
+          ], l)}';
+    default:
+      return base;
+  }
+}
+
 /// The Repeat button's short label — the day-aware cadence, or "Repeat" when
 /// the frequency is off.
 String repeatButtonLabel(

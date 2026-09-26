@@ -119,16 +119,10 @@ class _MarkPaidSheetState extends State<_MarkPaidSheet> {
   late final Task _task = widget.task;
   late final bool _payOut = _task.isPayOut;
 
-  /// Money owed to the user (task 063 §8e): a pay-in into a Receivables
-  /// account is an earning, and the sheet's title says so. Booking is
-  /// untouched — the same income txn is written either way.
-  bool get _isEarning =>
-      !_payOut &&
-      _store.accountById(_task.linkedAccountId)?.group ==
-          AccountGroup.receivables;
-
-  late Expression _expr =
-      Expression.ofRaw(AmountEntry.fromDouble(_task.expectedAmount.abs()));
+  // Prefilled with THIS occurrence's expected amount (task 064 §7c): a month
+  // with its own override starts from it, not from the series' usual figure.
+  late Expression _expr = Expression.ofRaw(
+      AmountEntry.fromDouble(_task.amountOn(_task.dueDate).abs()));
   late DateTime _date = _store.today;
 
   /// The account the money leaves (pay-out) or lands in (pay-in).
@@ -154,8 +148,10 @@ class _MarkPaidSheetState extends State<_MarkPaidSheet> {
   String get _currency =>
       _store.accountById(_fromAccountId)?.currency ?? _store.baseCurrency;
 
+  // Against the occurrence's own expectation (task 064): confirming a month's
+  // override as-is is not a deviation and must not offer to rewrite the usual.
   bool get _differs =>
-      (_amount - _task.expectedAmount.abs()).abs() >= 0.005;
+      (_amount - _task.amountOn(_task.dueDate).abs()).abs() >= 0.005;
 
   @override
   Widget build(BuildContext context) {
@@ -186,9 +182,9 @@ class _MarkPaidSheetState extends State<_MarkPaidSheet> {
               ),
               const SizedBox(height: Insets.md),
               Text(
-                _payOut
-                    ? l.mpTitlePaid
-                    : (_isEarning ? l.tdRecordEarning : l.mpTitleReceived),
+                // One verb for every kind (task 064 §6a): "done" is true
+                // whether the item was paid, received or earned.
+                l.tdMarkDone,
                 textAlign: TextAlign.center,
                 style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
               ),
@@ -227,7 +223,8 @@ class _MarkPaidSheetState extends State<_MarkPaidSheet> {
                 const SizedBox(height: 3),
                 Center(
                   child: Text(
-                    l.mpExpected(formatAmount(_task.expectedAmount, _currency,
+                    l.mpExpected(formatAmount(
+                        _task.amountOn(_task.dueDate), _currency,
                         kind: AmountKind.magnitude, masked: _store.masked)),
                     style: AppText.caption.copyWith(
                         fontSize: 11.5, color: AppColors.textTertiary),

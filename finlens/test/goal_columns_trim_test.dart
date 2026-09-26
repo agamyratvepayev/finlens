@@ -109,8 +109,8 @@ void main() {
   });
 
   testWidgets(
-      'the Schedule task detail summary card is untouched — NEXT · AMOUNT · '
-      'PER YEAR still 10.5/18 in a fromLTRB(6,9,6,10) card', (tester) async {
+      'the Schedule task detail strip is now one thin line — no NEXT/AMOUNT/'
+      'PER YEAR columns (task 064)', (tester) async {
     tester.view.physicalSize = const Size(1179, 2556);
     tester.view.devicePixelRatio = 3.0;
     addTearDown(tester.view.reset);
@@ -120,20 +120,13 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Schedule'));
     await tester.pumpAndSettle();
-    // Internet Bill is a recurring task → NEXT · AMOUNT · PER YEAR.
     await tester.tap(find.text('Internet Bill').first);
     await tester.pumpAndSettle();
 
-    // The geometry-defining styles of the summary card, byte-identical to
-    // before this change (which touched only the goal detail columns card).
-    expect(find.text('NEXT'), findsOneWidget);
-    expect(find.text('AMOUNT'), findsOneWidget);
-    expect(find.text('PER YEAR'), findsOneWidget);
-    expect(tester.widget<Text>(find.text('NEXT')).style!.fontSize, 10.5);
-
-    // Its inner padding literal is intact.
-    final innerPad = tester.widgetList<Padding>(find.byType(Padding)).where(
-        (p) => p.padding == const EdgeInsets.fromLTRB(6, 9, 6, 10));
-    expect(innerPad, isNotEmpty);
+    // The old three-column card is gone (task 064 §2): one strip, no labels.
+    expect(find.text('NEXT'), findsNothing);
+    expect(find.text('AMOUNT'), findsNothing);
+    expect(find.text('PER YEAR'), findsNothing);
+    expect(tester.takeException(), isNull);
   });
 }

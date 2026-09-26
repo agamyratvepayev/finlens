@@ -551,6 +551,7 @@ class MarkPaidResult {
     required this.previousStatus,
     required this.previousStatusChangedAt,
     required this.previousExpected,
+    this.previousOverride,
   });
 
   final Task task;
@@ -559,6 +560,11 @@ class MarkPaidResult {
   final TaskStatus previousStatus;
   final DateTime? previousStatusChangedAt;
   final double previousExpected;
+
+  /// The per-occurrence override the settled occurrence carried, if any
+  /// (task 064 §7e) — advancing past the occurrence drops it, so Undo puts it
+  /// back alongside the due date it belongs to.
+  final double? previousOverride;
 }
 
 /// What a goal watches — an account or an income category. `linkedAccountId`
@@ -793,7 +799,8 @@ class Task {
     this.note,
     this.payToAccountId,
     this.statusChangedAt,
-  });
+    Map<DateTime, double> amountOverrides = const {},
+  }) : amountOverrides = Map.of(amountOverrides);
 
   final String id;
   String title;
@@ -864,6 +871,13 @@ class Task {
   int? repeatEndCount;
 
   List<DateTime> skippedDates;
+
+  /// Per-occurrence expected amounts (task 064 §7a), keyed by the occurrence's
+  /// day (local midnight). Signed like [expectedAmount]. An occurrence with no
+  /// entry expects [expectedAmount]. Entries before [dueDate] are dropped when
+  /// the series advances past them.
+  final Map<DateTime, double> amountOverrides;
+
   Priority priority;
   int? reminderDaysBefore;
   TimeOfDay? reminderTime;
@@ -871,6 +885,15 @@ class Task {
 
   bool get isPayOut => expectedAmount < 0;
   bool get isRecurring => repeats != RepeatFrequency.none;
+
+  /// The amount this occurrence expects (task 064 §7c): its override, or the
+  /// series' [expectedAmount]. [day] is compared at day granularity.
+  double amountOn(DateTime day) =>
+      amountOverrides[DateTime(day.year, day.month, day.day)] ?? expectedAmount;
+
+  /// Whether [day]'s occurrence carries its own amount (the Upcoming dot).
+  bool hasOverrideOn(DateTime day) =>
+      amountOverrides.containsKey(DateTime(day.year, day.month, day.day));
 
   /// Whether the money moves between two of the user's own accounts (§10.4).
   /// A pay-out with a [payToAccountId] pays down a liability and is booked as a

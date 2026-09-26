@@ -3061,6 +3061,57 @@ class AppStore extends ChangeNotifier {
   /// screen's `PER YEAR` figure and row amounts (§7.3).
   double taskAmountInBase(Task t) => _taskAmountInBase(t);
 
+  /// A specific occurrence's expected amount in base currency (task 064 §7c):
+  /// [Task.amountOn]'s magnitude through the same conversion as
+  /// [_taskAmountInBase]. Every reader that knows which occurrence it is
+  /// pricing goes through here, so a per-month override moves the Schedule
+  /// totals, the shortfall and the forecast — never amount × count.
+  double taskAmountInBaseOn(Task t, DateTime day) => _toBaseOr(
+        t.amountOn(day).abs(),
+        accountById(t.linkedAccountId)?.currency ?? baseCurrency,
+      );
+
+  /// Task 064 §7c — writes one occurrence's expected amount. [magnitude] is
+  /// unsigned; the sign follows the task's direction.
+  ///
+  /// `andAfter: false` overrides [day] alone; an override equal to the usual
+  /// amount is removed instead (a no-op override is not stored).
+  /// `andAfter: true` first pins every open occurrence before [day] (from the
+  /// due date up to, not including, [day]) at the old usual amount unless it
+  /// already carries an override, then makes [magnitude] the new usual
+  /// [Task.expectedAmount] and drops every override at or after [day]. Past
+  /// (recorded) occurrences are never touched — they are transactions.
+  void setOccurrenceAmount(
+    Task task,
+    DateTime day,
+    double magnitude, {
+    required bool andAfter,
+  }) {
+    final d = DateTime(day.year, day.month, day.day);
+    final signed = task.isPayOut ? -magnitude.abs() : magnitude.abs();
+    if (!andAfter) {
+      if ((signed - task.expectedAmount).abs() < 0.005) {
+        task.amountOverrides.remove(d);
+      } else {
+        task.amountOverrides[d] = signed;
+      }
+    } else {
+      final old = task.expectedAmount;
+      var cur =
+          DateTime(task.dueDate.year, task.dueDate.month, task.dueDate.day);
+      for (var guard = 0; guard < 400 && cur.isBefore(d); guard++) {
+        task.amountOverrides.putIfAbsent(cur, () => old);
+        final next = task.nextOccurrence(cur);
+        final nextDay = DateTime(next.year, next.month, next.day);
+        if (!nextDay.isAfter(cur)) break;
+        cur = nextDay;
+      }
+      task.expectedAmount = signed;
+      task.amountOverrides.removeWhere((k, _) => !k.isBefore(d));
+    }
+    notifyListeners();
+  }
+
   /// Overdue is horizon-independent by design (§3.1): a filter cannot make money
   /// not owed, so narrowing the horizon never hides an unpaid bill. Shape
   /// unchanged for the nav badge (app_shell) and the summary banner.
@@ -3089,7 +3140,8 @@ class AppStore extends ChangeNotifier {
       ..sort((a, b) {
         final byPriority = b.priority.index.compareTo(a.priority.index);
         if (byPriority != 0) return byPriority;
-        return _taskAmountInBase(b).compareTo(_taskAmountInBase(a));
+        return taskAmountInBaseOn(b, earliest)
+            .compareTo(taskAmountInBaseOn(a, earliest));
       });
     return (task: due.first, date: earliest, sameDay: due.length - 1);
   }
@@ -3103,11 +3155,11 @@ class AppStore extends ChangeNotifier {
   List<Task> get overdueInflows =>
       overdueTasks.where((t) => !t.isPayOut).toList(growable: false);
 
-  double get overdueOutAmount =>
-      overdueOutflows.fold(0.0, (s, t) => s + _taskAmountInBase(t));
+  double get overdueOutAmount => overdueOutflows.fold(
+      0.0, (s, t) => s + taskAmountInBaseOn(t, t.dueDate));
 
-  double get overdueInAmount =>
-      overdueInflows.fold(0.0, (s, t) => s + _taskAmountInBase(t));
+  double get overdueInAmount => overdueInflows.fold(
+      0.0, (s, t) => s + taskAmountInBaseOn(t, t.dueDate));
 
   /// Total magnitude overdue — the banner's masked figure (§2.5).
   double get overdueAmount => overdueOutAmount + overdueInAmount;
@@ -3138,7 +3190,11 @@ class AppStore extends ChangeNotifier {
     var sum = 0.0;
     for (final t in openTasks) {
       if (!keep(t)) continue;
-      sum += t.occurrencesIn(startDay, endDay).length * _taskAmountInBase(t);
+      // Per occurrence, never amount × count (task 064 §7c): a month with its
+      // own amount moves this total by exactly that amount.
+      for (final day in t.occurrencesIn(startDay, endDay)) {
+        sum += taskAmountInBaseOn(t, day);
+      }
     }
     return sum;
   }
@@ -3203,12 +3259,12 @@ class AppStore extends ChangeNotifier {
     for (var d = start; !d.isAfter(end); d = d.add(const Duration(days: 1))) {
       for (final t in inRange) {
         if (_sameDay(t.dueDate, d) && !t.isPayOut) {
-          running += _taskAmountInBase(t);
+          running += taskAmountInBaseOn(t, d);
         }
       }
       for (final t in inRange) {
         if (_sameDay(t.dueDate, d) && t.isPayOut) {
-          running -= _taskAmountInBase(t);
+          running -= taskAmountInBaseOn(t, d);
         }
       }
       if (running < 0) return (day: d, amount: -running);
@@ -3233,12 +3289,12 @@ class AppStore extends ChangeNotifier {
     for (var d = start; !d.isAfter(end); d = d.add(const Duration(days: 1))) {
       for (final t in inRange) {
         if (_sameDay(t.dueDate, d) && !t.isPayOut) {
-          running += _taskAmountInBase(t);
+          running += taskAmountInBaseOn(t, d);
         }
       }
       for (final t in inRange) {
         if (_sameDay(t.dueDate, d) && t.isPayOut) {
-          running -= _taskAmountInBase(t);
+          running -= taskAmountInBaseOn(t, d);
         }
       }
       if (running < 0) out.add(DateTime(d.year, d.month, d.day));
@@ -3346,11 +3402,20 @@ class AppStore extends ChangeNotifier {
         continue;
       }
 
+      // Per occurrence (task 064 §7c): a month with its own amount moves the
+      // curve by that amount. The rate is per-currency, so once [amt] converted
+      // every override converts too — the `?? amt` never actually fires.
+      double amountOf(DateTime day) =>
+          convertToBase(t.amountOn(day).abs(), cur) ?? amt;
+
+      var total = 0.0;
       for (final day in occ) {
         final i = idxOf(day);
         if (i < 0 || i >= n) continue;
-        spendDaily[i] += spendPer * amt;
-        nwDaily[i] += nwPer * amt;
+        final a = amountOf(day);
+        spendDaily[i] += spendPer * a;
+        nwDaily[i] += nwPer * a;
+        total += a;
       }
       // A pay-out with a category feeds the budget-pace de-duplication (§1d).
       if (t.isPayOut && !t.isTransfer && t.categoryId != null) {
@@ -3358,14 +3423,14 @@ class AppStore extends ChangeNotifier {
             t.categoryId!, () => List<double>.filled(n, 0));
         for (final day in occ) {
           final i = idxOf(day);
-          if (i >= 0 && i < n) byDay[i] += amt;
+          if (i >= 0 && i < n) byDay[i] += amountOf(day);
         }
       }
       lines.add(ForecastLine(
         kind: ForecastKind.scheduled,
         refId: t.id,
         name: t.title,
-        amount: (t.isPayOut ? -amt : amt) * occ.length,
+        amount: t.isPayOut ? -total : total,
         count: occ.length,
         inSpendable: touchesSpend,
         inNetWorth: touchesNw,
@@ -3376,7 +3441,7 @@ class AppStore extends ChangeNotifier {
     for (final t in overdueOutflows) {
       final acc = accountById(t.linkedAccountId);
       final cur = acc?.currency ?? baseCurrency;
-      final amt = convertToBase(t.expectedAmount.abs(), cur);
+      final amt = convertToBase(t.amountOn(t.dueDate).abs(), cur);
       if (amt == null) {
         spendSilenced = true;
         nwSilenced = true;
@@ -3591,7 +3656,7 @@ class AppStore extends ChangeNotifier {
           date: sd,
           task: task,
           outcome: ScheduleOutcome.skipped,
-          amountInBase: _taskAmountInBase(task),
+          amountInBase: taskAmountInBaseOn(task, sd),
         ));
       }
     }
@@ -3604,7 +3669,7 @@ class AppStore extends ChangeNotifier {
           date: task.dueDate,
           task: task,
           outcome: ScheduleOutcome.cancelled,
-          amountInBase: _taskAmountInBase(task),
+          amountInBase: taskAmountInBaseOn(task, task.dueDate),
         ));
       }
     }
@@ -4839,6 +4904,9 @@ class AppStore extends ChangeNotifier {
     if (rememberAmount) {
       task.expectedAmount = isPayOut ? -amount : amount;
     }
+    // The settled occurrence's per-month override, if any — [_advance] drops
+    // it, so Undo needs it snapshotted (task 064 §7e).
+    final prevOverride = task.amountOverrides[occurrenceDue];
     _advance(task);
     notifyListeners();
     return MarkPaidResult(
@@ -4848,6 +4916,7 @@ class AppStore extends ChangeNotifier {
       previousStatus: prevStatus,
       previousStatusChangedAt: prevChanged,
       previousExpected: prevExpected,
+      previousOverride: prevOverride,
     );
   }
 
@@ -4862,6 +4931,12 @@ class AppStore extends ChangeNotifier {
       ..status = r.previousStatus
       ..statusChangedAt = r.previousStatusChangedAt
       ..expectedAmount = r.previousExpected;
+    // Put back the override the advance consumed with the occurrence (§7e).
+    if (r.previousOverride != null) {
+      final d = DateTime(r.previousDueDate.year, r.previousDueDate.month,
+          r.previousDueDate.day);
+      r.task.amountOverrides[d] = r.previousOverride!;
+    }
     _syncGoalLatches();
     notifyListeners();
   }
@@ -4911,6 +4986,11 @@ class AppStore extends ChangeNotifier {
   void _advance(Task task) {
     if (task.isRecurring) {
       task.dueDate = task.nextOccurrence(task.dueDate);
+      // Overrides for occurrences the series has moved past are spent
+      // (task 064 §7d) — the recorded transaction keeps its own amount.
+      final dueDay =
+          DateTime(task.dueDate.year, task.dueDate.month, task.dueDate.day);
+      task.amountOverrides.removeWhere((k, _) => k.isBefore(dueDay));
     } else {
       task
         ..status = TaskStatus.paid

@@ -4837,7 +4837,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get tdNoPayments =>
-      'Bir ödemeyi işaretlediğinizde ödemeler burada görünür.';
+      'Birini tamamlandı olarak işaretlediğinizde geçmiştekiler burada görünür.';
 
   @override
   String tdPaymentsSince(int count, Object month, Object total) {
@@ -4859,6 +4859,97 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String tdOwesMore(Object account, Object amount) {
     return '$account sana $amount daha borçlu olacak';
+  }
+
+  @override
+  String get tdMarkDone => 'Tamamlandı olarak işaretle';
+
+  @override
+  String tdResultDown(Object account, Object amount) {
+    return '$account $amount azalacak';
+  }
+
+  @override
+  String tdResultUp(Object account, Object amount) {
+    return '$account $amount artacak';
+  }
+
+  @override
+  String tdResultOweMore(Object account, Object amount) {
+    return '$account borcunuz $amount artacak';
+  }
+
+  @override
+  String tdResultDebtDown(Object account, Object amount) {
+    return '$account borcu $amount azalacak';
+  }
+
+  @override
+  String tdOwedByLine(Object account) {
+    return 'Borçlu: $account';
+  }
+
+  @override
+  String tdEndsOn(Object date) {
+    return 'Bitiş $date';
+  }
+
+  @override
+  String tdStripDone(int done, int left) {
+    return 'Sıradaki · $done yapıldı · $left kaldı';
+  }
+
+  @override
+  String tdStripDoneSoFar(int done) {
+    return 'Sıradaki · şu ana dek $done yapıldı';
+  }
+
+  @override
+  String tdStripIn(int count) {
+    return 'Sıradaki · $count gün sonra';
+  }
+
+  @override
+  String tdStripInLeft(int count, int left) {
+    return 'Sıradaki · $count gün sonra · $left kaldı';
+  }
+
+  @override
+  String tdStripDueIn(int count) {
+    return 'Vade · $count gün sonra';
+  }
+
+  @override
+  String tdStripDueLate(int count) {
+    return 'Vade · $count gün gecikti';
+  }
+
+  @override
+  String tdStripLeft(Object amount) {
+    return '$amount kaldı';
+  }
+
+  @override
+  String tdStripYear(Object amount) {
+    return 'yılda $amount';
+  }
+
+  @override
+  String tdUsually(Object amount) {
+    return 'genelde $amount';
+  }
+
+  @override
+  String get tdReset => 'Sıfırla';
+
+  @override
+  String tdOnlyThis(Object date) {
+    return 'Yalnız $date';
+  }
+
+  @override
+  String tdThisAndAfter(Object date) {
+    return '$date ve sonrası';
   }
 
   @override

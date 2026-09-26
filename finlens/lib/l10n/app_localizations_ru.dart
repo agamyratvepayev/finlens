@@ -4970,7 +4970,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get tdNoPayments =>
-      'Платежи появятся здесь, как только вы отметите первый.';
+      'Прошедшие появятся здесь, когда вы отметите один выполненным.';
 
   @override
   String tdPaymentsSince(int count, Object month, Object total) {
@@ -4992,6 +4992,118 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String tdOwesMore(Object account, Object amount) {
     return '$account будет должен вам ещё $amount';
+  }
+
+  @override
+  String get tdMarkDone => 'Отметить выполненным';
+
+  @override
+  String tdResultDown(Object account, Object amount) {
+    return '$account уменьшится на $amount';
+  }
+
+  @override
+  String tdResultUp(Object account, Object amount) {
+    return '$account увеличится на $amount';
+  }
+
+  @override
+  String tdResultOweMore(Object account, Object amount) {
+    return 'Вы будете должны $account ещё $amount';
+  }
+
+  @override
+  String tdResultDebtDown(Object account, Object amount) {
+    return 'Долг по $account уменьшится на $amount';
+  }
+
+  @override
+  String tdOwedByLine(Object account) {
+    return 'Должник: $account';
+  }
+
+  @override
+  String tdEndsOn(Object date) {
+    return 'До $date';
+  }
+
+  @override
+  String tdStripDone(int done, int left) {
+    return 'Далее · выполнено $done · осталось $left';
+  }
+
+  @override
+  String tdStripDoneSoFar(int done) {
+    return 'Далее · уже выполнено $done';
+  }
+
+  @override
+  String tdStripIn(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Далее · через $count дней',
+      few: 'Далее · через $count дня',
+      one: 'Далее · через $count день',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String tdStripInLeft(int count, int left) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Далее · через $count дней · осталось $left',
+      few: 'Далее · через $count дня · осталось $left',
+      one: 'Далее · через $count день · осталось $left',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String tdStripDueIn(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Срок · через $count дней',
+      few: 'Срок · через $count дня',
+      one: 'Срок · через $count день',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String tdStripDueLate(int count) {
+    return 'Срок · просрочено на $count дн.';
+  }
+
+  @override
+  String tdStripLeft(Object amount) {
+    return 'осталось $amount';
+  }
+
+  @override
+  String tdStripYear(Object amount) {
+    return '$amount в год';
+  }
+
+  @override
+  String tdUsually(Object amount) {
+    return 'обычно $amount';
+  }
+
+  @override
+  String get tdReset => 'Сбросить';
+
+  @override
+  String tdOnlyThis(Object date) {
+    return 'Только $date';
+  }
+
+  @override
+  String tdThisAndAfter(Object date) {
+    return '$date и далее';
   }
 
   @override

@@ -139,8 +139,8 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  // ── §2 · the strip: a unit is not a figure ─────────────────────────────────
-  testWidgets('AMOUNT prints the figure and a smaller, separate TMT unit', (
+  // ── §2 · the strip is one thin line (task 064) ─────────────────────────────
+  testWidgets('the strip prints the amount figure and a separate TMT unit', (
     tester,
   ) async {
     _size(tester);
@@ -152,27 +152,14 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    // Cents kept below 1,000 (§2c): "15.99", and PER YEAR = 15.99 × 12.
-    final figure = find.text('15.99');
-    expect(figure, findsOneWidget);
-    expect(find.text('191.88'), findsOneWidget);
-
-    // The currency is a separate unit, not glued into the figure.
-    final unit = find.text('TMT');
-    expect(unit, findsWidgets); // AMOUNT and PER YEAR, both TMT here
-
-    final figureSize = tester.widget<Text>(figure).style!.fontSize!;
-    final unitSize = tester.widget<Text>(unit.first).style!.fontSize!;
-    // The figure sits on one of the three steps and never drops below 15 (§2d);
-    // the code sits on the paired step, and is always the smaller of the two.
-    expect(
-      [18.0, 16.5, 15.0].contains(figureSize),
-      isTrue,
-      reason: 'figure size $figureSize is one of the three steps',
-    );
-    expect(figureSize, greaterThanOrEqualTo(15.0));
-    expect([11.5, 11.0, 10.5].contains(unitSize), isTrue);
-    expect(unitSize, lessThan(figureSize));
+    // Cents kept below 1,000 (058.2 §2c, kept by 064): "15.99". The old
+    // NEXT/AMOUNT/PER YEAR columns are gone — no per-year figure now.
+    expect(find.text('15.99'), findsOneWidget);
+    expect(find.text('191.88'), findsNothing);
+    expect(find.text('NEXT'), findsNothing);
+    expect(find.text('PER YEAR'), findsNothing);
+    // The currency is a separate unit beside the figure.
+    expect(find.text('TMT'), findsWidgets);
   });
 
   testWidgets('a whole amount ≥ 1,000 drops its cents (§2c)', (tester) async {
@@ -185,7 +172,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('4,500'), findsOneWidget);
+    expect(find.text('4,500'), findsWidgets);
     expect(find.text('4,500.00'), findsNothing);
   });
 
@@ -202,15 +189,15 @@ void main() {
     await tester.pumpAndSettle();
 
     // Grouped in full — "15,000,000", not "15M" / "1.5M".
-    expect(find.text('15,000,000'), findsOneWidget);
+    expect(find.text('15,000,000'), findsWidgets);
     expect(find.text('15M'), findsNothing);
     expect(find.text('15.0M'), findsNothing);
     // No overflow at any width.
     expect(tester.takeException(), isNull);
   });
 
-  // ── §3 · the cadence rides the Upcoming label ──────────────────────────────
-  testWidgets('Upcoming carries the long cadence as a footnote', (
+  // ── §3 · the cadence is a pill beside UPCOMING (task 064) ──────────────────
+  testWidgets('Upcoming carries the cadence as a pill, sentence case', (
     tester,
   ) async {
     _size(tester);
@@ -223,12 +210,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('UPCOMING'), findsOneWidget);
-    // Lower-case, not a second label.
-    final cadence = find.text('every month on the 1st');
-    expect(cadence, findsOneWidget);
-    final style = tester.widget<Text>(cadence).style!;
-    expect(style.color, AppColors.textTertiary);
-    expect(style.fontSize, 11.5);
+    // The pill reads the short "Monthly · 1st" form, no longer the lower-cased
+    // full sentence.
+    expect(find.text('Monthly · 1st'), findsOneWidget);
+    expect(find.text('every month on the 1st'), findsNothing);
   });
 
   testWidgets('a one-off task shows no Upcoming section and no cadence', (
@@ -255,9 +240,9 @@ void main() {
 
     expect(find.text('UPCOMING'), findsNothing);
     expect(find.textContaining('every month'), findsNothing);
-    // The strip drops PER YEAR too; it shows DUE and AMOUNT only.
+    // The strip shows the amount but no cadence and no bar for a one-off.
     expect(find.text('PER YEAR'), findsNothing);
-    expect(find.text('DUE'), findsOneWidget);
+    expect(find.text('50'), findsWidgets);
   });
 
   // ── §4 · payment history is not drawn until there is a payment ─────────────
@@ -275,7 +260,7 @@ void main() {
 
     expect(find.text('PAYMENT HISTORY'), findsNothing);
     expect(
-      find.text('Payments show up here once you mark one as paid.'),
+      find.text('Past ones show up here once you mark one as done.'),
       findsOneWidget,
     );
   });
