@@ -3068,6 +3068,32 @@ class AppStore extends ChangeNotifier {
       .where((t) => t.daysUntilDue(today) < 0)
       .toList(growable: false);
 
+  /// The first open occurrence strictly after [day]'s day (task 062 §1b): the
+  /// earliest [Task.dueDate] over [openTasks] whose day is after [day]. Among
+  /// tasks due that same day, ordered as the Schedule list orders them —
+  /// priority (high first), then amount in base (large first); [sameDay] is
+  /// how many *more* share the date. Pure, no side effects. Null when nothing
+  /// is due after [day].
+  ({Task task, DateTime date, int sameDay})? nextOccurrenceAfter(DateTime day) {
+    final after = DateTime(day.year, day.month, day.day);
+    DateTime dayOf(Task t) =>
+        DateTime(t.dueDate.year, t.dueDate.month, t.dueDate.day);
+    final beyond = openTasks.where((t) => dayOf(t).isAfter(after)).toList();
+    if (beyond.isEmpty) return null;
+    var earliest = dayOf(beyond.first);
+    for (final t in beyond.skip(1)) {
+      final d = dayOf(t);
+      if (d.isBefore(earliest)) earliest = d;
+    }
+    final due = beyond.where((t) => dayOf(t) == earliest).toList()
+      ..sort((a, b) {
+        final byPriority = b.priority.index.compareTo(a.priority.index);
+        if (byPriority != 0) return byPriority;
+        return _taskAmountInBase(b).compareTo(_taskAmountInBase(a));
+      });
+    return (task: due.first, date: earliest, sameDay: due.length - 1);
+  }
+
   /// Overdue pay-outs still owed. Applied at day 0 of the projection (§2.4).
   List<Task> get overdueOutflows =>
       overdueTasks.where((t) => t.isPayOut).toList(growable: false);

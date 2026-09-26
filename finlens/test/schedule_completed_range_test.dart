@@ -96,94 +96,82 @@ void main() {
     expect(store.completedRange.preset, RangePreset.thisMonth);
   });
 
-  // ── Zero items: one line + a History link, no period sheet (task 058 §5) ────
-  testWidgets('zero items shows one line and a History link',
+  // ── Task 062 §4: the completed header/expansion is one thin Done row ────────
+  testWidgets('zero events: the Done row reads its empty line and opens History',
       (tester) async {
-    // The seed has no completed events, so `This month` is empty.
+    // The seed has no completed events, so this month is empty.
     await tester.pumpWidget(_app(buildSeedStore()));
     await tester.pumpAndSettle();
 
-    expect(find.text('Nothing completed in this period.'), findsOneWidget);
-    // The empty state is one line + History ›, not the old "Choose a longer
-    // period" that reopened the range sheet (§5).
-    expect(find.text('History ›'), findsOneWidget);
-    expect(find.text('Choose a longer period'), findsNothing);
-    expect(find.byType(AnimatedRotation), findsNothing,
-        reason: 'no chevron when there is nothing to open');
+    // The old header UI is gone.
+    expect(find.text('THIS MONTH COMPLETED'), findsNothing);
+    expect(find.text('Nothing completed in this period.'), findsNothing);
+    expect(find.text('History ›'), findsNothing);
 
-    // The link opens the History screen — never the period sheet.
-    await tester.tap(find.text('History ›'));
+    expect(find.text('DONE THIS MONTH'), findsOneWidget);
+    expect(find.text('Nothing done this month'), findsOneWidget);
+
+    // The row is the tab's only way into History — never a period sheet.
+    await tester.tap(find.text('Nothing done this month'));
     await tester.pumpAndSettle();
     expect(find.text("DIDN'T HAPPEN"), findsOneWidget,
         reason: 'the History screen (its summary columns) should be open');
   });
 
-  // ── The count toggles the card open and closed (§B4) ────────────────────────
-  testWidgets('the count expands and collapses the completed card',
+  testWidgets('one paid event: the row reads 1 done, never expands inline',
       (tester) async {
     final store = buildSeedStore();
-    _payInternetOn(store, DateTime(2026, 8, 8)); // inside `This month`
+    _payInternetOn(store, DateTime(2026, 8, 8)); // inside this month
     await tester.pumpWidget(_app(store));
     await tester.pumpAndSettle();
 
-    expect(find.text('1 item'), findsOneWidget);
-    expect(find.byType(ScheduleEventRow), findsNothing);
+    expect(find.text('1 done'), findsOneWidget);
+    expect(find.byType(ScheduleEventRow), findsNothing,
+        reason: 'the inline expansion is gone (task 062 §4)');
 
-    await tester.tap(find.text('1 item'));
+    // A tap opens History, where the rows now live.
+    await tester.tap(find.text('1 done'));
     await tester.pumpAndSettle();
     expect(find.byType(ScheduleEventRow), findsWidgets);
-
-    await tester.tap(find.text('1 item'));
-    await tester.pumpAndSettle();
-    expect(find.byType(ScheduleEventRow), findsNothing);
   });
 
-  // ── Picking a preset changes both the header label and the query (§B1/B7) ───
-  testWidgets('picking Last 3 months re-labels the header and re-queries',
-      (tester) async {
+  // ── The Done row is always this month, whatever completedRange holds ────────
+  testWidgets('the Done row ignores store.completedRange', (tester) async {
     final store = buildSeedStore();
-    _payInternetOn(store, DateTime(2026, 6, 15)); // in last-3-months, not in-month
+    _payInternetOn(store, DateTime(2026, 6, 15)); // June — not this month
+    store.setCompletedRange(RangePreset.last3Months.resolve(today));
     await tester.pumpWidget(_app(store));
     await tester.pumpAndSettle();
 
-    // `This month` sees nothing — the June payment is out of window.
-    expect(find.text('THIS MONTH COMPLETED'), findsOneWidget);
-    expect(find.text('0 items'), findsOneWidget);
-
-    await tester.tap(find.text('THIS MONTH COMPLETED'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Last 3 months'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('LAST 3 MONTHS COMPLETED'), findsOneWidget);
-    expect(find.text('1 item'), findsOneWidget,
-        reason: 'the section re-queried against the new range');
+    // Last 3 months would see the June payment; the row must not (§4b).
+    expect(find.text('Nothing done this month'), findsOneWidget);
+    expect(find.text('1 done'), findsNothing);
   });
 
-  // ── The forward horizon and the completed section are independent (§B2) ─────
-  testWidgets('changing the forward horizon leaves the completed section alone',
+  // ── The forward horizon and the Done row are independent ────────────────────
+  testWidgets('changing the forward horizon leaves the Done row alone',
       (tester) async {
     final store = buildSeedStore();
+    _payInternetOn(store, DateTime(2026, 8, 8));
     await tester.pumpWidget(_app(store,
         horizon: const ScheduleHorizon.preset(SchedulePreset.next30)));
     await tester.pumpAndSettle();
-    expect(find.text('THIS MONTH COMPLETED'), findsOneWidget);
+    expect(find.text('1 done'), findsOneWidget);
 
-    // A different forward horizon — the completed header must not move.
     await tester.pumpWidget(_app(store,
         horizon: const ScheduleHorizon.preset(SchedulePreset.next3Months)));
     await tester.pumpAndSettle();
-    expect(find.text('THIS MONTH COMPLETED'), findsOneWidget);
+    expect(find.text('1 done'), findsOneWidget);
   });
 
-  // ── 320 pt, tr, the longest label — no overflow (§B6) ───────────────────────
-  testWidgets('no overflow on the header row at 320 pt in tr', (tester) async {
+  // ── 320 pt, tr — no overflow (§7) ───────────────────────────────────────────
+  testWidgets('no overflow on the Done section at 320 pt in tr', (tester) async {
     tester.view.physicalSize = const Size(320, 568);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
 
-    final store = buildSeedStore()
-      ..setCompletedRange(RangePreset.last3Months.resolve(today));
+    final store = buildSeedStore();
+    _payInternetOn(store, DateTime(2026, 8, 8));
     await tester.pumpWidget(_app(store, locale: const Locale('tr')));
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);

@@ -9,6 +9,7 @@ import '../../core/utils/formatters.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/amount_text.dart';
 import '../../shared/widgets/rate_missing.dart';
+import '../../shared/widgets/ratio_bar.dart';
 import '../../shared/widgets/screen_header.dart';
 import '../../shared/widgets/section_header.dart';
 import '../../shared/widgets/undo_bar.dart';
@@ -453,13 +454,19 @@ class _BalanceScreenState extends State<BalanceScreen> {
                             // the two blocks under it — so hanging it off the
                             // figure above misreads it as part of the number.
                             const SizedBox(height: 14),
-                            _RatioBar(
-                              assets:
+                            // Task 050's private _RatioBar, now the shared
+                            // RatioBar (task 062): assets first, 3 pt, and a
+                            // neutral track when everything is hidden.
+                            RatioBar(
+                              left:
                                   filter.sectionTotal(store, assets: true) ?? 0,
-                              liabilities:
+                              right:
                                   (filter.sectionTotal(store, assets: false) ??
                                           0)
                                       .abs(),
+                              leftColor: AppColors.positive,
+                              rightColor: AppColors.negative,
+                              emptyColor: AppColors.surfaceHigh,
                             ),
                           ],
                           // A silenced total means at least one in-use currency
@@ -1752,64 +1759,6 @@ class _ListSectionHeader extends StatelessWidget {
       ),
     );
   }
-}
-
-class _RatioBar extends StatelessWidget {
-  const _RatioBar({required this.assets, required this.liabilities});
-
-  /// Both filtered magnitudes (liabilities passed as a positive number).
-  final double assets;
-  final double liabilities;
-
-  @override
-  Widget build(BuildContext context) {
-    // Task 050: the bar always spans the header's full content width. The
-    // header column is `CrossAxisAlignment.start`, so it hands its children a
-    // loose width (min 0). The two-sided Row expanded to the max on its own,
-    // but a childless DecoratedBox sizes to `constraints.smallest` — the
-    // one-sided and empty branches drew at 0 width and the bar vanished for a
-    // single account. `width: double.infinity` makes every branch tight to
-    // the available width, so all four states share one geometry.
-    return SizedBox(
-      width: double.infinity,
-      height: 3,
-      child: _fill(),
-    );
-  }
-
-  Widget _fill() {
-    final total = assets + liabilities;
-    // Everything hidden: no ratio to draw — a flat neutral track (spec §5),
-    // and the guard that keeps the division below safe.
-    if (total <= 0) return _seg(AppColors.surfaceHigh);
-    // One side fully hidden reads as a single solid bar, not a bar with a
-    // 1-flex sliver of the other colour.
-    if (liabilities <= 0) return _seg(AppColors.positive);
-    if (assets <= 0) return _seg(AppColors.negative);
-
-    final ratio = (liabilities / total).clamp(0.0, 1.0);
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Expanded(
-          flex: ((1 - ratio) * 1000).round().clamp(1, 1000),
-          child: _seg(AppColors.positive),
-        ),
-        const SizedBox(width: 1.5),
-        Expanded(
-          flex: (ratio * 1000).round().clamp(1, 1000),
-          child: _seg(AppColors.negative),
-        ),
-      ],
-    );
-  }
-
-  Widget _seg(Color color) => DecoratedBox(
-    decoration: BoxDecoration(
-      color: color,
-      borderRadius: BorderRadius.circular(2),
-    ),
-  );
 }
 
 /// The as-of control. Accent while the view is historical (task 038): a

@@ -3,7 +3,6 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 
-import '../../core/l10n/enum_labels.dart';
 import '../../core/models/models.dart';
 import '../../core/store/app_store.dart';
 import '../../core/utils/date_range.dart';
@@ -12,7 +11,7 @@ import '../../core/utils/repeat_labels.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/amount_text.dart';
 import '../../shared/widgets/app_card.dart';
-import '../../shared/widgets/range_picker_sheet.dart';
+import '../../shared/widgets/ratio_bar.dart';
 import '../../shared/widgets/screen_header.dart';
 import '../../shared/widgets/swipe_actions.dart';
 import '../../theme/app_colors.dart';
@@ -51,10 +50,10 @@ class _Section {
   final List<_Occurrence> occurrences;
   final bool isOverdue;
 
-  /// Print the out/in figures only when the reader cannot add them up at a
-  /// glance — three rows or more (§3b). No overdue exception any more: a section
-  /// of one or two rows never repeats its own numbers.
-  bool get showsSectionTotal => occurrences.length > 2;
+  /// Show the count and the ratio bar from two rows up (task 062 §3a): a
+  /// one-row section never repeats its own number. No overdue exception — the
+  /// Overdue section follows the same rule.
+  bool get showsSectionTotal => occurrences.length > 1;
 }
 
 /// Orders a section by date, then priority (high first), then amount (§1c/§3.1).
@@ -174,8 +173,6 @@ class ScheduleTab extends StatefulWidget {
 }
 
 class _ScheduleTabState extends State<ScheduleTab> {
-  bool _completedExpanded = false;
-
   @override
   Widget build(BuildContext context) {
     final store = widget.store;
@@ -198,29 +195,58 @@ class _ScheduleTabState extends State<ScheduleTab> {
     final breach = store.firstShortfall(h);
     final breachOcc = _breachOccurrence(store, h, breach?.day);
 
-    // The completed section ranges over the past with its own stored control,
-    // wholly independent of the forward horizon (§B2).
-    final completedRange = store.completedRange;
-    final events = store.scheduleEvents(completedRange);
+    // Done this month is fixed to the current calendar month (task 062 §4b):
+    // the tab no longer reads or writes store.completedRange — History carries
+    // the period control for every other range.
+    final events =
+        store.scheduleEvents(RangePreset.thisMonth.resolve(today));
+
+    // The empty window (task 062 §1): open tasks exist but none falls inside
+    // the horizon (overdue is always inside, so nothing is owed either). The
+    // block centres in the free space above the Done section and names the
+    // next payment; at very small sizes it scrolls instead of overflowing.
+    if (sections.isEmpty) {
+      return Column(
+        children: [
+          Expanded(
+            child: LayoutBuilder(
+              builder: (context, c) => SingleChildScrollView(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: c.maxHeight),
+                  child: Center(
+                    child: _EmptyWindow(
+                      store: store,
+                      horizon: widget.horizon,
+                      onShow: (day) => widget
+                          .onHorizonChange(ScheduleHorizon.until(day)),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          _DoneSection(store: store, events: events),
+          const SizedBox(height: Insets.xxl),
+        ],
+      );
+    }
 
     return ListView(
       padding: const EdgeInsets.only(bottom: Insets.xxl),
       children: [
-        if (sections.isEmpty)
-          _nothingDue(context, l)
-        else
           for (final section in sections) ...[
             SectionLabel(
               section.label,
-              // The figures end where the row amounts do — 62 pt from the screen
-              // edge (12 pad + 44 tick + 6 gap), so 42 past the gutter (§3c).
+              // The count, not the figures (task 062 §3b): the total moved
+              // under the label as a ratio bar with its ends on the gutters.
               trailing: section.showsSectionTotal
-                  ? Padding(
-                      padding: const EdgeInsets.only(right: 42),
-                      child: _sectionFigures(section),
+                  ? Text(
+                      l.schItemsCount(section.occurrences.length),
+                      style: AppText.label.copyWith(letterSpacing: 0.3),
                     )
                   : null,
             ),
+            if (section.showsSectionTotal) _sectionBar(l, section),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: Insets.gutter),
               // The swipe strip paints to the row's edge; clip it to the card's
@@ -248,38 +274,9 @@ class _ScheduleTabState extends State<ScheduleTab> {
               ),
             ),
           ],
-        _CompletedSection(
-          store: store,
-          events: events,
-          range: completedRange,
-          expanded: _completedExpanded,
-          onToggle: () =>
-              setState(() => _completedExpanded = !_completedExpanded),
-          onPickRange: _pickCompletedRange,
-        ),
+        _DoneSection(store: store, events: events),
       ],
     );
-  }
-
-  /// Opens the shared range-picker sheet for the completed section and stores the
-  /// choice (§B1, §B3). A preset persists as its preset; a custom range as its
-  /// dates. `disableFuture` is the sheet's default — completed events are past.
-  Future<void> _pickCompletedRange() async {
-    final store = widget.store;
-    final picked = await showRangePickerSheet(
-      context,
-      current: store.completedRange,
-      hasData: (day) => store
-          .scheduleEvents(DateRange(
-            DateTime(day.year, day.month, day.day),
-            DateTime(day.year, day.month, day.day, 23, 59, 59, 999),
-          ))
-          .isNotEmpty,
-      countBetween: (from, to) =>
-          store.scheduleEvents(DateRange(from, to)).length,
-    );
-    if (picked == null || !mounted) return;
-    store.setCompletedRange(picked);
   }
 
   /// Matches an occurrence to the breach by identity — (task id, date) — never by
@@ -287,60 +284,187 @@ class _ScheduleTabState extends State<ScheduleTab> {
   bool _isBreach(_Occurrence o, _Occurrence? breach) =>
       breach != null && o.task.id == breach.task.id && o.date == breach.date;
 
-  /// A section prints what leaves and what lands, never a net (§3a): `−out` in
-  /// negative at 85 %, `+in` in positive at 85 %, 8 pt apart. A side with no
-  /// amount is omitted entirely.
-  Widget _sectionFigures(_Section section) {
+  /// A section's total as a proportion, not a floating pair of numbers
+  /// (task 062 §3c): a 2 pt bar between the label and the card, its two
+  /// segments flexed to what leaves and what lands, and the unsigned figures
+  /// on the gutters — `{out} out` left, `{in} in` right. The words carry the
+  /// direction; there is no sign. A side with no amount is omitted but the
+  /// other keeps its edge; a section with no amounts at all draws no block.
+  Widget _sectionBar(AppLocalizations l, _Section section) {
+    final store = widget.store;
     var out = 0.0, income = 0.0;
     for (final o in section.occurrences) {
-      final amt = widget.store.taskAmountInBase(o.task);
+      final amt = store.taskAmountInBase(o.task);
       if (o.task.isPayOut) {
         out += amt;
       } else {
         income += amt;
       }
     }
-    final style = AppText.label.copyWith(fontSize: 11, fontWeight: FontWeight.w600);
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        if (out > 0)
-          AmountText(
-            -out,
-            style: style,
-            color: AppColors.negative.withValues(alpha: 0.85),
-          ),
-        if (out > 0 && income > 0) const SizedBox(width: 8),
-        if (income > 0)
-          AmountText(
-            income,
-            showSign: true,
-            style: style,
-            color: AppColors.positive.withValues(alpha: 0.85),
-          ),
-      ],
-    );
-  }
+    if (out <= 0 && income <= 0) return const SizedBox.shrink();
 
-  Widget _nothingDue(BuildContext context, AppLocalizations l) {
+    const figStyle = TextStyle(
+      fontSize: 11.5,
+      fontWeight: FontWeight.w600,
+      fontFeatures: [FontFeature.tabularFigures()],
+    );
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 40, horizontal: Insets.gutter),
+      padding: const EdgeInsets.fromLTRB(Insets.gutter, 0, Insets.gutter, 10),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Center(
-            child: Text(l.schNothingInHorizon,
-                style: AppText.body.copyWith(color: AppColors.textSecondary)),
+          RatioBar(
+            left: out,
+            right: income,
+            leftColor: AppColors.negative,
+            rightColor: AppColors.positive,
+            height: 2,
           ),
-          const SizedBox(height: Insets.sm),
-          TextButton(
-            onPressed: () => widget.onHorizonChange(
-                const ScheduleHorizon.preset(SchedulePreset.next3Months)),
-            style: TextButton.styleFrom(foregroundColor: AppColors.accentLight),
-            child: Text(l.schShowNext3Months),
+          const SizedBox(height: 6),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              if (out > 0)
+                Text(
+                  l.schAmountOut(money(out, masked: store.masked)),
+                  style: figStyle.copyWith(color: AppColors.amountChildNeg),
+                )
+              else
+                const SizedBox.shrink(),
+              if (income > 0)
+                Text(
+                  l.schAmountIn(money(income, masked: store.masked)),
+                  style: figStyle.copyWith(
+                      color: AppColors.positive.withValues(alpha: 0.85)),
+                ),
+            ],
           ),
         ],
       ),
     );
+  }
+}
+
+// ── The empty window (task 062 §1) ───────────────────────────────────────────
+
+/// Open tasks exist, none inside the horizon: name the next payment and offer
+/// one button that shows it. With no next occurrence at all only the icon and
+/// the title render.
+class _EmptyWindow extends StatelessWidget {
+  const _EmptyWindow({
+    required this.store,
+    required this.horizon,
+    required this.onShow,
+  });
+
+  final AppStore store;
+  final ScheduleHorizon horizon;
+  final ValueChanged<DateTime> onShow;
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final today = store.today;
+    final h = horizon.range(today);
+    final next = store.nextOccurrenceAfter(h.end);
+
+    final title = switch (horizon.preset) {
+      SchedulePreset.thisWeek => l.schEmptyThisWeek,
+      SchedulePreset.next30 => l.schEmptyNext30,
+      SchedulePreset.thisMonth => l.schEmptyThisMonth,
+      SchedulePreset.next3Months => l.schEmptyNext3Months,
+      null => l.schEmptyThrough(dayMonth(horizon.customEnd!, l)),
+    };
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 36),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 72,
+            height: 72,
+            decoration: BoxDecoration(
+              color: AppColors.tint(AppColors.positive, 0.14),
+              borderRadius: BorderRadius.circular(24),
+            ),
+            child: const Icon(Icons.event_available_rounded,
+                size: 34, color: AppColors.positive),
+          ),
+          const SizedBox(height: 20),
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 21,
+              fontWeight: FontWeight.w700,
+              letterSpacing: -0.3,
+              height: 25 / 21,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          if (next != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              _nextLine(l, next),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 14,
+                height: 18 / 14,
+                color: AppColors.textSecondary,
+              ),
+            ),
+            const SizedBox(height: 22),
+            Semantics(
+              button: true,
+              child: Material(
+                color: AppColors.accent,
+                borderRadius: BorderRadius.circular(Radii.pill),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(Radii.pill),
+                  // Nothing is paid, created or scrolled (§1d): the horizon
+                  // widens to the next occurrence's own day and the tab
+                  // re-renders with it in its first section.
+                  onTap: () => onShow(next.date),
+                  child: Container(
+                    height: 38,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    alignment: Alignment.center,
+                    child: Text(
+                      l.schShowNextPayment,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// `Next: {name} on {date} · {amount}` — the date via [dayMonth], with the
+  /// year only when it is not this year; the amount unsigned, in the task's
+  /// own currency (its account's), masked mode respected. Same-day ties read
+  /// `and {count} more` with the first task's amount.
+  String _nextLine(
+      AppLocalizations l, ({Task task, DateTime date, int sameDay}) next) {
+    final task = next.task;
+    final account = store.accountById(task.linkedAccountId);
+    final amount = money(task.expectedAmount.abs(),
+        currency: account?.currency, masked: store.masked);
+    final date = next.date.year == store.today.year
+        ? dayMonth(next.date, l)
+        : dayMonthYear(next.date, l);
+    return next.sameDay > 0
+        ? l.schNextLineMore(task.title, next.sameDay, date, amount)
+        : l.schNextLine(task.title, date, amount);
   }
 }
 
@@ -688,118 +812,134 @@ class _ShortfallMarker extends StatelessWidget {
   }
 }
 
-// ── Completed section, in-tab (§5) ──────────────────────────────────────────
+// ── Done this month — one thin row at the end (task 062 §4) ──────────────────
 
-class _CompletedSection extends StatelessWidget {
-  const _CompletedSection({
-    required this.store,
-    required this.events,
-    required this.range,
-    required this.expanded,
-    required this.onToggle,
-    required this.onPickRange,
-  });
+/// The tab's last section: a DONE THIS MONTH label and a single 34 pt row that
+/// opens History. Always the current calendar month — History's own period
+/// control is where another period is chosen. Transfers are counted in the
+/// `{n} done` text but never summed: a transfer moves the user's own money and
+/// is neither a gain nor a loss (§5). The row's figures carry direction by
+/// colour alone — the user's explicit choice for this one row.
+class _DoneSection extends StatelessWidget {
+  const _DoneSection({required this.store, required this.events});
 
   final AppStore store;
   final List<ScheduleEvent> events;
-  final DateRange range;
-  final bool expanded;
-  final VoidCallback onToggle;
-  final VoidCallback onPickRange;
+
+  void _openHistory(BuildContext context) {
+    Navigator.of(context, rootNavigator: true).push(
+      MaterialPageRoute(builder: (_) => const ScheduleHistoryScreen()),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final headerStyle = AppText.label.copyWith(color: AppColors.textSecondary);
-    final hasEvents = events.isNotEmpty;
 
-    // The chosen range's own name — a preset by its preset label, a custom range
-    // by its compressed day-range label — folded into "… completed" (§B1).
-    final rangeLabel = range.preset?.label(l) ??
-        range.label(StoreScope.of(context).today, l);
-    final headerText = l.schCompletedIn(rangeLabel).toUpperCase();
+    var done = 0, skipped = 0;
+    var red = 0.0, green = 0.0;
+    for (final e in events) {
+      switch (e.outcome) {
+        case ScheduleOutcome.paid:
+          done++;
+          // Counted, never summed (§5): paid covers transfer tasks too.
+          if (!e.task.isTransfer) red += e.amountInBase;
+        case ScheduleOutcome.received:
+          done++;
+          green += e.amountInBase;
+        case ScheduleOutcome.skipped:
+        case ScheduleOutcome.cancelled:
+          // Cancelled counts as skipped in the row's fallback text.
+          skipped++;
+      }
+    }
+    final text = events.isEmpty
+        ? l.schNothingDoneThisMonth
+        : done > 0
+            ? l.schDoneCount(done)
+            : l.schSkippedCount(skipped);
+    final textColor =
+        events.isEmpty ? AppColors.textTertiary : AppColors.chipText;
 
-    final count = Text(l.schItemsCount(events.length), style: headerStyle);
+    const figStyle = TextStyle(
+      fontSize: 12.5,
+      fontWeight: FontWeight.w600,
+      fontFeatures: [FontFeature.tabularFigures()],
+    );
+
+    final row = Row(
+      children: [
+        const Icon(Icons.check_circle_outline_rounded,
+            size: 15, color: AppColors.positive),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            text,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+                fontSize: 13, fontWeight: FontWeight.w500, color: textColor),
+          ),
+        ),
+        if (red > 0)
+          AmountText(red,
+              kind: AmountKind.magnitude,
+              style: figStyle,
+              color: AppColors.negative),
+        if (red > 0 && green > 0) const SizedBox(width: 8),
+        if (green > 0)
+          AmountText(green,
+              kind: AmountKind.magnitude,
+              style: figStyle,
+              color: AppColors.positive),
+        const SizedBox(width: 6),
+        const Icon(Icons.chevron_right_rounded,
+            size: 14, color: AppColors.formChevron),
+      ],
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        SectionLabel(
+          l.schDoneThisMonth,
+          // Top 22 (Insets.lg + 6, §4a). The bottom gives back the 5 pt the
+          // 44 pt hit area adds above the 34 pt card, so the visual label→card
+          // gap stays the standard Insets.sm.
+          padding: const EdgeInsets.fromLTRB(
+              Insets.gutter, Insets.lg + 6, Insets.gutter, Insets.sm - 5),
+        ),
         Padding(
-          // Vertical whitespace comes from the two ≥44pt tap targets below, not
-          // the outer padding — keeping the header near its old height (§B4).
-          padding: const EdgeInsets.fromLTRB(Insets.gutter, Insets.xs, Insets.gutter, 0),
-          child: Row(
-            children: [
-              // Left: the period control — a real choice (§B1). Accent, so it
-              // reads as a chooser, not a toggle.
-              Expanded(
-                child: InkWell(
-                  onTap: onPickRange,
-                  borderRadius: BorderRadius.circular(Radii.sm),
-                  child: Container(
-                    constraints: const BoxConstraints(minHeight: 44),
-                    alignment: AlignmentDirectional.centerStart,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Flexible(
-                          child: Text(
-                            headerText,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 10.5,
-                              height: 1.2,
-                              fontWeight: FontWeight.w500,
-                              letterSpacing: 0.63, // 0.06em @ 10.5pt
-                              color: AppColors.accentLight,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        const Icon(Icons.keyboard_arrow_down_rounded,
-                            size: 16, color: AppColors.accentLight),
-                      ],
+          padding: const EdgeInsets.symmetric(horizontal: Insets.gutter),
+          // The tap target is 44 while the card stays a visible 34 (§4c): the
+          // opaque hit area is the 44 pt box, the card centred inside it.
+          child: Semantics(
+            button: true,
+            label: '${l.schDoneThisMonth} $text',
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => _openHistory(context),
+              child: SizedBox(
+                height: 44,
+                child: Center(
+                  child: AppCard(
+                    radius: Radii.md,
+                    child: Container(
+                      height: 34,
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: Insets.md),
+                      child: row,
                     ),
                   ),
                 ),
               ),
-              const SizedBox(width: Insets.sm),
-              // Right: the count. Grey, so it reads as expand/collapse rather
-              // than competing with the accent picker (§B4). At zero items there
-              // is nothing to open — no chevron, and the count is not tappable.
-              if (hasEvents)
-                InkWell(
-                  onTap: onToggle,
-                  borderRadius: BorderRadius.circular(Radii.sm),
-                  child: Container(
-                    constraints: const BoxConstraints(minHeight: 44),
-                    alignment: Alignment.center,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        count,
-                        const SizedBox(width: Insets.xs),
-                        AnimatedRotation(
-                          turns: expanded ? 0.25 : 0.0,
-                          duration: const Duration(milliseconds: 160),
-                          child: const Icon(Icons.chevron_right_rounded,
-                              size: 18, color: AppColors.textSecondary),
-                        ),
-                      ],
-                    ),
-                  ),
-                )
-              else
-                count,
-            ],
+            ),
           ),
         ),
-        if (expanded && hasEvents) _expanded(context, l),
-        if (!hasEvents) _emptyLines(context, l),
         if (store.pausedTasks.isNotEmpty)
           Padding(
-            padding: const EdgeInsets.fromLTRB(Insets.gutter, Insets.sm, Insets.gutter, 0),
+            padding: const EdgeInsets.fromLTRB(
+                Insets.gutter, Insets.sm, Insets.gutter, 0),
             child: InkWell(
               onTap: () => Navigator.of(context, rootNavigator: true).push(
                 MaterialPageRoute(builder: (_) => const ArchiveScreen()),
@@ -811,106 +951,6 @@ class _CompletedSection extends StatelessWidget {
             ),
           ),
       ],
-    );
-  }
-
-  /// Zero items: one line (§5/§D.5). A sentence, then a `History ›` link that
-  /// opens the History screen — not the period sheet: changing the period from an
-  /// empty state is a surprise, and History carries its own period control.
-  Widget _emptyLines(BuildContext context, AppLocalizations l) {
-    return Padding(
-      padding:
-          const EdgeInsets.fromLTRB(Insets.gutter, Insets.sm, Insets.gutter, 0),
-      child: Row(
-        children: [
-          Flexible(
-            child: Text(
-              l.schCompletedEmpty,
-              style: AppText.caption.copyWith(color: AppColors.textTertiary),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          const SizedBox(width: 8),
-          InkWell(
-            onTap: () => Navigator.of(context, rootNavigator: true).push(
-              MaterialPageRoute(builder: (_) => const ScheduleHistoryScreen()),
-            ),
-            child: Text(
-              l.schHistoryLink,
-              style: AppText.caption.copyWith(
-                  fontWeight: FontWeight.w500, color: AppColors.accentLight),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _expanded(BuildContext context, AppLocalizations l) {
-    // Fill the space left below the last section, then a See all footer (§5.1).
-    // A viewport-relative estimate stands in for a true measurement.
-    final h = MediaQuery.of(context).size.height;
-    final fit = ((h - 480) / 45).floor().clamp(3, 12);
-    final shown = events.take(fit).toList();
-    final hasMore = events.length > fit;
-
-    var out = 0.0, income = 0.0, didnt = 0;
-    for (final e in events) {
-      switch (e.outcome) {
-        case ScheduleOutcome.paid:
-          out += e.amountInBase;
-        case ScheduleOutcome.received:
-          income += e.amountInBase;
-        case ScheduleOutcome.skipped:
-        case ScheduleOutcome.cancelled:
-          didnt++;
-      }
-    }
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: Insets.gutter),
-      child: AppCard(
-        child: Column(
-          children: [
-            for (var i = 0; i < shown.length; i++) ...[
-              if (i > 0) const RowDivider(indent: 51),
-              ScheduleEventRow(store: store, event: shown[i]),
-            ],
-            const RowDivider(indent: Insets.md),
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 10),
-              child: Center(
-                child: Text(
-                  l.schCompletedFooter(
-                    money(out, masked: store.masked),
-                    money(income, masked: store.masked),
-                    didnt,
-                  ),
-                  style: AppText.caption,
-                ),
-              ),
-            ),
-            if (hasMore) ...[
-              const RowDivider(indent: Insets.md),
-              InkWell(
-                onTap: () => Navigator.of(context, rootNavigator: true).push(
-                  MaterialPageRoute(
-                      builder: (_) => const ScheduleHistoryScreen()),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  child: Center(
-                    child: Text(l.schSeeAll(events.length),
-                        style: AppText.caption.copyWith(
-                            fontSize: 13.5, color: AppColors.accentLight)),
-                  ),
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
     );
   }
 }

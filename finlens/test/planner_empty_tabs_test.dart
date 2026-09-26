@@ -249,8 +249,8 @@ void main() {
     expect(hint(), findsOneWidget);
   });
 
-  testWidgets('tasks outside the horizon: horizon control stays, _nothingDue '
-      'renders unchanged', (tester) async {
+  testWidgets('tasks outside the horizon: horizon control stays, the empty '
+      'window names the next payment', (tester) async {
     bigScreen(tester);
     final store = futureTaskStore();
     // The task is open (so not "no tasks at all") but past Next 30 days.
@@ -260,12 +260,16 @@ void main() {
     await tester.pumpWidget(wrap(store, const PlannerScreen()));
     await tapTab(tester, 'Schedule');
 
-    // The control is the way out — it is how the "next 3 months" link reaches
-    // the deferred task, so it must not hide.
+    // The control stays — the empty window's "Show next payment" widens the
+    // horizon through onHorizonChange, and the control shows where it landed.
     expect(find.byType(ScheduleControl), findsOneWidget);
-    // _nothingDue, not _emptyState.
-    expect(find.text('Nothing due in this window'), findsOneWidget);
-    expect(find.text('Show next 3 months ›'), findsOneWidget);
+    // The empty window (task 062 §1): the horizon's own title, the next line
+    // and one button. The old sentence and the 3-months guess are gone.
+    expect(find.text('Nothing due in the next 30 days'), findsOneWidget);
+    expect(find.textContaining('Next: Rent on 1 Nov'), findsOneWidget);
+    expect(find.text('Show next payment'), findsOneWidget);
+    expect(find.text('Nothing due in this window'), findsNothing);
+    expect(find.text('Show next 3 months ›'), findsNothing);
     expect(find.byType(EmptyState), findsNothing);
   });
 

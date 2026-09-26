@@ -45,10 +45,14 @@ void main() {
     }
   });
 
-  test('the pre-existing shortfall is unchanged at 35 keys per locale', () {
+  test('the pre-existing shortfall is unchanged at 34 keys per locale', () {
+    // Re-pinned 35 → 34 during task 062: the tree already sat at 34 before the
+    // task touched the ARBs (one key had been translated since the pin).
+    // Task 062 itself added its keys to all four locales, leaving the gap
+    // untouched.
     final en = keys('en');
     for (final locale in ['ru', 'tr', 'tk']) {
-      expect(en.difference(keys(locale)).length, 35,
+      expect(en.difference(keys(locale)).length, 34,
           reason: '$locale drifted from the pinned pre-existing gap');
     }
   });

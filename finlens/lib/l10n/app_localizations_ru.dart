@@ -4391,7 +4391,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String schUntilControl(Object date) {
-    return 'До $date';
+    return 'Сегодня – $date';
   }
 
   @override
@@ -4541,6 +4541,82 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get schShowNext3Months => 'Показать следующие 3 месяца ›';
+
+  @override
+  String get schEmptyThisWeek => 'На этой неделе платежей нет';
+
+  @override
+  String get schEmptyNext30 => 'В ближайшие 30 дней платежей нет';
+
+  @override
+  String get schEmptyThisMonth => 'В этом месяце платежей нет';
+
+  @override
+  String get schEmptyNext3Months => 'В ближайшие 3 месяца платежей нет';
+
+  @override
+  String schEmptyThrough(Object date) {
+    return 'По $date платежей нет';
+  }
+
+  @override
+  String schNextLine(Object name, Object date, Object amount) {
+    return 'Далее: $name, $date · $amount';
+  }
+
+  @override
+  String schNextLineMore(Object name, int count, Object date, Object amount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'ещё $count',
+      one: 'ещё $count',
+    );
+    return 'Далее: $name и $_temp0, $date · $amount';
+  }
+
+  @override
+  String get schShowNextPayment => 'Показать следующий платёж';
+
+  @override
+  String schAmountOut(Object amount) {
+    return '$amount исходящих';
+  }
+
+  @override
+  String schAmountIn(Object amount) {
+    return '$amount входящих';
+  }
+
+  @override
+  String get schDoneThisMonth => 'Выполнено в этом месяце';
+
+  @override
+  String schDoneCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count выполнено',
+      few: '$count выполнено',
+      one: '$count выполнен',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String schSkippedCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count пропущено',
+      few: '$count пропущено',
+      one: '$count пропущен',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get schNothingDoneThisMonth => 'В этом месяце ничего не выполнено';
 
   @override
   String schDaysLate(int count) {

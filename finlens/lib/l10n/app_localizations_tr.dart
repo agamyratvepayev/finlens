@@ -4291,7 +4291,7 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String schUntilControl(Object date) {
-    return '$date tarihine kadar';
+    return 'Bugün – $date';
   }
 
   @override
@@ -4423,6 +4423,80 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get schShowNext3Months => 'Sonraki 3 ayı göster ›';
+
+  @override
+  String get schEmptyThisWeek => 'Bu hafta ödeme yok';
+
+  @override
+  String get schEmptyNext30 => 'Önümüzdeki 30 günde ödeme yok';
+
+  @override
+  String get schEmptyThisMonth => 'Bu ay ödeme yok';
+
+  @override
+  String get schEmptyNext3Months => 'Önümüzdeki 3 ayda ödeme yok';
+
+  @override
+  String schEmptyThrough(Object date) {
+    return '$date tarihine dek ödeme yok';
+  }
+
+  @override
+  String schNextLine(Object name, Object date, Object amount) {
+    return 'Sıradaki: $name, $date · $amount';
+  }
+
+  @override
+  String schNextLineMore(Object name, int count, Object date, Object amount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count öğe daha',
+      one: '$count öğe daha',
+    );
+    return 'Sıradaki: $name ve $_temp0, $date · $amount';
+  }
+
+  @override
+  String get schShowNextPayment => 'Sıradaki ödemeyi göster';
+
+  @override
+  String schAmountOut(Object amount) {
+    return '$amount çıkan';
+  }
+
+  @override
+  String schAmountIn(Object amount) {
+    return '$amount gelen';
+  }
+
+  @override
+  String get schDoneThisMonth => 'Bu ay tamamlanan';
+
+  @override
+  String schDoneCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count tamamlandı',
+      one: '$count tamamlandı',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String schSkippedCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count atlandı',
+      one: '$count atlandı',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get schNothingDoneThisMonth => 'Bu ay tamamlanan yok';
 
   @override
   String schDaysLate(int count) {

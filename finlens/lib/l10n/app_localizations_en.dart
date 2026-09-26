@@ -4305,7 +4305,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String schUntilControl(Object date) {
-    return 'Until $date';
+    return 'Today – $date';
   }
 
   @override
@@ -4455,6 +4455,80 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get schShowNext3Months => 'Show next 3 months ›';
+
+  @override
+  String get schEmptyThisWeek => 'Nothing due this week';
+
+  @override
+  String get schEmptyNext30 => 'Nothing due in the next 30 days';
+
+  @override
+  String get schEmptyThisMonth => 'Nothing due this month';
+
+  @override
+  String get schEmptyNext3Months => 'Nothing due in the next 3 months';
+
+  @override
+  String schEmptyThrough(Object date) {
+    return 'Nothing due through $date';
+  }
+
+  @override
+  String schNextLine(Object name, Object date, Object amount) {
+    return 'Next: $name on $date · $amount';
+  }
+
+  @override
+  String schNextLineMore(Object name, int count, Object date, Object amount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count more',
+      one: '$count more',
+    );
+    return 'Next: $name and $_temp0 on $date · $amount';
+  }
+
+  @override
+  String get schShowNextPayment => 'Show next payment';
+
+  @override
+  String schAmountOut(Object amount) {
+    return '$amount out';
+  }
+
+  @override
+  String schAmountIn(Object amount) {
+    return '$amount in';
+  }
+
+  @override
+  String get schDoneThisMonth => 'Done this month';
+
+  @override
+  String schDoneCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count done',
+      one: '$count done',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String schSkippedCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count skipped',
+      one: '$count skipped',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get schNothingDoneThisMonth => 'Nothing done this month';
 
   @override
   String schDaysLate(int count) {

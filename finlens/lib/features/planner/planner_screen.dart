@@ -183,7 +183,8 @@ class _PlannerScreenState extends State<PlannerScreen> {
             ),
     // Hidden only with no tasks at all — the same test `_emptyState` fires on
     // (`openTasks.isEmpty`). Tasks that all fall past the horizon keep the
-    // control: it is how `_nothingDue`'s own "next 3 months" link reaches them.
+    // control: it is how the empty window's "Show next payment" reaches the
+    // next task (task 062 §1d — the button widens the horizon to its day).
     2 =>
       store.openTasks.isEmpty
           ? const SizedBox.shrink()

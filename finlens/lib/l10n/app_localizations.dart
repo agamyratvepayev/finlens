@@ -6727,7 +6727,7 @@ abstract class AppLocalizations {
   /// No description provided for @schUntilControl.
   ///
   /// In en, this message translates to:
-  /// **'Until {date}'**
+  /// **'Today – {date}'**
   String schUntilControl(Object date);
 
   /// No description provided for @schCompletedIn.
@@ -6897,6 +6897,90 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Show next 3 months ›'**
   String get schShowNext3Months;
+
+  /// No description provided for @schEmptyThisWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing due this week'**
+  String get schEmptyThisWeek;
+
+  /// No description provided for @schEmptyNext30.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing due in the next 30 days'**
+  String get schEmptyNext30;
+
+  /// No description provided for @schEmptyThisMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing due this month'**
+  String get schEmptyThisMonth;
+
+  /// No description provided for @schEmptyNext3Months.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing due in the next 3 months'**
+  String get schEmptyNext3Months;
+
+  /// No description provided for @schEmptyThrough.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing due through {date}'**
+  String schEmptyThrough(Object date);
+
+  /// No description provided for @schNextLine.
+  ///
+  /// In en, this message translates to:
+  /// **'Next: {name} on {date} · {amount}'**
+  String schNextLine(Object name, Object date, Object amount);
+
+  /// No description provided for @schNextLineMore.
+  ///
+  /// In en, this message translates to:
+  /// **'Next: {name} and {count, plural, one{{count} more} other{{count} more}} on {date} · {amount}'**
+  String schNextLineMore(Object name, int count, Object date, Object amount);
+
+  /// No description provided for @schShowNextPayment.
+  ///
+  /// In en, this message translates to:
+  /// **'Show next payment'**
+  String get schShowNextPayment;
+
+  /// No description provided for @schAmountOut.
+  ///
+  /// In en, this message translates to:
+  /// **'{amount} out'**
+  String schAmountOut(Object amount);
+
+  /// No description provided for @schAmountIn.
+  ///
+  /// In en, this message translates to:
+  /// **'{amount} in'**
+  String schAmountIn(Object amount);
+
+  /// No description provided for @schDoneThisMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Done this month'**
+  String get schDoneThisMonth;
+
+  /// No description provided for @schDoneCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{{count} done} other{{count} done}}'**
+  String schDoneCount(int count);
+
+  /// No description provided for @schSkippedCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{{count} skipped} other{{count} skipped}}'**
+  String schSkippedCount(int count);
+
+  /// No description provided for @schNothingDoneThisMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing done this month'**
+  String get schNothingDoneThisMonth;
 
   /// No description provided for @schDaysLate.
   ///

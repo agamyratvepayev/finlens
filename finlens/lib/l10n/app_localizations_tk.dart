@@ -4296,7 +4296,7 @@ class AppLocalizationsTk extends AppLocalizations {
 
   @override
   String schUntilControl(Object date) {
-    return '$date çenli';
+    return 'Şu gün – $date';
   }
 
   @override
@@ -4410,6 +4410,62 @@ class AppLocalizationsTk extends AppLocalizations {
 
   @override
   String get schShowNext3Months => 'Indiki 3 aýy görkez ›';
+
+  @override
+  String get schEmptyThisWeek => 'Şu hepde töleg ýok';
+
+  @override
+  String get schEmptyNext30 => 'Indiki 30 günde töleg ýok';
+
+  @override
+  String get schEmptyThisMonth => 'Şu aýda töleg ýok';
+
+  @override
+  String get schEmptyNext3Months => 'Indiki 3 aýda töleg ýok';
+
+  @override
+  String schEmptyThrough(Object date) {
+    return '$date çenli töleg ýok';
+  }
+
+  @override
+  String schNextLine(Object name, Object date, Object amount) {
+    return 'Indiki: $name, $date · $amount';
+  }
+
+  @override
+  String schNextLineMore(Object name, int count, Object date, Object amount) {
+    return 'Indiki: $name we ýene $count sany, $date · $amount';
+  }
+
+  @override
+  String get schShowNextPayment => 'Indiki tölegi görkez';
+
+  @override
+  String schAmountOut(Object amount) {
+    return '$amount çykýan';
+  }
+
+  @override
+  String schAmountIn(Object amount) {
+    return '$amount gelýän';
+  }
+
+  @override
+  String get schDoneThisMonth => 'Şu aýda ýerine ýetirilen';
+
+  @override
+  String schDoneCount(int count) {
+    return '$count ýerine ýetirildi';
+  }
+
+  @override
+  String schSkippedCount(int count) {
+    return '$count geçildi';
+  }
+
+  @override
+  String get schNothingDoneThisMonth => 'Şu aýda hiç zat edilmedi';
 
   @override
   String schDaysLate(int count) {
