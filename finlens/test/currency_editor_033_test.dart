@@ -10,6 +10,7 @@ import 'package:finlens/core/utils/formatters.dart';
 import 'package:finlens/features/quick_add/pickers.dart';
 import 'package:finlens/l10n/app_localizations.dart';
 import 'package:finlens/l10n/fallback_localizations.dart';
+import 'package:finlens/theme/app_colors.dart';
 import 'package:finlens/theme/app_theme.dart';
 
 // flutter test hangs on the author's machine — run these yourself:
@@ -244,7 +245,7 @@ void main() {
   });
 
   testWidgets('the clear button appears only with a value, and clearing shows '
-      'Set rate', (tester) async {
+      '0 and the code', (tester) async {
     tester.view.physicalSize = const Size(390, 1400);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.reset);
@@ -261,8 +262,16 @@ void main() {
     await tester.tap(find.bySemanticsLabel('Clear'));
     await tester.pumpAndSettle();
 
-    // Dropped to the designed Set-rate state; the clear button is gone.
-    expect(find.text('Set rate'), findsOneWidget);
+    // Dropped to the dim 0-and-code empty state (task 060); no Set rate is
+    // drawn anywhere on the sheet, and the clear button is gone.
+    expect(find.text('Set rate'), findsNothing);
+    final rateRow = find.byKey(const Key('curRowRate'));
+    final codeText = tester.widget<Text>(
+        find.descendant(of: rateRow, matching: find.text('TMT')));
+    expect(codeText.style?.color, AppColors.textTertiary);
+    final field = tester.widget<TextField>(
+        find.descendant(of: rateRow, matching: find.byType(TextField)));
+    expect(field.decoration?.hintText, '0');
     expect(find.bySemanticsLabel('Clear'), findsNothing);
   });
 

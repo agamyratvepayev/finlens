@@ -3816,8 +3816,8 @@ class _AddCurrencyFormState extends State<_AddCurrencyForm> {
   void _onRateChanged() => setState(() => _rateOverride = _typedRate);
 
   /// On blur, canonicalise a good value and restore a bad or empty one to the
-  /// last valid rate — the empty case then reads as the designed `Set rate`
-  /// state rather than a half-typed number (§3).
+  /// last valid rate — the empty case then reads as the dim `0` beside its
+  /// code (task 060) rather than a half-typed number.
   void _onRateFocusChanged() {
     if (_rateFocusNode.hasFocus) return;
     final v = _typedRate;
@@ -4072,13 +4072,16 @@ class _AddCurrencyFormState extends State<_AddCurrencyForm> {
 
   /// The rate row (task 033 §3). One row, `FormRow` tall: the question on the
   /// left, the answer on the right, typed here rather than on a sheet over this
-  /// one. The code beside the field is static — only the number is editable.
+  /// one. The code beside the field is static — only the number is editable,
+  /// and the code is always drawn, so the unit is visible before anything is
+  /// typed and typing moves nothing but the digits.
   ///
-  /// The clear button appears only when there is a value; clearing drops the row
-  /// to the existing `curSetRate` state, so the empty case is one that was
-  /// already designed rather than a new one. It is overlaid in a `Stack` so its
-  /// 36×36 tap target never makes this row taller than the FormRows beside it —
-  /// the row's height comes from the 14.5pt line, exactly like `FormRow`.
+  /// Empty, the row reads as a dim `0` beside that code (task 060) — a number
+  /// in its unit, never a sentence, never blank. The clear button appears only
+  /// when there is a value; clearing or blurring an empty field returns the
+  /// row to that state. It is overlaid in a `Stack` so its 36×36 tap target
+  /// never makes this row taller than the FormRows beside it — the row's
+  /// height comes from the 14.5pt line, exactly like `FormRow`.
   Widget _rateRow(AppLocalizations l, String base, String code) {
     final focused = _rateFocusNode.hasFocus;
     final hasValue = _rate.text.trim().isNotEmpty;
@@ -4103,39 +4106,50 @@ class _AddCurrencyFormState extends State<_AddCurrencyForm> {
               child: Row(
                 children: [
                   Expanded(
-                    child: TextField(
-                      controller: _rate,
-                      focusNode: _rateFocusNode,
-                      textAlign: TextAlign.right,
-                      keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true),
-                      inputFormatters: [
-                        FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
-                      ],
-                      style: AppText.body.copyWith(
-                          fontSize: 14.5, fontWeight: FontWeight.w600),
-                      cursorColor: AppColors.accentSoft,
-                      decoration: InputDecoration(
-                        isCollapsed: true,
-                        border: InputBorder.none,
-                        // Empty reads as the designed "Set rate" state, in
-                        // warning, rather than a blank field (§3).
-                        hintText: l.curSetRate,
-                        hintStyle: const TextStyle(
-                            fontSize: 14.5,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.warning),
+                    // The eye reads one sentence across the row; a screen
+                    // reader hears the same one — "1 {base} = {figure} {code}"
+                    // — with the hint 0 standing in while empty (task 060).
+                    child: Semantics(
+                      label:
+                          '1 $base = ${hasValue ? _rate.text.trim() : '0'} $code',
+                      child: TextField(
+                        controller: _rate,
+                        focusNode: _rateFocusNode,
+                        textAlign: TextAlign.right,
+                        keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true),
+                        inputFormatters: [
+                          FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
+                        ],
+                        style: AppText.body.copyWith(
+                            fontSize: 14.5, fontWeight: FontWeight.w600),
+                        cursorColor: AppColors.accentSoft,
+                        decoration: InputDecoration(
+                          isCollapsed: true,
+                          border: InputBorder.none,
+                          // Empty reads as a dim 0 in the figure's own slot
+                          // (task 060) — the first digit lands where the 0
+                          // was. '0' is a numeral, not copy: no ARB key, the
+                          // same rule task 055 set for every amount field.
+                          hintText: '0',
+                          hintStyle: AppText.body.copyWith(
+                              fontSize: 14.5,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.textTertiary),
+                        ),
                       ),
                     ),
                   ),
-                  if (hasValue) ...[
-                    const SizedBox(width: 5),
-                    Text(code,
-                        style: AppText.body.copyWith(
-                            fontSize: 14.5,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.textSecondary)),
-                  ],
+                  const SizedBox(width: 5),
+                  // Always drawn; dim while the figure is the hint 0, grey
+                  // once a value pairs it with a white figure.
+                  Text(code,
+                      style: AppText.body.copyWith(
+                          fontSize: 14.5,
+                          fontWeight: FontWeight.w600,
+                          color: hasValue
+                              ? AppColors.textSecondary
+                              : AppColors.textTertiary)),
                   // Reserve room for the overlaid clear button so the code and
                   // number never sit under it.
                   SizedBox(width: hasValue ? 34 : 0),
@@ -4174,7 +4188,8 @@ class _AddCurrencyFormState extends State<_AddCurrencyForm> {
     return row;
   }
 
-  /// Clears the typed rate, dropping the row to its `Set rate` state (§3).
+  /// Clears the typed rate, returning the row to its dim `0` + code empty
+  /// state (task 060).
   Widget _rateClearButton(AppLocalizations l) {
     return Semantics(
       button: true,
