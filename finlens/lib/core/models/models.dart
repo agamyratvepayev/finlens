@@ -567,6 +567,38 @@ class MarkPaidResult {
   final double? previousOverride;
 }
 
+/// The snapshot [AppStore.skipTask] returns so a skip can be undone (task 065
+/// §6b). For a recurring skip [skippedDate] is the day appended to
+/// [Task.skippedDates] and [previousDue] the due date before the advance; for a
+/// cancelled one-off both are null/unused and only the status is restored.
+class TaskSkip {
+  const TaskSkip({
+    required this.task,
+    required this.previousDue,
+    required this.previousStatus,
+    required this.previousStatusChangedAt,
+    this.skippedDate,
+    this.previousOverride,
+  });
+
+  final Task task;
+  final DateTime previousDue;
+  final TaskStatus previousStatus;
+  final DateTime? previousStatusChangedAt;
+  final DateTime? skippedDate;
+  final double? previousOverride;
+}
+
+/// The snapshot [AppStore.deleteTaskForGood] returns so a delete can be undone
+/// (task 065 §3a): the removed task (its object is untouched) and the ids of
+/// the transactions whose recurrence link the purge nulled, to re-link.
+class TaskDeletion {
+  const TaskDeletion({required this.task, required this.linkedTxnIds});
+
+  final Task task;
+  final List<String> linkedTxnIds;
+}
+
 /// What a goal watches — an account or an income category. `linkedAccountId`
 /// of the old model is promoted here and is now required: a goal is a *lens*
 /// over one real source, and the source decides the section, the direction and

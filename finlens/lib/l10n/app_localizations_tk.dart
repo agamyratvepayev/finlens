@@ -4709,7 +4709,7 @@ class AppLocalizationsTk extends AppLocalizations {
 
   @override
   String get tmEditSub =>
-      'Möçber, sene, gaýtalanma, hasap, kategoriýa, ýatladyş we bellik.';
+      'Möçber, sene, gaýtalanma, hasap, kategoriýa we bellik.';
 
   @override
   String get tmSkip => 'Muny geç';
@@ -4724,7 +4724,24 @@ class AppLocalizationsTk extends AppLocalizations {
 
   @override
   String get tmPauseSub =>
-      'Sanawdan we çaklamadan çykýar. Töleg taryhy we geljekki seneler saklanýar — islän wagtyňyz Arhiwden dowam ediň.';
+      'Häzirlikçe durýar. Islän wagtyňyz dowam ediň — hiç zat ýitmeýär.';
+
+  @override
+  String get tmArchive => 'Arhiwle';
+
+  @override
+  String tmArchiveSub(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Edilen $count sanysy taryhynda galýar.',
+      one: 'Edilen $count sanysy taryhynda galýar.',
+    );
+    return 'Şu günden soň sene ýok. $_temp0';
+  }
+
+  @override
+  String get tmArchiveSubNone => 'Şu günden soň sene ýok.';
 
   @override
   String get tmDelete => 'Poz';
@@ -4733,6 +4750,86 @@ class AppLocalizationsTk extends AppLocalizations {
   String tmDeleteSub(int count) {
     return 'Arhiwe geçýär — tötänleýin pozmagy yzyna gaýtaryp bolýar. $count töleg Depderde galýar. Hemişelik pozmak Arhiwden edilýär.';
   }
+
+  @override
+  String get tmDeleteSubNone => 'Bu meýilleşdirilen ýazgyny aýyrýar.';
+
+  @override
+  String tmDeleteSubLocked(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Edilen $count sanysy bar. Ilki arhiwläň, soň Arhiwden pozuň.',
+      one: 'Edilen $count sanysy bar. Ilki arhiwläň, soň Arhiwden pozuň.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String taArchiveTitle(Object title) {
+    return '«$title» arhiwlensinmi?';
+  }
+
+  @override
+  String taArchiveBody(Object date) {
+    return '$date senesinden soň sene ýok.';
+  }
+
+  @override
+  String taKeptHistory(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Edilen $count sanysy taryhynda galýar',
+      one: 'Edilen $count sanysy taryhynda galýar',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get taLedgerUnchanged => 'Depderiňiz we balanslaryňyz üýtgemeýär';
+
+  @override
+  String get taRestoreAnyTime => 'Arhiwden islän wagtyňyz dikeldiň';
+
+  @override
+  String get taLeavesSchedule => 'Meýilnamadan we çaklamadan çykýar';
+
+  @override
+  String taDeleteTitle(Object title) {
+    return '«$title» pozulsynmy?';
+  }
+
+  @override
+  String taDeleteForGoodTitle(Object title) {
+    return '«$title» düýbünden pozulsynmy?';
+  }
+
+  @override
+  String get taDeleteForGoodBody => 'Arhiwlenen. Bu ony düýbünden aýyrýar.';
+
+  @override
+  String taEntriesStay(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ýazgy Depderiňizde galýar',
+      one: '$count ýazgy Depderiňizde galýar',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get taCantRestore => 'Dikeldip bolmaýar';
+
+  @override
+  String get taHistoryRemoved => 'Meýilnamasy we taryhy aýrylýar';
+
+  @override
+  String get taArchive => 'Arhiwle';
+
+  @override
+  String get taDeleteForGood => 'Düýbünden poz';
 
   @override
   String tdDeleteTitle(Object title) {
@@ -4907,6 +5004,48 @@ class AppLocalizationsTk extends AppLocalizations {
   String get tdSkipOne => 'Muny geç';
 
   @override
+  String tdArchivedOn(Object date) {
+    return '$date senesinde arhiwlendi';
+  }
+
+  @override
+  String tdContinuesFrom(Object date) {
+    return '$date senesinden dowam edýär';
+  }
+
+  @override
+  String tdBackOverdue(Object date) {
+    return '$date senesinden bäri möhleti geçen hökmünde dolanýar';
+  }
+
+  @override
+  String get tdRestore => 'Dikelt';
+
+  @override
+  String get tdDeleteForGood => 'Düýbünden poz';
+
+  @override
+  String tdRestored(Object title) {
+    return '«$title» ýene Meýilnamada';
+  }
+
+  @override
+  String tdDeletedBar(Object title) {
+    return '«$title» pozuldy';
+  }
+
+  @override
+  String get tdArchivedNothing => 'Hiç zat edilmedi';
+
+  @override
+  String get tdInTotal => 'jemi';
+
+  @override
+  String tdArchivedRange(Object from, Object to) {
+    return '$from – $to';
+  }
+
+  @override
   String get etNote => 'Bellik';
 
   @override
@@ -4933,6 +5072,18 @@ class AppLocalizationsTk extends AppLocalizations {
   @override
   String arDeletedLineTask(Object date, int payments, Object total) {
     return '$date pozuldy · $payments töleg · $total';
+  }
+
+  @override
+  String arArchivedLineTask(Object date, int count, Object total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$date arhiwlendi · $count edildi · $total',
+      one: '$date arhiwlendi · $count edildi · $total',
+      zero: '$date arhiwlendi',
+    );
+    return '$_temp0';
   }
 
   @override

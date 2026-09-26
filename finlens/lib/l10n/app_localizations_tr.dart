@@ -4751,8 +4751,7 @@ class AppLocalizationsTr extends AppLocalizations {
   String get tmEdit => 'Düzenle';
 
   @override
-  String get tmEditSub =>
-      'Tutar, tarih, tekrar, hesap, kategori, hatırlatıcı ve not.';
+  String get tmEditSub => 'Tutar, tarih, tekrar, hesap, kategori ve not.';
 
   @override
   String get tmSkip => 'Bunu atla';
@@ -4767,7 +4766,24 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get tmPauseSub =>
-      'Listeden ve tahminden çıkar. Ödeme geçmişi ve gelecek tarihler korunur — istediğiniz zaman Arşiv\'den sürdürün.';
+      'Şimdilik durur. İstediğiniz zaman sürdürün — hiçbir şey kaybolmaz.';
+
+  @override
+  String get tmArchive => 'Arşivle';
+
+  @override
+  String tmArchiveSub(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Yapılan $count tanesi geçmişinde kalır.',
+      one: 'Yapılan $count tanesi geçmişinde kalır.',
+    );
+    return 'Bugünden sonra tarih yok. $_temp0';
+  }
+
+  @override
+  String get tmArchiveSubNone => 'Bugünden sonra tarih yok.';
 
   @override
   String get tmDelete => 'Sil';
@@ -4776,6 +4792,88 @@ class AppLocalizationsTr extends AppLocalizations {
   String tmDeleteSub(int count) {
     return 'Arşiv\'e taşınır — yanlışlıkla silmeyi geri alabilirsiniz. $count ödeme Defterde kalır. Kalıcı silme Arşiv\'den yapılır.';
   }
+
+  @override
+  String get tmDeleteSubNone => 'Bu planlanmış öğeyi kaldırır.';
+
+  @override
+  String tmDeleteSubLocked(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Yapılan $count tanesi var. Önce arşivleyin, sonra Arşiv\'den silin.',
+      one:
+          'Yapılan $count tanesi var. Önce arşivleyin, sonra Arşiv\'den silin.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String taArchiveTitle(Object title) {
+    return '$title arşivlensin mi?';
+  }
+
+  @override
+  String taArchiveBody(Object date) {
+    return '$date tarihinden sonra tarih yok.';
+  }
+
+  @override
+  String taKeptHistory(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Yapılan $count tanesi geçmişinde kalır',
+      one: 'Yapılan $count tanesi geçmişinde kalır',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get taLedgerUnchanged => 'Defteriniz ve bakiyeleriniz değişmez';
+
+  @override
+  String get taRestoreAnyTime => 'İstediğiniz zaman Arşiv\'den geri yükleyin';
+
+  @override
+  String get taLeavesSchedule => 'Programdan ve tahminden çıkar';
+
+  @override
+  String taDeleteTitle(Object title) {
+    return '$title silinsin mi?';
+  }
+
+  @override
+  String taDeleteForGoodTitle(Object title) {
+    return '$title tamamen silinsin mi?';
+  }
+
+  @override
+  String get taDeleteForGoodBody => 'Arşivlenmiş. Bu, onu tamamen kaldırır.';
+
+  @override
+  String taEntriesStay(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count kayıt defterinizde kalır',
+      one: '$count kayıt defterinizde kalır',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get taCantRestore => 'Geri yüklenemez';
+
+  @override
+  String get taHistoryRemoved => 'Programı ve geçmişi kaldırılır';
+
+  @override
+  String get taArchive => 'Arşivle';
+
+  @override
+  String get taDeleteForGood => 'Tamamen sil';
 
   @override
   String tdDeleteTitle(Object title) {
@@ -4956,6 +5054,48 @@ class AppLocalizationsTr extends AppLocalizations {
   String get tdSkipOne => 'Bunu atla';
 
   @override
+  String tdArchivedOn(Object date) {
+    return '$date tarihinde arşivlendi';
+  }
+
+  @override
+  String tdContinuesFrom(Object date) {
+    return '$date tarihinden devam eder';
+  }
+
+  @override
+  String tdBackOverdue(Object date) {
+    return '$date tarihinden beri gecikmiş olarak döner';
+  }
+
+  @override
+  String get tdRestore => 'Geri yükle';
+
+  @override
+  String get tdDeleteForGood => 'Tamamen sil';
+
+  @override
+  String tdRestored(Object title) {
+    return '$title yeniden programda';
+  }
+
+  @override
+  String tdDeletedBar(Object title) {
+    return '$title silindi';
+  }
+
+  @override
+  String get tdArchivedNothing => 'Hiçbir şey yapılmadı';
+
+  @override
+  String get tdInTotal => 'toplam';
+
+  @override
+  String tdArchivedRange(Object from, Object to) {
+    return '$from – $to';
+  }
+
+  @override
   String get etNote => 'Not';
 
   @override
@@ -4982,6 +5122,18 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String arDeletedLineTask(Object date, int payments, Object total) {
     return '$date silindi · $payments ödeme · $total';
+  }
+
+  @override
+  String arArchivedLineTask(Object date, int count, Object total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$date arşivlendi · $count yapıldı · $total',
+      one: '$date arşivlendi · $count yapıldı · $total',
+      zero: '$date arşivlendi',
+    );
+    return '$_temp0';
   }
 
   @override

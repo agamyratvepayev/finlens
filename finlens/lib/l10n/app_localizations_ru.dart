@@ -4884,8 +4884,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get tmEdit => 'Изменить';
 
   @override
-  String get tmEditSub =>
-      'Сумма, дата, повтор, счёт, категория, напоминание и заметка.';
+  String get tmEditSub => 'Сумма, дата, повтор, счёт, категория и заметка.';
 
   @override
   String get tmSkip => 'Пропустить эту';
@@ -4900,7 +4899,25 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get tmPauseSub =>
-      'Уходит из списка и прогноза. История платежей и будущие даты сохраняются — возобновите из Архива в любой момент.';
+      'Останавливается на время. Возобновите когда угодно — ничего не теряется.';
+
+  @override
+  String get tmArchive => 'В архив';
+
+  @override
+  String tmArchiveSub(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Выполненные ($count) остаются в истории.',
+      few: 'Выполненные ($count) остаются в истории.',
+      one: 'Выполненное ($count) остаётся в истории.',
+    );
+    return 'После сегодня дат больше нет. $_temp0';
+  }
+
+  @override
+  String get tmArchiveSubNone => 'После сегодня дат больше нет.';
 
   @override
   String get tmDelete => 'Удалить';
@@ -4909,6 +4926,92 @@ class AppLocalizationsRu extends AppLocalizations {
   String tmDeleteSub(int count) {
     return 'Перемещается в Архив — случайное удаление можно отменить. $count платежей остаются в Реестре. Окончательное удаление — из Архива.';
   }
+
+  @override
+  String get tmDeleteSubNone => 'Удаляет этот запланированный пункт.';
+
+  @override
+  String tmDeleteSubLocked(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Выполнено $count. Сначала отправьте в архив, затем удалите из Архива.',
+      few:
+          'Выполнено $count. Сначала отправьте в архив, затем удалите из Архива.',
+      one:
+          'Выполнено $count. Сначала отправьте в архив, затем удалите из Архива.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String taArchiveTitle(Object title) {
+    return 'Отправить «$title» в архив?';
+  }
+
+  @override
+  String taArchiveBody(Object date) {
+    return 'После $date дат больше нет.';
+  }
+
+  @override
+  String taKeptHistory(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Выполненные ($count) остаются в истории',
+      few: 'Выполненные ($count) остаются в истории',
+      one: 'Выполненное ($count) остаётся в истории',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get taLedgerUnchanged => 'Ваш Реестр и балансы не меняются';
+
+  @override
+  String get taRestoreAnyTime => 'Восстановите из Архива в любой момент';
+
+  @override
+  String get taLeavesSchedule => 'Уходит из Расписания и прогноза';
+
+  @override
+  String taDeleteTitle(Object title) {
+    return 'Удалить «$title»?';
+  }
+
+  @override
+  String taDeleteForGoodTitle(Object title) {
+    return 'Удалить «$title» навсегда?';
+  }
+
+  @override
+  String get taDeleteForGoodBody => 'Пункт в архиве. Это удалит его полностью.';
+
+  @override
+  String taEntriesStay(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count записей остаются в Реестре',
+      few: '$count записи остаются в Реестре',
+      one: '$count запись остаётся в Реестре',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get taCantRestore => 'Восстановить будет нельзя';
+
+  @override
+  String get taHistoryRemoved => 'Его расписание и история удаляются';
+
+  @override
+  String get taArchive => 'В архив';
+
+  @override
+  String get taDeleteForGood => 'Удалить навсегда';
 
   @override
   String tdDeleteTitle(Object title) {
@@ -5110,6 +5213,48 @@ class AppLocalizationsRu extends AppLocalizations {
   String get tdSkipOne => 'Пропустить эту';
 
   @override
+  String tdArchivedOn(Object date) {
+    return 'В архиве с $date';
+  }
+
+  @override
+  String tdContinuesFrom(Object date) {
+    return 'Продолжится с $date';
+  }
+
+  @override
+  String tdBackOverdue(Object date) {
+    return 'Вернётся как просроченная с $date';
+  }
+
+  @override
+  String get tdRestore => 'Восстановить';
+
+  @override
+  String get tdDeleteForGood => 'Удалить навсегда';
+
+  @override
+  String tdRestored(Object title) {
+    return '«$title» снова в Расписании';
+  }
+
+  @override
+  String tdDeletedBar(Object title) {
+    return '«$title» удалено';
+  }
+
+  @override
+  String get tdArchivedNothing => 'Ничего не выполнено';
+
+  @override
+  String get tdInTotal => 'всего';
+
+  @override
+  String tdArchivedRange(Object from, Object to) {
+    return '$from – $to';
+  }
+
+  @override
   String get etNote => 'Заметка';
 
   @override
@@ -5136,6 +5281,19 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String arDeletedLineTask(Object date, int payments, Object total) {
     return 'удалено $date · $payments платежей · $total';
+  }
+
+  @override
+  String arArchivedLineTask(Object date, int count, Object total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'в архиве с $date · $count выполнено · $total',
+      few: 'в архиве с $date · $count выполнено · $total',
+      one: 'в архиве с $date · $count выполнено · $total',
+      zero: 'в архиве с $date',
+    );
+    return '$_temp0';
   }
 
   @override

@@ -4795,8 +4795,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tmEdit => 'Edit';
 
   @override
-  String get tmEditSub =>
-      'Amount, date, repeat, account, category, reminder and note.';
+  String get tmEditSub => 'Amount, date, repeat, account, category and note.';
 
   @override
   String get tmSkip => 'Skip this one';
@@ -4810,8 +4809,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tmPause => 'Pause';
 
   @override
-  String get tmPauseSub =>
-      'Leaves the list and the projection. Payment history and future dates are kept — resume it from the Archive whenever you like.';
+  String get tmPauseSub => 'Stops for now. Resume any time — nothing is lost.';
+
+  @override
+  String get tmArchive => 'Archive';
+
+  @override
+  String tmArchiveSub(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'The $count done stay in its history.',
+      one: 'The $count done stays in its history.',
+    );
+    return 'No more dates after today. $_temp0';
+  }
+
+  @override
+  String get tmArchiveSubNone => 'No more dates after today.';
 
   @override
   String get tmDelete => 'Delete';
@@ -4820,6 +4835,89 @@ class AppLocalizationsEn extends AppLocalizations {
   String tmDeleteSub(int count) {
     return 'Moves to the Archive — you can undo an accidental delete. The $count payments stay in your Ledger. Permanent deletion is from the Archive.';
   }
+
+  @override
+  String get tmDeleteSubNone => 'Removes this scheduled item.';
+
+  @override
+  String tmDeleteSubLocked(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'It has $count done. Archive it first, then delete it from the Archive.',
+      one:
+          'It has $count done. Archive it first, then delete it from the Archive.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String taArchiveTitle(Object title) {
+    return 'Archive $title?';
+  }
+
+  @override
+  String taArchiveBody(Object date) {
+    return 'No more dates after $date.';
+  }
+
+  @override
+  String taKeptHistory(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'The $count done stay in its history',
+      one: 'The $count done stays in its history',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get taLedgerUnchanged => 'Your Ledger and balances don\'t change';
+
+  @override
+  String get taRestoreAnyTime => 'Restore it from the Archive any time';
+
+  @override
+  String get taLeavesSchedule => 'It leaves the Schedule and the forecast';
+
+  @override
+  String taDeleteTitle(Object title) {
+    return 'Delete $title?';
+  }
+
+  @override
+  String taDeleteForGoodTitle(Object title) {
+    return 'Delete $title for good?';
+  }
+
+  @override
+  String get taDeleteForGoodBody =>
+      'It\'s archived. This removes it completely.';
+
+  @override
+  String taEntriesStay(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'The $count entries stay in your Ledger',
+      one: 'The $count entry stays in your Ledger',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get taCantRestore => 'It can\'t be restored';
+
+  @override
+  String get taHistoryRemoved => 'Its schedule and history are removed';
+
+  @override
+  String get taArchive => 'Archive';
+
+  @override
+  String get taDeleteForGood => 'Delete for good';
 
   @override
   String tdDeleteTitle(Object title) {
@@ -5025,6 +5123,48 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tdSkipOne => 'Skip this one';
 
   @override
+  String tdArchivedOn(Object date) {
+    return 'Archived on $date';
+  }
+
+  @override
+  String tdContinuesFrom(Object date) {
+    return 'Continues from $date';
+  }
+
+  @override
+  String tdBackOverdue(Object date) {
+    return 'Back as overdue since $date';
+  }
+
+  @override
+  String get tdRestore => 'Restore';
+
+  @override
+  String get tdDeleteForGood => 'Delete for good';
+
+  @override
+  String tdRestored(Object title) {
+    return '$title is back on the Schedule';
+  }
+
+  @override
+  String tdDeletedBar(Object title) {
+    return '$title deleted';
+  }
+
+  @override
+  String get tdArchivedNothing => 'Nothing done';
+
+  @override
+  String get tdInTotal => 'in total';
+
+  @override
+  String tdArchivedRange(Object from, Object to) {
+    return '$from – $to';
+  }
+
+  @override
   String get etNote => 'Note';
 
   @override
@@ -5051,6 +5191,18 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String arDeletedLineTask(Object date, int payments, Object total) {
     return 'deleted $date · $payments payments · $total';
+  }
+
+  @override
+  String arArchivedLineTask(Object date, int count, Object total) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'archived $date · $count done · $total',
+      one: 'archived $date · $count done · $total',
+      zero: 'archived $date',
+    );
+    return '$_temp0';
   }
 
   @override

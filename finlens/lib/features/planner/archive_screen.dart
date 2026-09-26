@@ -50,12 +50,14 @@ class ArchiveScreen extends StatelessWidget {
     final skippedTasks = store.completedTasks
         .where((t) => t.status == TaskStatus.skipped)
         .toList();
+    // Archived series end and are kept, so they read as Finished (task 065 §4).
+    final archivedTasks = store.archivedTasks;
     final pausedTasks = store.pausedTasks;
     final budgets = store.removedBudgets;
     final accounts = store.archivedAccounts;
     final deletedTasks = store.deletedTasks;
 
-    final finished = reached.length + paidTasks.length;
+    final finished = reached.length + paidTasks.length + archivedTasks.length;
     final unfinished = gaveUp.length + skippedTasks.length;
     final canComeBack = pausedTasks.length + budgets.length + accounts.length;
     final total = finished + unfinished + canComeBack + deletedTasks.length;
@@ -120,6 +122,20 @@ class ArchiveScreen extends StatelessWidget {
                                   title: t.title,
                                   subtitle:
                                       '${l.arTypeTask} · ${l.arCompletedLine(dayMonth(t.statusChangedAt ?? t.dueDate, l), money(store.paymentTotalForTask(t.id)))}',
+                                  trailing: _readTrailing(AmountText(
+                                      store.paymentTotalForTask(t.id),
+                                      style: AppText.amount)),
+                                  onTap: () => _openTask(context, t)),
+                            // Archived series — ended and kept (task 065 §4a).
+                            for (final t in archivedTasks)
+                              _row(context,
+                                  icon: t.icon,
+                                  color: t.isPayOut
+                                      ? AppColors.negative
+                                      : AppColors.positive,
+                                  title: t.title,
+                                  subtitle:
+                                      '${l.arTypeTask} · ${l.arArchivedLineTask(dayMonthYear(t.statusChangedAt ?? t.dueDate, l), store.paymentsForTask(t.id).length, money(store.paymentTotalForTask(t.id)))}',
                                   trailing: _readTrailing(AmountText(
                                       store.paymentTotalForTask(t.id),
                                       style: AppText.amount)),

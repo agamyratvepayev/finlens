@@ -1455,11 +1455,24 @@ class AppStore extends ChangeNotifier {
           (t.status == TaskStatus.paid || t.status == TaskStatus.skipped))
       .toList(growable: false);
 
-  /// Archived (soft-deleted) tasks — reversible until the Archive is cleared
-  /// (§8/§9). Their Ledger entries are never touched.
+  /// Archived (soft-deleted) tasks — the legacy Recently-deleted group,
+  /// reversible until the Archive is cleared. No UI produces this status any
+  /// more (task 065 §1c); it lingers only for existing rows and Undo.
   List<Task> get deletedTasks => _tasks
       .where((t) => t.status == TaskStatus.deleted)
       .toList(growable: false);
+
+  /// Archived series — ended and kept (task 065 §1). Newest first by the date
+  /// they were archived. Their Ledger entries are never touched; a Restore
+  /// (§1b) resumes them at the first occurrence at or after today.
+  List<Task> get archivedTasks {
+    final list = _tasks
+        .where((t) => t.status == TaskStatus.archived)
+        .toList(growable: false);
+    list.sort((a, b) => (b.statusChangedAt ?? b.dueDate)
+        .compareTo(a.statusChangedAt ?? a.dueDate));
+    return list;
+  }
 
   /// Categories whose monthly budget is archived and has no active replacement —
   /// the Archive's `REMOVED BUDGETS` section. A migrated `removedOn` becomes the
@@ -4718,6 +4731,9 @@ class AppStore extends ChangeNotifier {
     _purgeTasks({
       for (final t in completedTasks)
         if (t.status == TaskStatus.paid) t.id,
+      // Archived series live in FINISHED too (task 065 §4c), so clearing the
+      // group deletes them for good like the paid one-offs beside them.
+      for (final t in archivedTasks) t.id,
     });
     notifyListeners();
   }
@@ -4971,15 +4987,60 @@ class AppStore extends ChangeNotifier {
 
   /// §8 — skip writes nothing to the Ledger. A recurring skip is recorded in
   /// [Task.skippedDates] and the series advances; a one-off is cancelled.
-  void skipTask(Task task) {
+  /// Returns the snapshot [undoSkipTask] needs (task 065 §6b), mirroring
+  /// [markTaskPaid]'s [MarkPaidResult].
+  TaskSkip skipTask(Task task) {
+    final prevDue = task.dueDate;
+    final prevStatus = task.status;
+    final prevChanged = task.statusChangedAt;
     if (task.isRecurring) {
+      final skippedDay =
+          DateTime(prevDue.year, prevDue.month, prevDue.day);
+      // The advance drops any override on the skipped occurrence (§064 §7d);
+      // capture it so Undo restores it with the due date.
+      final prevOverride = task.amountOverrides[skippedDay];
       task.skippedDates = [...task.skippedDates, task.dueDate];
       _advance(task);
-    } else {
-      task
-        ..status = TaskStatus.skipped
-        ..statusChangedAt = today;
+      notifyListeners();
+      return TaskSkip(
+        task: task,
+        previousDue: prevDue,
+        previousStatus: prevStatus,
+        previousStatusChangedAt: prevChanged,
+        skippedDate: skippedDay,
+        previousOverride: prevOverride,
+      );
     }
+    task
+      ..status = TaskStatus.skipped
+      ..statusChangedAt = today;
+    notifyListeners();
+    return TaskSkip(
+      task: task,
+      previousDue: prevDue,
+      previousStatus: prevStatus,
+      previousStatusChangedAt: prevChanged,
+    );
+  }
+
+  /// §6b — reverses exactly what [skipTask] did: a recurring skip drops the
+  /// skipped date, restores the previous due date and any override the advance
+  /// consumed; a cancelled one-off returns to its previous status.
+  void undoSkipTask(TaskSkip s) {
+    final task = s.task;
+    if (s.skippedDate != null) {
+      final d = s.skippedDate!;
+      task.skippedDates = task.skippedDates
+          .where((x) => !(x.year == d.year && x.month == d.month && x.day == d.day))
+          .toList();
+      task.dueDate = s.previousDue;
+      if (s.previousOverride != null) {
+        task.amountOverrides[d] = s.previousOverride!;
+      }
+    }
+    task
+      ..status = s.previousStatus
+      ..statusChangedAt = s.previousStatusChangedAt;
     notifyListeners();
   }
 
@@ -5051,11 +5112,65 @@ class AppStore extends ChangeNotifier {
 
   /// Hard-removes a task record. Still used by Quick Add when an edited
   /// transaction's recurrence link is rewritten (the old generating task is
-  /// replaced, not archived). The Schedule UI never calls this — it uses
-  /// [deleteTask] (archive) instead.
+  /// replaced, not archived).
   void deleteTaskSeries(Task task) {
     _tasks.removeWhere((t) => t.id == task.id);
     _taskPriorStatus.remove(task.id);
+    notifyListeners();
+  }
+
+  /// §1 — archive a series: end it, keep its history. No future occurrence is
+  /// produced; recorded entries stay linked and the Ledger is untouched. Works
+  /// from `open` or `paused`. [statusChangedAt] holds the archive date.
+  void archiveTask(Task task) {
+    task
+      ..status = TaskStatus.archived
+      ..statusChangedAt = today;
+    notifyListeners();
+  }
+
+  /// §1b — restore an archived series. Exactly [resumeTask]: a recurring series
+  /// resumes at the first occurrence at or after today; a one-off returns as
+  /// overdue if its date has passed.
+  void restoreTask(Task task) => resumeTask(task);
+
+  /// The date [restoreTask] would land a recurring series on, computed without
+  /// mutating it (task 065 §5 — the "Continues from" / "Back as overdue" line).
+  DateTime restoreDueDate(Task task) {
+    if (!task.isRecurring) return task.dueDate;
+    var d = task.dueDate;
+    var guard = 0;
+    while (DateTime(d.year, d.month, d.day).isBefore(_todayDay) &&
+        guard++ < 600) {
+      final next = task.nextOccurrence(d);
+      if (!next.isAfter(d)) break;
+      d = next;
+    }
+    return d;
+  }
+
+  /// §3 — remove a task for good. The Ledger keeps every entry (only the
+  /// `recurrenceTaskId` link is nulled, as [_purgeTasks] does). Returns the
+  /// snapshot [undoDeleteForGood] needs to re-insert it identically (§3a).
+  TaskDeletion deleteTaskForGood(Task task) {
+    final txnIds = [
+      for (final t in _txns)
+        if (t.recurrenceTaskId == task.id) t.id,
+    ];
+    _purgeTasks({task.id});
+    notifyListeners();
+    return TaskDeletion(task: task, linkedTxnIds: txnIds);
+  }
+
+  /// §3a — Undo a [deleteTaskForGood]: re-insert the task exactly as it was
+  /// (its object is unchanged) and re-link the transactions the purge unlinked.
+  void undoDeleteForGood(TaskDeletion snapshot) {
+    if (_tasks.any((t) => t.id == snapshot.task.id)) return;
+    _tasks.add(snapshot.task);
+    final ids = snapshot.linkedTxnIds.toSet();
+    for (final t in _txns) {
+      if (ids.contains(t.id)) t.recurrenceTaskId = snapshot.task.id;
+    }
     notifyListeners();
   }
 

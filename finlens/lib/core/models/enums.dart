@@ -113,7 +113,12 @@ enum GoalStatus { active, reached, abandoned }
 /// the series `open`); `paused` and `deleted` are the Archive states (§11.2).
 /// Nothing persists this enum by index (no persistence layer; seed data and
 /// callers use named values), so appending members is safe — do not reorder.
-enum TaskStatus { open, paid, skipped, paused, deleted }
+/// A scheduled item's lifecycle. Persisted **by name** (see `taskToMap` /
+/// `_enumByName`), so appending a value is safe and an unknown name in an old
+/// row falls back to [open] rather than remapping. `archived` (task 065) ends a
+/// series and keeps it; `deleted` is the legacy soft-delete, no longer produced
+/// by any UI but kept for old rows and Undo.
+enum TaskStatus { open, paid, skipped, paused, deleted, archived }
 
 /// Priority labels localized — see `PriorityL10n.label`.
 enum Priority { low, normal, high }

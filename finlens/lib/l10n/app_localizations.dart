@@ -7345,7 +7345,7 @@ abstract class AppLocalizations {
   /// No description provided for @tmEditSub.
   ///
   /// In en, this message translates to:
-  /// **'Amount, date, repeat, account, category, reminder and note.'**
+  /// **'Amount, date, repeat, account, category and note.'**
   String get tmEditSub;
 
   /// No description provided for @tmSkip.
@@ -7369,8 +7369,26 @@ abstract class AppLocalizations {
   /// No description provided for @tmPauseSub.
   ///
   /// In en, this message translates to:
-  /// **'Leaves the list and the projection. Payment history and future dates are kept — resume it from the Archive whenever you like.'**
+  /// **'Stops for now. Resume any time — nothing is lost.'**
   String get tmPauseSub;
+
+  /// No description provided for @tmArchive.
+  ///
+  /// In en, this message translates to:
+  /// **'Archive'**
+  String get tmArchive;
+
+  /// No description provided for @tmArchiveSub.
+  ///
+  /// In en, this message translates to:
+  /// **'No more dates after today. {count, plural, one{The {count} done stays in its history.} other{The {count} done stay in its history.}}'**
+  String tmArchiveSub(int count);
+
+  /// No description provided for @tmArchiveSubNone.
+  ///
+  /// In en, this message translates to:
+  /// **'No more dates after today.'**
+  String get tmArchiveSubNone;
 
   /// No description provided for @tmDelete.
   ///
@@ -7383,6 +7401,102 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Moves to the Archive — you can undo an accidental delete. The {count} payments stay in your Ledger. Permanent deletion is from the Archive.'**
   String tmDeleteSub(int count);
+
+  /// No description provided for @tmDeleteSubNone.
+  ///
+  /// In en, this message translates to:
+  /// **'Removes this scheduled item.'**
+  String get tmDeleteSubNone;
+
+  /// No description provided for @tmDeleteSubLocked.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{It has {count} done. Archive it first, then delete it from the Archive.} other{It has {count} done. Archive it first, then delete it from the Archive.}}'**
+  String tmDeleteSubLocked(int count);
+
+  /// No description provided for @taArchiveTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Archive {title}?'**
+  String taArchiveTitle(Object title);
+
+  /// No description provided for @taArchiveBody.
+  ///
+  /// In en, this message translates to:
+  /// **'No more dates after {date}.'**
+  String taArchiveBody(Object date);
+
+  /// No description provided for @taKeptHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{The {count} done stays in its history} other{The {count} done stay in its history}}'**
+  String taKeptHistory(int count);
+
+  /// No description provided for @taLedgerUnchanged.
+  ///
+  /// In en, this message translates to:
+  /// **'Your Ledger and balances don\'t change'**
+  String get taLedgerUnchanged;
+
+  /// No description provided for @taRestoreAnyTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore it from the Archive any time'**
+  String get taRestoreAnyTime;
+
+  /// No description provided for @taLeavesSchedule.
+  ///
+  /// In en, this message translates to:
+  /// **'It leaves the Schedule and the forecast'**
+  String get taLeavesSchedule;
+
+  /// No description provided for @taDeleteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete {title}?'**
+  String taDeleteTitle(Object title);
+
+  /// No description provided for @taDeleteForGoodTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete {title} for good?'**
+  String taDeleteForGoodTitle(Object title);
+
+  /// No description provided for @taDeleteForGoodBody.
+  ///
+  /// In en, this message translates to:
+  /// **'It\'s archived. This removes it completely.'**
+  String get taDeleteForGoodBody;
+
+  /// No description provided for @taEntriesStay.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{The {count} entry stays in your Ledger} other{The {count} entries stay in your Ledger}}'**
+  String taEntriesStay(int count);
+
+  /// No description provided for @taCantRestore.
+  ///
+  /// In en, this message translates to:
+  /// **'It can\'t be restored'**
+  String get taCantRestore;
+
+  /// No description provided for @taHistoryRemoved.
+  ///
+  /// In en, this message translates to:
+  /// **'Its schedule and history are removed'**
+  String get taHistoryRemoved;
+
+  /// No description provided for @taArchive.
+  ///
+  /// In en, this message translates to:
+  /// **'Archive'**
+  String get taArchive;
+
+  /// No description provided for @taDeleteForGood.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete for good'**
+  String get taDeleteForGood;
 
   /// No description provided for @tdDeleteTitle.
   ///
@@ -7636,6 +7750,66 @@ abstract class AppLocalizations {
   /// **'Skip this one'**
   String get tdSkipOne;
 
+  /// No description provided for @tdArchivedOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Archived on {date}'**
+  String tdArchivedOn(Object date);
+
+  /// No description provided for @tdContinuesFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'Continues from {date}'**
+  String tdContinuesFrom(Object date);
+
+  /// No description provided for @tdBackOverdue.
+  ///
+  /// In en, this message translates to:
+  /// **'Back as overdue since {date}'**
+  String tdBackOverdue(Object date);
+
+  /// No description provided for @tdRestore.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore'**
+  String get tdRestore;
+
+  /// No description provided for @tdDeleteForGood.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete for good'**
+  String get tdDeleteForGood;
+
+  /// No description provided for @tdRestored.
+  ///
+  /// In en, this message translates to:
+  /// **'{title} is back on the Schedule'**
+  String tdRestored(Object title);
+
+  /// No description provided for @tdDeletedBar.
+  ///
+  /// In en, this message translates to:
+  /// **'{title} deleted'**
+  String tdDeletedBar(Object title);
+
+  /// No description provided for @tdArchivedNothing.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing done'**
+  String get tdArchivedNothing;
+
+  /// No description provided for @tdInTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'in total'**
+  String get tdInTotal;
+
+  /// No description provided for @tdArchivedRange.
+  ///
+  /// In en, this message translates to:
+  /// **'{from} – {to}'**
+  String tdArchivedRange(Object from, Object to);
+
   /// No description provided for @etNote.
   ///
   /// In en, this message translates to:
@@ -7677,6 +7851,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'deleted {date} · {payments} payments · {total}'**
   String arDeletedLineTask(Object date, int payments, Object total);
+
+  /// No description provided for @arArchivedLineTask.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{archived {date}} one{archived {date} · {count} done · {total}} other{archived {date} · {count} done · {total}}}'**
+  String arArchivedLineTask(Object date, int count, Object total);
 
   /// No description provided for @moreAccount.
   ///

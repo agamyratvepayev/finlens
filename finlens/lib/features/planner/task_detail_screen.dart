@@ -9,6 +9,7 @@ import '../../shared/widgets/amount_text.dart';
 import '../../shared/widgets/app_card.dart';
 import '../../shared/widgets/form_fields.dart';
 import '../../shared/widgets/screen_header.dart';
+import '../../shared/widgets/undo_bar.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/app_typography.dart';
@@ -64,33 +65,45 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
 
     final payments = store.paymentsForTask(task.id);
     final paused = task.status == TaskStatus.paused;
+    final archived = task.status == TaskStatus.archived;
 
     return Scaffold(
       body: SafeArea(
         child: Column(
           children: [
-            _navBar(context, l, task),
+            _navBar(context, l, task, archived),
             Expanded(
               child: ListView(
                 padding: const EdgeInsets.only(bottom: Insets.xxl),
-                children: [
-                  _header(context, store, l, task),
-                  if (paused) _pausedBanner(l, task),
-                  _strip(context, store, l, task, payments),
-                  if (task.isRecurring) _upcoming(store, l, task, paused),
-                  if ((task.note ?? '').trim().isNotEmpty) _note(l, task),
-                  _paymentHistory(context, store, l, task, payments),
-                ],
+                children: archived
+                    ? [
+                        _header(context, store, l, task),
+                        _archivedBanner(l, task),
+                        _archivedStrip(context, store, l, task, payments),
+                        if ((task.note ?? '').trim().isNotEmpty) _note(l, task),
+                        _paymentHistory(context, store, l, task, payments),
+                      ]
+                    : [
+                        _header(context, store, l, task),
+                        if (paused) _pausedBanner(l, task),
+                        _strip(context, store, l, task, payments),
+                        if (task.isRecurring) _upcoming(store, l, task, paused),
+                        if ((task.note ?? '').trim().isNotEmpty) _note(l, task),
+                        _paymentHistory(context, store, l, task, payments),
+                      ],
               ),
             ),
-            _actions(context, store, l, task, paused),
+            archived
+                ? _archivedActions(context, store, l, task)
+                : _actions(context, store, l, task, paused),
           ],
         ),
       ),
     );
   }
 
-  Widget _navBar(BuildContext context, AppLocalizations l, Task task) {
+  Widget _navBar(
+      BuildContext context, AppLocalizations l, Task task, bool archived) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: Insets.sm, vertical: 4),
       child: Row(
@@ -102,11 +115,14 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
             style: TextButton.styleFrom(foregroundColor: AppColors.accentLight),
           ),
           const Spacer(),
-          IconButton(
-            icon: const Icon(Icons.more_horiz_rounded, size: 22),
-            color: AppColors.textPrimary,
-            onPressed: () => _openMenu(context, task),
-          ),
+          // No ••• on an archived item (§2c): its actions are Restore and
+          // Delete for good, pinned at the bottom.
+          if (!archived)
+            IconButton(
+              icon: const Icon(Icons.more_horiz_rounded, size: 22),
+              color: AppColors.textPrimary,
+              onPressed: () => _openMenu(context, task),
+            ),
         ],
       ),
     );
@@ -178,6 +194,172 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
         icon: Icons.pause_circle_outline_rounded,
         text: l.tdPausedOn(
             dayMonth(task.statusChangedAt ?? task.dueDate, l)),
+      ),
+    );
+  }
+
+  /// §5 — the archived banner: a tinted strip naming the archive date.
+  Widget _archivedBanner(AppLocalizations l, Task task) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.tint(AppColors.accent, 0.12),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        child: Row(
+          children: [
+            const Icon(Icons.archive_outlined,
+                size: 16, color: AppColors.accentLight),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                l.tdArchivedOn(
+                    dayMonthYear(task.statusChangedAt ?? task.dueDate, l)),
+                style: const TextStyle(fontSize: 13),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// §5 — the strip as a summary of what happened: `{count} done`, a full bar
+  /// in the item's colour, the total recorded; below, the first–last recorded
+  /// dates and "in total". No history → "Nothing done", no bar, no total.
+  Widget _archivedStrip(BuildContext context, AppStore store,
+      AppLocalizations l, Task task, List<Txn> payments) {
+    final currency =
+        store.accountById(task.linkedAccountId)?.currency ?? store.baseCurrency;
+    final color = _kindColor(store, task);
+    final masked = store.masked;
+    final done = payments.length;
+    final total = store.paymentTotalForTask(task.id);
+
+    DateTime? first, last;
+    for (final t in payments) {
+      if (first == null || t.date.isBefore(first)) first = t.date;
+      if (last == null || t.date.isAfter(last)) last = t.date;
+    }
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 0),
+      child: AppCard(
+        radius: 14,
+        padding: const EdgeInsets.fromLTRB(12, 9, 12, 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Text(
+                  done > 0 ? l.schDoneCount(done) : l.tdArchivedNothing,
+                  style: const TextStyle(
+                      fontSize: 14.5, fontWeight: FontWeight.w700),
+                ),
+                if (done > 0) ...[
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: Container(
+                        height: 2,
+                        decoration: BoxDecoration(
+                            color: color,
+                            borderRadius: BorderRadius.circular(2)),
+                      ),
+                    ),
+                  ),
+                  Text(
+                    _figure(total, masked),
+                    style: const TextStyle(
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.w700,
+                        fontFeatures: [FontFeature.tabularFigures()]),
+                  ),
+                  const SizedBox(width: 3),
+                  Text(currency,
+                      style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textTertiary)),
+                ] else
+                  const Spacer(),
+              ],
+            ),
+            if (done > 0 && first != null && last != null) ...[
+              const SizedBox(height: 4),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    l.tdArchivedRange(
+                        dayMonth(first, l), dayMonthYear(last, l)),
+                    style: const TextStyle(
+                        fontSize: 11.5,
+                        color: AppColors.textSecondary,
+                        fontFeatures: [FontFeature.tabularFigures()]),
+                  ),
+                  Text(l.tdInTotal,
+                      style: const TextStyle(
+                          fontSize: 11.5, color: AppColors.textSecondary)),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// §5 — the pinned bottom on an archived item: the resume-date line, Restore,
+  /// and Delete for good.
+  Widget _archivedActions(BuildContext context, AppStore store,
+      AppLocalizations l, Task task) {
+    final resumeDate = store.restoreDueDate(task);
+    final overdue = DateTime(resumeDate.year, resumeDate.month, resumeDate.day)
+        .isBefore(DateTime(store.today.year, store.today.month, store.today.day));
+    final line = overdue
+        ? l.tdBackOverdue(dayMonthYear(resumeDate, l))
+        : l.tdContinuesFrom(dayMonthYear(resumeDate, l));
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+          Insets.gutter, Insets.sm, Insets.gutter, Insets.sm),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: Text(line,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                    fontSize: 12, color: AppColors.textSecondary)),
+          ),
+          SizedBox(
+            width: double.infinity,
+            height: 47,
+            child: FilledButton(
+              onPressed: () => _restore(context, store, task),
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.accent,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(Radii.md)),
+              ),
+              child: Text(l.tdRestore,
+                  style: const TextStyle(
+                      fontSize: 15, fontWeight: FontWeight.w600)),
+            ),
+          ),
+          TextButton(
+            onPressed: () => _deleteForGood(context, store, task),
+            style: TextButton.styleFrom(foregroundColor: AppColors.negative),
+            child: Text(l.tdDeleteForGood),
+          ),
+        ],
       ),
     );
   }
@@ -679,17 +861,42 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
   }
 
   void _skip(BuildContext context, AppStore store, Task task) {
-    store.skipTask(task);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(AppLocalizations.of(context)
-            .etSkippedNext(dayMonth(task.dueDate, AppLocalizations.of(context)))),
-      ),
+    final l = AppLocalizations.of(context);
+    // Skip beside Mark as done can be undone (§6b): the shared undo bar, the
+    // same one Mark as done uses, carrying the snapshot [undoSkipTask] reverses.
+    final skip = store.skipTask(task);
+    showUndoBar(
+      context,
+      message: l.etSkippedNext(dayMonth(task.dueDate, l)),
+      onUndo: () => store.undoSkipTask(skip),
     );
+  }
+
+  Future<void> _restore(
+      BuildContext context, AppStore store, Task task) async {
+    final l = AppLocalizations.of(context);
+    store.restoreTask(task);
+    Navigator.of(context).maybePop();
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(l.tdRestored(task.title))));
+  }
+
+  Future<void> _deleteForGood(
+      BuildContext context, AppStore store, Task task) async {
+    final ok = await confirmDeleteTask(context, store, task, forGood: true);
+    if (!ok || !context.mounted) return;
+    // Pop first, then purge: removing the task makes this screen's subject
+    // null, whose build-guard would also try to pop. No undo — this is the
+    // second deliberate step (§3b); Ledger rows keep their data, lose only the
+    // recurrence link.
+    Navigator.of(context).maybePop();
+    store.deleteTaskForGood(task);
   }
 
   Future<void> _openMenu(BuildContext context, Task task) async {
     final store = StoreScope.read(context);
+    final l = AppLocalizations.of(context);
     final action = await showTaskMenu(context, task: task);
     if (!context.mounted || action == null) return;
     switch (action) {
@@ -697,16 +904,40 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
         Navigator.of(context).push(
           MaterialPageRoute(builder: (_) => EditTaskScreen(taskId: task.id)),
         );
-      case TaskMenuAction.skip:
-        _skip(context, store, task);
       case TaskMenuAction.pause:
-        store.pauseTask(task);
+        // The same slot is Resume on a paused item (§2c).
+        if (task.status == TaskStatus.paused) {
+          store.resumeTask(task);
+        } else {
+          store.pauseTask(task);
+        }
+        Navigator.of(context).maybePop();
+      case TaskMenuAction.archive:
+        final ok = await confirmArchiveTask(context, store, task);
+        if (!ok || !context.mounted) return;
+        store.archiveTask(task);
         Navigator.of(context).maybePop();
       case TaskMenuAction.delete:
+        // Only reachable with no history (the row is inert otherwise, §2b):
+        // a hard delete with the shared undo bar (§3a).
         final ok = await confirmDeleteTask(context, store, task);
         if (!ok || !context.mounted) return;
-        store.deleteTask(task);
+        // Grab the app-level messenger before we leave, pop first (so the
+        // null-subject build-guard doesn't also pop), then purge and show the
+        // undo bar on the screen we returned to (§3a).
+        final messenger = ScaffoldMessenger.of(context);
         Navigator.of(context).maybePop();
+        final snapshot = store.deleteTaskForGood(task);
+        messenger
+          ..hideCurrentSnackBar()
+          ..showSnackBar(SnackBar(
+            content: Text(l.tdDeletedBar(task.title)),
+            duration: undoBarWindow,
+            action: SnackBarAction(
+              label: l.actionUndo,
+              onPressed: () => store.undoDeleteForGood(snapshot),
+            ),
+          ));
     }
   }
 

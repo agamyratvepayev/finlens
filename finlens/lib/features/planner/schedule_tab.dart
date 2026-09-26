@@ -14,6 +14,7 @@ import '../../shared/widgets/app_card.dart';
 import '../../shared/widgets/ratio_bar.dart';
 import '../../shared/widgets/screen_header.dart';
 import '../../shared/widgets/swipe_actions.dart';
+import '../../shared/widgets/undo_bar.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/app_typography.dart';
@@ -579,7 +580,7 @@ class _OccurrenceRow extends StatelessWidget {
           icon: Icons.skip_next_rounded,
           label: l.actionSkip,
           color: AppColors.info,
-          onTap: () => store.skipTask(task),
+          onTap: () => _skip(context),
         ),
       SwipeActionItem(
         icon: Icons.delete_outline_rounded,
@@ -595,11 +596,21 @@ class _OccurrenceRow extends StatelessWidget {
       customSemanticsActions: <CustomSemanticsAction, VoidCallback>{
         CustomSemanticsAction(label: l.actionEdit): () => _edit(context),
         if (canSkip)
-          CustomSemanticsAction(label: l.actionSkip): () =>
-              store.skipTask(task),
+          CustomSemanticsAction(label: l.actionSkip): () => _skip(context),
         CustomSemanticsAction(label: l.actionDelete): () => _delete(context),
       },
       child: SwipeActions(actions: actions, child: semanticRow),
+    );
+  }
+
+  /// §6c — the swipe Skip gets the same undo bar as Mark as done.
+  void _skip(BuildContext context) {
+    final l = AppLocalizations.of(context);
+    final skip = store.skipTask(task);
+    showUndoBar(
+      context,
+      message: l.etSkippedNext(dayMonth(task.dueDate, l)),
+      onUndo: () => store.undoSkipTask(skip),
     );
   }
 
@@ -609,9 +620,31 @@ class _OccurrenceRow extends StatelessWidget {
     );
   }
 
+  /// Swipe Delete follows the ••• menu's rule (task 065 §3c — no UI soft-
+  /// deletes any more): a series with history is archived (it can't be hard-
+  /// deleted in one step); one without is removed for good, with an undo bar.
   Future<void> _delete(BuildContext context) async {
+    final l = AppLocalizations.of(context);
+    final hasHistory = store.paymentsForTask(task.id).isNotEmpty;
+    if (hasHistory) {
+      final ok = await confirmArchiveTask(context, store, task);
+      if (ok) store.archiveTask(task);
+      return;
+    }
     final ok = await confirmDeleteTask(context, store, task);
-    if (ok) store.deleteTask(task);
+    if (!ok || !context.mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    final snapshot = store.deleteTaskForGood(task);
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(
+        content: Text(l.tdDeletedBar(task.title)),
+        duration: undoBarWindow,
+        action: SnackBarAction(
+          label: l.actionUndo,
+          onPressed: () => store.undoDeleteForGood(snapshot),
+        ),
+      ));
   }
 
   /// One unbreakable line, the repeat glyph moved to the **front** so truncation
