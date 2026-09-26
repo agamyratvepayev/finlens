@@ -2043,6 +2043,116 @@ class AppLocalizationsRu extends AppLocalizations {
   String get bgEvOnce => 'один раз';
 
   @override
+  String bgAutoNameMore(Object name, int count) {
+    return '$name + $count';
+  }
+
+  @override
+  String get bgSpendingOn => 'Траты на';
+
+  @override
+  String get bgSpendingFrom => 'Траты со счёта';
+
+  @override
+  String get bgSpendingTagged => 'Траты с меткой';
+
+  @override
+  String get bgWeeklyLimit => 'Недельный лимит';
+
+  @override
+  String get bgPeriod => 'Период';
+
+  @override
+  String bgPeriodEveryDays(int count) {
+    return 'Каждые $count дн.';
+  }
+
+  @override
+  String get bgPeriodMonthHint => 'Сбрасывается 1-го числа';
+
+  @override
+  String get bgPeriodWeekHint => 'Сбрасывается в выбранный день';
+
+  @override
+  String get bgPeriodDaysHint => '2–365 дней';
+
+  @override
+  String get bgRuns => 'Срок';
+
+  @override
+  String get bgRunsThisMonthNoEnd => 'С этого месяца · без конца';
+
+  @override
+  String get bgRunsTodayNoEnd => 'С сегодня · без конца';
+
+  @override
+  String bgRunsFromNoEnd(Object start) {
+    return 'С $start · без конца';
+  }
+
+  @override
+  String get bgRunsOnceSub => 'Один раз · поездка, проект';
+
+  @override
+  String get bgRunsUntil => 'ДО';
+
+  @override
+  String get bgNoEnd => 'Без конца';
+
+  @override
+  String bgStartsOn(Object date) {
+    return 'начнётся $date';
+  }
+
+  @override
+  String bgApplyDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Применить · $count дней',
+      few: 'Применить · $count дня',
+      one: 'Применить · $count день',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String bgApplyWeeks(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Применить · $count недель',
+      few: 'Применить · $count недели',
+      one: 'Применить · $count неделя',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String bgApplyMonths(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Применить · $count месяцев',
+      few: 'Применить · $count месяца',
+      one: 'Применить · $count месяц',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String bgApplyPeriods(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Применить · $count периодов',
+      few: 'Применить · $count периода',
+      one: 'Применить · $count период',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get bgSuffixWeekly => 'еженедельно';
 
   @override

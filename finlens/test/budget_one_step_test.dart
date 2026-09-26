@@ -7,8 +7,13 @@ import 'package:finlens/core/store/app_store.dart';
 import 'package:finlens/core/utils/clock.dart';
 import 'package:finlens/features/planner/budget_detail_screen.dart';
 import 'package:finlens/features/planner/edit_budget_screen.dart';
+import 'package:finlens/features/quick_add/widgets/form_kit.dart';
 import 'package:finlens/l10n/app_localizations.dart';
 import 'package:finlens/theme/app_theme.dart';
+
+// The limit field is one of several TextFields on the form now (name hero, limit,
+// note), so tests target it by key.
+final _limitField = find.byKey(const Key('budgetLimitField'));
 
 // One screen, two modes (spec §7) — plus the ••• menu's new Remove budget row
 // (spec §5) and the store's budget removal (spec §5). flutter test hangs on this
@@ -99,7 +104,8 @@ void main() {
         .pumpWidget(_host(store, EditBudgetScreen(categoryId: cat.id)));
     await tester.pumpAndSettle();
 
-    expect(find.byIcon(Icons.lock_rounded), findsOneWidget);
+    // Task 067.1: Spending on and Period are both locked after creation.
+    expect(find.byIcon(Icons.lock_rounded), findsNWidgets(2));
 
     // Tapping the row opens no picker.
     await tester.tap(find.text('Grocery'));
@@ -133,7 +139,7 @@ void main() {
     // No limit yet → bare percentage, never "80% · $0".
     expect(find.text('80%'), findsOneWidget);
 
-    await tester.enterText(find.byType(TextField), '2000');
+    await tester.enterText(_limitField, '2000');
     await tester.pump();
 
     // 80% of 2000 = 1600, folded onto the one line.
@@ -145,8 +151,10 @@ void main() {
   testWidgets('Save needs both a category and a positive limit', (tester) async {
     _size(tester, 390, 844);
 
+    // Create mode draws the FormNavBar (its Save is a GestureDetector, not a
+    // TextButton); its canSave flag mirrors the form's gate.
     bool saveEnabled() =>
-        tester.widget<TextButton>(find.widgetWithText(TextButton, 'Save')).enabled;
+        tester.widget<FormNavBar>(find.byType(FormNavBar)).canSave;
 
     // No category, no limit → disabled.
     await tester.pumpWidget(_host(AppStore.empty(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32))), const EditBudgetScreen()));
@@ -154,7 +162,7 @@ void main() {
     expect(saveEnabled(), isFalse);
 
     // No category, a limit → still disabled.
-    await tester.enterText(find.byType(TextField), '100');
+    await tester.enterText(_limitField, '100');
     await tester.pump();
     expect(saveEnabled(), isFalse);
 
@@ -165,7 +173,7 @@ void main() {
         .pumpWidget(_host(store, EditBudgetScreen(categoryId: cat.id)));
     await tester.pumpAndSettle();
     expect(saveEnabled(), isFalse);
-    await tester.enterText(find.byType(TextField), '100');
+    await tester.enterText(_limitField, '100');
     await tester.pump();
     expect(saveEnabled(), isTrue);
   });
@@ -181,7 +189,7 @@ void main() {
           _host(store, EditBudgetScreen(categoryId: cat.id), textScale: scale));
       await tester.pumpAndSettle();
 
-      final h1 = _rowHeight(tester, 'Category');
+      final h1 = _rowHeight(tester, 'Spending on');
       final h2 = _rowHeight(tester, 'Monthly limit');
       final h3 = _rowHeight(tester, 'Roll over unspent');
       final h4 = _rowHeight(tester, 'Warn me at');

@@ -47,7 +47,7 @@ class LocalDatabase {
   // v11 (task 064 §7a) adds the tasks' `amount_overrides` column — per-
   // occurrence expected amounts as a JSON object of epochMs → amount. Nullable:
   // a pre-11 row reads back null, which the mapper coalesces to {}.
-  static const int schemaVersion = 12;
+  static const int schemaVersion = 13;
 
   static const String accountsTable = 'accounts';
   static const String categoriesTable = 'categories';
@@ -317,7 +317,9 @@ class LocalDatabase {
         ended_at INTEGER,
         archived_at INTEGER,
         currency TEXT,
-        history TEXT NOT NULL
+        history TEXT NOT NULL,
+        runs_until INTEGER,
+        note TEXT
       )''';
 
   /// Additive migrations only — every column/table added since v1 is nullable or
@@ -394,6 +396,12 @@ class LocalDatabase {
       // Task 066 §5a — a goal's saving pace period. Nullable: a pre-12 row
       // reads back null and the mapper coalesces it to GoalPace.month.
       await db.execute('ALTER TABLE $goalsTable ADD COLUMN pace_name TEXT');
+    }
+    if (oldVersion < 13) {
+      // Task 067.1 §1 — a repeating budget's end, and a budget's note. Both
+      // nullable: a pre-13 row reads back null → no end, '' note.
+      await db.execute('ALTER TABLE $budgetsTable ADD COLUMN runs_until INTEGER');
+      await db.execute('ALTER TABLE $budgetsTable ADD COLUMN note TEXT');
     }
   }
 }

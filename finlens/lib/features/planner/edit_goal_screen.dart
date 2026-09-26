@@ -6,6 +6,7 @@ import '../../core/utils/formatters.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/amount_text.dart';
 import '../../shared/widgets/app_card.dart';
+import '../../shared/widgets/auto_pill.dart';
 import '../../shared/widgets/destructive_sheet.dart';
 import '../../shared/widgets/form_fields.dart';
 import '../../shared/widgets/typed_date_sheet.dart';
@@ -580,21 +581,7 @@ class _EditGoalScreenState extends State<EditGoalScreen>
       );
 
   /// The `auto` pill on the computed half (§5e).
-  Widget _autoPill() => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-        decoration: BoxDecoration(
-          color: AppColors.tint(AppColors.accent, 0.18),
-          borderRadius: BorderRadius.circular(Radii.pill),
-        ),
-        child: Text(
-          AppLocalizations.of(context).goalAuto,
-          style: const TextStyle(
-            fontSize: 10.5,
-            fontWeight: FontWeight.w600,
-            color: AppColors.accentLight,
-          ),
-        ),
-      );
+  Widget _autoPill() => const AutoPill();
 
   // ── Pace ─────────────────────────────────────────────────────────────────
 

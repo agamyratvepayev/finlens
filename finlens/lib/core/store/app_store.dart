@@ -2202,6 +2202,25 @@ class AppStore extends ChangeNotifier {
   DateTime _budgetCreatedAt(Budget b) =>
       b.history.isNotEmpty ? b.history.first.at : b.anchor;
 
+  /// The first day of [b]'s first period when the user set it to start after the
+  /// period it was created in (task 067.1 §2a); null for every retroactive
+  /// budget (the default — a budget created in September also measures August).
+  /// Covers Runs · From a future month and a one-off whose dates are ahead.
+  DateTime? budgetStartsLater(Budget b) {
+    final first = budgetWindow(b, b.anchor).start;
+    final created = budgetWindow(b, _budgetCreatedAt(b)).start;
+    return first.isAfter(created) ? first : null;
+  }
+
+  /// Whether [b] is measured in [window] (task 067.1 §2b): not before it starts,
+  /// not after it ends.
+  bool budgetRunsIn(Budget b, DateRange window) {
+    final start = budgetStartsLater(b);
+    if (start != null && window.end.isBefore(start)) return false;
+    if (b.runsUntil != null && window.start.isAfter(b.runsUntil!)) return false;
+    return true;
+  }
+
   /// Every active category-scope budget that lists [categoryId] — **any** period,
   /// repeating or one-off (spec §4a). A category is "budgeted" exactly when this
   /// is non-empty; that is the test the unbudgeted seams now ask, replacing
@@ -2264,7 +2283,10 @@ class AppStore extends ChangeNotifier {
   /// strides from the anchor.
   DateRange budgetWindow(Budget b, DateTime on) {
     // A finished budget freezes on its last period: never advance past the end.
-    final ref = (b.endedAt != null && on.isAfter(b.endedAt!)) ? b.endedAt! : on;
+    // A repeating budget with an end (task 067.1 §2c) freezes the same way on
+    // [Budget.runsUntil]; no period past a budget's end is ever computed.
+    final end = b.endedAt ?? b.runsUntil;
+    final ref = (end != null && on.isAfter(end)) ? end : on;
     if (b.period == BudgetPeriod.month) {
       return _monthWindow(b.anchor.day, ref);
     }
@@ -2477,6 +2499,16 @@ class AppStore extends ChangeNotifier {
       .where(_countsInMonthHero)
       .fold(0.0, (sum, b) => sum + budgetEffectiveLimit(b, _period));
 
+  /// [totalBudget] for a given [month] (task 067.1 §2e): sums the month-hero
+  /// budgets that actually run in it — a budget that starts later is excluded
+  /// until its first period. Never tests against today.
+  double totalBudgetFor(DateTime month) {
+    final window = DateRange(_monthStart(month), _monthEnd(month));
+    return _budgets
+        .where((b) => _countsInMonthHero(b) && budgetRunsIn(b, window))
+        .fold(0.0, (sum, b) => sum + budgetEffectiveLimit(b, month));
+  }
+
   /// Active budgets the month hero does **not** sum — non-monthly, one-off, or
   /// (021d) foreign-currency (spec §4c). The hero's caption counts these as
   /// "N more run on their own clock"; a finished one-off still counts (it stays
@@ -2484,13 +2516,37 @@ class AppStore extends ChangeNotifier {
   int get budgetsOffMonthHero =>
       _budgets.where((b) => !b.isArchived && !_countsInMonthHero(b)).length;
 
+  /// [budgetsOffMonthHero] for a given [month] (task 067.1 §2e): the other
+  /// budgets that run in the month. A budget that has not started is not counted.
+  int budgetsOffMonthHeroFor(DateTime month) {
+    final window = DateRange(_monthStart(month), _monthEnd(month));
+    return _budgets
+        .where((b) =>
+            !b.isArchived &&
+            !_countsInMonthHero(b) &&
+            budgetRunsIn(b, window))
+        .length;
+  }
+
   /// Every active budget, grouped for the Budgets tab's three sections (spec §5a),
   /// each already ordered over-limit-first within its section. A finished one-off
   /// stays in its section, dimmed (spec §5c); an archived one is gone.
   List<Budget> activeBudgetsByScope(BudgetScope scope, DateTime month) {
-    final list = _budgets
-        .where((b) => b.scope == scope && !b.isArchived)
-        .toList();
+    final window = DateRange(_monthStart(month), _monthEnd(month));
+    final monthStart = _monthStart(month);
+    final thisMonthStart = DateTime(today.year, today.month, 1);
+    final list = _budgets.where((b) {
+      if (b.scope != scope || b.isArchived) return false;
+      // Budgets that run in the month (task 067.1 §2d).
+      if (budgetRunsIn(b, window)) return true;
+      // Plus a not-yet-started budget, kept reachable to edit/remove — but only
+      // in the current month or a later one before it starts, never in a past
+      // month (§2d).
+      final start = budgetStartsLater(b);
+      if (start == null) return false;
+      if (monthStart.isBefore(thisMonthStart)) return false;
+      return window.end.isBefore(start);
+    }).toList();
     bool over(Budget b) {
       final limit = budgetEffectiveLimit(b, month);
       return limit > 0 && budgetSpend(b, month) > limit;
@@ -2512,6 +2568,17 @@ class AppStore extends ChangeNotifier {
   double budgetedSpend(DateTime month) => budgetedCategories
       .fold(0.0, (sum, c) => sum + spentInCategory(c.id, month));
 
+  /// [budgetedSpend] restricted to categories whose monthly budget actually
+  /// runs in [month] (task 067.1 §2e) — a not-yet-started budget's category is
+  /// excluded, so the hero total and its spend describe the same budget set.
+  double budgetedSpendFor(DateTime month) {
+    final window = DateRange(_monthStart(month), _monthEnd(month));
+    return budgetedCategories.where((c) {
+      final b = monthlyBudgetForCategory(c.id);
+      return b != null && budgetRunsIn(b, window);
+    }).fold(0.0, (sum, c) => sum + spentInCategory(c.id, month));
+  }
+
   /// Whether [categoryId] has no active category budget of **any** period — the
   /// test "unbudgeted" now asks (spec §4a). A category with a weekly limit is
   /// budgeted, so it is not unbudgeted, even though the month hero does not sum
@@ -2532,7 +2599,7 @@ class AppStore extends ChangeNotifier {
   /// `budgeted of total` line (spec 5.1 §2). Goes negative — with its minus
   /// sign — when budgeted spend alone passes the budget.
   double leftThisMonth(DateTime month) =>
-      totalBudget - budgetedSpend(month);
+      totalBudgetFor(month) - budgetedSpendFor(month);
 
   /// Expense categories with no budget that have spending in [month], amount
   /// descending — the `NO BUDGET SET` list. A category with nothing spent is
@@ -4306,6 +4373,8 @@ class AppStore extends ChangeNotifier {
     bool rollover = false,
     double warnThreshold = 0.8,
     DateTime? endedAt,
+    DateTime? runsUntil,
+    String note = '',
   }) {
     final cur = (currency == null || currency.isEmpty) ? null : currency;
     final rolls = repeats && rollover;
@@ -4323,6 +4392,8 @@ class AppStore extends ChangeNotifier {
       rollover: rolls,
       warnThreshold: warnThreshold,
       endedAt: endedAt,
+      runsUntil: repeats ? runsUntil : null,
+      note: note.trim(),
       history: [
         BudgetEdit(
           at: today,
@@ -4381,6 +4452,44 @@ class AppStore extends ChangeNotifier {
       ..limit = limit ?? b.limit
       ..rollover = b.repeats ? (rollover ?? b.rollover) : false
       ..warnThreshold = warnThreshold ?? b.warnThreshold;
+    notifyListeners();
+  }
+
+  /// Sets a budget's free-text note (task 067.1 §1). Stored trimmed; not logged.
+  void setBudgetNote(Budget b, String note) {
+    final trimmed = note.trim();
+    if (trimmed == b.note) return;
+    b.note = trimmed;
+    notifyListeners();
+  }
+
+  /// Sets a budget's display name (task 067.1 §8) — the Task 005 path has no name
+  /// parameter, so this fills it. Not logged, matching [updateBudgetGeneral].
+  void setBudgetName(Budget b, String name) {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty || trimmed == b.name) return;
+    b.name = trimmed;
+    notifyListeners();
+  }
+
+  /// Moves a repeating budget's end (task 067.1 §1/§6e). Logs an `'until'` edit
+  /// with the old/new last day as epoch-ms strings (or '' for no end). A no-op
+  /// on a one-off, which ends through [endedAt].
+  void setBudgetRunsUntil(Budget b, DateTime? runsUntil) {
+    if (!b.repeats) return;
+    final next = runsUntil == null
+        ? null
+        : DateTime(runsUntil.year, runsUntil.month, runsUntil.day);
+    if (next == b.runsUntil) return;
+    b.history.add(BudgetEdit(
+      at: today,
+      field: 'until',
+      from: b.runsUntil == null
+          ? ''
+          : '${b.runsUntil!.millisecondsSinceEpoch}',
+      to: next == null ? '' : '${next.millisecondsSinceEpoch}',
+    ));
+    b.runsUntil = next;
     notifyListeners();
   }
 

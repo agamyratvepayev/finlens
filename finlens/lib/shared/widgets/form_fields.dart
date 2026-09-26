@@ -600,6 +600,7 @@ class NameField extends StatefulWidget {
     this.fixedHeight,
     this.iconColumn = RowMetrics.iconColumn,
     this.iconGap = RowMetrics.iconGap,
+    this.emptyTrailing,
   })  : assert(leadingIcon == null || leadingTile == null,
             'a quiet glyph or a tappable tile, never both'),
         assert(onLeadingTap == null || leadingIcon != null,
@@ -662,6 +663,11 @@ class NameField extends StatefulWidget {
 
   final double iconColumn;
   final double iconGap;
+
+  /// A trailing widget drawn only while the field is empty, where the clear
+  /// button is drawn once it is not (task 067.1 §3) — the budget's `auto` pill
+  /// beside its derived-name hint. Null keeps the plain empty row.
+  final Widget? emptyTrailing;
 
   @override
   State<NameField> createState() => _NameFieldState();
@@ -770,7 +776,7 @@ class _NameFieldState extends State<NameField> {
               ValueListenableBuilder<TextEditingValue>(
                 valueListenable: widget.controller,
                 builder: (context, value, _) => value.text.isEmpty
-                    ? const SizedBox.shrink()
+                    ? (widget.emptyTrailing ?? const SizedBox.shrink())
                     : _clearButton(),
               ),
             ],

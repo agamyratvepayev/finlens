@@ -65,7 +65,7 @@ void main() {
     _noNotSet(tester);
   });
 
-  testWidgets('new budget: targets read "Choose categories" and dates "Pick dates"',
+  testWidgets('new budget: targets read "Choose categories", Runs a default',
       (tester) async {
     _tall(tester);
     await tester.pumpWidget(_host(_empty(), const EditBudgetScreen()));
@@ -73,7 +73,10 @@ void main() {
 
     // Default scope is categories, so the target row asks for categories.
     expect(find.text('Choose categories'), findsOneWidget);
-    expect(find.text('Pick dates'), findsOneWidget);
+    // Task 067.1: the Dates row became Runs, which is never empty — a new
+    // monthly budget opens on its default window, not a "Pick dates" imperative.
+    expect(find.text('Pick dates'), findsNothing);
+    expect(find.text('From this month · no end'), findsOneWidget);
     _noNotSet(tester);
   });
 

@@ -1985,6 +1985,112 @@ class AppLocalizationsTk extends AppLocalizations {
   String get bgEvOnce => 'bir gezek';
 
   @override
+  String bgAutoNameMore(Object name, int count) {
+    return '$name + $count';
+  }
+
+  @override
+  String get bgSpendingOn => 'Näme üçin';
+
+  @override
+  String get bgSpendingFrom => 'Haýsy hasapdan';
+
+  @override
+  String get bgSpendingTagged => 'Bellikli çykdajy';
+
+  @override
+  String get bgWeeklyLimit => 'Hepdelik çäk';
+
+  @override
+  String get bgPeriod => 'Döwür';
+
+  @override
+  String bgPeriodEveryDays(int count) {
+    return 'Her $count günde';
+  }
+
+  @override
+  String get bgPeriodMonthHint => 'Aýyň 1-ine täzelenýär';
+
+  @override
+  String get bgPeriodWeekHint => 'Saýlan günüňde täzelenýär';
+
+  @override
+  String get bgPeriodDaysHint => '2–365 gün';
+
+  @override
+  String get bgRuns => 'Möhlet';
+
+  @override
+  String get bgRunsThisMonthNoEnd => 'Şu aýdan · soňy ýok';
+
+  @override
+  String get bgRunsTodayNoEnd => 'Şu günden · soňy ýok';
+
+  @override
+  String bgRunsFromNoEnd(Object start) {
+    return '$start senesinden · soňy ýok';
+  }
+
+  @override
+  String get bgRunsOnceSub => 'Bir gezek · syýahat, taslama';
+
+  @override
+  String get bgRunsUntil => 'ÇENLI';
+
+  @override
+  String get bgNoEnd => 'Soňy ýok';
+
+  @override
+  String bgStartsOn(Object date) {
+    return '$date başlar';
+  }
+
+  @override
+  String bgApplyDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Ulan · $count gün',
+      one: 'Ulan · $count gün',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String bgApplyWeeks(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Ulan · $count hepde',
+      one: 'Ulan · $count hepde',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String bgApplyMonths(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Ulan · $count aý',
+      one: 'Ulan · $count aý',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String bgApplyPeriods(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Ulan · $count döwür',
+      one: 'Ulan · $count döwür',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get bgSuffixWeekly => 'hepdelik';
 
   @override

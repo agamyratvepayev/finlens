@@ -193,7 +193,9 @@ class BudgetEdit {
 
   /// 'created' | 'limit' | 'rollover' | 'warn' | 'removed' | 'restored'
   /// | 'categoryArchived' | 'categories' (targets changed — budgets-as-object
-  /// spec §C.3)
+  /// spec §C.3) | 'until' (a repeating budget's end moved — task 067.1 §1; from
+  /// and to hold the epoch-ms string of the old and new last day, or '' for no
+  /// end. 067.2's CHANGES list renders it).
   final String field;
 
   /// Formatted, and language-neutral: money via `money()`, percent via
@@ -247,7 +249,9 @@ class Budget {
     this.rollover = false,
     this.warnThreshold = 0.8,
     this.endedAt,
+    this.runsUntil,
     this.archivedAt,
+    this.note = '',
     List<BudgetEdit>? history,
   })  : targets = {...targets},
         currency = currency ?? '',
@@ -301,6 +305,15 @@ class Budget {
   /// (spec §C.5). A finished budget's definition is then locked so recomputing
   /// over the closed window is stable.
   DateTime? endedAt;
+
+  /// The last day (inclusive, local midnight) a **repeating** budget runs: the
+  /// end of the period that contains the chosen UNTIL (task 067.1 §1). Null
+  /// means no end. Always null for a one-off, which keeps using [endedAt].
+  DateTime? runsUntil;
+
+  /// Free text shown on the budget's detail and its card (067.2 / 067.3).
+  /// Empty string means no note. Never null.
+  String note;
 
   /// Set when the budget is archived — it then leaves the Budgets tab in every
   /// month and lives only in the Archive (spec §C.5). The migration maps a

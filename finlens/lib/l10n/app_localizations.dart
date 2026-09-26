@@ -3088,6 +3088,138 @@ abstract class AppLocalizations {
   /// **'once'**
   String get bgEvOnce;
 
+  /// No description provided for @bgAutoNameMore.
+  ///
+  /// In en, this message translates to:
+  /// **'{name} + {count}'**
+  String bgAutoNameMore(Object name, int count);
+
+  /// No description provided for @bgSpendingOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Spending on'**
+  String get bgSpendingOn;
+
+  /// No description provided for @bgSpendingFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'Spending from'**
+  String get bgSpendingFrom;
+
+  /// No description provided for @bgSpendingTagged.
+  ///
+  /// In en, this message translates to:
+  /// **'Spending tagged'**
+  String get bgSpendingTagged;
+
+  /// No description provided for @bgWeeklyLimit.
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly limit'**
+  String get bgWeeklyLimit;
+
+  /// No description provided for @bgPeriod.
+  ///
+  /// In en, this message translates to:
+  /// **'Period'**
+  String get bgPeriod;
+
+  /// No description provided for @bgPeriodEveryDays.
+  ///
+  /// In en, this message translates to:
+  /// **'Every {count} days'**
+  String bgPeriodEveryDays(int count);
+
+  /// No description provided for @bgPeriodMonthHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Resets on the 1st'**
+  String get bgPeriodMonthHint;
+
+  /// No description provided for @bgPeriodWeekHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Resets on the day you pick'**
+  String get bgPeriodWeekHint;
+
+  /// No description provided for @bgPeriodDaysHint.
+  ///
+  /// In en, this message translates to:
+  /// **'2–365 days'**
+  String get bgPeriodDaysHint;
+
+  /// No description provided for @bgRuns.
+  ///
+  /// In en, this message translates to:
+  /// **'Runs'**
+  String get bgRuns;
+
+  /// No description provided for @bgRunsThisMonthNoEnd.
+  ///
+  /// In en, this message translates to:
+  /// **'From this month · no end'**
+  String get bgRunsThisMonthNoEnd;
+
+  /// No description provided for @bgRunsTodayNoEnd.
+  ///
+  /// In en, this message translates to:
+  /// **'From today · no end'**
+  String get bgRunsTodayNoEnd;
+
+  /// No description provided for @bgRunsFromNoEnd.
+  ///
+  /// In en, this message translates to:
+  /// **'From {start} · no end'**
+  String bgRunsFromNoEnd(Object start);
+
+  /// No description provided for @bgRunsOnceSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Once · a trip, a project'**
+  String get bgRunsOnceSub;
+
+  /// No description provided for @bgRunsUntil.
+  ///
+  /// In en, this message translates to:
+  /// **'UNTIL'**
+  String get bgRunsUntil;
+
+  /// No description provided for @bgNoEnd.
+  ///
+  /// In en, this message translates to:
+  /// **'No end'**
+  String get bgNoEnd;
+
+  /// No description provided for @bgStartsOn.
+  ///
+  /// In en, this message translates to:
+  /// **'starts {date}'**
+  String bgStartsOn(Object date);
+
+  /// No description provided for @bgApplyDays.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{Apply · {count} day} other{Apply · {count} days}}'**
+  String bgApplyDays(int count);
+
+  /// No description provided for @bgApplyWeeks.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{Apply · {count} week} other{Apply · {count} weeks}}'**
+  String bgApplyWeeks(int count);
+
+  /// No description provided for @bgApplyMonths.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{Apply · {count} month} other{Apply · {count} months}}'**
+  String bgApplyMonths(int count);
+
+  /// No description provided for @bgApplyPeriods.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{Apply · {count} period} other{Apply · {count} periods}}'**
+  String bgApplyPeriods(int count);
+
   /// No description provided for @bgSuffixWeekly.
   ///
   /// In en, this message translates to:

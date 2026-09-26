@@ -351,7 +351,7 @@ class _PlannerScreenState extends State<PlannerScreen> {
     // the tab is empty and in the spending-without-budget case, where the NO
     // BUDGET SET panel carries the tab instead (§3.1).
     _ =>
-      store.totalBudget > 0
+      store.totalBudgetFor(_month) > 0
           ? _BudgetSummary(store: store, month: _month)
           : const SizedBox.shrink(),
   };
@@ -591,9 +591,9 @@ class _BudgetSummary extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
-    final budget = store.totalBudget;
+    final budget = store.totalBudgetFor(month);
     final hasBudget = budget > 0;
-    final budgeted = store.budgetedSpend(month);
+    final budgeted = store.budgetedSpendFor(month);
     // Hero and caption describe the budget and nothing else: left = budget в€’
     // budgeted spend; the percentage is budgeted / budget. Unbudgeted spend sits
     // outside the budget and is surfaced by _NoBudgetSection at the foot of the
@@ -768,9 +768,10 @@ class _BudgetsTab extends StatelessWidget {
               trailing: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  AmountText(store.budgetedSpend(month), style: totalLabelStyle),
+                  AmountText(store.budgetedSpendFor(month),
+                      style: totalLabelStyle),
                   Text(' / ', style: totalLabelStyle),
-                  AmountText(store.totalBudget, style: totalLabelStyle),
+                  AmountText(store.totalBudgetFor(month), style: totalLabelStyle),
                 ],
               ),
             ),
@@ -876,6 +877,16 @@ class _BudgetCard extends StatelessWidget {
     // dimmed, verdict state is the end being in the past (spec §5c).
     final finished =
         !b.repeats && b.endedAt != null && today.isAfter(b.endedAt!);
+    // A budget the user set to start later, shown (dimmed) in a month before it
+    // runs (task 067.1 §2d). 067.3 redraws this card; here it only dims and
+    // swaps the third line for a "starts {date}" note.
+    final windowStart =
+        DateTime(month.year, month.month, 1);
+    final startsLater = store.budgetStartsLater(b);
+    final notStarted = startsLater != null &&
+        DateTime(windowStart.year, windowStart.month + 1, 0)
+            .isBefore(startsLater);
+    final dimmed = finished || notStarted;
 
     final curArg = b.currency.isEmpty ? null : b.currency;
     final spentStr = money(spent, currency: curArg, masked: store.masked);
@@ -887,13 +898,17 @@ class _BudgetCard extends StatelessWidget {
     // Pace as the fraction of the window elapsed — generic across any period,
     // shown only while the window contains today.
     final windowSpan = window.end.difference(window.start).inDays;
-    final pace = containsToday && !finished
+    final pace = containsToday && !dimmed
         ? (today.difference(window.start).inDays /
                 (windowSpan == 0 ? 1 : windowSpan))
             .clamp(0.0, 1.0)
         : null;
 
-    final clock = _clockLine(l, window, containsToday);
+    final clock = notStarted
+        ? Text(l.bgStartsOn(dayMonth(startsLater, l)),
+            style: AppText.caption
+                .copyWith(fontSize: 11.5, color: AppColors.textTertiary))
+        : _clockLine(l, window, containsToday);
 
     final card = AppCard(
       radius: 14,
@@ -928,7 +943,7 @@ class _BudgetCard extends StatelessWidget {
                                 fontSize: 11.5, color: AppColors.textTertiary),
                           ),
                         ],
-                        if (over && !finished)
+                        if (over && !dimmed)
                           const Padding(
                             padding: EdgeInsets.only(left: 5),
                             child: Icon(Icons.warning_amber_rounded,
@@ -977,7 +992,7 @@ class _BudgetCard extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(Insets.gutter, 0, Insets.gutter, 8),
-      child: finished ? Opacity(opacity: 0.55, child: card) : card,
+      child: dimmed ? Opacity(opacity: 0.55, child: card) : card,
     );
   }
 

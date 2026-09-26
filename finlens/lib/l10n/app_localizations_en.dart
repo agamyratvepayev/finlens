@@ -1997,6 +1997,112 @@ class AppLocalizationsEn extends AppLocalizations {
   String get bgEvOnce => 'once';
 
   @override
+  String bgAutoNameMore(Object name, int count) {
+    return '$name + $count';
+  }
+
+  @override
+  String get bgSpendingOn => 'Spending on';
+
+  @override
+  String get bgSpendingFrom => 'Spending from';
+
+  @override
+  String get bgSpendingTagged => 'Spending tagged';
+
+  @override
+  String get bgWeeklyLimit => 'Weekly limit';
+
+  @override
+  String get bgPeriod => 'Period';
+
+  @override
+  String bgPeriodEveryDays(int count) {
+    return 'Every $count days';
+  }
+
+  @override
+  String get bgPeriodMonthHint => 'Resets on the 1st';
+
+  @override
+  String get bgPeriodWeekHint => 'Resets on the day you pick';
+
+  @override
+  String get bgPeriodDaysHint => '2–365 days';
+
+  @override
+  String get bgRuns => 'Runs';
+
+  @override
+  String get bgRunsThisMonthNoEnd => 'From this month · no end';
+
+  @override
+  String get bgRunsTodayNoEnd => 'From today · no end';
+
+  @override
+  String bgRunsFromNoEnd(Object start) {
+    return 'From $start · no end';
+  }
+
+  @override
+  String get bgRunsOnceSub => 'Once · a trip, a project';
+
+  @override
+  String get bgRunsUntil => 'UNTIL';
+
+  @override
+  String get bgNoEnd => 'No end';
+
+  @override
+  String bgStartsOn(Object date) {
+    return 'starts $date';
+  }
+
+  @override
+  String bgApplyDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Apply · $count days',
+      one: 'Apply · $count day',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String bgApplyWeeks(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Apply · $count weeks',
+      one: 'Apply · $count week',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String bgApplyMonths(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Apply · $count months',
+      one: 'Apply · $count month',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String bgApplyPeriods(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Apply · $count periods',
+      one: 'Apply · $count period',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get bgSuffixWeekly => 'weekly';
 
   @override

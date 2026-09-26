@@ -140,8 +140,10 @@ Map<String, Object?> budgetToMap(Budget b) => {
       'rollover': _b(b.rollover),
       'warn_threshold': b.warnThreshold,
       'ended_at': _dt(b.endedAt),
+      'runs_until': _dt(b.runsUntil),
       'archived_at': _dt(b.archivedAt),
       'currency': b.currency,
+      'note': b.note,
       'history': jsonEncode(b.history.map(_budgetEditToJson).toList()),
     };
 
@@ -158,8 +160,11 @@ Budget budgetFromMap(Map<String, Object?> m) => Budget(
       rollover: _bf(m['rollover']),
       warnThreshold: _d(m['warn_threshold']),
       endedAt: _dtn(m['ended_at']),
+      // Pre-task-067 rows lack these: no end, no note (§1).
+      runsUntil: _dtn(m['runs_until']),
       archivedAt: _dtn(m['archived_at']),
       currency: m['currency'] as String?,
+      note: (m['note'] as String?) ?? '',
       history: _decodeList(m['history'])
           .map((e) => _budgetEditFromJson(e as Map<String, dynamic>))
           .toList(),
