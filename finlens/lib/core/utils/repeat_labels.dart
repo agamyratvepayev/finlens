@@ -49,9 +49,20 @@ String repeatCadenceLabel(
     case RepeatFrequency.monthly:
       final days = (daysOfMonth.isEmpty ? {seedDate.day} : daysOfMonth).toList()
         ..sort();
-      if (days.length == 1) return l.rsMonthlyOnDay(ordinalDay(days.first, l));
+      // 31 IS the last day (task 063 §7a): the engine clamps it to every
+      // month's end, so naming it "31st" previews `30 Nov` as if it were a
+      // bug. The [kLastDayOfMonth] sentinel and a literal 31 read the same;
+      // 29 and 30 keep their ordinals (they really do skip short months' end).
+      bool isLast(int d) => d == 31 || d == kLastDayOfMonth;
+      if (days.length == 1) {
+        return isLast(days.first)
+            ? l.rsMonthlyOnLastDay
+            : l.rsMonthlyOnDay(ordinalDay(days.first, l));
+      }
       if (days.length > 3) return l.rsNDaysMonth(days.length);
-      return _joinList([for (final d in days) ordinalDay(d, l)], l);
+      return _joinList(
+          [for (final d in days) isLast(d) ? l.rcLastDay : ordinalDay(d, l)],
+          l);
   }
 }
 

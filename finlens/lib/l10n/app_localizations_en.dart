@@ -2326,6 +2326,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get etCategoryHint => 'Where \"Mark as paid\" books it';
 
   @override
+  String get etOwedBy => 'Owed by';
+
+  @override
+  String get etOwedByHint => 'Adds to what they owe you';
+
+  @override
+  String etRepeatLast(Object date) {
+    return 'last $date';
+  }
+
+  @override
   String get etNextDue => 'Next due';
 
   @override
@@ -3407,6 +3418,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String rsMonthlyOnDay(Object day) {
     return 'Every month on the $day';
   }
+
+  @override
+  String get rsMonthlyOnLastDay => 'Every month on the last day';
 
   @override
   String rsDaysJoin(Object head, Object last) {
@@ -4882,6 +4896,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get tdMarkReceived => 'Mark as received';
+
+  @override
+  String get tdRecordEarning => 'Record earning';
+
+  @override
+  String tdOwesMore(Object account, Object amount) {
+    return '$account will owe you $amount more';
+  }
 
   @override
   String get tdSkipOne => 'Skip this one';

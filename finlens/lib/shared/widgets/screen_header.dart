@@ -188,6 +188,11 @@ class SectionLabel extends StatelessWidget {
 }
 
 /// Segmented control used by New/Edit Goal's type picker (spec 3.6 / 5.6).
+///
+/// [dense] (task 063 §3) is the compact form-row variant Edit scheduled item's
+/// Direction row uses: ~30 pt tall, hugging its labels instead of filling the
+/// width, so it sits inside a 48 pt [FormRow] with air around it. Every other
+/// caller keeps the full-size control.
 class SegmentedPicker<T> extends StatelessWidget {
   const SegmentedPicker({
     super.key,
@@ -195,52 +200,59 @@ class SegmentedPicker<T> extends StatelessWidget {
     required this.labelOf,
     required this.selected,
     required this.onChanged,
+    this.dense = false,
   });
 
   final List<T> values;
   final String Function(T) labelOf;
   final T selected;
   final ValueChanged<T> onChanged;
+  final bool dense;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(3),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceAlt,
-        borderRadius: BorderRadius.circular(Radii.md),
-      ),
-      child: Row(
-        children: [
-          for (final v in values)
-            Expanded(
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () => onChanged(v),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 160),
-                  padding: const EdgeInsets.symmetric(vertical: 9),
-                  decoration: BoxDecoration(
-                    color: v == selected
-                        ? AppColors.surfaceHigh
-                        : Colors.transparent,
-                    borderRadius: BorderRadius.circular(Radii.sm + 1),
-                  ),
-                  child: Text(
-                    labelOf(v),
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 13.5,
-                      fontWeight:
-                          v == selected ? FontWeight.w600 : FontWeight.w500,
-                      color: v == selected
-                          ? AppColors.textPrimary
-                          : AppColors.textSecondary,
-                    ),
-                  ),
-                ),
+    Widget segment(T v) => GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => onChanged(v),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 160),
+            padding: dense
+                ? const EdgeInsets.symmetric(vertical: 5, horizontal: 11)
+                : const EdgeInsets.symmetric(vertical: 9),
+            decoration: BoxDecoration(
+              // Dense sits on a darker row card, so its selected fill steps up
+              // to chipActive to stay legible at the smaller size.
+              color: v == selected
+                  ? (dense ? AppColors.chipActive : AppColors.surfaceHigh)
+                  : Colors.transparent,
+              borderRadius:
+                  BorderRadius.circular(dense ? Radii.sm - 1 : Radii.sm + 1),
+            ),
+            child: Text(
+              labelOf(v),
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: dense ? 13 : 13.5,
+                fontWeight: v == selected ? FontWeight.w600 : FontWeight.w500,
+                color: v == selected
+                    ? AppColors.textPrimary
+                    : AppColors.textSecondary,
               ),
             ),
+          ),
+        );
+
+    return Container(
+      padding: EdgeInsets.all(dense ? 2 : 3),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceAlt,
+        borderRadius: BorderRadius.circular(dense ? Radii.sm + 1 : Radii.md),
+      ),
+      child: Row(
+        mainAxisSize: dense ? MainAxisSize.min : MainAxisSize.max,
+        children: [
+          for (final v in values)
+            if (dense) segment(v) else Expanded(child: segment(v)),
         ],
       ),
     );

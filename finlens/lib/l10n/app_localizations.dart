@@ -3562,6 +3562,24 @@ abstract class AppLocalizations {
   /// **'Where \"Mark as paid\" books it'**
   String get etCategoryHint;
 
+  /// No description provided for @etOwedBy.
+  ///
+  /// In en, this message translates to:
+  /// **'Owed by'**
+  String get etOwedBy;
+
+  /// No description provided for @etOwedByHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Adds to what they owe you'**
+  String get etOwedByHint;
+
+  /// No description provided for @etRepeatLast.
+  ///
+  /// In en, this message translates to:
+  /// **'last {date}'**
+  String etRepeatLast(Object date);
+
   /// No description provided for @etNextDue.
   ///
   /// In en, this message translates to:
@@ -5397,6 +5415,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Every month on the {day}'**
   String rsMonthlyOnDay(Object day);
+
+  /// No description provided for @rsMonthlyOnLastDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Every month on the last day'**
+  String get rsMonthlyOnLastDay;
 
   /// No description provided for @rsDaysJoin.
   ///
@@ -7479,6 +7503,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Mark as received'**
   String get tdMarkReceived;
+
+  /// No description provided for @tdRecordEarning.
+  ///
+  /// In en, this message translates to:
+  /// **'Record earning'**
+  String get tdRecordEarning;
+
+  /// No description provided for @tdOwesMore.
+  ///
+  /// In en, this message translates to:
+  /// **'{account} will owe you {amount} more'**
+  String tdOwesMore(Object account, Object amount);
 
   /// No description provided for @tdSkipOne.
   ///

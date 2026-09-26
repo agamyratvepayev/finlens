@@ -118,6 +118,14 @@ enum TaskStatus { open, paid, skipped, paused, deleted }
 /// Priority labels localized — see `PriorityL10n.label`.
 enum Priority { low, normal, high }
 
+/// The value 32 stands for "the last day of the month, whatever it is" — the
+/// month grid's `Last` cell. The occurrence engine clamps any day past a
+/// month's length to that month's last day, so 32 always resolves to the last
+/// day, and 31 + Last collapse to one occurrence in a 31-day month. Lives in
+/// core (task 063 §7a) so [repeatCadenceLabel] can name it without importing a
+/// feature; the repeat sheet re-uses this same constant.
+const int kLastDayOfMonth = 32;
+
 /// Repeat cadences. Labels localized — see `RepeatFrequencyL10n.label`.
 /// `biweekly` sits between `weekly` and `monthly` to match the Planner Repeat
 /// sheet's row order.

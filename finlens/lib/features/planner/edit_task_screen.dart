@@ -7,6 +7,7 @@ import '../../core/utils/arithmetic.dart';
 import '../../core/utils/formatters.dart';
 import '../../core/utils/repeat_labels.dart';
 import '../../l10n/app_localizations.dart';
+import '../../shared/widgets/app_card.dart';
 import '../../shared/widgets/form_fields.dart';
 import '../../shared/widgets/screen_header.dart';
 import '../../shared/widgets/typed_date_sheet.dart';
@@ -67,6 +68,28 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
   late final Priority _priority = _task.priority;
   late bool _payOut = _task.isPayOut;
 
+  /// Money owed to the user only ever flows in (task 063 §8): a task linked to
+  /// a Receivables account is an earning, whatever the stored sign says.
+  bool get _isReceivable =>
+      _store.accountById(_accountId)?.group == AccountGroup.receivables;
+
+  /// Forces the invariants of receivable mode (§8b): pay-in, and never a
+  /// liability transfer. Called on entry and whenever the account changes;
+  /// leaving receivable mode keeps pay-in selected, with Direction back on
+  /// screen.
+  void _normalizeReceivable() {
+    if (_isReceivable) {
+      _payOut = false;
+      _payToAccountId = null;
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _normalizeReceivable();
+  }
+
   @override
   void dispose() {
     _title.dispose();
@@ -102,7 +125,10 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
   List<DateTime> get _preview {
     if (_repeats == RepeatFrequency.none) return const [];
     // A transient Task runs the one true [Task.nextOccurrence] rule against the
-    // locally-edited frequency, due date and day sets.
+    // locally-edited frequency, due date and day sets. The stored custom step
+    // and end condition ride along (task 063 §7b) so a Custom rule previews
+    // truly — though [Task.upcomingPreview] itself does not stop at the end
+    // condition (it only steps dates); the end is *shown* beside the preview.
     return Task(
       id: '',
       title: '',
@@ -113,6 +139,10 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
       repeats: _repeats,
       weekdays: _weekdays,
       daysOfMonth: _daysOfMonth,
+      repeatInterval: _task.repeatInterval,
+      repeatUnit: _task.repeatUnit,
+      repeatEndDate: _task.repeatEndDate,
+      repeatEndCount: _task.repeatEndCount,
     ).upcomingPreview(3);
   }
 
@@ -155,9 +185,21 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
         FormSection(
           children: [
             FormRow(
-              icon: Icons.account_balance_wallet_rounded,
-              label: _payOut ? l.etPaidFrom : l.etPaidInto,
-              subtitle: account?.name ?? l.fieldSelectAccount,
+              // The receivable row is the one two-line account row (§8c): its
+              // caption says what recording does, and the icon takes the
+              // group's own glyph and blue.
+              icon: _isReceivable
+                  ? AccountGroup.receivables.icon
+                  : Icons.account_balance_wallet_rounded,
+              iconColor: _isReceivable ? AppColors.receivables : null,
+              label: _isReceivable
+                  ? l.etOwedBy
+                  : (_payOut ? l.etPaidFrom : l.etPaidInto),
+              subtitle: _isReceivable ? l.etOwedByHint : null,
+              // One line (task 063 §2): the account is the row's value, not a
+              // second line; long names ellipsise at the cap.
+              value: account?.name ?? l.fieldSelectAccount,
+              valueMaxWidth: 170,
               showChevron: true,
               // pickAccount raises a bottom sheet.
               opensSheet: true,
@@ -169,26 +211,32 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
                 setState(() {
                   _dropDeletedRefs();
                   if (a != null) _accountId = a.id;
+                  _normalizeReceivable();
                 });
               },
             ),
-            FormRow(
-              icon: Icons.swap_vert_rounded,
-              label: l.fieldDirection,
-              trailing: Flexible(
-                child: SegmentedPicker<bool>(
-                  values: const [true, false],
-                  labelOf: (v) => v ? l.etPayOut : l.etPayIn,
-                  selected: _payOut,
-                  onChanged: (v) => setState(() {
-                    _payOut = v;
-                    // Pay-in can only book into an income category, never a
-                    // liability account (§10.4).
-                    if (!v) _payToAccountId = null;
-                  }),
+            // No Direction on a receivable (§8b): money owed to you only ever
+            // flows in — offering "Pay out" here is how a pay-out earning
+            // happened in the first place.
+            if (!_isReceivable)
+              FormRow(
+                icon: Icons.swap_vert_rounded,
+                label: l.fieldDirection,
+                trailing: Flexible(
+                  child: SegmentedPicker<bool>(
+                    dense: true,
+                    values: const [true, false],
+                    labelOf: (v) => v ? l.etPayOut : l.etPayIn,
+                    selected: _payOut,
+                    onChanged: (v) => setState(() {
+                      _payOut = v;
+                      // Pay-in can only book into an income category, never a
+                      // liability account (§10.4).
+                      if (!v) _payToAccountId = null;
+                    }),
+                  ),
                 ),
               ),
-            ),
             TxnAmountFieldRow(
               // The Schedule form's own choice for this row (task 061): the
               // currency-neutral # beside the label Amount, not $ / Expected
@@ -206,20 +254,20 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
             ),
             FormRow(
               icon: Icons.category_rounded,
-              label: _payOut ? l.etPaidTo : l.fieldCategory,
-              subtitle: _destinationSubtitle(store, l),
+              // Paid to never appears in receivable mode (§8d): an earning
+              // books into an income category, full stop.
+              label: (!_isReceivable && _payOut) ? l.etPaidTo : l.fieldCategory,
+              // Empty is the same imperative the transaction form's rows use
+              // (task 063 §5a) — never the old "Where …" sentence.
+              value: _destinationInfo(store) == null ? l.qaChooseCategory : null,
+              valueColor: AppColors.textTertiary,
+              trailing: _destinationTrailing(store),
               showChevron: true,
               // _pickDestination raises a bottom sheet (category / pay-out picker).
               opensSheet: true,
               onTap: _pickDestination,
             ),
-            FormRow(
-              icon: Icons.event_rounded,
-              label: l.etNextDue,
-              value: dayMonth(_due, AppLocalizations.of(context)),
-              showChevron: true,
-              onTap: _pickDue,
-            ),
+            _dueRow(store, l),
             FormRow(
               icon: Icons.repeat_rounded,
               label: _repeats == RepeatFrequency.none
@@ -227,10 +275,11 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
                   : l.etRepeatsCadence(
                       repeatCadenceLabel(_repeats, _weekdays, _daysOfMonth, _due, l)
                           .toLowerCase()),
-              // Spec 5.7 — the preview is what makes a series comprehensible.
-              subtitle: _preview.isEmpty
-                  ? l.etOneOff
-                  : '${_preview.map((d) => repeatPreviewDate(d, _repeats, AppLocalizations.of(context))).join(' · ')} …',
+              // Spec 5.7 — the preview is what makes a series comprehensible;
+              // task 063 §7b adds how the series ends, read from the stored
+              // task (this screen shows the end, it cannot edit it).
+              subtitle: _preview.isEmpty ? l.etOneOff : null,
+              subtitleSpans: _preview.isEmpty ? null : _previewSpans(l),
               value:
                   _preview.isEmpty ? _repeats.label(AppLocalizations.of(context)) : null,
               showChevron: true,
@@ -254,6 +303,9 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
               label: l.etNote,
               controller: _note,
               hint: l.etNoteHint,
+              // A saved note reads as content, not a blank row (task 063 §1e):
+              // the label becomes a caption and the text wraps below it.
+              stacked: true,
             ),
           ],
         ),
@@ -261,12 +313,86 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
     );
   }
 
-  String _destinationSubtitle(AppStore store, AppLocalizations l) {
-    if (_payToAccountId != null) {
-      return '${store.accountById(_payToAccountId)?.name ?? '—'} · '
-          '${l.mpTransferNoCategory}';
+  /// The chosen destination — a category, or (pay-out only) a liability
+  /// account. Null when nothing is chosen yet.
+  ({IconData icon, Color color, String name})? _destinationInfo(
+      AppStore store) {
+    if (!_isReceivable && _payToAccountId != null) {
+      final a = store.accountById(_payToAccountId);
+      if (a != null) return (icon: a.displayIcon, color: a.color, name: a.name);
     }
-    return store.categoryById(_categoryId)?.name ?? l.etCategoryHint;
+    final c = store.categoryById(_categoryId);
+    if (c != null) return (icon: c.icon, color: c.color, name: c.name);
+    return null;
+  }
+
+  /// The chosen destination as the row's value (task 063 §5b): its 20 pt tile,
+  /// then its name. The `Transfer — no budget category` caption lives in the
+  /// destination sheet's row, not here.
+  Widget? _destinationTrailing(AppStore store) {
+    final d = _destinationInfo(store);
+    if (d == null) return null;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        IconTile(d.icon, color: d.color, size: 20, iconSize: 12),
+        const SizedBox(width: 6),
+        ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 150),
+          child: Text(
+            d.name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: RowMetrics.valueSize,
+              color: AppColors.textSecondary,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Next due — and, when the date has passed, how late, in red (task 063 §6).
+  Widget _dueRow(AppStore store, AppLocalizations l) {
+    final today = store.today;
+    final dueDay = DateTime(_due.year, _due.month, _due.day);
+    final todayDay = DateTime(today.year, today.month, today.day);
+    final lateDays = todayDay.difference(dueDay).inDays;
+    final late = lateDays > 0;
+    return FormRow(
+      icon: Icons.event_rounded,
+      label: l.etNextDue,
+      value: late
+          ? '${dayMonth(_due, l)} · ${l.schDaysLate(lateDays)}'
+          : dayMonth(_due, l),
+      valueColor: late ? AppColors.negative : null,
+      showChevron: true,
+      onTap: _pickDue,
+    );
+  }
+
+  /// The repeat preview with the series' end after the ellipsis (§7b), in
+  /// accentLight: `· {n} times` for a count, `· last {date}` for a date,
+  /// nothing when the series never ends.
+  List<InlineSpan> _previewSpans(AppLocalizations l) {
+    final dates =
+        _preview.map((d) => repeatPreviewDate(d, _repeats, l)).join(' · ');
+    final endCount = _task.repeatEndCount;
+    final endDate = _task.repeatEndDate;
+    final String? end = endCount != null
+        ? l.rcTimes(endCount)
+        : endDate != null
+            ? l.etRepeatLast(dayMonthYear(endDate, l))
+            : null;
+    return [
+      TextSpan(text: '$dates …'),
+      if (end != null) ...[
+        const TextSpan(text: ' · '),
+        TextSpan(
+            text: end, style: const TextStyle(color: AppColors.accentLight)),
+      ],
+    ];
   }
 
   /// Clears any nullable ref the form holds that no longer resolves after a
@@ -367,6 +493,9 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
   }
 
   void _save() {
+    // Belt and braces: receivable mode's invariants hold at save even if the
+    // account changed without passing through the picker's setState.
+    _normalizeReceivable();
     final noteText = _note.text.trim();
     _store.updateTask(
       _task,

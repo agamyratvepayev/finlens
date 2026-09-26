@@ -2379,6 +2379,17 @@ class AppLocalizationsRu extends AppLocalizations {
   String get etCategoryHint => 'Куда «Отметить оплаченным» запишет операцию';
 
   @override
+  String get etOwedBy => 'Должник';
+
+  @override
+  String get etOwedByHint => 'Увеличивает долг перед вами';
+
+  @override
+  String etRepeatLast(Object date) {
+    return 'последний $date';
+  }
+
+  @override
   String get etNextDue => 'Следующий срок';
 
   @override
@@ -3464,6 +3475,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String rsMonthlyOnDay(Object day) {
     return 'Каждый месяц $day числа';
   }
+
+  @override
+  String get rsMonthlyOnLastDay => 'Каждый месяц в последний день';
 
   @override
   String rsDaysJoin(Object head, Object last) {
@@ -4971,6 +4985,14 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get tdMarkReceived => 'Отметить полученным';
+
+  @override
+  String get tdRecordEarning => 'Записать доход';
+
+  @override
+  String tdOwesMore(Object account, Object amount) {
+    return '$account будет должен вам ещё $amount';
+  }
 
   @override
   String get tdSkipOne => 'Пропустить эту';

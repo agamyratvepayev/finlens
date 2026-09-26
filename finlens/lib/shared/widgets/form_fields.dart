@@ -78,10 +78,13 @@ class FormRow extends StatelessWidget {
   const FormRow({
     super.key,
     this.icon,
+    this.iconColor,
     required this.label,
     this.subtitle,
+    this.subtitleSpans,
     this.value,
     this.valueColor,
+    this.valueMaxWidth,
     this.trailing,
     this.onTap,
     this.showChevron = false,
@@ -92,6 +95,10 @@ class FormRow extends StatelessWidget {
   });
 
   final IconData? icon;
+
+  /// Tints the icon (task 063 §8c — the receivable row's blue). Null keeps the
+  /// standard grey.
+  final Color? iconColor;
   final String label;
 
   /// An optional tag rendered immediately after the label, outside its flexible
@@ -99,8 +106,18 @@ class FormRow extends StatelessWidget {
   /// every other row.
   final Widget? labelBadge;
   final String? subtitle;
+
+  /// A styled subtitle (task 063 §7b — the repeat preview's accented end
+  /// marker). Rendered in the subtitle's slot and base style; spans override
+  /// per-run colour. At most one of [subtitle] / [subtitleSpans] is passed.
+  final List<InlineSpan>? subtitleSpans;
   final String? value;
   final Color? valueColor;
+
+  /// Caps the value's width so a long value (an account name) ellipsises
+  /// instead of squeezing the label to nothing (task 063 §2). Null keeps the
+  /// value unconstrained, as every pre-existing caller expects.
+  final double? valueMaxWidth;
   final Widget? trailing;
   final VoidCallback? onTap;
   final bool showChevron;
@@ -125,7 +142,7 @@ class FormRow extends StatelessWidget {
     // a row may exceed RowMetrics.height. It tightens the air inside its line
     // boxes and caps the sentence at two lines; a single-line row is exactly
     // RowMetrics.height tall (task 042).
-    final hasSub = subtitle != null;
+    final hasSub = subtitle != null || subtitleSpans != null;
     return InkWell(
       onTap: enabled && !locked ? onTap : null,
       child: ConstrainedBox(
@@ -150,9 +167,10 @@ class FormRow extends StatelessWidget {
                   child: Icon(
                     icon,
                     size: RowMetrics.iconGlyph,
-                    color: dim
-                        ? AppColors.textTertiary
-                        : AppColors.textSecondary,
+                    color: iconColor ??
+                        (dim
+                            ? AppColors.textTertiary
+                            : AppColors.textSecondary),
                   ),
                 ),
                 const SizedBox(width: RowMetrics.iconGap),
@@ -190,10 +208,12 @@ class FormRow extends StatelessWidget {
                         ?labelBadge,
                       ],
                     ),
-                    if (subtitle != null) ...[
+                    if (hasSub) ...[
                       const SizedBox(height: 1),
-                      Text(
-                        subtitle!,
+                      Text.rich(
+                        subtitleSpans != null
+                            ? TextSpan(children: subtitleSpans)
+                            : TextSpan(text: subtitle),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
@@ -207,16 +227,20 @@ class FormRow extends StatelessWidget {
                 ),
               ),
               if (value != null)
-                Text(
-                  value!,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: RowMetrics.valueSize,
-                    color: valueColor ??
-                        (dim
-                            ? AppColors.textTertiary
-                            : AppColors.textSecondary),
+                ConstrainedBox(
+                  constraints: BoxConstraints(
+                      maxWidth: valueMaxWidth ?? double.infinity),
+                  child: Text(
+                    value!,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: RowMetrics.valueSize,
+                      color: valueColor ??
+                          (dim
+                              ? AppColors.textTertiary
+                              : AppColors.textSecondary),
+                    ),
                   ),
                 ),
               ?trailing,
@@ -321,7 +345,7 @@ class ToggleRow extends StatelessWidget {
 ///
 /// The subtitled [FormRow] is the only row in the app that may exceed
 /// [RowMetrics.height]. This one no longer is.
-class TextFieldRow extends StatelessWidget {
+class TextFieldRow extends StatefulWidget {
   const TextFieldRow({
     super.key,
     this.icon,
@@ -331,6 +355,7 @@ class TextFieldRow extends StatelessWidget {
     this.autofocus = false,
     this.trailing,
     this.focusNode,
+    this.stacked = false,
   });
 
   final IconData? icon;
@@ -344,8 +369,40 @@ class TextFieldRow extends StatelessWidget {
   /// TextField's own internal node.
   final FocusNode? focusNode;
 
+  /// Task 063 §1e — a filled field renders the label as a caption above a
+  /// wrapping, left-aligned value (the Edit-scheduled-item note); empty keeps
+  /// the one-line row. False (every pre-existing caller) never stacks.
+  final bool stacked;
+
   @override
-  Widget build(BuildContext context) {
+  State<TextFieldRow> createState() => _TextFieldRowState();
+}
+
+class _TextFieldRowState extends State<TextFieldRow> {
+  /// Keeps the EditableText's state (text, selection, focus) alive when the
+  /// stacked layout swaps in mid-typing — the field is reparented, not rebuilt.
+  final _fieldKey = GlobalKey();
+
+  Widget _field({required bool stacked}) => TextField(
+        key: _fieldKey,
+        controller: widget.controller,
+        focusNode: widget.focusNode,
+        autofocus: widget.autofocus,
+        textAlign: stacked ? TextAlign.left : TextAlign.right,
+        maxLines: stacked ? null : 1,
+        style: stacked
+            ? AppText.body.copyWith(fontSize: RowMetrics.labelSize, height: 1.35)
+            : AppText.body.copyWith(fontSize: RowMetrics.labelSize),
+        cursorColor: AppColors.accentSoft,
+        decoration: InputDecoration(
+          isCollapsed: true,
+          border: InputBorder.none,
+          hintText: widget.hint,
+          hintStyle: const TextStyle(color: AppColors.textTertiary),
+        ),
+      );
+
+  Widget _inline() {
     return ConstrainedBox(
       // Stated once, as in [FormRow] — never inferred from padding around an
       // intrinsic field.
@@ -354,16 +411,16 @@ class TextFieldRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: RowMetrics.padding),
         child: Row(
           children: [
-            if (icon != null) ...[
+            if (widget.icon != null) ...[
               SizedBox(
                 // Aligns to the shared icon column and text start (task 042 §5).
                 width: RowMetrics.iconColumn,
-                child: Icon(icon,
+                child: Icon(widget.icon,
                     size: RowMetrics.iconGlyph, color: AppColors.textSecondary),
               ),
               const SizedBox(width: RowMetrics.iconGap),
             ],
-            Text(label,
+            Text(widget.label,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
@@ -371,26 +428,65 @@ class TextFieldRow extends StatelessWidget {
                   color: AppColors.textPrimary,
                 )),
             const SizedBox(width: RowMetrics.iconGap),
-            Expanded(
-              child: TextField(
-                controller: controller,
-                focusNode: focusNode,
-                autofocus: autofocus,
-                textAlign: TextAlign.right,
-                style: AppText.body.copyWith(fontSize: RowMetrics.labelSize),
-                cursorColor: AppColors.accentSoft,
-                decoration: InputDecoration(
-                  isCollapsed: true,
-                  border: InputBorder.none,
-                  hintText: hint,
-                  hintStyle: const TextStyle(color: AppColors.textTertiary),
-                ),
-              ),
-            ),
-            ?trailing,
+            Expanded(child: _field(stacked: false)),
+            ?widget.trailing,
           ],
         ),
       ),
+    );
+  }
+
+  /// The filled note (task 063 §1e / §D.7): caption above, the text wrapping
+  /// below, top-aligned icon. Still the same TextField — tapping edits in place.
+  Widget _stacked() {
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: RowMetrics.height),
+      child: Padding(
+        padding: const EdgeInsets.all(RowMetrics.padding),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (widget.icon != null) ...[
+              SizedBox(
+                width: RowMetrics.iconColumn,
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 1),
+                  child: Icon(widget.icon,
+                      size: RowMetrics.iconGlyph,
+                      color: AppColors.textSecondary),
+                ),
+              ),
+              const SizedBox(width: RowMetrics.iconGap),
+            ],
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(widget.label,
+                      style: const TextStyle(
+                        fontSize: 12.5,
+                        color: AppColors.textSecondary,
+                      )),
+                  const SizedBox(height: 3),
+                  _field(stacked: true),
+                ],
+              ),
+            ),
+            ?widget.trailing,
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!widget.stacked) return _inline();
+    return ListenableBuilder(
+      listenable: widget.controller,
+      builder: (context, _) =>
+          widget.controller.text.isEmpty ? _inline() : _stacked(),
     );
   }
 }

@@ -2202,9 +2202,12 @@ class _QuickAddScreenState extends State<QuickAddScreen>
       repeatUnit: customUnit,
     ).nextOccurrence(_date);
     final task = store.addTask(
-      title: note.isNotEmpty
-          ? note
-          : (store.categoryById(categoryId)?.name ?? AppLocalizations.of(context).qaRecurring),
+      // The series is named after what it is (its category); the user's note
+      // stays a note (task 063 §1c). Before this the note doubled as the
+      // title and Edit showed an empty Note row for what the user typed.
+      title: store.categoryById(categoryId)?.name ??
+          AppLocalizations.of(context).qaRecurring,
+      note: note,
       linkedAccountId: accountId,
       expectedAmount: expected,
       dueDate: firstDue,
@@ -2657,6 +2660,8 @@ class _QuickAddScreenState extends State<QuickAddScreen>
         if (linked == null) return;
         store.addTask(
           title: _title.text.trim(),
+          // The form's Add note row was written nowhere before task 063 §1b.
+          note: _note.text.trim(),
           linkedAccountId: linked,
           // Task 030 §3: the side of the chosen category is the sign. An income
           // category means money coming in (positive); an expense category, or

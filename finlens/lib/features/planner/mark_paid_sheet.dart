@@ -119,6 +119,14 @@ class _MarkPaidSheetState extends State<_MarkPaidSheet> {
   late final Task _task = widget.task;
   late final bool _payOut = _task.isPayOut;
 
+  /// Money owed to the user (task 063 §8e): a pay-in into a Receivables
+  /// account is an earning, and the sheet's title says so. Booking is
+  /// untouched — the same income txn is written either way.
+  bool get _isEarning =>
+      !_payOut &&
+      _store.accountById(_task.linkedAccountId)?.group ==
+          AccountGroup.receivables;
+
   late Expression _expr =
       Expression.ofRaw(AmountEntry.fromDouble(_task.expectedAmount.abs()));
   late DateTime _date = _store.today;
@@ -178,7 +186,9 @@ class _MarkPaidSheetState extends State<_MarkPaidSheet> {
               ),
               const SizedBox(height: Insets.md),
               Text(
-                _payOut ? l.mpTitlePaid : l.mpTitleReceived,
+                _payOut
+                    ? l.mpTitlePaid
+                    : (_isEarning ? l.tdRecordEarning : l.mpTitleReceived),
                 textAlign: TextAlign.center,
                 style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
               ),
@@ -454,51 +464,166 @@ class _MarkPaidSheetState extends State<_MarkPaidSheet> {
 /// The pay-out `To` picker: expense categories **and** liability accounts, in
 /// two labelled groups — the choice of an account is what makes the payment a
 /// transfer (§10.4).
+///
+/// Task 063 §5c: full height, titled after the row that opened it, with a
+/// search filtering both groups. The old content-sized hug tracked the list's
+/// length — a store with few or no expense categories opened a stub of a sheet
+/// showing just the unconditional CATEGORY heading. Group labels now render
+/// only over rows that exist.
 Future<({String id, bool isAccount})?> pickPayOutDestination(
   BuildContext context,
   AppStore store,
 ) {
   final l = AppLocalizations.of(context);
-  final categories = store.categoriesOfType(CategoryType.expense);
-  final liabilities = [
-    for (final g in AccountGroup.liabilities) ...store.accountsIn(g),
-  ];
   return showAppSheet<({String id, bool isAccount})>(
     context,
-    title: l.mpChooseDestination,
-    contentSized: true,
-    builder: (context, controller) => ListView(
-      controller: controller,
-      shrinkWrap: true,
-      padding: const EdgeInsets.only(bottom: Insets.xxl),
+    title: l.etPaidTo,
+    cancelLabel: l.actionCancel,
+    // Full available height — showAppSheet clamps this to its computed
+    // ceiling (window − status bar − 44 pt barrier).
+    initialSize: 1.0,
+    builder: (context, controller) =>
+        _PayOutDestinationBody(controller: controller),
+  );
+}
+
+class _PayOutDestinationBody extends StatefulWidget {
+  const _PayOutDestinationBody({required this.controller});
+
+  final ScrollController controller;
+
+  @override
+  State<_PayOutDestinationBody> createState() =>
+      _PayOutDestinationBodyState();
+}
+
+class _PayOutDestinationBodyState extends State<_PayOutDestinationBody> {
+  String _query = '';
+
+  @override
+  Widget build(BuildContext context) {
+    final store = StoreScope.of(context);
+    final l = AppLocalizations.of(context);
+    final q = _query.trim().toLowerCase();
+    bool matches(String name) => q.isEmpty || name.toLowerCase().contains(q);
+
+    final categories = store
+        .categoriesOfType(CategoryType.expense)
+        .where((c) => matches(c.name))
+        .toList();
+    final liabilities = [
+      for (final g in AccountGroup.liabilities) ...store.accountsIn(g),
+    ].where((a) => matches(a.name)).toList();
+
+    return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(Insets.gutter, Insets.sm, Insets.gutter, Insets.xs),
-          child: Text(l.fieldCategory.toUpperCase(), style: AppText.label),
-        ),
-        for (final c in categories)
-          ListTile(
-            leading: IconTile(c.icon, color: c.color, size: 30),
-            title: Text(c.name, style: AppText.rowTitle),
-            onTap: () =>
-                Navigator.of(context).pop((id: c.id, isAccount: false)),
-          ),
-        if (liabilities.isNotEmpty) ...[
-          Padding(
-            padding: const EdgeInsets.fromLTRB(Insets.gutter, Insets.md, Insets.gutter, Insets.xs),
-            child: Text(l.mpPayOffGroup, style: AppText.label),
-          ),
-          for (final a in liabilities)
-            ListTile(
-              leading: IconTile(a.displayIcon, color: a.color, size: 30),
-              title: Text(a.name, style: AppText.rowTitle),
-              subtitle: Text(l.mpTransferNoCategory,
-                  style: AppText.caption.copyWith(fontSize: 11)),
-              onTap: () =>
-                  Navigator.of(context).pop((id: a.id, isAccount: true)),
+          padding:
+              const EdgeInsets.fromLTRB(Insets.gutter, 0, Insets.gutter, 10),
+          child: Container(
+            height: 38,
+            padding: const EdgeInsets.symmetric(horizontal: Insets.md),
+            decoration: BoxDecoration(
+              color: AppColors.sheetCard,
+              borderRadius: BorderRadius.circular(10),
             ),
-        ],
+            child: TextField(
+              onChanged: (v) => setState(() => _query = v),
+              style: AppText.body.copyWith(fontSize: 14.5),
+              cursorColor: AppColors.accentSoft,
+              decoration: InputDecoration(
+                isCollapsed: true,
+                border: InputBorder.none,
+                hintText: l.qaSearchCategories,
+                hintStyle: const TextStyle(color: AppColors.textTertiary),
+              ),
+            ),
+          ),
+        ),
+        Expanded(
+          child: ListView(
+            controller: widget.controller,
+            padding: const EdgeInsets.only(bottom: Insets.xxl),
+            children: [
+              if (categories.isNotEmpty) ...[
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                      Insets.gutter, Insets.md, Insets.gutter, Insets.xs),
+                  child: Text(l.fieldCategory.toUpperCase(),
+                      style: AppText.label),
+                ),
+                for (final c in categories)
+                  _row(
+                    icon: c.icon,
+                    color: c.color,
+                    name: c.name,
+                    onTap: () => Navigator.of(context)
+                        .pop((id: c.id, isAccount: false)),
+                  ),
+              ],
+              if (liabilities.isNotEmpty) ...[
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                      Insets.gutter, Insets.lg, Insets.gutter, Insets.xs),
+                  child: Text(l.mpPayOffGroup, style: AppText.label),
+                ),
+                for (final a in liabilities)
+                  _row(
+                    icon: a.displayIcon,
+                    color: a.color,
+                    name: a.name,
+                    caption: l.mpTransferNoCategory,
+                    onTap: () => Navigator.of(context)
+                        .pop((id: a.id, isAccount: true)),
+                  ),
+              ],
+            ],
+          ),
+        ),
       ],
-    ),
-  );
+    );
+  }
+
+  /// One 52 pt destination row (§D.4): a 30 pt tile, the name, and — for a
+  /// liability — the transfer caption that used to sit on the form row.
+  Widget _row({
+    required IconData icon,
+    required Color color,
+    required String name,
+    String? caption,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      child: SizedBox(
+        height: 52,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: Insets.gutter),
+          child: Row(
+            children: [
+              IconTile(icon, color: color, size: 30),
+              const SizedBox(width: Insets.md),
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppText.rowTitle),
+                    if (caption != null)
+                      Text(caption,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppText.caption.copyWith(fontSize: 11.5)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }

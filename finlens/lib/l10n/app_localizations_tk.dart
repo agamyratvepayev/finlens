@@ -2314,6 +2314,17 @@ class AppLocalizationsTk extends AppLocalizations {
   String get etCategoryHint => '\"Tölenen diýip belle\" nirä ýazýar';
 
   @override
+  String get etOwedBy => 'Bergidar';
+
+  @override
+  String get etOwedByHint => 'Size bergisini artdyrýar';
+
+  @override
+  String etRepeatLast(Object date) {
+    return 'soňky $date';
+  }
+
+  @override
   String get etNextDue => 'Indiki möhlet';
 
   @override
@@ -3394,6 +3405,9 @@ class AppLocalizationsTk extends AppLocalizations {
   String rsMonthlyOnDay(Object day) {
     return 'her aýyň $day';
   }
+
+  @override
+  String get rsMonthlyOnLastDay => 'her aýyň soňky güni';
 
   @override
   String rsDaysJoin(Object head, Object last) {
@@ -4789,6 +4803,14 @@ class AppLocalizationsTk extends AppLocalizations {
 
   @override
   String get tdMarkReceived => 'Alnan diýip belle';
+
+  @override
+  String get tdRecordEarning => 'Gazanjy ýaz';
+
+  @override
+  String tdOwesMore(Object account, Object amount) {
+    return '$account size ýene $amount bergili bolar';
+  }
 
   @override
   String get tdSkipOne => 'Muny geç';

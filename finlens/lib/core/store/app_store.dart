@@ -4694,7 +4694,11 @@ class AppStore extends ChangeNotifier {
     Priority priority = Priority.normal,
     int? reminderDaysBefore,
     TimeOfDay? reminderTime,
+    // What the user typed stays with the item (task 063 §1). Trimmed; an
+    // empty string stores null, matching how updateTask treats ''.
+    String? note,
   }) {
+    final trimmedNote = note?.trim();
     final task = Task(
       id: _nextId('k'),
       title: title,
@@ -4703,6 +4707,7 @@ class AppStore extends ChangeNotifier {
       dueDate: dueDate,
       icon: icon,
       categoryId: categoryId,
+      note: (trimmedNote == null || trimmedNote.isEmpty) ? null : trimmedNote,
       repeats: repeats,
       weekdays: weekdays,
       daysOfMonth: daysOfMonth,

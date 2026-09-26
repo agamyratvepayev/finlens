@@ -471,11 +471,9 @@ class _CustomResult {
   final Set<int> daysOfMonth;
 }
 
-/// The value 32 stands for "the last day of the month, whatever it is" — the
-/// month grid's `Last` cell. The occurrence engine clamps any day past a
-/// month's length to that month's last day, so 32 always resolves to the last
-/// day, and 31 + Last collapse to one occurrence in a 31-day month (§5, §11).
-const int kLastDayOfMonth = 32;
+// kLastDayOfMonth (the 32 sentinel) moved to core/models/enums.dart (task 063
+// §7a) so the cadence label can render it; this sheet keeps using it via the
+// models import.
 
 Future<_CustomResult?> _showCustomSheet(
   BuildContext context, {

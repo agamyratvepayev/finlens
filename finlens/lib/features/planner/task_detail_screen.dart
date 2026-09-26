@@ -387,6 +387,11 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
 
   Widget _actions(BuildContext context, AppStore store, AppLocalizations l,
       Task task, bool paused) {
+    // Money owed to the user (task 063 §8e): a pay-in on a Receivables account
+    // is recorded as an earning — the words change, the booking does not.
+    final account = store.accountById(task.linkedAccountId);
+    final isEarning =
+        !task.isPayOut && account?.group == AccountGroup.receivables;
     return Padding(
       padding: const EdgeInsets.fromLTRB(Insets.gutter, Insets.sm, Insets.gutter, Insets.sm),
       child: Column(
@@ -408,11 +413,27 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
               child: Text(
                 paused
                     ? l.tdResume
-                    : (task.isPayOut ? l.tdMarkPaid : l.tdMarkReceived),
+                    : (task.isPayOut
+                        ? l.tdMarkPaid
+                        : (isEarning ? l.tdRecordEarning : l.tdMarkReceived)),
                 style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
               ),
             ),
           ),
+          if (!paused && isEarning && account != null)
+            Padding(
+              padding: const EdgeInsets.only(top: Insets.sm),
+              child: Text(
+                l.tdOwesMore(
+                  account.name,
+                  money(task.expectedAmount.abs(),
+                      currency: account.currency, masked: store.masked),
+                ),
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                    fontSize: 12, color: AppColors.textSecondary),
+              ),
+            ),
           if (!paused && task.isRecurring)
             TextButton(
               onPressed: () => _skip(context, store, task),

@@ -2311,6 +2311,17 @@ class AppLocalizationsTr extends AppLocalizations {
   String get etCategoryHint => '\"Ödendi olarak işaretle\" nereye kaydeder';
 
   @override
+  String get etOwedBy => 'Borçlu';
+
+  @override
+  String get etOwedByHint => 'Sana olan borcunu artırır';
+
+  @override
+  String etRepeatLast(Object date) {
+    return 'son $date';
+  }
+
+  @override
   String get etNextDue => 'Sonraki vade';
 
   @override
@@ -3392,6 +3403,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String rsMonthlyOnDay(Object day) {
     return 'her ayın $day';
   }
+
+  @override
+  String get rsMonthlyOnLastDay => 'her ayın son günü';
 
   @override
   String rsDaysJoin(Object head, Object last) {
@@ -4838,6 +4852,14 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get tdMarkReceived => 'Alındı olarak işaretle';
+
+  @override
+  String get tdRecordEarning => 'Kazanç kaydet';
+
+  @override
+  String tdOwesMore(Object account, Object amount) {
+    return '$account sana $amount daha borçlu olacak';
+  }
 
   @override
   String get tdSkipOne => 'Bunu atla';
