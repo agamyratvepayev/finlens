@@ -260,6 +260,7 @@ class Budget {
     this.runsUntil,
     this.archivedAt,
     this.note = '',
+    this.sortIndex,
     Map<DateTime, double> limitOverrides = const {},
     Map<DateTime, double> limitBefore = const {},
     List<BudgetEdit>? history,
@@ -339,6 +340,11 @@ class Budget {
   /// (back to the previous key). Periods on or after the last key use [limit].
   /// Empty for every budget today, which keeps [limit] in force everywhere.
   Map<DateTime, double> limitBefore;
+
+  /// The reader's manual order within its scope on the Budgets tab (task 067.3
+  /// §5). Null until the budget is first dragged; the tab then falls back to
+  /// creation order for the unindexed ones. Renumbered 0…n−1 on every move.
+  int? sortIndex;
 
   /// Set when the budget is archived — it then leaves the Budgets tab in every
   /// month and lives only in the Archive (spec §C.5). The migration maps a

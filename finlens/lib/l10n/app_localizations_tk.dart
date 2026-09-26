@@ -2099,6 +2099,49 @@ class AppLocalizationsTk extends AppLocalizations {
   }
 
   @override
+  String bgSpentOfLimit(Object spent, Object limit) {
+    return '$limit içinden $spent';
+  }
+
+  @override
+  String bgOfLimit(Object limit) {
+    return '$limit içinden';
+  }
+
+  @override
+  String bgCardUntil(Object date, Object state) {
+    return '$date · $state';
+  }
+
+  @override
+  String get bgCardLeft => 'galdy';
+
+  @override
+  String get bgCardOver => 'aşdy';
+
+  @override
+  String get bgCardUnder => 'tygşytlandy';
+
+  @override
+  String get bgCardStarts => 'başlaýar';
+
+  @override
+  String get bgRemove => 'Aýyr';
+
+  @override
+  String get bgShowNote => 'Bellikni görkez';
+
+  @override
+  String bgCardA11y(Object name, Object amount, Object state, Object date) {
+    return '$name, $amount $state, $date çenli';
+  }
+
+  @override
+  String bgPosition(int index, int count) {
+    return '$count içinden $index';
+  }
+
+  @override
   String bgOverlapNote(Object name) {
     return '$name üçin eýýäm býujet bar. Ikisi-de muny hasaba alar.';
   }

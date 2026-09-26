@@ -148,6 +148,8 @@ Map<String, Object?> budgetToMap(Budget b) => {
       // JSON object of epochMs → amount, following amount_overrides' encoding.
       'limit_overrides': _encodeDateMap(b.limitOverrides),
       'limit_before': _encodeDateMap(b.limitBefore),
+      // Task 067.3 §5 — the reader's manual order within its scope.
+      'sort_index': b.sortIndex,
       'history': jsonEncode(b.history.map(_budgetEditToJson).toList()),
     };
 
@@ -172,6 +174,8 @@ Budget budgetFromMap(Map<String, Object?> m) => Budget(
       // Pre-task-067.2 rows lack these: no per-period limits (§1).
       limitOverrides: _decodeOverrides(m['limit_overrides']),
       limitBefore: _decodeOverrides(m['limit_before']),
+      // Pre-task-067.3 rows lack this: no manual order (§5).
+      sortIndex: (m['sort_index'] as num?)?.toInt(),
       history: _decodeList(m['history'])
           .map((e) => _budgetEditFromJson(e as Map<String, dynamic>))
           .toList(),

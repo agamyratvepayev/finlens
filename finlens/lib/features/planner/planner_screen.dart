@@ -1,21 +1,24 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 
 import '../../core/l10n/enum_labels.dart';
 import '../../core/models/models.dart';
 import '../../core/store/app_store.dart';
-import '../../core/utils/date_range.dart';
 import '../../core/utils/formatters.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/amount_text.dart';
 import '../../shared/widgets/app_card.dart';
 import '../../shared/widgets/header_menu.dart';
+import '../../shared/widgets/reorderable_group.dart';
 import '../../shared/widgets/screen_header.dart';
 import '../../shared/widgets/section_header.dart' show HorizontalSectionSwipe;
+import '../../shared/widgets/swipe_actions.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/app_typography.dart';
 import '../quick_add/quick_add_sheet.dart';
 import 'archive_screen.dart';
+import 'budget_actions.dart';
 import 'budget_detail_screen.dart';
 import 'edit_budget_screen.dart';
 import 'edit_goal_screen.dart';
@@ -666,7 +669,9 @@ class _BudgetSummary extends StatelessWidget {
             value: ratio,
             color: barColor,
             paceMarker: isCurrent ? monthGone : null,
-            height: 8,
+            height: 3,
+            markerWidth: 1.5,
+            markerOverhang: 1.5,
           ),
           const SizedBox(height: Insets.sm),
           Row(
@@ -693,7 +698,7 @@ class _BudgetSummary extends StatelessWidget {
               // Sits flush right at its intrinsic width, on the same line.
               if (isCurrent) ...[
                 const SizedBox(width: Insets.sm),
-                Container(width: 2, height: 10, color: AppColors.textPrimary),
+                Container(width: 1.5, height: 9, color: AppColors.textPrimary),
                 const SizedBox(width: 5),
                 Text(l.plPace, style: AppText.caption.copyWith(fontSize: 11.5)),
               ],
@@ -717,16 +722,64 @@ class _BudgetSummary extends StatelessWidget {
   }
 }
 
-class _BudgetsTab extends StatelessWidget {
+class _BudgetsTab extends StatefulWidget {
   const _BudgetsTab({required this.store, required this.month});
 
   final AppStore store;
   final DateTime month;
 
+  @override
+  State<_BudgetsTab> createState() => _BudgetsTabState();
+}
+
+class _BudgetsTabState extends State<_BudgetsTab> {
+  /// Edge autoscroll while a card is dragged (§5c).
+  final ScrollController _scroll = ScrollController();
+
+  /// The one card whose note is open, per tab (§3). Null when none is.
+  String? _openId;
+
+  AppStore get store => widget.store;
+  DateTime get month => widget.month;
+
+  @override
+  void didUpdateWidget(_BudgetsTab old) {
+    super.didUpdateWidget(old);
+    // Changing the month closes an open note and any open swipe (§3).
+    if (old.month != widget.month) {
+      _openId = null;
+      closeOpenSwipeRow();
+    }
+  }
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  void _toggleNote(Budget b) {
+    setState(() => _openId = _openId == b.id ? null : b.id);
+    // Opening a note closes any open swipe (§4a).
+    if (_openId != null) closeOpenSwipeRow();
+  }
+
+  void _closeNote() {
+    if (_openId != null) setState(() => _openId = null);
+  }
+
+  void _onDragStart() {
+    _closeNote();
+    closeOpenSwipeRow();
+  }
+
+  void _openBudget(BuildContext context, Budget b) =>
+      _openBudgetRoute(context, store, b, month);
+
   /// Empty when nothing is budgeted in any scope and nothing is uncovered (spec
   /// §5). The month control and this branch derive from one condition so a month
   /// above a "no budgets" panel can never appear.
-  bool _isEmpty(AppStore store) =>
+  bool _isEmpty() =>
       store.activeBudgetsByScope(BudgetScope.categories, month).isEmpty &&
       store.activeBudgetsByScope(BudgetScope.account, month).isEmpty &&
       store.activeBudgetsByScope(BudgetScope.tag, month).isEmpty &&
@@ -737,93 +790,229 @@ class _BudgetsTab extends StatelessWidget {
     final l = AppLocalizations.of(context);
     final unbudgeted = store.unbudgetedSpendingCategories(month);
 
-    // No pill — the header + is the only way in, named by the hint line (§4.1).
-    // The block centres itself in the space below the tabs (§4.5).
-    if (_isEmpty(store)) {
+    if (_isEmpty()) {
       return const PlannerEmptyState(tab: PlannerEmptyTab.budgets);
     }
 
     final cats = store.activeBudgetsByScope(BudgetScope.categories, month);
     final accts = store.activeBudgetsByScope(BudgetScope.account, month);
     final tags = store.activeBudgetsByScope(BudgetScope.tag, month);
-    final nonEmpty =
-        [cats, accts, tags].where((x) => x.isNotEmpty).length;
+    final nonEmpty = [cats, accts, tags].where((x) => x.isNotEmpty).length;
     // A single-scope user keeps exactly the header they had before: the
     // categories-only case shows "BUDGETED" with its spent / total, and no
     // scope headers appear until a second scope is in use (spec §5a).
     final showScopeHeaders = nonEmpty > 1;
-
     final totalLabelStyle =
         AppText.label.copyWith(color: AppColors.textSecondary);
 
+    final budgetedHeader = SectionLabel(
+      l.plBudgeted,
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          AmountText(store.budgetedSpendFor(month), style: totalLabelStyle),
+          Text(' / ', style: totalLabelStyle),
+          AmountText(store.totalBudgetFor(month), style: totalLabelStyle),
+        ],
+      ),
+    );
+
     return ListView(
+      controller: _scroll,
       padding: const EdgeInsets.only(bottom: Insets.xxl),
       children: [
-        if (cats.isNotEmpty) ...[
-          if (showScopeHeaders)
-            SectionLabel(l.plSectionByCategory)
-          else
-            SectionLabel(
-              l.plBudgeted,
-              trailing: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  AmountText(store.budgetedSpendFor(month),
-                      style: totalLabelStyle),
-                  Text(' / ', style: totalLabelStyle),
-                  AmountText(store.totalBudgetFor(month), style: totalLabelStyle),
-                ],
-              ),
-            ),
-          for (final b in cats)
-            _BudgetCard(store: store, budget: b, month: month),
-        ],
-        if (accts.isNotEmpty) ...[
-          SectionLabel(l.plSectionByAccount),
-          for (final b in accts)
-            _BudgetCard(store: store, budget: b, month: month),
-        ],
-        if (tags.isNotEmpty) ...[
-          SectionLabel(l.plSectionByOccasion),
-          for (final b in tags)
-            _BudgetCard(store: store, budget: b, month: month),
-        ],
+        if (cats.isNotEmpty)
+          ..._section(
+            context,
+            l,
+            BudgetScope.categories,
+            cats,
+            header: showScopeHeaders
+                ? SectionLabel(l.plSectionByCategory)
+                : budgetedHeader,
+          ),
+        if (accts.isNotEmpty)
+          ..._section(context, l, BudgetScope.account, accts,
+              header: SectionLabel(l.plSectionByAccount)),
+        if (tags.isNotEmpty)
+          ..._section(context, l, BudgetScope.tag, tags,
+              header: SectionLabel(l.plSectionByOccasion)),
         if (unbudgeted.isNotEmpty)
           _NoBudgetSection(store: store, month: month, categories: unbudgeted),
       ],
     );
   }
+
+  /// A scope's cards: the running ones form one [ReorderableGroup] (hold to move,
+  /// §5); one-offs past their end sit below it and do not lift (§5c).
+  List<Widget> _section(BuildContext context, AppLocalizations l,
+      BudgetScope scope, List<Budget> budgets,
+      {required Widget header}) {
+    final running = budgets.where((b) => !store.budgetPastEnd(b)).toList();
+    final pastEnd = budgets.where(store.budgetPastEnd).toList();
+    return [
+      header,
+      if (running.isNotEmpty)
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: Insets.gutter),
+          child: ReorderableGroup<Budget>(
+            key: ValueKey('budgets-${scope.name}'),
+            items: running,
+            scrollController: _scroll,
+            liftScale: 1.03,
+            liftColor: AppColors.sheetCard,
+            liftRadius: 14,
+            onDragStart: (_) => _onDragStart(),
+            semanticLabel: (b, i, n) =>
+                '${_budgetCardLabel(store, b, month, l)}, ${l.bgPosition(i + 1, n)}',
+            onReorder: (moved, target) => store.moveBudget(moved,
+                before: target < running.length ? running[target] : null),
+            itemBuilder: (ctx, b, lifted) => Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: _wrapCard(ctx, b, lifted: lifted, inGroup: true),
+            ),
+          ),
+        ),
+      for (final b in pastEnd)
+        Padding(
+          padding: const EdgeInsets.fromLTRB(Insets.gutter, 0, Insets.gutter, 6),
+          child: _wrapCard(context, b, lifted: false, inGroup: false),
+        ),
+    ];
+  }
+
+  /// Wraps the card content in its swipe strip and semantics. The proxy (lifted)
+  /// gets the bare card so the lift colour shows (§5c).
+  Widget _wrapCard(BuildContext context, Budget b,
+      {required bool lifted, required bool inGroup}) {
+    final l = AppLocalizations.of(context);
+    final card = _BudgetCard(
+      store: store,
+      budget: b,
+      month: month,
+      open: !lifted && _openId == b.id,
+      lifted: lifted,
+      onTapCard: () =>
+          b.note.trim().isEmpty ? _openBudget(context, b) : _toggleNote(b),
+      onTapFigure: () => _openBudget(context, b),
+    );
+    if (lifted) return card;
+    final swipe = ClipRRect(
+      borderRadius: BorderRadius.circular(14),
+      child: SwipeActions(
+        actionWidth: 64,
+        actions: _swipeItems(context, b),
+        child: card,
+      ),
+    );
+    // In the group the label + position + move actions come from
+    // ReorderableGroup; here we add only the swipe actions. A past-end card is
+    // outside the group, so it carries its own label too (§5d).
+    return Semantics(
+      container: !inGroup,
+      label: inGroup ? null : _budgetCardLabel(store, b, month, l),
+      customSemanticsActions: _cardActions(context, b),
+      child: swipe,
+    );
+  }
+
+  List<SwipeActionItem> _swipeItems(BuildContext context, Budget b) {
+    final l = AppLocalizations.of(context);
+    return [
+      SwipeActionItem(
+        icon: Icons.edit_outlined,
+        label: l.actionEdit,
+        color: AppColors.surfaceHigh,
+        onTap: () => _editBudget(context, b),
+      ),
+      SwipeActionItem(
+        icon: Icons.delete_outline_rounded,
+        label: l.bgRemove,
+        color: AppColors.negative,
+        onTap: () => _removeBudget(context, b),
+      ),
+    ];
+  }
+
+  Map<CustomSemanticsAction, VoidCallback> _cardActions(
+      BuildContext context, Budget b) {
+    final l = AppLocalizations.of(context);
+    return {
+      CustomSemanticsAction(label: l.actionEdit): () => _editBudget(context, b),
+      CustomSemanticsAction(label: l.bgRemove): () => _removeBudget(context, b),
+      if (b.note.trim().isNotEmpty)
+        CustomSemanticsAction(label: l.bgShowNote): () => _toggleNote(b),
+    };
+  }
+
+  void _editBudget(BuildContext context, Budget b) {
+    _closeNote();
+    Navigator.of(context, rootNavigator: true).push(
+      MaterialPageRoute(builder: (_) => EditBudgetScreen(budgetId: b.id)),
+    );
+  }
+
+  Future<void> _removeBudget(BuildContext context, Budget b) async {
+    _closeNote();
+    await confirmAndRemoveBudget(context, store, b);
+  }
 }
 
-/// One budget's card on the Budgets tab — any scope, any period (spec §5).
-/// Line one names the budget (with a period suffix for a non-monthly one) and
-/// its spent figure; line two is the bar and the limit; line three is the
-/// budget's own clock — days-to-go, "resets Monday", "ends 22 Aug" — or, for a
-/// finished one-off, its verdict and the dates it ran. Figures render in the
-/// budget's own currency (spec 021d). A finished one-off is dimmed and stays in
-/// the list until the reader removes it from the detail menu (spec §5c).
+/// Opens what a budget card's figure opens (task 067.3 §2, unchanged from §0):
+/// the detail for a monthly single-category budget, the editor otherwise.
+void _openBudgetRoute(
+    BuildContext context, AppStore store, Budget b, DateTime month) {
+  final monthlyCategory = b.scope == BudgetScope.categories &&
+      b.period == BudgetPeriod.month &&
+      b.repeats &&
+      b.targets.length == 1;
+  Navigator.of(context, rootNavigator: true).push(
+    MaterialPageRoute(
+      builder: (_) => monthlyCategory
+          ? BudgetDetailScreen(categoryId: b.targets.first, month: month)
+          : EditBudgetScreen(budgetId: b.id),
+    ),
+  );
+}
+
+/// One budget's card on the Budgets tab — any scope, any period (task 067.3 §1).
+/// One thin line: a ring showing how full it is, the name with spent-of-limit
+/// (the limit in accentLight when this period's limit is its own, task 067.2),
+/// and on the right what is left and until when. A note (067.1) opens in one
+/// line on tap. Figures render in the budget's own currency (spec 021d). A
+/// finished one-off is dimmed; a not-started budget shows "starts {date}".
+///
+/// This widget is only the card's content; the Budgets tab wraps it in
+/// [SwipeActions] (Edit / Remove, §4) and a [ReorderableGroup] (hold to move,
+/// §5), and owns the open-note state (§3).
 class _BudgetCard extends StatelessWidget {
-  const _BudgetCard(
-      {required this.store, required this.budget, required this.month});
+  const _BudgetCard({
+    required this.store,
+    required this.budget,
+    required this.month,
+    this.open = false,
+    this.lifted = false,
+    this.onTapCard,
+    this.onTapFigure,
+  });
 
   final AppStore store;
   final Budget budget;
   final DateTime month;
 
-  void _open(BuildContext context) {
-    final b = budget;
-    final monthlyCategory = b.scope == BudgetScope.categories &&
-        b.period == BudgetPeriod.month &&
-        b.repeats &&
-        b.targets.length == 1;
-    Navigator.of(context, rootNavigator: true).push(
-      MaterialPageRoute(
-        builder: (_) => monthlyCategory
-            ? BudgetDetailScreen(categoryId: b.targets.first, month: month)
-            : EditBudgetScreen(budgetId: b.id),
-      ),
-    );
-  }
+  /// The note line is shown (§3).
+  final bool open;
+
+  /// True only in the drag proxy — the card drops its own background so the
+  /// lift colour shows (§5c).
+  final bool lifted;
+
+  /// Tap anywhere but the right column: toggles the note, or opens the budget
+  /// when there is no note (§2).
+  final VoidCallback? onTapCard;
+
+  /// Tap the right column: opens the budget (§2).
+  final VoidCallback? onTapFigure;
 
   ({IconData icon, Color color}) _tile() {
     final b = budget;
@@ -860,190 +1049,372 @@ class _BudgetCard extends StatelessWidget {
     final b = budget;
     final today = store.today;
     final ref = b.period == BudgetPeriod.month ? month : today;
-    final window = store.budgetWindow(b, ref);
-    final containsToday =
-        !today.isBefore(window.start) && !today.isAfter(window.end);
 
     final spent = store.budgetSpend(b, ref);
     final limit = store.budgetEffectiveLimit(b, ref);
     final ratio = limit <= 0 ? 0.0 : spent / limit;
     final over = ratio > 1;
-    final warn = !over && ratio >= b.warnThreshold;
-    final color = over
-        ? AppColors.negative
-        : (warn ? AppColors.warning : AppColors.positive);
-    // Finished in the everyday sense: a one-off whose end has passed. Its
-    // endedAt is set at creation, so Budget.isFinished is true from birth — the
-    // dimmed, verdict state is the end being in the past (spec §5c).
-    final finished =
-        !b.repeats && b.endedAt != null && today.isAfter(b.endedAt!);
-    // A budget the user set to start later, shown (dimmed) in a month before it
-    // runs (task 067.1 §2d). 067.3 redraws this card; here it only dims and
-    // swaps the third line for a "starts {date}" note.
-    final windowStart =
-        DateTime(month.year, month.month, 1);
+    final finished = store.budgetPastEnd(b);
     final startsLater = store.budgetStartsLater(b);
-    final notStarted = startsLater != null &&
-        DateTime(windowStart.year, windowStart.month + 1, 0)
-            .isBefore(startsLater);
+    final monthEnd = DateTime(month.year, month.month + 1, 0);
+    final notStarted = startsLater != null && monthEnd.isBefore(startsLater);
     final dimmed = finished || notStarted;
 
-    final curArg = b.currency.isEmpty ? null : b.currency;
-    final spentStr = money(spent, currency: curArg, masked: store.masked);
-    final limitStr = money(limit, currency: curArg, masked: store.masked);
+    final color = over
+        ? AppColors.negative
+        : (ratio >= b.warnThreshold ? AppColors.warning : AppColors.positive);
 
+    final code = store.budgetCurrencyOf(b);
+    final def = currencyDef(code);
+    final tokenAfter = !def.symbolBefore;
+    final masked = store.masked;
     final tile = _tile();
     final suffix = _periodSuffix(l);
+    final hasNote = b.note.trim().isNotEmpty;
 
-    // Pace as the fraction of the window elapsed — generic across any period,
-    // shown only while the window contains today.
-    final windowSpan = window.end.difference(window.start).inDays;
-    final pace = containsToday && !dimmed
-        ? (today.difference(window.start).inDays /
-                (windowSpan == 0 ? 1 : windowSpan))
-            .clamp(0.0, 1.0)
-        : null;
+    const line2Style = TextStyle(
+      fontSize: 12,
+      height: 1.25,
+      color: AppColors.textSecondary,
+      fontFeatures: [FontFeature.tabularFigures()],
+    );
 
-    final clock = notStarted
-        ? Text(l.bgStartsOn(dayMonth(startsLater, l)),
-            style: AppText.caption
-                .copyWith(fontSize: 11.5, color: AppColors.textTertiary))
-        : _clockLine(l, window, containsToday);
+    // ── Line two: {spent} of {limit}; the limit accentLight when it is its own.
+    Widget lineTwo() {
+      final limitFull =
+          money(limit, currency: code, withSymbol: true, masked: masked);
+      if (notStarted) {
+        return Text(l.bgOfLimit(limitFull),
+            style: line2Style, maxLines: 1, overflow: TextOverflow.ellipsis);
+      }
+      final spentStr = money(spent,
+          currency: code, withSymbol: !tokenAfter, masked: masked);
+      final full = l.bgSpentOfLimit(spentStr, limitFull);
+      final isOwn = store.budgetLimitIsOwn(b, ref);
+      final number =
+          money(limit, currency: code, withSymbol: false, masked: masked);
+      final idx = isOwn ? full.lastIndexOf(number) : -1;
+      if (idx < 0) {
+        return Text(full,
+            style: line2Style, maxLines: 1, overflow: TextOverflow.ellipsis);
+      }
+      return Text.rich(
+        TextSpan(children: [
+          TextSpan(text: full.substring(0, idx)),
+          TextSpan(
+              text: number,
+              style: const TextStyle(
+                  color: AppColors.accentLight, fontWeight: FontWeight.w500)),
+          TextSpan(text: full.substring(idx + number.length)),
+        ]),
+        style: line2Style,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      );
+    }
 
-    final card = AppCard(
-      radius: 14,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(14),
-        onTap: () => _open(context),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(12, 8, 12, 11),
-          child: Row(
+    // ── Right column: the remainder, and {date} · left|over|under|starts.
+    final rc = _budgetRightColumn(store, b, month, l);
+    Widget figure() {
+      final figColor =
+          rc.figNegative ? AppColors.negative : AppColors.textPrimary;
+      if (!tokenAfter) {
+        return Text(
+          money(rc.remainder, currency: code, withSymbol: true, masked: masked),
+          style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              color: figColor,
+              fontFeatures: const [FontFeature.tabularFigures()]),
+        );
+      }
+      final number =
+          money(rc.remainder, currency: code, withSymbol: false, masked: masked);
+      final gap = def.tokenHugs ? '' : ' ';
+      return Text.rich(
+        TextSpan(children: [
+          TextSpan(
+              text: number,
+              style: TextStyle(
+                  fontSize: 15, fontWeight: FontWeight.w600, color: figColor)),
+          TextSpan(
+              text: '$gap${def.token}',
+              style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w400,
+                  color: AppColors.textSecondary)),
+        ]),
+        style:
+            const TextStyle(fontFeatures: [FontFeature.tabularFigures()]),
+      );
+    }
+
+    Widget subLine() {
+      final full = l.bgCardUntil(rc.dateStr, rc.stateWord);
+      const base =
+          TextStyle(fontSize: 11, height: 1.27, color: AppColors.textTertiary);
+      final idx =
+          rc.stateColor == AppColors.textTertiary ? -1 : full.lastIndexOf(rc.stateWord);
+      if (idx < 0) {
+        return Text(full, style: base, maxLines: 1, softWrap: false);
+      }
+      return Text.rich(
+        TextSpan(children: [
+          TextSpan(text: full.substring(0, idx)),
+          TextSpan(text: rc.stateWord, style: TextStyle(color: rc.stateColor)),
+          TextSpan(text: full.substring(idx + rc.stateWord.length)),
+        ]),
+        style: base,
+        maxLines: 1,
+        softWrap: false,
+      );
+    }
+
+    final row = Row(
+      children: [
+        _BudgetRing(
+          ratio: notStarted ? 0.0 : ratio,
+          color: color,
+          icon: tile.icon,
+          iconColor: tile.color,
+          over: over && !dimmed,
+        ),
+        const SizedBox(width: 11),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              IconTile(tile.icon, color: tile.color, size: 30),
-              const SizedBox(width: Insets.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Row(
-                      children: [
-                        Flexible(
-                          child: Text(
-                            b.name,
-                            style: AppText.rowTitle.copyWith(height: 1.15),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        if (suffix != null) ...[
-                          const SizedBox(width: 5),
-                          Text(
-                            '· $suffix',
-                            style: AppText.caption.copyWith(
-                                fontSize: 11.5, color: AppColors.textTertiary),
-                          ),
-                        ],
-                        if (over && !dimmed)
-                          const Padding(
-                            padding: EdgeInsets.only(left: 5),
-                            child: Icon(Icons.warning_amber_rounded,
-                                size: 15, color: AppColors.negative),
-                          ),
-                        const Spacer(),
-                        const SizedBox(width: Insets.sm),
-                        Text(spentStr,
-                            style: AppText.amount.copyWith(height: 1.15)),
-                      ],
+              Row(
+                children: [
+                  Flexible(
+                    child: Text(
+                      b.name,
+                      style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          height: 1.2),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 7),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: ProgressBar(
-                            value: ratio,
-                            color: color,
-                            height: 4,
-                            paceMarker: pace,
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Text(
-                          limitStr,
-                          style: AppText.rowSubtitle.copyWith(
-                            fontSize: 11.5,
-                            height: 1.15,
-                            color: AppColors.textTertiary,
-                          ),
-                        ),
-                      ],
-                    ),
-                    if (clock != null) ...[
-                      const SizedBox(height: 4),
-                      clock,
-                    ],
+                  ),
+                  if (suffix != null) ...[
+                    const SizedBox(width: 5),
+                    Text('· $suffix',
+                        style: const TextStyle(
+                            fontSize: 11.5, color: AppColors.textTertiary)),
                   ],
-                ),
+                  if (hasNote) ...[
+                    const SizedBox(width: 6),
+                    Icon(Icons.notes_rounded,
+                        size: 12,
+                        color: open
+                            ? AppColors.accentLight
+                            : AppColors.textTertiary),
+                  ],
+                ],
               ),
+              const SizedBox(height: 1),
+              lineTwo(),
             ],
           ),
+        ),
+        const SizedBox(width: 8),
+        // The right column is its own tap target: it always opens the budget
+        // (§2), whether or not the card has a note.
+        InkWell(
+          onTap: onTapFigure,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            mainAxisSize: MainAxisSize.min,
+            children: [figure(), const SizedBox(height: 1), subLine()],
+          ),
+        ),
+      ],
+    );
+
+    final content = Container(
+      color: open && !lifted ? AppColors.surfaceAlt : Colors.transparent,
+      child: AnimatedSize(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOut,
+        alignment: Alignment.topCenter,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            InkWell(
+              onTap: onTapCard,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minHeight: 50),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(10, 7, 12, 7),
+                  child: row,
+                ),
+              ),
+            ),
+            if (open && hasNote)
+              Transform.translate(
+                offset: const Offset(0, -3),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(55, 0, 12, 8),
+                  child: Text(
+                    b.note.trim(),
+                    style: const TextStyle(
+                        fontSize: 12.5,
+                        height: 1.28,
+                        color: AppColors.amountChild),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ),
+          ],
         ),
       ),
     );
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(Insets.gutter, 0, Insets.gutter, 8),
-      child: dimmed ? Opacity(opacity: 0.55, child: card) : card,
+    return dimmed ? Opacity(opacity: 0.55, child: content) : content;
+  }
+}
+
+/// The card's right-column facts (task 067.3 §1e), computed once so the visible
+/// figure and the a11y label can never disagree.
+typedef _RightColumn = ({
+  double remainder,
+  bool figNegative,
+  String stateWord,
+  Color stateColor,
+  String dateStr,
+});
+
+_RightColumn _budgetRightColumn(
+    AppStore store, Budget b, DateTime month, AppLocalizations l) {
+  final today = store.today;
+  final ref = b.period == BudgetPeriod.month ? month : today;
+  final window = store.budgetWindow(b, ref);
+  final spent = store.budgetSpend(b, ref);
+  final limit = store.budgetEffectiveLimit(b, ref);
+  final over = limit > 0 && spent > limit;
+  final startsLater = store.budgetStartsLater(b);
+  final monthEnd = DateTime(month.year, month.month + 1, 0);
+  final notStarted = startsLater != null && monthEnd.isBefore(startsLater);
+
+  if (notStarted) {
+    return (
+      remainder: limit,
+      figNegative: false,
+      stateWord: l.bgCardStarts,
+      stateColor: AppColors.textTertiary,
+      dateStr: dayMonth(startsLater, l),
+    );
+  }
+  if (store.budgetPastEnd(b)) {
+    final spentF = store.budgetSpend(b, today);
+    final delta = b.limit - spentF;
+    final under = delta >= 0;
+    return (
+      remainder: delta.abs(),
+      figNegative: !under,
+      stateWord: under ? l.bgCardUnder : l.bgCardOver,
+      stateColor: under ? AppColors.textTertiary : AppColors.negative,
+      dateStr: dayMonth(b.endedAt ?? window.end, l),
+    );
+  }
+  return (
+    remainder: (limit - spent).abs(),
+    figNegative: over,
+    stateWord: over ? l.bgCardOver : l.bgCardLeft,
+    stateColor: over ? AppColors.negative : AppColors.textTertiary,
+    dateStr: dayMonth(window.end, l),
+  );
+}
+
+/// One a11y label for the whole card (task 067.3 §2/§5d), used by the Budgets
+/// tab so the card is one node, not two.
+String _budgetCardLabel(
+    AppStore store, Budget b, DateTime month, AppLocalizations l) {
+  final rc = _budgetRightColumn(store, b, month, l);
+  final code = store.budgetCurrencyOf(b);
+  final amount = money(rc.remainder, currency: code, masked: store.masked);
+  return l.bgCardA11y(b.name, amount, rc.stateWord, rc.dateStr);
+}
+
+/// The card's ring (task 067.3 §1b): a 34×34 track with a status-coloured arc
+/// from 12 o'clock, and the budget's glyph centred inside it — no tile.
+class _BudgetRing extends StatelessWidget {
+  const _BudgetRing({
+    required this.ratio,
+    required this.color,
+    required this.icon,
+    required this.iconColor,
+    required this.over,
+  });
+
+  final double ratio;
+  final Color color;
+  final IconData icon;
+  final Color iconColor;
+  final bool over;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 34,
+      height: 34,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          CustomPaint(
+            size: const Size(34, 34),
+            painter: _RingPainter(ratio: ratio, color: color, over: over),
+          ),
+          Icon(icon, size: 13, color: iconColor),
+        ],
+      ),
+    );
+  }
+}
+
+class _RingPainter extends CustomPainter {
+  const _RingPainter(
+      {required this.ratio, required this.color, required this.over});
+
+  final double ratio;
+  final Color color;
+  final bool over;
+
+  static const _stroke = 2.5;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = size.center(Offset.zero);
+    final radius = (size.width - _stroke) / 2;
+    final track = Paint()
+      ..color = AppColors.surfaceHigh
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = _stroke;
+    canvas.drawCircle(center, radius, track);
+
+    final sweep = over ? 2 * 3.1415926535 : ratio.clamp(0.0, 1.0) * 2 * 3.1415926535;
+    if (sweep <= 0) return;
+    final arc = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = _stroke
+      ..strokeCap = StrokeCap.round;
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius),
+      -3.1415926535 / 2, // 12 o'clock
+      sweep,
+      false,
+      arc,
     );
   }
 
-  /// The card's third line: the budget's own clock, or a finished one-off's
-  /// verdict + the dates it ran (spec §5b/§5c). Null when there is nothing to
-  /// say (a repeating budget shown on a month that is not its current period).
-  Widget? _clockLine(
-      AppLocalizations l, DateRange window, bool containsToday) {
-    final b = budget;
-    final today = store.today;
-    final curArg = b.currency.isEmpty ? null : b.currency;
-    final caption =
-        AppText.caption.copyWith(fontSize: 11.5, color: AppColors.textTertiary);
-
-    if (!b.repeats) {
-      final end = b.endedAt ?? window.end;
-      final range = '${dayMonth(b.anchor, l)} – ${dayMonth(end, l)}';
-      final past = b.endedAt != null && today.isAfter(b.endedAt!);
-      if (past) {
-        final spent = store.budgetSpend(b, today);
-        final delta = b.limit - spent;
-        final under = delta >= 0;
-        final amount =
-            formatAmount(delta, curArg,
-                kind: AmountKind.magnitude, masked: store.masked);
-        return Row(
-          children: [
-            Flexible(
-              child: Text(
-                under ? l.bdUnder(amount) : l.bdOver(amount),
-                style: caption.copyWith(
-                    color: under ? AppColors.positive : AppColors.negative),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            Text(' · $range', style: caption),
-          ],
-        );
-      }
-      return Text(l.bdEndsOn(dayMonth(end, l)), style: caption);
-    }
-
-    if (!containsToday) return null;
-    final endDay = DateTime(window.end.year, window.end.month, window.end.day);
-    if (b.lengthDays == 7 && b.period == BudgetPeriod.days) {
-      return Text(l.bdResetsOn(weekdayLong(b.anchor, l)), style: caption);
-    }
-    final left = endDay.difference(today).inDays + 1;
-    return Text(l.bdDaysToGo(left < 1 ? 1 : left), style: caption);
-  }
+  @override
+  bool shouldRepaint(_RingPainter old) =>
+      old.ratio != ratio || old.color != color || old.over != over;
 }
 
 class _NoBudgetSection extends StatefulWidget {

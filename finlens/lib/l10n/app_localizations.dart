@@ -3232,6 +3232,72 @@ abstract class AppLocalizations {
   /// **'every {count} days'**
   String bgSuffixEveryDays(int count);
 
+  /// No description provided for @bgSpentOfLimit.
+  ///
+  /// In en, this message translates to:
+  /// **'{spent} of {limit}'**
+  String bgSpentOfLimit(Object spent, Object limit);
+
+  /// No description provided for @bgOfLimit.
+  ///
+  /// In en, this message translates to:
+  /// **'of {limit}'**
+  String bgOfLimit(Object limit);
+
+  /// No description provided for @bgCardUntil.
+  ///
+  /// In en, this message translates to:
+  /// **'{date} · {state}'**
+  String bgCardUntil(Object date, Object state);
+
+  /// No description provided for @bgCardLeft.
+  ///
+  /// In en, this message translates to:
+  /// **'left'**
+  String get bgCardLeft;
+
+  /// No description provided for @bgCardOver.
+  ///
+  /// In en, this message translates to:
+  /// **'over'**
+  String get bgCardOver;
+
+  /// No description provided for @bgCardUnder.
+  ///
+  /// In en, this message translates to:
+  /// **'under'**
+  String get bgCardUnder;
+
+  /// No description provided for @bgCardStarts.
+  ///
+  /// In en, this message translates to:
+  /// **'starts'**
+  String get bgCardStarts;
+
+  /// No description provided for @bgRemove.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove'**
+  String get bgRemove;
+
+  /// No description provided for @bgShowNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Show note'**
+  String get bgShowNote;
+
+  /// No description provided for @bgCardA11y.
+  ///
+  /// In en, this message translates to:
+  /// **'{name}, {amount} {state}, until {date}'**
+  String bgCardA11y(Object name, Object amount, Object state, Object date);
+
+  /// No description provided for @bgPosition.
+  ///
+  /// In en, this message translates to:
+  /// **'position {index} of {count}'**
+  String bgPosition(int index, int count);
+
   /// No description provided for @bgOverlapNote.
   ///
   /// In en, this message translates to:

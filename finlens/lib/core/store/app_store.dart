@@ -2556,9 +2556,37 @@ class AppStore extends ChangeNotifier {
         .length;
   }
 
-  /// Every active budget, grouped for the Budgets tab's three sections (spec §5a),
-  /// each already ordered over-limit-first within its section. A finished one-off
-  /// stays in its section, dimmed (spec §5c); an archived one is gone.
+  /// A one-off whose end has passed — the Budgets tab's "finished" card (task
+  /// 067.3 §1e / §5). It sits below the reorderable group and cannot be dragged.
+  bool budgetPastEnd(Budget b) => _isPastOnce(b);
+
+  /// The reader's order within a scope (task 067.3 §5b), independent of the
+  /// month on screen: running budgets first — indexed by [Budget.sortIndex]
+  /// ascending, then the unindexed ones oldest-created-first — then one-offs past
+  /// their end, most recently ended first. Ties break by id so it is total.
+  int _budgetOrder(Budget a, Budget b) {
+    final pa = budgetPastEnd(a), pb = budgetPastEnd(b);
+    if (pa != pb) return pa ? 1 : -1;
+    if (pa && pb) {
+      final ae = a.endedAt ?? a.anchor;
+      final be = b.endedAt ?? b.anchor;
+      final c = be.compareTo(ae); // most recently ended first
+      return c != 0 ? c : a.id.compareTo(b.id);
+    }
+    final ai = a.sortIndex, bi = b.sortIndex;
+    if (ai != null && bi != null) {
+      final c = ai.compareTo(bi);
+      return c != 0 ? c : a.id.compareTo(b.id);
+    }
+    if (ai != null) return -1; // indexed before unindexed
+    if (bi != null) return 1;
+    final c = _budgetCreatedAt(a).compareTo(_budgetCreatedAt(b)); // oldest first
+    return c != 0 ? c : a.id.compareTo(b.id);
+  }
+
+  /// Every active budget in [scope], for the Budgets tab (spec §5a), in the
+  /// reader's order (task 067.3 §5b). A finished one-off stays in its section,
+  /// dimmed (spec §5c); an archived one is gone.
   List<Budget> activeBudgetsByScope(BudgetScope scope, DateTime month) {
     final window = DateRange(_monthStart(month), _monthEnd(month));
     final monthStart = _monthStart(month);
@@ -2574,21 +2602,34 @@ class AppStore extends ChangeNotifier {
       if (start == null) return false;
       if (monthStart.isBefore(thisMonthStart)) return false;
       return window.end.isBefore(start);
-    }).toList();
-    bool over(Budget b) {
-      final limit = budgetEffectiveLimit(b, month);
-      return limit > 0 && budgetSpend(b, month) > limit;
-    }
-    list.sort((a, b) {
-      final byOver = (over(a) ? 0 : 1).compareTo(over(b) ? 0 : 1);
-      if (byOver != 0) return byOver;
-      // Finished one-offs settle below running budgets in the same section.
-      final byFinished =
-          (a.isFinished ? 1 : 0).compareTo(b.isFinished ? 1 : 0);
-      if (byFinished != 0) return byFinished;
-      return _budgetCreatedAt(b).compareTo(_budgetCreatedAt(a));
-    });
+    }).toList()
+      ..sort(_budgetOrder);
     return list;
+  }
+
+  /// Move [moved] within its scope to just before [before] (task 067.3 §5), or
+  /// to the end of the running budgets when [before] is null. Renumbers the whole
+  /// scope 0…n−1 so indices never collide, and persists.
+  void moveBudget(Budget moved, {Budget? before}) {
+    final all = _budgets
+        .where((b) => b.scope == moved.scope && !b.isArchived)
+        .toList()
+      ..sort(_budgetOrder);
+    all.remove(moved);
+    int idx;
+    if (before != null) {
+      idx = all.indexOf(before);
+      if (idx < 0) idx = all.length;
+    } else {
+      // The end of the running ones = before the first past-end budget.
+      idx = all.indexWhere(budgetPastEnd);
+      if (idx < 0) idx = all.length;
+    }
+    all.insert(idx, moved);
+    for (var i = 0; i < all.length; i++) {
+      all[i].sortIndex = i;
+    }
+    notifyListeners();
   }
 
   /// Spent against budgeted categories in [month]. Planner passes its own month

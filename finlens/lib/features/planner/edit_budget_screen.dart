@@ -14,6 +14,7 @@ import '../../theme/app_typography.dart';
 import '../quick_add/pickers.dart';
 import '../quick_add/type_menu.dart';
 import '../quick_add/widgets/form_kit.dart';
+import 'budget_actions.dart';
 import 'edit_scaffold.dart';
 import 'widgets/percent_input_formatter.dart';
 import 'widgets/runs_sheet.dart';
@@ -629,31 +630,10 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
       );
 
   Future<void> _confirmRemove() async {
-    final l = AppLocalizations.of(context);
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: AppColors.surfaceAlt,
-        title: Text(l.ebRemoveTitle(_editBudget!.name), style: AppText.rowTitle),
-        content:
-            Text(l.ebRemoveMsg, style: AppText.body.copyWith(fontSize: 13.5)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            style: TextButton.styleFrom(foregroundColor: AppColors.textSecondary),
-            child: Text(l.actionCancel),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            style: TextButton.styleFrom(foregroundColor: AppColors.negative),
-            child: Text(l.ebRemoveBudget),
-          ),
-        ],
-      ),
-    );
-    if (ok != true || !mounted) return;
-    _store.archiveBudget(_editBudget!);
-    if (mounted) Navigator.of(context).pop();
+    // One remove path for both screens (task 067.3 §4c). Unchanged text/effect;
+    // this screen pops itself after removal.
+    final removed = await confirmAndRemoveBudget(context, _store, _editBudget!);
+    if (removed && mounted) Navigator.of(context).pop();
   }
 
   Widget _historyCard(double currentSpend) {

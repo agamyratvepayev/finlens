@@ -2111,6 +2111,49 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String bgSpentOfLimit(Object spent, Object limit) {
+    return '$spent of $limit';
+  }
+
+  @override
+  String bgOfLimit(Object limit) {
+    return 'of $limit';
+  }
+
+  @override
+  String bgCardUntil(Object date, Object state) {
+    return '$date · $state';
+  }
+
+  @override
+  String get bgCardLeft => 'left';
+
+  @override
+  String get bgCardOver => 'over';
+
+  @override
+  String get bgCardUnder => 'under';
+
+  @override
+  String get bgCardStarts => 'starts';
+
+  @override
+  String get bgRemove => 'Remove';
+
+  @override
+  String get bgShowNote => 'Show note';
+
+  @override
+  String bgCardA11y(Object name, Object amount, Object state, Object date) {
+    return '$name, $amount $state, until $date';
+  }
+
+  @override
+  String bgPosition(int index, int count) {
+    return 'position $index of $count';
+  }
+
+  @override
   String bgOverlapNote(Object name) {
     return '$name already has its own budget. Both will count it.';
   }

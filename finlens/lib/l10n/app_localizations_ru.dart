@@ -2161,6 +2161,49 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
+  String bgSpentOfLimit(Object spent, Object limit) {
+    return '$spent из $limit';
+  }
+
+  @override
+  String bgOfLimit(Object limit) {
+    return 'из $limit';
+  }
+
+  @override
+  String bgCardUntil(Object date, Object state) {
+    return '$date · $state';
+  }
+
+  @override
+  String get bgCardLeft => 'осталось';
+
+  @override
+  String get bgCardOver => 'превышено';
+
+  @override
+  String get bgCardUnder => 'сэкономлено';
+
+  @override
+  String get bgCardStarts => 'старт';
+
+  @override
+  String get bgRemove => 'Удалить';
+
+  @override
+  String get bgShowNote => 'Показать заметку';
+
+  @override
+  String bgCardA11y(Object name, Object amount, Object state, Object date) {
+    return '$name, $amount $state, до $date';
+  }
+
+  @override
+  String bgPosition(int index, int count) {
+    return 'позиция $index из $count';
+  }
+
+  @override
   String bgOverlapNote(Object name) {
     return 'У «$name» уже есть свой бюджет. Оба будут учитывать эту трату.';
   }

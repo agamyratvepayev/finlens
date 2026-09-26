@@ -17,6 +17,7 @@ import '../../theme/app_typography.dart';
 import '../../core/utils/date_range.dart';
 import '../balance/same_transactions_screen.dart';
 import '../insight/category_detail_screen.dart';
+import 'budget_actions.dart';
 import 'edit_budget_screen.dart';
 
 /// Spec 5.6 — the screen a budget card opens on a tap: "where did this $560
@@ -292,28 +293,12 @@ class BudgetDetailScreen extends StatelessWidget {
   Future<void> _confirmRemoveBudget(
       BuildContext context, Category category) async {
     final store = StoreScope.read(context);
-    final l = AppLocalizations.of(context);
-    final count = store.txnCountForCategory(category.id);
-    final newTotal =
-        store.totalBudget - (store.effectiveLimitOf(category) ?? 0);
-
-    final ok = await showDestructiveConfirm(
-      context,
-      title: l.ebRemoveTitle(category.name),
-      message: l.ebRemoveMsg,
-      impact: [
-        ImpactLine.kept(l.ebCategoryStays(category.name, count)),
-        ImpactLine.lost(l.ebWarningsDisappear),
-        ImpactLine.lost(
-            l.ebTotalDrops(money(store.totalBudget), money(newTotal))),
-      ],
-      confirmLabel: l.ebRemoveBudget,
-    );
-    if (!ok || !context.mounted) return;
-    store.removeBudget(category);
-    // The budget is gone; this screen answers "how did I do against the limit?"
-    // for a budget that no longer exists, so return to Planner.
-    Navigator.of(context).pop();
+    final budget = store.monthlyBudgetForCategory(category.id);
+    if (budget == null) return;
+    // One remove path for both screens (task 067.3 §4c); the text and effect are
+    // unchanged. This screen pops itself after the budget is gone.
+    final removed = await confirmAndRemoveBudget(context, store, budget);
+    if (removed && context.mounted) Navigator.of(context).pop();
   }
 
   /// §4 — archive the category. A scheduled item that books into it would keep

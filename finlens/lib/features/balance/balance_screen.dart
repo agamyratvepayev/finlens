@@ -18,7 +18,7 @@ import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/app_typography.dart';
 import 'balance_order.dart';
-import 'widgets/reorderable_group.dart';
+import '../../shared/widgets/reorderable_group.dart';
 import '../ledger/ledger_scope.dart';
 import '../ledger/ledger_screen.dart' show buildFirstRunHint;
 import '../ledger/scoped_ledger_screen.dart';
@@ -1270,7 +1270,7 @@ class _BalanceScreenState extends State<BalanceScreen> {
                         target: target,
                         visible: children,
                       ),
-                      itemBuilder: (context, a) => AccountRow(
+                      itemBuilder: (context, a, lifted) => AccountRow(
                         account: a,
                         balance: store.balanceOf(a.id),
                         subtitle: group.isLiability

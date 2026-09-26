@@ -2097,6 +2097,49 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
+  String bgSpentOfLimit(Object spent, Object limit) {
+    return '$limit içinde $spent';
+  }
+
+  @override
+  String bgOfLimit(Object limit) {
+    return '$limit içinde';
+  }
+
+  @override
+  String bgCardUntil(Object date, Object state) {
+    return '$date · $state';
+  }
+
+  @override
+  String get bgCardLeft => 'kaldı';
+
+  @override
+  String get bgCardOver => 'aşıldı';
+
+  @override
+  String get bgCardUnder => 'altında';
+
+  @override
+  String get bgCardStarts => 'başlar';
+
+  @override
+  String get bgRemove => 'Kaldır';
+
+  @override
+  String get bgShowNote => 'Notu göster';
+
+  @override
+  String bgCardA11y(Object name, Object amount, Object state, Object date) {
+    return '$name, $amount $state, $date tarihine kadar';
+  }
+
+  @override
+  String bgPosition(int index, int count) {
+    return '$count içinde $index. sıra';
+  }
+
+  @override
   String bgOverlapNote(Object name) {
     return '$name için zaten bir bütçe var. İkisi de bunu sayacak.';
   }

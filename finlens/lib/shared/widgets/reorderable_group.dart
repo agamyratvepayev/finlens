@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 
-import '../../../l10n/app_localizations.dart';
-import '../../../theme/app_colors.dart';
+import '../../l10n/app_localizations.dart';
+import '../../theme/app_colors.dart';
 
 /// One independent reorder group: a non-scrolling column of rows the user can
 /// press-and-hold to drag *within this group only*.
@@ -31,6 +31,9 @@ class ReorderableGroup<T> extends StatefulWidget {
     this.scrollController,
     this.delay = const Duration(milliseconds: 500),
     this.enabled = true,
+    this.liftScale = 1.02,
+    this.liftColor,
+    this.liftRadius = 10,
   });
 
   final List<T> items;
@@ -41,8 +44,16 @@ class ReorderableGroup<T> extends StatefulWidget {
   /// open/close does not disturb them.
   final bool enabled;
 
-  /// Builds a row's visible content, including its own tap handlers.
-  final Widget Function(BuildContext context, T item) itemBuilder;
+  /// Builds a row's visible content, including its own tap handlers. [lifted] is
+  /// true only for the floating drag proxy, so a row can drop its own surface
+  /// background and let the lift colour show through (task 067.3 §5c).
+  final Widget Function(BuildContext context, T item, bool lifted) itemBuilder;
+
+  /// The floating proxy's scale, fill and corner radius while dragging. Default
+  /// to Balance's look; the Budgets tab passes 1.03 / sheetCard / 14 (§5c).
+  final double liftScale;
+  final Color? liftColor;
+  final double liftRadius;
 
   /// Called once on drop with the moved item and the index it should sit
   /// *before* in the current visible list (`items.length` = dropped at the end).
@@ -393,15 +404,15 @@ class _ReorderableGroupState<T> extends State<ReorderableGroup<T>> {
         onDragStarted: () => _startDrag(index),
         onDragUpdate: (d) => _onPointerMove(d.globalPosition),
         onDragEnd: (_) => _endDrag(),
-        child: widget.itemBuilder(context, item),
+        child: widget.itemBuilder(context, item, false),
       ),
     );
   }
 
   Widget _proxy(BuildContext context, T item) {
-    final child = widget.itemBuilder(context, item);
+    final child = widget.itemBuilder(context, item, true);
     return Transform.scale(
-      scale: 1.02,
+      scale: widget.liftScale,
       child: Material(
         type: MaterialType.transparency,
         child: Container(
@@ -411,8 +422,8 @@ class _ReorderableGroupState<T> extends State<ReorderableGroup<T>> {
           // throws and the whole drag dies.
           width: _width,
           decoration: BoxDecoration(
-            color: AppColors.dragLifted,
-            borderRadius: BorderRadius.circular(10),
+            color: widget.liftColor ?? AppColors.dragLifted,
+            borderRadius: BorderRadius.circular(widget.liftRadius),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.65),

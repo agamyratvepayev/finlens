@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:finlens/features/balance/widgets/reorderable_group.dart';
+import 'package:finlens/shared/widgets/reorderable_group.dart';
 
 /// Gesture-level tests for [ReorderableGroup]. These simulate *real* drags —
 /// startGesture → pump past the long-press delay → moveBy in steps → up — and
@@ -42,7 +42,7 @@ void main() {
                   scrollController: controller,
                   semanticLabel: (s, i, n) => '$s ${i + 1}/$n',
                   onReorder: (m, target) => moved.add((m, target)),
-                  itemBuilder: (_, s) => SizedBox(
+                  itemBuilder: (_, s, lifted) => SizedBox(
                     height: rowHeight,
                     width: double.infinity,
                     child: Text(s),
