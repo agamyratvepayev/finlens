@@ -1180,7 +1180,15 @@ class _EndsSheetState extends State<_EndsSheet> {
 
   void _selectAfter() {
     setState(() => _mode = _EndsMode.after);
-    _countFocus.requestFocus();
+    // The count field only exists once the row is selected — it is built by
+    // the frame this setState schedules. Requesting focus synchronously on the
+    // first tap therefore hit a FocusNode not yet attached to any field and
+    // did nothing; the keyboard only rose on a second tap (task 061 Part C).
+    // Focus after that frame, when the field is real, so one tap anywhere on
+    // the row raises the number keyboard.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _countFocus.requestFocus();
+    });
   }
 
   /// Commits the typed count on blur / Done. Clamp waits for here so typing the

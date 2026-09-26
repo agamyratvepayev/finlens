@@ -7,6 +7,7 @@ import 'package:finlens/core/store/app_store.dart';
 import 'package:finlens/core/utils/clock.dart';
 import 'package:finlens/features/planner/edit_task_screen.dart';
 import 'package:finlens/features/quick_add/quick_add_sheet.dart';
+import 'package:finlens/features/quick_add/widgets/amount_hero.dart';
 import 'package:finlens/l10n/app_localizations.dart';
 import 'package:finlens/shared/widgets/form_fields.dart';
 import 'package:finlens/theme/app_theme.dart';
@@ -93,13 +94,21 @@ void main() {
   });
 
   group('§2 · empty optional rows name their action', () {
-    testWidgets('Amount, Account and Category each read their imperative',
+    testWidgets('Amount reads 0; Account and Category read their imperative',
         (tester) async {
       await _openTask(tester, _store());
-      // Each empty required row names the action that fills it (task 043 §3):
-      // Amount → Enter amount, Account → Choose account, Category → Choose
-      // category. The note reads "Add note" and the due date has a value.
-      expect(find.text('Enter amount'), findsOneWidget);
+      // Empty pickers name the action that fills them (task 043 §3): Account →
+      // Choose account, Category → Choose category. The amount is a number,
+      // and a number's empty state is 0 in its currency (task 061) — never
+      // the Enter amount sentence.
+      expect(find.text('Enter amount'), findsNothing);
+      expect(
+          find.descendant(
+              of: find.byType(TxnAmountFieldRow),
+              matching: find.byWidgetPredicate(
+                  (w) => w is Text && w.textSpan?.toPlainText() == '0')),
+          findsOneWidget);
+      expect(find.byType(CurrencyChip), findsOneWidget);
       expect(find.text('Choose account'), findsOneWidget);
       expect(find.text('Choose category'), findsOneWidget);
       // The old vocabulary is gone from this form.

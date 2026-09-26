@@ -774,6 +774,10 @@ class CurrencyChip extends StatelessWidget {
 /// keypad docked at the form's foot writes here; the accent outline, the accent
 /// icon and a blinking caret mark it three ways at once, so focus never rests
 /// on colour alone.
+///
+/// An empty amount is a neutral, dim `0` beside its currency chip (task 061):
+/// a zero in a unit, never a sentence. The chip is always present, so typing
+/// moves nothing but the digits.
 class TxnAmountFieldRow extends StatefulWidget {
   const TxnAmountFieldRow({
     super.key,
@@ -781,7 +785,6 @@ class TxnAmountFieldRow extends StatefulWidget {
     required this.label,
     required this.raw,
     required this.currency,
-    required this.emptyText,
     required this.focused,
     required this.onTap,
     required this.onCurrencyTap,
@@ -804,17 +807,14 @@ class TxnAmountFieldRow extends StatefulWidget {
   /// A leading sign glyph shown before the figure once a direction is known
   /// (task 030 §3): '+' or '−'. Empty keeps the row unsigned, as every amount
   /// row was before. Never drawn in the empty state — an unset amount has no
-  /// sign to carry.
+  /// sign to carry — and the build enforces that (task 061): the empty `0`
+  /// stays neutral even when [valueColor] is set.
   final String sign;
 
   /// The colour the figure (and its sign) take once a direction is known —
   /// positive for money in, negative for money out. Null keeps the neutral
   /// primary-text colour every other amount row uses.
   final Color? valueColor;
-
-  /// Shown while [raw] is empty *and* the row is unfocused. The instant the row
-  /// takes focus the dim `0.00` replaces it; the two never coexist.
-  final String emptyText;
 
   /// True while the docked keypad writes to this row.
   final bool focused;
@@ -873,10 +873,9 @@ class _TxnAmountFieldRowState extends State<TxnAmountFieldRow>
     final exprMode =
         widget.expression != null && widget.expression!.showsAsExpression;
     final filled = widget.raw.isNotEmpty || exprMode;
-    // The chip is a property of an amount: absent until there is one, or until
-    // the row is focused and there is about to be (§1).
-    final showChip = focused || filled;
-    final showEmpty = !filled && !focused;
+    // The chip is always present (task 061): it is the currency's place on the
+    // row, exactly like the hero's, in every state — so typing into an empty
+    // amount moves nothing but the digits.
 
     final labelStyle = TextStyle(
       fontSize: 14.5 * s * t,
@@ -903,9 +902,13 @@ class _TxnAmountFieldRowState extends State<TxnAmountFieldRow>
     // joins the number at full brightness once the row is filled and unfocused.
     // Pale means "not typed yet", never "these are the decimals". A signed row
     // paints the padding in the direction colour too, so `+1,200.00` reads as
-    // one figure.
-    final restColor = widget.valueColor ??
-        ((filled && !focused) ? AppColors.textPrimary : AppColors.textTertiary);
+    // one figure. An EMPTY amount is neutral (task 061): its `0` stays in the
+    // dim ramp in every state, even when a category has set [valueColor] —
+    // an unset amount has no direction yet.
+    final restColor = !filled
+        ? AppColors.textTertiary
+        : widget.valueColor ??
+            (focused ? AppColors.textTertiary : AppColors.textPrimary);
 
     final Widget value = exprMode
         ? _ExpressionText(
@@ -914,19 +917,11 @@ class _TxnAmountFieldRowState extends State<TxnAmountFieldRow>
             focused: focused,
             fontSize: 14.5 * s * t,
           )
-        : showEmpty
-        ? Text(
-            widget.emptyText,
-            textAlign: TextAlign.right,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: numStyle(AppColors.formDim2),
-          )
         : Text.rich(
             TextSpan(children: [
               // The sign leads the figure (task 030 §3); never in the empty
-              // state, which this branch is not.
-              if (widget.sign.isNotEmpty)
+              // state — an unset amount has no sign to carry (task 061).
+              if (widget.sign.isNotEmpty && filled)
                 TextSpan(text: widget.sign, style: numStyle(numColor)),
               if (parts.typed.isNotEmpty)
                 TextSpan(text: parts.typed, style: numStyle(numColor)),
@@ -954,9 +949,8 @@ class _TxnAmountFieldRowState extends State<TxnAmountFieldRow>
             softWrap: false,
           );
 
-    final chip = showChip
-        ? CurrencyChip(currency: widget.currency, onTap: widget.onCurrencyTap)
-        : null;
+    final chip =
+        CurrencyChip(currency: widget.currency, onTap: widget.onCurrencyTap);
 
     final icon = Icon(
       widget.icon,
@@ -967,28 +961,26 @@ class _TxnAmountFieldRowState extends State<TxnAmountFieldRow>
     final content = LayoutBuilder(
       builder: (context, c) {
         final labelW = _measure(widget.label, labelStyle, scaler);
-        final shown = showEmpty
-            ? widget.emptyText
-            : '${widget.sign}${parts.typed}${parts.rest}';
+        final shown =
+            '${filled ? widget.sign : ''}${parts.typed}${parts.rest}';
         final valueW = _measure(shown, numStyle(AppColors.textPrimary), scaler) +
             (focused ? 4 : 0); // the caret column
-        final chipW = chip == null
-            ? 0.0
-            // padL(10) + code + gap(2) + chevron(8) + padR(10), all ·s — the
-            // same arithmetic the hero uses, so the two chips measure alike.
-            : 10 * s +
-                _measure(
-                  widget.currency,
-                  TextStyle(
-                      fontSize: 12.5 * s * t,
-                      fontWeight: FontWeight.w600,
-                      height: 1.2),
-                  scaler,
-                ) +
-                2 * s +
-                8 * s +
-                10 * s +
-                6 * s; // the gap before it
+        // padL(10) + code + gap(2) + chevron(8) + padR(10), all ·s — the
+        // same arithmetic the hero uses, so the two chips measure alike. The
+        // chip is always on the row (task 061), so it is always counted.
+        final chipW = 10 * s +
+            _measure(
+              widget.currency,
+              TextStyle(
+                  fontSize: 12.5 * s * t,
+                  fontWeight: FontWeight.w600,
+                  height: 1.2),
+              scaler,
+            ) +
+            2 * s +
+            8 * s +
+            10 * s +
+            6 * s; // the gap before it
         final iconW = kIconColumn * s;
         final gaps = kIconGap * s * 2;
         // One line only if the label and the amount unit both fit with a little
@@ -1016,7 +1008,8 @@ class _TxnAmountFieldRowState extends State<TxnAmountFieldRow>
               ),
               SizedBox(width: kIconGap * s),
               Expanded(child: value),
-              if (chip != null) ...[SizedBox(width: 6 * s), chip],
+              SizedBox(width: 6 * s),
+              chip,
             ],
           );
         }
@@ -1043,7 +1036,8 @@ class _TxnAmountFieldRowState extends State<TxnAmountFieldRow>
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
                       Flexible(child: value),
-                      if (chip != null) ...[SizedBox(width: 6 * s), chip],
+                      SizedBox(width: 6 * s),
+                      chip,
                     ],
                   ),
                 ],
@@ -1080,13 +1074,13 @@ class _TxnAmountFieldRowState extends State<TxnAmountFieldRow>
       button: true,
       focused: focused,
       excludeSemantics: true,
-      label: showEmpty
-          ? '${widget.label} ${widget.emptyText}'
-          : exprMode
-              ? '${widget.label} '
-                  '${spokenExpression(widget.expression!, AppLocalizations.of(context))}'
-              : '${widget.label} '
-                  '${money(AmountEntry.value(widget.raw), currency: widget.currency)}',
+      // An empty amount is announced as a zero in its currency through the
+      // same money() path the filled state uses (task 061) — never a sentence.
+      label: exprMode
+          ? '${widget.label} '
+              '${spokenExpression(widget.expression!, AppLocalizations.of(context))}'
+          : '${widget.label} '
+              '${money(AmountEntry.value(widget.raw), currency: widget.currency)}',
       child: InkWell(
         onTap: widget.onTap,
         borderRadius: BorderRadius.circular(14 * s),

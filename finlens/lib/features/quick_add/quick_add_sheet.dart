@@ -1499,6 +1499,9 @@ class _QuickAddScreenState extends State<QuickAddScreen>
             onChanged: (_) => setState(() {}),
             numberColor: AppColors.negative,
             suffix: ' $feeCurrency',
+            // Empty reads 0 in its unit (task 061); the rate row above keeps
+            // its bare field on purpose.
+            hint: '0',
             semanticsLabel: '${l.qaAmount}, $feeCurrency',
           ),
           TxnFieldRow(
@@ -1840,7 +1843,6 @@ class _QuickAddScreenState extends State<QuickAddScreen>
             raw: _expr.pending,
             expression: _expr,
             currency: _currency,
-            emptyText: AppLocalizations.of(context).emptyEnterAmount,
             slotKey: _amountRowKey,
             onTap: _focusAmount,
             onCurrencyTap: _pickTaskCurrency,
@@ -1936,8 +1938,13 @@ class _QuickAddScreenState extends State<QuickAddScreen>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final ctx = _amountRowKey.currentContext;
       if (ctx != null) {
+        // Scroll only if the row would otherwise sit behind the keypad
+        // (task 061 Part B): keepVisibleAtEnd moves the list the minimum
+        // needed and not at all when the row is already fully visible — a
+        // centred ensureVisible scrolled every time and read as a reload.
         Scrollable.ensureVisible(ctx,
-            alignment: 0.5, duration: const Duration(milliseconds: 150));
+            alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtEnd,
+            duration: const Duration(milliseconds: 150));
       }
     });
   }

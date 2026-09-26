@@ -32,6 +32,7 @@ class InRowNumberField extends StatelessWidget {
     required this.numberColor,
     this.prefix,
     this.suffix,
+    this.hint,
     this.semanticsLabel,
   });
 
@@ -48,6 +49,10 @@ class InRowNumberField extends StatelessWidget {
   /// Muted text before the field (`1 USD = `) and after it (` EUR` / `USD`).
   final String? prefix;
   final String? suffix;
+
+  /// Dim placeholder shown while the field is empty — `0` for an amount
+  /// (task 061). Null (the rate row) keeps today's bare field.
+  final String? hint;
 
   /// Announced to a screen reader so the field reads its label and units, not a
   /// bare number (spec §6).
@@ -77,15 +82,25 @@ class InRowNumberField extends StatelessWidget {
             fontFeatures: const [FontFeature.tabularFigures()],
           ),
           cursorColor: AppColors.accent,
-          decoration: const InputDecoration(
+          decoration: InputDecoration(
             isDense: true,
             isCollapsed: true,
             contentPadding: EdgeInsets.zero,
             border: InputBorder.none,
             enabledBorder: InputBorder.none,
             // The underline sits under the number only, and only on focus.
-            focusedBorder: UnderlineInputBorder(
+            focusedBorder: const UnderlineInputBorder(
               borderSide: BorderSide(color: AppColors.accent, width: 1.5),
+            ),
+            // The hint is the number's own figure in the dim colour, so the
+            // 0 and the unit beside it read as one muted pair (task 061).
+            hintText: hint,
+            hintStyle: TextStyle(
+              fontSize: 15 * s * t,
+              fontWeight: FontWeight.w400,
+              height: 1.2,
+              color: AppColors.textTertiary,
+              fontFeatures: const [FontFeature.tabularFigures()],
             ),
           ),
         ),

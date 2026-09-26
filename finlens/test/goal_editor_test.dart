@@ -164,10 +164,11 @@ void main() {
         find.descendant(
             of: rowByLabel('Watching'), matching: find.text('Choose source')),
         findsOneWidget);
-    // …and Monthly's placeholder reads "Enter amount".
+    // …and Monthly's placeholder reads "0", the same empty state Target
+    // amount uses (task 061). Scoped to the row — Target amount shows 0 too.
+    expect(find.text('Enter amount'), findsNothing);
     expect(
-        find.descendant(
-            of: rowByLabel('Monthly'), matching: find.text('Enter amount')),
+        find.descendant(of: rowByLabel('Monthly'), matching: find.text('0')),
         findsOneWidget);
   });
 

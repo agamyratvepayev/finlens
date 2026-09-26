@@ -132,16 +132,18 @@ void main() {
       expect(find.textContaining('120', findRichText: true), findsOneWidget);
     });
 
-    testWidgets('the four states show Enter amount and the chip correctly',
+    testWidgets('the four states show 0 and the chip correctly',
         (tester) async {
       await tester.pumpWidget(_taskApp(buildSeedStore()));
       await _settle(tester);
 
-      // empty, unfocused — the imperative names the action (task 043 §3)
-      expect(find.text('Enter amount'), findsOneWidget);
-      expect(find.byType(CurrencyChip), findsNothing);
+      // empty, unfocused — a dim 0 in its currency, never a sentence
+      // (task 061); the chip is always present.
+      expect(find.text('Enter amount'), findsNothing);
+      expect(find.byType(CurrencyChip), findsOneWidget);
+      expect(_valueSpan(tester).toPlainText(), '0');
 
-      // empty, focused — a bare dim 0, no `.00` before a point is typed (§4)
+      // empty, focused — the same bare dim 0, no `.00` before a point is typed
       await tester.tap(find.text('Amount'));
       await _settle(tester);
       expect(find.text('Enter amount'), findsNothing);

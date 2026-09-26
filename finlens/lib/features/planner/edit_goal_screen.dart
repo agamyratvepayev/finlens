@@ -385,7 +385,9 @@ class _EditGoalScreenState extends State<EditGoalScreen> {
                 controller: _monthly,
                 focusNode: _monthlyFocus,
                 dim: _primary != _Pair.monthly,
-                hint: l.emptyEnterAmount,
+                // The same 0 Target amount uses (task 061): an empty amount is
+                // a zero in its unit, never a sentence.
+                hint: '0',
                 token: _currencyCode(code),
               ),
             ),

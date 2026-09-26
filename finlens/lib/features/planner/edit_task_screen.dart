@@ -190,12 +190,14 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
               ),
             ),
             TxnAmountFieldRow(
-              icon: Icons.attach_money_rounded,
-              label: l.etExpectedAmount,
+              // The Schedule form's own choice for this row (task 061): the
+              // currency-neutral # beside the label Amount, not $ / Expected
+              // amount — the same amount must read the same on both forms.
+              icon: Icons.numbers_rounded,
+              label: l.qaAmount,
               raw: _amountExpr.pending,
               expression: _amountExpr,
               currency: account?.currency ?? store.baseCurrency,
-              emptyText: '0',
               focused: _keypadOpen,
               onTap: _focusAmount,
               // The task's currency follows its account; the chip is a label

@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import '../../../l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 
@@ -311,9 +313,27 @@ class TransactionFormShell extends StatelessWidget {
   Widget build(BuildContext context) {
     final s = formScale(context);
     final bottomInset = MediaQuery.paddingOf(context).bottom;
+    final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
+    // The form manages its own bottom inset (task 061 Part B). With the
+    // Scaffold's default resize, tapping Amount while the title held the
+    // system keyboard moved the page twice — the keyboard's dismissal grew the
+    // body while the keypad's insertion shrank it. Here the keypad is laid out
+    // at the bottom the instant it opens and the departing keyboard simply
+    // slides down over it, so it takes the keyboard's place in one motion and
+    // the rows above never move. While a text field holds the keyboard (title,
+    // note, rate, fee) the keypad is closed and the manual inset does exactly
+    // what the Scaffold resize did.
+    //
+    // viewPadding, not padding, under the keypad: padding.bottom is consumed
+    // by the keyboard's inset and only grows back as it leaves, which would
+    // nudge the keypad; viewPadding is the same safe area throughout.
+    final manualInset = keypadOpen
+        ? MediaQuery.viewPaddingOf(context).bottom
+        : math.max(keyboardInset, bottomInset);
 
     return Scaffold(
       backgroundColor: AppColors.formBg,
+      resizeToAvoidBottomInset: false,
       body: SafeArea(
         bottom: false,
         child: Column(
@@ -382,7 +402,7 @@ class TransactionFormShell extends StatelessWidget {
                   canResolve: canResolve,
                 ),
               ),
-            SizedBox(height: bottomInset + 8 * s),
+            SizedBox(height: manualInset + 8 * s),
           ],
         ),
       ),
@@ -526,7 +546,6 @@ Widget _fieldRow(FieldSpec f, String? flashTarget, bool keypadOpen) {
       raw: f.raw!,
       expression: f.expression,
       currency: f.currency!,
-      emptyText: f.emptyText ?? '',
       // The task form has no numeric hero, so keypadOpen names this row
       // unambiguously. The day a second numeric row lands on this form, this
       // line is the one that has to grow a target.

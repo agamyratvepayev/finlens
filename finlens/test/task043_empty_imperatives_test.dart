@@ -56,7 +56,9 @@ void main() {
     await tester.pumpWidget(_host(_empty(), const EditGoalScreen()));
     await tester.pumpAndSettle();
 
-    expect(find.text('Enter amount'), findsOneWidget); // Monthly hint
+    // Monthly's empty state is a 0 like Target amount's (task 061), so the
+    // Enter amount imperative is gone; the non-amount rows keep theirs.
+    expect(find.text('Enter amount'), findsNothing);
     expect(find.text('Pick month'), findsOneWidget); // Target date
     expect(find.text('Choose source'), findsOneWidget); // Watching
     _noNotSet(tester);
