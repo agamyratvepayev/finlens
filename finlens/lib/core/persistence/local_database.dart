@@ -47,7 +47,7 @@ class LocalDatabase {
   // v11 (task 064 §7a) adds the tasks' `amount_overrides` column — per-
   // occurrence expected amounts as a JSON object of epochMs → amount. Nullable:
   // a pre-11 row reads back null, which the mapper coalesces to {}.
-  static const int schemaVersion = 13;
+  static const int schemaVersion = 14;
 
   static const String accountsTable = 'accounts';
   static const String categoriesTable = 'categories';
@@ -319,7 +319,9 @@ class LocalDatabase {
         currency TEXT,
         history TEXT NOT NULL,
         runs_until INTEGER,
-        note TEXT
+        note TEXT,
+        limit_overrides TEXT,
+        limit_before TEXT
       )''';
 
   /// Additive migrations only — every column/table added since v1 is nullable or
@@ -402,6 +404,13 @@ class LocalDatabase {
       // nullable: a pre-13 row reads back null → no end, '' note.
       await db.execute('ALTER TABLE $budgetsTable ADD COLUMN runs_until INTEGER');
       await db.execute('ALTER TABLE $budgetsTable ADD COLUMN note TEXT');
+    }
+    if (oldVersion < 14) {
+      // Task 067.2 §1 — per-period limits and earlier usual limits. Both
+      // nullable: a pre-14 row reads back null → {} (limit everywhere).
+      await db.execute(
+          'ALTER TABLE $budgetsTable ADD COLUMN limit_overrides TEXT');
+      await db.execute('ALTER TABLE $budgetsTable ADD COLUMN limit_before TEXT');
     }
   }
 }

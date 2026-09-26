@@ -18,8 +18,8 @@ import 'package:finlens/core/utils/clock.dart';
 /// flutter test hangs on the author's machine — run these yourself:
 ///   flutter test test/budget_object_migration_test.dart
 void main() {
-  test('schemaVersion is 13 (budgets carry a note and a run end)', () {
-    expect(LocalDatabase.schemaVersion, 13);
+  test('schemaVersion is 14 (budgets carry per-period limits)', () {
+    expect(LocalDatabase.schemaVersion, 14);
   });
 
   // ── the migration helper, in isolation ──────────────────────────────────────

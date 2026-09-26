@@ -3759,6 +3759,27 @@ class AppLocalizationsTk extends AppLocalizations {
   String get bdAgainstLimit => 'ÇÄKE GARŞY';
 
   @override
+  String bdOfLeft(String limit, String left) {
+    return '$limit · $left galdy';
+  }
+
+  @override
+  String bdOfOver(String limit, String over) {
+    return '$limit · $over aşdy';
+  }
+
+  @override
+  String get bdUpcoming => 'GELJEK';
+
+  @override
+  String get bdNote => 'BELLIK';
+
+  @override
+  String bdUntil(String month) {
+    return '$month çenli';
+  }
+
+  @override
   String get mpMonth => 'AÝ';
 
   @override
@@ -4277,6 +4298,19 @@ class AppLocalizationsTk extends AppLocalizations {
 
   @override
   String get bhLimit => 'Çäk';
+
+  @override
+  String bhLimitFor(String period) {
+    return '$period üçin çäk';
+  }
+
+  @override
+  String bhLimitFrom(String period) {
+    return '$period senesinden çäk';
+  }
+
+  @override
+  String get bhEnds => 'Tamamlanýar';
 
   @override
   String get bhRollover => 'Geçiriş';

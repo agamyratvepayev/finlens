@@ -635,21 +635,14 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
             child: Text(dayMonthYear(day, l),
                 style: AppText.rowTitle.copyWith(fontWeight: FontWeight.w500)),
           ),
-          if (changed) ...[
-            Container(
-              width: 5,
-              height: 5,
-              decoration: const BoxDecoration(
-                  shape: BoxShape.circle, color: AppColors.accentLight),
-            ),
-            const SizedBox(width: 8),
-          ],
+          // A changed amount is said in colour alone (task 067.2 §6 / §3): the
+          // amount itself is accentLight w600, with no leading dot.
           Text(
             amount,
             style: TextStyle(
               fontSize: 14.5,
               fontWeight: changed ? FontWeight.w600 : FontWeight.w400,
-              color: changed ? AppColors.textPrimary : AppColors.textTertiary,
+              color: changed ? AppColors.accentLight : AppColors.textTertiary,
               fontFeatures: const [FontFeature.tabularFigures()],
             ),
           ),

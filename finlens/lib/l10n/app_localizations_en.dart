@@ -3770,6 +3770,27 @@ class AppLocalizationsEn extends AppLocalizations {
   String get bdAgainstLimit => 'AGAINST THE LIMIT';
 
   @override
+  String bdOfLeft(String limit, String left) {
+    return 'of $limit · $left left';
+  }
+
+  @override
+  String bdOfOver(String limit, String over) {
+    return 'of $limit · $over over';
+  }
+
+  @override
+  String get bdUpcoming => 'UPCOMING';
+
+  @override
+  String get bdNote => 'NOTE';
+
+  @override
+  String bdUntil(String month) {
+    return 'until $month';
+  }
+
+  @override
   String get mpMonth => 'MONTH';
 
   @override
@@ -4287,6 +4308,19 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get bhLimit => 'Limit';
+
+  @override
+  String bhLimitFor(String period) {
+    return 'Limit for $period';
+  }
+
+  @override
+  String bhLimitFrom(String period) {
+    return 'Limit from $period';
+  }
+
+  @override
+  String get bhEnds => 'Ends';
 
   @override
   String get bhRollover => 'Rollover';

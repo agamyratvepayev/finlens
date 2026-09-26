@@ -2401,6 +2401,33 @@ class AppStore extends ChangeNotifier {
   /// preceding period only, and only when [repeats] && [rollover] (spec §A.3). A
   /// negative carry (overspending the prior period) is clamped to zero so one
   /// month's overspend never silently shrinks the next.
+  /// The **usual** limit of [b]'s period containing [on] (task 067.2 §1): the
+  /// earlier value from [Budget.limitBefore] when this period predates a later
+  /// change, else the current [Budget.limit]. This is the limit before any
+  /// single-period override.
+  double budgetUsualLimitFor(Budget b, DateTime on) {
+    final ps = budgetWindow(b, on).start;
+    DateTime? firstAfter;
+    for (final k in b.limitBefore.keys) {
+      if (k.isAfter(ps) && (firstAfter == null || k.isBefore(firstAfter))) {
+        firstAfter = k;
+      }
+    }
+    return firstAfter == null ? b.limit : b.limitBefore[firstAfter]!;
+  }
+
+  /// The limit of [b]'s period containing [on] (task 067.2 §1): its own override
+  /// if one exists, else the usual limit. Rollover is added on top by
+  /// [budgetEffectiveLimit], never here.
+  double budgetLimitFor(Budget b, DateTime on) =>
+      b.limitOverrides[budgetWindow(b, on).start] ?? budgetUsualLimitFor(b, on);
+
+  /// Whether [b]'s period containing [on] carries its own limit (task 067.2 §1).
+  /// An override is never stored equal to the usual limit (§2), so this is true
+  /// exactly when the period's limit differs from the usual one.
+  bool budgetLimitIsOwn(Budget b, DateTime on) =>
+      b.limitOverrides.containsKey(budgetWindow(b, on).start);
+
   double budgetRolloverCarry(Budget b, DateTime on) {
     if (!(b.repeats && b.rollover)) return 0;
     final current = budgetWindow(b, on);
@@ -2410,14 +2437,15 @@ class AppStore extends ChangeNotifier {
       return 0;
     }
     final prev = budgetWindow(b, prevRef);
-    final carry = b.limit - budgetSpendOverWindow(b, prev);
+    // Carry that period's own limit, not the usual one (task 067.2 §1).
+    final carry = budgetLimitFor(b, prevRef) - budgetSpendOverWindow(b, prev);
     return carry > 0 ? carry : 0;
   }
 
-  /// The limit that applies in the period containing [on] — base limit plus any
-  /// rollover carry (spec §A.3).
+  /// The limit that applies in the period containing [on] — the period's own
+  /// limit (task 067.2 §1) plus any rollover carry (spec §A.3).
   double budgetEffectiveLimit(Budget b, DateTime on) =>
-      b.limit + budgetRolloverCarry(b, on);
+      budgetLimitFor(b, on) + budgetRolloverCarry(b, on);
 
   // ── Category ⇄ budget compatibility seams ──────────────────────────────────
   // The old code read `category.monthlyBudget` / `.effectiveLimit` /
@@ -3573,7 +3601,10 @@ class AppStore extends ChangeNotifier {
         if (!b.repeats && b.endedAt != null && day.isAfter(b.endedAt!)) break;
         final window = budgetWindow(b, day);
         final windowLen = window.end.difference(window.start).inDays + 1;
-        var pace = windowLen <= 0 ? 0.0 : limitBase / windowLen;
+        // That day's period may carry its own limit (task 067.2 §1); a later
+        // period (December's 2,500) paces higher than the usual one.
+        final dayLimitBase = convertToBase(budgetLimitFor(b, day), cur) ?? limitBase;
+        var pace = windowLen <= 0 ? 0.0 : dayLimitBase / windowLen;
         // A bill in a budgeted category is subtracted from that day's share,
         // never below zero, so it is not counted twice (§1d).
         if (b.scope == BudgetScope.categories && catDays.isNotEmpty) {
@@ -4452,6 +4483,8 @@ class AppStore extends ChangeNotifier {
       ..limit = limit ?? b.limit
       ..rollover = b.repeats ? (rollover ?? b.rollover) : false
       ..warnThreshold = warnThreshold ?? b.warnThreshold;
+    // A changed usual limit may make an override redundant (task 067.2 §2).
+    _pruneRedundantOverrides(b);
     notifyListeners();
   }
 
@@ -4491,6 +4524,95 @@ class AppStore extends ChangeNotifier {
     ));
     b.runsUntil = next;
     notifyListeners();
+  }
+
+  /// Give one period of [b] its own limit, or change the limit from that period
+  /// onward (task 067.2 §2), with the same "Only this" / "…and after" choice
+  /// [setOccurrenceAmount] offers a scheduled item. [periodStart] is normalised
+  /// to the period's own start.
+  ///
+  /// `andAfter: false` — only that period changes; an entry equal to the usual
+  /// limit is never stored. `andAfter: true` — every period before it keeps
+  /// exactly the limit it had (recorded in [Budget.limitBefore]), and it and
+  /// every later period take the new limit. Nothing before it changes.
+  void setBudgetPeriodLimit(Budget b, DateTime periodStart, double limit,
+      {required bool andAfter}) {
+    final d = budgetWindow(b, periodStart).start;
+    final bc = b.currency.isEmpty ? null : b.currency;
+    final oldLimit = budgetLimitFor(b, d);
+    if (!andAfter) {
+      final usual = budgetUsualLimitFor(b, d);
+      if ((limit - usual).abs() < 0.005) {
+        b.limitOverrides.remove(d);
+      } else {
+        b.limitOverrides[d] = limit;
+      }
+      if ((limit - oldLimit).abs() >= 0.005) {
+        b.history.add(BudgetEdit(
+          at: today,
+          field: 'periodLimit',
+          period: d,
+          from: money(oldLimit, currency: bc),
+          to: money(limit, currency: bc),
+          amber: limit > oldLimit,
+        ));
+      }
+    } else {
+      // Read the usual limit of the period just before D before mutating.
+      final before = budgetUsualLimitFor(b, d.subtract(const Duration(days: 1)));
+      // Periods on/after D now take the new usual limit, so any earlier boundary
+      // at or after D is dropped; a boundary at D is re-established below.
+      b.limitBefore.removeWhere((k, _) => !k.isBefore(d));
+      if ((before - limit).abs() >= 0.005) {
+        b.limitBefore[d] = before;
+      }
+      b.limit = limit;
+      // Overrides from D on are superseded by the new usual limit.
+      b.limitOverrides.removeWhere((k, _) => !k.isBefore(d));
+      if ((limit - oldLimit).abs() >= 0.005) {
+        b.history.add(BudgetEdit(
+          at: today,
+          field: 'limit',
+          period: d,
+          from: money(oldLimit, currency: bc),
+          to: money(limit, currency: bc),
+          amber: limit > oldLimit,
+        ));
+      }
+    }
+    _pruneRedundantOverrides(b);
+    notifyListeners();
+  }
+
+  /// Remove a period's own limit (task 067.2 §2) — it returns to the usual one.
+  void resetBudgetPeriodLimit(Budget b, DateTime periodStart) {
+    final d = budgetWindow(b, periodStart).start;
+    final old = b.limitOverrides[d];
+    if (old == null) return;
+    b.limitOverrides.remove(d);
+    final usual = budgetUsualLimitFor(b, d);
+    if ((old - usual).abs() >= 0.005) {
+      final bc = b.currency.isEmpty ? null : b.currency;
+      b.history.add(BudgetEdit(
+        at: today,
+        field: 'periodLimit',
+        period: d,
+        from: money(old, currency: bc),
+        to: money(usual, currency: bc),
+      ));
+    }
+    _pruneRedundantOverrides(b);
+    notifyListeners();
+  }
+
+  /// Drop every override that now equals its period's usual limit (task 067.2
+  /// §2) — called after any limit change, here or in the edit form, so a stored
+  /// override never merely restates the usual limit.
+  void _pruneRedundantOverrides(Budget b) {
+    b.limitOverrides.removeWhere((ps, v) {
+      final usual = budgetUsualLimitFor(b, ps);
+      return (v - usual).abs() < 0.005;
+    });
   }
 
   /// Archive any budget (spec §5c/§C.5) — it leaves the Budgets tab. Used to
@@ -4581,6 +4703,8 @@ class AppStore extends ChangeNotifier {
       ..limit = newLimit
       ..rollover = newRollover
       ..warnThreshold = newWarn;
+    // A changed usual limit may make an override redundant (task 067.2 §2).
+    _pruneRedundantOverrides(existing);
     notifyListeners();
   }
 

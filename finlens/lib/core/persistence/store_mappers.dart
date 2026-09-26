@@ -144,6 +144,10 @@ Map<String, Object?> budgetToMap(Budget b) => {
       'archived_at': _dt(b.archivedAt),
       'currency': b.currency,
       'note': b.note,
+      // Task 067.2 §1 — per-period limits and earlier usual limits, both as a
+      // JSON object of epochMs → amount, following amount_overrides' encoding.
+      'limit_overrides': _encodeDateMap(b.limitOverrides),
+      'limit_before': _encodeDateMap(b.limitBefore),
       'history': jsonEncode(b.history.map(_budgetEditToJson).toList()),
     };
 
@@ -165,6 +169,9 @@ Budget budgetFromMap(Map<String, Object?> m) => Budget(
       archivedAt: _dtn(m['archived_at']),
       currency: m['currency'] as String?,
       note: (m['note'] as String?) ?? '',
+      // Pre-task-067.2 rows lack these: no per-period limits (§1).
+      limitOverrides: _decodeOverrides(m['limit_overrides']),
+      limitBefore: _decodeOverrides(m['limit_before']),
       history: _decodeList(m['history'])
           .map((e) => _budgetEditFromJson(e as Map<String, dynamic>))
           .toList(),
@@ -406,6 +413,8 @@ Map<String, Object?> _budgetEditToJson(BudgetEdit b) => {
       'from': b.from,
       'to': b.to,
       'amber': b.amber,
+      // Task 067.2 §3 — the period a periodLimit/limit edit applies to, optional.
+      if (b.period != null) 'period': b.period!.millisecondsSinceEpoch,
     };
 
 BudgetEdit _budgetEditFromJson(Map<String, dynamic> j) => BudgetEdit(
@@ -414,6 +423,10 @@ BudgetEdit _budgetEditFromJson(Map<String, dynamic> j) => BudgetEdit(
       from: j['from'] as String? ?? '',
       to: j['to'] as String? ?? '',
       amber: (j['amber'] as bool?) ?? false,
+      // Old entries load with null (§3).
+      period: j['period'] == null
+          ? null
+          : DateTime.fromMillisecondsSinceEpoch((j['period'] as num).toInt()),
     );
 
 Map<String, Object?> _goalEditToJson(GoalEdit g) => {
@@ -479,6 +492,12 @@ List<dynamic> _decodeList(Object? v) {
     return const [];
   }
 }
+
+/// Encodes a date-keyed amount map as a JSON object of epochMs → amount, the
+/// encoding [_decodeOverrides] reads (task 064 §7a / 067.2 §1).
+String _encodeDateMap(Map<DateTime, double> m) => jsonEncode({
+      for (final e in m.entries) '${e.key.millisecondsSinceEpoch}': e.value,
+    });
 
 /// Task 064 §7a — the `amount_overrides` JSON object (epochMs → amount).
 /// Absent (pre-11 row, old backup) or malformed decodes as empty.

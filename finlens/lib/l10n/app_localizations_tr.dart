@@ -3755,6 +3755,27 @@ class AppLocalizationsTr extends AppLocalizations {
   String get bdAgainstLimit => 'LİMİTE KARŞI';
 
   @override
+  String bdOfLeft(String limit, String left) {
+    return '$limit · $left kaldı';
+  }
+
+  @override
+  String bdOfOver(String limit, String over) {
+    return '$limit · $over aşıldı';
+  }
+
+  @override
+  String get bdUpcoming => 'YAKLAŞAN';
+
+  @override
+  String get bdNote => 'NOT';
+
+  @override
+  String bdUntil(String month) {
+    return '$month tarihine kadar';
+  }
+
+  @override
   String get mpMonth => 'AY';
 
   @override
@@ -4272,6 +4293,19 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get bhLimit => 'Limit';
+
+  @override
+  String bhLimitFor(String period) {
+    return '$period limiti';
+  }
+
+  @override
+  String bhLimitFrom(String period) {
+    return '$period tarihinden limit';
+  }
+
+  @override
+  String get bhEnds => 'Bitiş';
 
   @override
   String get bhRollover => 'Devir';

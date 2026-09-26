@@ -187,6 +187,7 @@ class BudgetEdit {
     required this.from,
     required this.to,
     this.amber = false,
+    this.period,
   });
 
   final DateTime at;
@@ -195,7 +196,9 @@ class BudgetEdit {
   /// | 'categoryArchived' | 'categories' (targets changed — budgets-as-object
   /// spec §C.3) | 'until' (a repeating budget's end moved — task 067.1 §1; from
   /// and to hold the epoch-ms string of the old and new last day, or '' for no
-  /// end. 067.2's CHANGES list renders it).
+  /// end) | 'periodLimit' (one period's own limit changed — task 067.2 §3;
+  /// [period] is that period's start, from/to the old and new limit). 067.2's
+  /// CHANGES list renders both.
   final String field;
 
   /// Formatted, and language-neutral: money via `money()`, percent via
@@ -212,6 +215,11 @@ class BudgetEdit {
   /// A raised limit is amber; everything else is neutral. Colour states a fact;
   /// the reader forms the opinion.
   final bool amber;
+
+  /// The period a 'periodLimit' / 'limit' edit applies to (task 067.2 §3), by
+  /// its start (local midnight). Null for every other field, and for entries
+  /// written before this existed.
+  final DateTime? period;
 }
 
 /// What a budget's [Budget.targets] point at (budgets-as-object spec §A.1).
@@ -252,9 +260,13 @@ class Budget {
     this.runsUntil,
     this.archivedAt,
     this.note = '',
+    Map<DateTime, double> limitOverrides = const {},
+    Map<DateTime, double> limitBefore = const {},
     List<BudgetEdit>? history,
   })  : targets = {...targets},
         currency = currency ?? '',
+        limitOverrides = Map.of(limitOverrides),
+        limitBefore = Map.of(limitBefore),
         history = history ?? <BudgetEdit>[];
 
   final String id;
@@ -314,6 +326,19 @@ class Budget {
   /// Free text shown on the budget's detail and its card (067.2 / 067.3).
   /// Empty string means no note. Never null.
   String note;
+
+  /// Limits for single periods (task 067.2 §1), keyed by the period's start
+  /// (local midnight). A period with an entry uses it, whatever [limit] is; past
+  /// entries are kept — they are the limit that period actually had. An entry is
+  /// never stored equal to that period's usual limit (§2). Empty for every
+  /// budget until a period is overridden.
+  Map<DateTime, double> limitOverrides;
+
+  /// Earlier usual limits (task 067.2 §1). Key = the first period that no longer
+  /// used the value; value = the usual limit of the periods before that key
+  /// (back to the previous key). Periods on or after the last key use [limit].
+  /// Empty for every budget today, which keeps [limit] in force everywhere.
+  Map<DateTime, double> limitBefore;
 
   /// Set when the budget is archived — it then leaves the Budgets tab in every
   /// month and lives only in the Archive (spec §C.5). The migration maps a

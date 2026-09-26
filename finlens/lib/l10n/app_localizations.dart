@@ -5896,6 +5896,36 @@ abstract class AppLocalizations {
   /// **'AGAINST THE LIMIT'**
   String get bdAgainstLimit;
 
+  /// No description provided for @bdOfLeft.
+  ///
+  /// In en, this message translates to:
+  /// **'of {limit} · {left} left'**
+  String bdOfLeft(String limit, String left);
+
+  /// No description provided for @bdOfOver.
+  ///
+  /// In en, this message translates to:
+  /// **'of {limit} · {over} over'**
+  String bdOfOver(String limit, String over);
+
+  /// No description provided for @bdUpcoming.
+  ///
+  /// In en, this message translates to:
+  /// **'UPCOMING'**
+  String get bdUpcoming;
+
+  /// No description provided for @bdNote.
+  ///
+  /// In en, this message translates to:
+  /// **'NOTE'**
+  String get bdNote;
+
+  /// No description provided for @bdUntil.
+  ///
+  /// In en, this message translates to:
+  /// **'until {month}'**
+  String bdUntil(String month);
+
   /// No description provided for @mpMonth.
   ///
   /// In en, this message translates to:
@@ -6645,6 +6675,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Limit'**
   String get bhLimit;
+
+  /// No description provided for @bhLimitFor.
+  ///
+  /// In en, this message translates to:
+  /// **'Limit for {period}'**
+  String bhLimitFor(String period);
+
+  /// No description provided for @bhLimitFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'Limit from {period}'**
+  String bhLimitFrom(String period);
+
+  /// No description provided for @bhEnds.
+  ///
+  /// In en, this message translates to:
+  /// **'Ends'**
+  String get bhEnds;
 
   /// No description provided for @bhRollover.
   ///

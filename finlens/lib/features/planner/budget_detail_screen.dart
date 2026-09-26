@@ -4,6 +4,7 @@ import '../../core/models/models.dart';
 import '../../core/store/app_store.dart';
 import '../../core/utils/formatters.dart';
 import '../../l10n/app_localizations.dart';
+import '../../shared/widgets/amount_override_sheet.dart';
 import '../../shared/widgets/amount_text.dart';
 import '../../shared/widgets/app_card.dart';
 import '../../shared/widgets/change_row.dart';
@@ -63,8 +64,12 @@ class BudgetDetailScreen extends StatelessWidget {
       return const Scaffold(body: SizedBox.shrink());
     }
 
-    final monthlyBudget = store.monthlyLimitOf(category) ?? 0;
-    final effectiveLimit = store.effectiveLimitOf(category) ?? 0;
+    final budget = store.monthlyBudgetForCategory(category.id);
+    final monthlyBudget = budget?.limit ?? store.monthlyLimitOf(category) ?? 0;
+    // The screen's month, not the global period (task 067.2 §1): a period's own
+    // limit is read where the reader is looking.
+    final effectiveLimit =
+        budget == null ? 0.0 : store.budgetEffectiveLimit(budget, month);
     final spent = store.spentInCategory(category.id, month);
     final ratio = effectiveLimit <= 0 ? 0.0 : spent / effectiveLimit;
     final over = ratio > 1;
@@ -73,6 +78,8 @@ class BudgetDetailScreen extends StatelessWidget {
         ? AppColors.negative
         : (warn ? AppColors.warning : AppColors.positive);
     final isCurrent = store.isCurrentMonth(month);
+    final beforeCurrent = DateTime(month.year, month.month)
+        .isBefore(DateTime(store.today.year, store.today.month));
 
     return Scaffold(
       body: SafeArea(
@@ -84,29 +91,57 @@ class BudgetDetailScreen extends StatelessWidget {
               child: ListView(
                 padding: const EdgeInsets.only(bottom: Insets.xxl),
                 children: [
-                  _header(context, category, monthlyBudget),
+                  _header(context, store, category, monthlyBudget, budget),
                   _thisMonth(
                     context,
                     store,
                     category,
+                    budget: budget,
                     spent: spent,
                     ratio: ratio,
                     over: over,
                     effectiveLimit: effectiveLimit,
                     color: color,
                     isCurrent: isCurrent,
+                    beforeCurrent: beforeCurrent,
                   ),
-                  _againstTheLimit(store, category, monthlyBudget, color,
+                  if (budget != null && !beforeCurrent)
+                    _upcoming(context, store, category, budget),
+                  if (budget != null && budget.note.isNotEmpty)
+                    _note(context, budget.note),
+                  _againstTheLimit(store, category, budget, monthlyBudget, color,
                       AppLocalizations.of(context)),
                   _spendingHistoryRow(context, AppLocalizations.of(context)),
                   _transactions(context, store, category),
-                  _changes(context, store, category),
+                  _changes(context, store, category, budget),
                 ],
               ),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  /// Opens §4's sheet for [periodStart] of [budget], writing the period's own
+  /// limit. Shared by the THIS MONTH card and every UPCOMING row.
+  Future<void> _openPeriodSheet(
+      BuildContext context, AppStore store, Budget budget, DateTime periodStart) {
+    final l = AppLocalizations.of(context);
+    final ps = DateTime(periodStart.year, periodStart.month, periodStart.day);
+    final label = monthYearLong(ps, l);
+    return showAmountOverrideSheet(
+      context,
+      title: label,
+      initialMagnitude: store.budgetLimitFor(budget, ps),
+      usualMagnitude: store.budgetUsualLimitFor(budget, ps),
+      currencyCode: store.budgetCurrencyOf(budget),
+      hasOverride: store.budgetLimitIsOwn(budget, ps),
+      onlyLabel: l.tdOnlyThis(label),
+      andAfterLabel: l.tdThisAndAfter(label),
+      onSave: (magnitude, andAfter) =>
+          store.setBudgetPeriodLimit(budget, ps, magnitude, andAfter: andAfter),
+      onReset: () => store.resetBudgetPeriodLimit(budget, ps),
     );
   }
 
@@ -338,8 +373,11 @@ class BudgetDetailScreen extends StatelessWidget {
 
   // ── Header ───────────────────────────────────────────────────────────────
 
-  Widget _header(
-      BuildContext context, Category category, double monthlyBudget) {
+  Widget _header(BuildContext context, AppStore store, Category category,
+      double monthlyBudget, Budget? budget) {
+    final l = AppLocalizations.of(context);
+    // A repeating budget with an end appends " · until {Jun 2027}" (§5b).
+    final until = budget?.runsUntil;
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         Insets.gutter,
@@ -362,12 +400,27 @@ class BudgetDetailScreen extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 2),
-                // The recurring limit, not the effective one (spec 5.6).
+                // The usual limit, not the effective one (spec 5.6).
                 Row(
                   children: [
-                    AmountText(monthlyBudget, style: AppText.rowSubtitle),
-                    Text(' ${AppLocalizations.of(context).bdAMonth}',
-                        style: AppText.rowSubtitle),
+                    Flexible(
+                      child: Text.rich(
+                        TextSpan(children: [
+                          WidgetSpan(
+                            alignment: PlaceholderAlignment.baseline,
+                            baseline: TextBaseline.alphabetic,
+                            child: AmountText(monthlyBudget,
+                                style: AppText.rowSubtitle),
+                          ),
+                          TextSpan(text: ' ${l.bdAMonth}'),
+                          if (until != null)
+                            TextSpan(text: ' · ${l.bdUntil(monthYear(until, l))}'),
+                        ]),
+                        style: AppText.rowSubtitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
                   ],
                 ),
               ],
@@ -384,26 +437,28 @@ class BudgetDetailScreen extends StatelessWidget {
     BuildContext context,
     AppStore store,
     Category category, {
+    required Budget? budget,
     required double spent,
     required double ratio,
     required bool over,
     required double effectiveLimit,
     required Color color,
     required bool isCurrent,
+    required bool beforeCurrent,
   }) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        Insets.gutter,
-        0,
-        Insets.gutter,
-        Insets.lg,
-      ),
+    final l = AppLocalizations.of(context);
+    // The limit run wears accentLight when this period carries its own (§5c).
+    final isOwn = budget != null && store.budgetLimitIsOwn(budget, month);
+    final limitStr = money(effectiveLimit, masked: store.masked);
+    final caption = over
+        ? l.bdOfOver(limitStr, money(spent - effectiveLimit, masked: store.masked))
+        : l.bdOfLeft(limitStr, money(effectiveLimit - spent, masked: store.masked));
+
+    final card = AppCard(
+      padding: const EdgeInsets.fromLTRB(14, 11, 14, 10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(AppLocalizations.of(context).rangeThisMonth.toUpperCase(),
-              style: AppText.label),
-          const SizedBox(height: Insets.sm),
           Row(
             crossAxisAlignment: CrossAxisAlignment.baseline,
             textBaseline: TextBaseline.alphabetic,
@@ -414,21 +469,19 @@ class BudgetDetailScreen extends StatelessWidget {
                 color: color,
               ),
               const SizedBox(width: Insets.sm),
-              Text(
-                over
-                    ? AppLocalizations.of(context)
-                        .bdSpentOver(money(spent - effectiveLimit))
-                    : AppLocalizations.of(context).bdSpent,
-                style: AppText.caption.copyWith(fontSize: 12),
+              Flexible(
+                child: _ownAwareCaption(caption, limitStr, isOwn),
               ),
             ],
           ),
-          const SizedBox(height: Insets.md),
+          const SizedBox(height: 9),
           ProgressBar(
             value: ratio,
             color: color,
             paceMarker: isCurrent ? store.monthProgressFor(month) : null,
-            height: 8,
+            height: 3,
+            markerWidth: 1.5,
+            markerOverhang: 1.5,
           ),
           const SizedBox(height: Insets.sm),
           Row(
@@ -436,17 +489,180 @@ class BudgetDetailScreen extends StatelessWidget {
               Text(
                 isCurrent
                     ? '${percent(ratio, decimals: 0)} · '
-                        '${AppLocalizations.of(context).bdDayOfMonth(store.dayOfMonthFor(month), store.daysInMonthOf(month))}'
+                        '${l.bdDayOfMonth(store.dayOfMonthFor(month), store.daysInMonthOf(month))}'
                     : percent(ratio, decimals: 0),
                 style: AppText.caption.copyWith(fontSize: 11.5),
               ),
               if (isCurrent) ...[
                 const Spacer(),
-                Container(width: 2, height: 10, color: AppColors.textPrimary),
+                Container(width: 1.5, height: 9, color: AppColors.textPrimary),
                 const SizedBox(width: 5),
-                Text(AppLocalizations.of(context).plPace, style: AppText.caption.copyWith(fontSize: 11.5)),
+                Text(l.plPace, style: AppText.caption.copyWith(fontSize: 11.5)),
               ],
             ],
+          ),
+        ],
+      ),
+    );
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(Insets.gutter, 0, Insets.gutter, Insets.lg),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(l.rangeThisMonth.toUpperCase(), style: AppText.label),
+          const SizedBox(height: Insets.sm),
+          // Tapping opens §4's sheet for this period — unless the month on screen
+          // is before the current one, whose limit is history (§5c).
+          if (budget == null || beforeCurrent)
+            card
+          else
+            _PeriodTap(
+              onTap: () => _openPeriodSheet(
+                  context, store, budget, store.budgetWindow(budget, month).start),
+              builder: (tapped) => card,
+              radius: Radii.card,
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// The THIS MONTH caption, with the limit run drawn in accentLight when the
+  /// period carries its own limit — the sentence split around the formatted
+  /// figure so locale word order is preserved (§5c).
+  Widget _ownAwareCaption(String full, String limitStr, bool isOwn) {
+    const base = TextStyle(fontSize: 13, color: AppColors.textSecondary);
+    if (!isOwn) {
+      return Text(full, style: base, maxLines: 1, overflow: TextOverflow.ellipsis);
+    }
+    final idx = full.indexOf(limitStr);
+    if (idx < 0) {
+      return Text(full, style: base, maxLines: 1, overflow: TextOverflow.ellipsis);
+    }
+    return Text.rich(
+      TextSpan(children: [
+        TextSpan(text: full.substring(0, idx)),
+        TextSpan(
+          text: limitStr,
+          style: const TextStyle(
+              color: AppColors.accentLight, fontWeight: FontWeight.w500),
+        ),
+        TextSpan(text: full.substring(idx + limitStr.length)),
+      ]),
+      style: base,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+    );
+  }
+
+  // ── Upcoming (task 067.2 §5d) ────────────────────────────────────────────────
+
+  /// The next three periods after the one on screen in which the budget runs,
+  /// each opening §4's sheet. Absent on a past month, for a one-off, or when no
+  /// such period exists (handled by the caller / an empty return here).
+  Widget _upcoming(
+      BuildContext context, AppStore store, Category category, Budget budget) {
+    final l = AppLocalizations.of(context);
+    if (!budget.repeats) return const SizedBox.shrink();
+
+    final periods = <DateTime>[];
+    for (var i = 1; periods.length < 3 && i <= 36; i++) {
+      final m = DateTime(month.year, month.month + i, 1);
+      final window = DateRange(
+        DateTime(m.year, m.month, 1),
+        DateTime(m.year, m.month + 1, 0, 23, 59, 59, 999),
+      );
+      if (store.budgetRunsIn(budget, window)) {
+        periods.add(store.budgetWindow(budget, m).start);
+      } else if (budget.runsUntil != null &&
+          window.start.isAfter(budget.runsUntil!)) {
+        break; // past the end — no later period runs
+      }
+    }
+    if (periods.isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding:
+          const EdgeInsets.fromLTRB(Insets.gutter, 0, Insets.gutter, Insets.lg),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(l.bdUpcoming, style: AppText.label),
+          const SizedBox(height: Insets.sm),
+          AppCard(
+            padding: EdgeInsets.zero,
+            clipBehavior: Clip.antiAlias,
+            child: Column(
+              children: [
+                for (var i = 0; i < periods.length; i++) ...[
+                  if (i > 0) const RowDivider(indent: 12),
+                  _upcomingRow(context, store, budget, periods[i]),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _upcomingRow(
+      BuildContext context, AppStore store, Budget budget, DateTime periodStart) {
+    final l = AppLocalizations.of(context);
+    final isOwn = store.budgetLimitIsOwn(budget, periodStart);
+    final limit = store.budgetLimitFor(budget, periodStart);
+    final limitStr =
+        money(limit, currency: store.budgetCurrencyOf(budget), masked: store.masked);
+    return _PeriodTap(
+      radius: 0,
+      onTap: () => _openPeriodSheet(context, store, budget, periodStart),
+      builder: (tapped) => Container(
+        color: tapped ? AppColors.tint(AppColors.accent, 0.14) : null,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                monthYearLong(periodStart, l),
+                style: const TextStyle(
+                    fontSize: 15, fontWeight: FontWeight.w500),
+              ),
+            ),
+            Text(
+              limitStr,
+              style: TextStyle(
+                fontSize: 14.5,
+                fontWeight: isOwn ? FontWeight.w600 : FontWeight.w400,
+                color: isOwn ? AppColors.accentLight : AppColors.textTertiary,
+              ),
+            ),
+            const SizedBox(width: 8),
+            const Icon(Icons.chevron_right_rounded,
+                size: 14, color: AppColors.textQuaternary),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Note (task 067.2 §5e) ────────────────────────────────────────────────────
+
+  Widget _note(BuildContext context, String note) {
+    return Padding(
+      padding:
+          const EdgeInsets.fromLTRB(Insets.gutter, 0, Insets.gutter, Insets.lg),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(AppLocalizations.of(context).bdNote, style: AppText.label),
+          const SizedBox(height: Insets.sm),
+          AppCard(
+            padding: const EdgeInsets.all(12),
+            child: Text(
+              note,
+              style: AppText.body.copyWith(fontSize: 14.5, height: 1.35),
+            ),
           ),
         ],
       ),
@@ -458,6 +674,7 @@ class BudgetDetailScreen extends StatelessWidget {
   Widget _againstTheLimit(
     AppStore store,
     Category category,
+    Budget? budget,
     double monthlyBudget,
     Color selectedColor,
     AppLocalizations l,
@@ -469,21 +686,49 @@ class BudgetDetailScreen extends StatelessWidget {
     final amounts = [
       for (final m in months) store.spentInCategory(category.id, m),
     ];
-    final withSpending = amounts.where((a) => a > 0).length;
+    // Whether the budget actually runs in each month (task 067.2 §5f): a month
+    // before a later start, or after the end, shows spend with no limit line and
+    // is excluded from the average and the over count.
+    bool runsIn(DateTime m) {
+      if (budget == null) return true;
+      return store.budgetRunsIn(
+        budget,
+        DateRange(DateTime(m.year, m.month, 1),
+            DateTime(m.year, m.month + 1, 0, 23, 59, 59, 999)),
+      );
+    }
 
+    double limitOf(DateTime m) =>
+        budget == null ? monthlyBudget : store.budgetLimitFor(budget, m);
+
+    final withSpending = amounts.where((a) => a > 0).length;
     // A rate from two points is noise — the same rule the frequency line follows
     // (spec 5.6).
     if (withSpending < 2) return const SizedBox.shrink();
 
-    final highest = amounts.fold(0.0, (m, a) => a > m ? a : m);
-    final axisMax = (highest > monthlyBudget ? highest : monthlyBudget) * 1.15;
-    final limitFraction = axisMax <= 0 ? 0.0 : monthlyBudget / axisMax;
+    final highestSpend = amounts.fold(0.0, (m, a) => a > m ? a : m);
+    var highestLimit = 0.0;
+    for (var i = 0; i < months.length; i++) {
+      if (runsIn(months[i])) {
+        final li = limitOf(months[i]);
+        if (li > highestLimit) highestLimit = li;
+      }
+    }
+    final axisMax =
+        (highestSpend > highestLimit ? highestSpend : highestLimit) * 1.15;
 
-    final spentMonths = amounts.where((a) => a > 0).toList();
-    final average = spentMonths.isEmpty
+    // Average and over-count are measured over running months only (§5f).
+    final runningSpent = [
+      for (var i = 0; i < months.length; i++)
+        if (runsIn(months[i]) && amounts[i] > 0) amounts[i],
+    ];
+    final average = runningSpent.isEmpty
         ? 0.0
-        : spentMonths.fold(0.0, (s, a) => s + a) / spentMonths.length;
-    final overLimitCount = amounts.where((a) => a > monthlyBudget).length;
+        : runningSpent.fold(0.0, (s, a) => s + a) / runningSpent.length;
+    var overLimitCount = 0;
+    for (var i = 0; i < months.length; i++) {
+      if (runsIn(months[i]) && amounts[i] > limitOf(months[i])) overLimitCount++;
+    }
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(
@@ -496,28 +741,43 @@ class BudgetDetailScreen extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(l.bdAgainstLimit, style: AppText.label),
-          const SizedBox(height: Insets.md),
-          for (var i = 0; i < months.length; i++) ...[
-            if (i > 0) const SizedBox(height: Insets.md),
-            _historyRow(
-              month: months[i],
-              amount: amounts[i],
-              fraction: axisMax <= 0 ? 0.0 : amounts[i] / axisMax,
-              limitFraction: limitFraction,
-              color: i == 0 ? selectedColor : _pastMonth,
-              l: l,
+          const SizedBox(height: Insets.sm),
+          AppCard(
+            padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
+            child: Column(
+              children: [
+                for (var i = 0; i < months.length; i++) ...[
+                  if (i > 0) const SizedBox(height: 10),
+                  _historyRow(
+                    month: months[i],
+                    amount: amounts[i],
+                    fraction: axisMax <= 0 ? 0.0 : amounts[i] / axisMax,
+                    // Each row against its own month's limit (§5f); a month the
+                    // budget does not run in draws no line.
+                    limitFraction: !runsIn(months[i]) || axisMax <= 0
+                        ? null
+                        : limitOf(months[i]) / axisMax,
+                    color: i == 0 ? selectedColor : _pastMonth,
+                    l: l,
+                  ),
+                ],
+                if (withSpending >= 3) ...[
+                  const SizedBox(height: Insets.md),
+                  const Divider(
+                      height: 1, thickness: 1, color: AppColors.hairline),
+                  const SizedBox(height: Insets.sm),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      l.bdAveraging(money(average.roundToDouble()),
+                          money(monthlyBudget), '$overLimitCount'),
+                      style: AppText.caption.copyWith(fontSize: 12),
+                    ),
+                  ),
+                ],
+              ],
             ),
-          ],
-          if (withSpending >= 3) ...[
-            const SizedBox(height: Insets.md),
-            const Divider(height: 1, thickness: 1, color: AppColors.hairline),
-            const SizedBox(height: Insets.sm),
-            Text(
-              l.bdAveraging(money(average.roundToDouble()),
-                  money(monthlyBudget), '$overLimitCount'),
-              style: AppText.caption.copyWith(fontSize: 12),
-            ),
-          ],
+          ),
         ],
       ),
     );
@@ -527,44 +787,48 @@ class BudgetDetailScreen extends StatelessWidget {
     required DateTime month,
     required double amount,
     required double fraction,
-    required double limitFraction,
+    required double? limitFraction,
     required Color color,
     required AppLocalizations l,
   }) {
-    return Row(
-      children: [
-        SizedBox(
-          width: 40,
-          child: Text(
-            monthShort(month.month, l),
-            style: AppText.caption.copyWith(fontSize: 12.5),
+    return SizedBox(
+      height: 18,
+      child: Row(
+        children: [
+          SizedBox(
+            width: 40,
+            child: Text(
+              monthShort(month.month, l),
+              style: AppText.caption.copyWith(fontSize: 12.5),
+            ),
           ),
-        ),
-        Expanded(
-          child: _HistoryBar(
-            fraction: fraction,
-            limitFraction: limitFraction,
-            color: color,
-            limitColor: _limitLine,
+          Expanded(
+            child: _HistoryBar(
+              fraction: fraction,
+              limitFraction: limitFraction,
+              color: color,
+              limitColor: _limitLine,
+            ),
           ),
-        ),
-        const SizedBox(width: Insets.md),
-        SizedBox(
-          width: 66,
-          child: Align(
-            alignment: Alignment.centerRight,
-            child: AmountText(
-              amount,
-              style: AppText.amount.copyWith(
-                fontSize: 13.5,
-                color: color == _pastMonth
-                    ? AppColors.textSecondary
-                    : AppColors.textPrimary,
+          const SizedBox(width: Insets.md),
+          SizedBox(
+            width: 66,
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: AmountText(
+                amount,
+                style: AppText.amount.copyWith(
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w500,
+                  color: color == _pastMonth
+                      ? AppColors.textSecondary
+                      : AppColors.textPrimary,
+                ),
               ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -668,8 +932,10 @@ class BudgetDetailScreen extends StatelessWidget {
   /// green because the limit grew is told apart from one turning green because
   /// spending fell. Existing budgets start empty (no backfill); the footnote
   /// dates the record so its emptiness reads as new, not missing.
-  Widget _changes(BuildContext context, AppStore store, Category category) {
+  Widget _changes(
+      BuildContext context, AppStore store, Category category, Budget? budget) {
     final l = AppLocalizations.of(context);
+    final monthly = budget == null || budget.period == BudgetPeriod.month;
     final history = store.budgetHistoryOf(category);
     final since =
         '${store.budgetHistorySince.day} ${monthLong(store.budgetHistorySince.month, l)} ${store.budgetHistorySince.year}';
@@ -699,7 +965,7 @@ class BudgetDetailScreen extends StatelessWidget {
                     children: [
                       for (var i = 0; i < history.length; i++) ...[
                         if (i > 0) const RowDivider(indent: Insets.md),
-                        _changeRow(l, history[i], store.masked),
+                        _changeRow(l, history[i], store.masked, monthly),
                       ],
                     ],
                   ),
@@ -721,17 +987,25 @@ class BudgetDetailScreen extends StatelessWidget {
     );
   }
 
-  ChangeRow _changeRow(AppLocalizations l, BudgetEdit e, bool masked) {
+  ChangeRow _changeRow(
+      AppLocalizations l, BudgetEdit e, bool masked, bool monthly) {
+    final period = e.period;
+    final periodLabel = period == null
+        ? ''
+        : (monthly ? monthYearLong(period, l) : dayMonthYear(period, l));
     final label = switch (e.field) {
       'created' => l.bhCreated,
-      'limit' => l.bhLimit,
+      // Task 067.2 §3 — a period's own limit, and a from-this-period change.
+      'periodLimit' => l.bhLimitFor(periodLabel),
+      'limit' => period == null ? l.bhLimit : l.bhLimitFrom(periodLabel),
+      'until' => l.bhEnds,
       'rollover' => l.bhRollover,
       'warn' => l.bhWarn,
       'removed' => l.bhRemoved,
       'restored' => l.bhRestored,
       _ => l.bhCategoryArchived,
     };
-    final value = _changeValue(l, e, masked);
+    final value = _changeValue(l, e, masked, monthly);
     // Screen reader: one sentence, the amber flag folded in as words rather than
     // read as a separate node. Money in the value honours the privacy eye.
     final spoken = value.replaceAll(' → ', ' ${l.bhA11yTo} ');
@@ -751,7 +1025,8 @@ class BudgetDetailScreen extends StatelessWidget {
   /// Composes the display value from the record's language-neutral parts. The
   /// store never stores localised words (it holds no [AppLocalizations]): the
   /// rollover state rides in as an `on`/`off` token, resolved here.
-  String _changeValue(AppLocalizations l, BudgetEdit e, bool masked) {
+  String _changeValue(
+      AppLocalizations l, BudgetEdit e, bool masked, bool monthly) {
     switch (e.field) {
       case 'created':
         final amount = _mask(e.to, masked);
@@ -759,7 +1034,11 @@ class BudgetDetailScreen extends StatelessWidget {
             ? l.bhCreatedRolloverOn(amount)
             : l.bhCreatedRolloverOff(amount);
       case 'limit':
+      case 'periodLimit':
         return '${_mask(e.from, masked)} → ${_mask(e.to, masked)}';
+      case 'until':
+        // from/to hold epoch-ms strings, or '' for no end (task 067.1 §1).
+        return '${_untilSide(l, e.from, monthly)} → ${_untilSide(l, e.to, monthly)}';
       case 'rollover':
         return '${_rolloverWord(l, e.from)} → ${_rolloverWord(l, e.to)}';
       case 'warn':
@@ -777,6 +1056,16 @@ class BudgetDetailScreen extends StatelessWidget {
   String _rolloverWord(AppLocalizations l, String token) =>
       token == 'on' ? l.bhOn : l.bhOff;
 
+  /// One side of an 'until' change (task 067.2 §3): a date (monthYear for a
+  /// monthly budget, dayMonthYear otherwise), or "No end" for the empty token.
+  String _untilSide(AppLocalizations l, String token, bool monthly) {
+    if (token.isEmpty) return l.bgNoEnd;
+    final ms = int.tryParse(token);
+    if (ms == null) return token;
+    final d = DateTime.fromMillisecondsSinceEpoch(ms);
+    return monthly ? monthYear(d, l) : dayMonthYear(d, l);
+  }
+
   /// Masks the money runs in an already-formatted string when the privacy eye is
   /// on, leaving separators and any trailing words ("· rollover off") intact.
   /// The base currency is `$` throughout the app, so the pattern is unambiguous.
@@ -785,7 +1074,8 @@ class BudgetDetailScreen extends StatelessWidget {
       masked ? s.replaceAll(_moneyRe, r'$••••') : s;
 }
 
-/// A single history bar with a fill and the shared vertical limit line.
+/// A single history bar with a fill and, when the budget runs that month, the
+/// month's own vertical limit line (task 067.2 §5f). 3 pt tall (was 10).
 class _HistoryBar extends StatelessWidget {
   const _HistoryBar({
     required this.fraction,
@@ -795,16 +1085,19 @@ class _HistoryBar extends StatelessWidget {
   });
 
   final double fraction;
-  final double limitFraction;
+
+  /// Null for a month the budget does not run in — no line is drawn.
+  final double? limitFraction;
   final Color color;
   final Color limitColor;
 
   @override
   Widget build(BuildContext context) {
-    const height = 10.0;
+    const height = 3.0;
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;
+        final lf = limitFraction;
         return SizedBox(
           height: height,
           child: Stack(
@@ -830,17 +1123,69 @@ class _HistoryBar extends StatelessWidget {
                   ),
                 ),
               ),
-              Positioned(
-                left: (width * limitFraction.clamp(0.0, 1.0) - 0.75)
-                    .clamp(0.0, width - 1.5),
-                top: -2,
-                bottom: -2,
-                child: Container(width: 1.5, color: limitColor),
-              ),
+              if (lf != null)
+                Positioned(
+                  // Snapped to a whole pixel so the 1.5 pt line stays crisp.
+                  left: (width * lf.clamp(0.0, 1.0) - 0.75)
+                      .clamp(0.0, width - 1.5)
+                      .roundToDouble(),
+                  top: -2,
+                  bottom: -2,
+                  child: Container(width: 1.5, color: limitColor),
+                ),
             ],
           ),
         );
       },
+    );
+  }
+}
+
+/// A tappable region that tints [AppColors.accent] at 14 % while its sheet is up
+/// (task 067.2 §D.2 / §5c). Kept local so [BudgetDetailScreen] stays stateless.
+class _PeriodTap extends StatefulWidget {
+  const _PeriodTap({
+    required this.builder,
+    required this.onTap,
+    required this.radius,
+  });
+
+  final Widget Function(bool tapped) builder;
+  final Future<void> Function() onTap;
+  final double radius;
+
+  @override
+  State<_PeriodTap> createState() => _PeriodTapState();
+}
+
+class _PeriodTapState extends State<_PeriodTap> {
+  bool _tapped = false;
+
+  Future<void> _run() async {
+    setState(() => _tapped = true);
+    await widget.onTap();
+    if (mounted) setState(() => _tapped = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final child = widget.builder(_tapped);
+    // The THIS MONTH card paints its own surface; the tint sits behind it via a
+    // decorated wrapper only when the card is rounded (radius > 0). An UPCOMING
+    // row (radius 0) tints its own background inside the builder.
+    return InkWell(
+      onTap: _run,
+      borderRadius:
+          widget.radius > 0 ? BorderRadius.circular(widget.radius) : null,
+      child: widget.radius > 0 && _tapped
+          ? DecoratedBox(
+              decoration: BoxDecoration(
+                color: AppColors.tint(AppColors.accent, 0.14),
+                borderRadius: BorderRadius.circular(widget.radius),
+              ),
+              child: child,
+            )
+          : child,
     );
   }
 }

@@ -185,7 +185,7 @@ void main() {
       expect(find.byIcon(Icons.chevron_right_rounded), findsWidgets);
     });
 
-    testWidgets('a changed row is white with a dot, and says no "edited"',
+    testWidgets('a changed row is accentLight with no dot, and says no "edited"',
         (tester) async {
       _size(tester);
       final store =
@@ -195,8 +195,10 @@ void main() {
 
       final changed = find.textContaining('25,000');
       expect(changed, findsWidgets);
+      // Task 067.2 §6 — a changed amount is said in colour alone: accentLight,
+      // no leading dot.
       expect(tester.widget<Text>(changed.first).style!.color,
-          AppColors.textPrimary);
+          AppColors.accentLight);
       expect(find.textContaining('edited'), findsNothing);
     });
 

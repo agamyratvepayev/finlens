@@ -3843,6 +3843,27 @@ class AppLocalizationsRu extends AppLocalizations {
   String get bdAgainstLimit => 'ОТНОСИТЕЛЬНО ЛИМИТА';
 
   @override
+  String bdOfLeft(String limit, String left) {
+    return 'из $limit · осталось $left';
+  }
+
+  @override
+  String bdOfOver(String limit, String over) {
+    return 'из $limit · превышено на $over';
+  }
+
+  @override
+  String get bdUpcoming => 'ПРЕДСТОЯЩИЕ';
+
+  @override
+  String get bdNote => 'ЗАМЕТКА';
+
+  @override
+  String bdUntil(String month) {
+    return 'до $month';
+  }
+
+  @override
   String get mpMonth => 'МЕСЯЦ';
 
   @override
@@ -4373,6 +4394,19 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get bhLimit => 'Лимит';
+
+  @override
+  String bhLimitFor(String period) {
+    return 'Лимит на $period';
+  }
+
+  @override
+  String bhLimitFrom(String period) {
+    return 'Лимит с $period';
+  }
+
+  @override
+  String get bhEnds => 'Окончание';
 
   @override
   String get bhRollover => 'Перенос';
