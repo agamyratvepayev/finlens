@@ -84,10 +84,12 @@ void main() {
     });
 
     test('the four verb keys are distinct and grammatical', () {
-      expect(l.plGoalRateSave(r'$970'), r'save $970/mo');
-      expect(l.plGoalRatePay(r'$970'), r'pay $970/mo');
-      expect(l.plGoalRateCollect(r'$970'), r'collect $970/mo');
-      expect(l.plGoalRateEarn(r'$970'), r'earn $970/mo');
+      // The period suffix is now a separate placeholder (task 066 §5c).
+      final per = l.goalPer('month');
+      expect(l.plGoalRateSave(r'$970', per), r'save $970/mo');
+      expect(l.plGoalRatePay(r'$970', per), r'pay $970/mo');
+      expect(l.plGoalRateCollect(r'$970', per), r'collect $970/mo');
+      expect(l.plGoalRateEarn(r'$970', per), r'earn $970/mo');
     });
 
     test('WAITING ON never quotes a rate — no verb, no "Behind"', () {

@@ -93,7 +93,7 @@ class GoalDetailScreen extends StatelessWidget {
                   if (isArchived)
                     _outcome(l, goal, m, store.today)
                   else
-                    _columns(l, m, store.today),
+                    _columns(l, m, store.today, goal.pace),
                   _watching(context, l, store, goal, m),
                   if (goal.source.isAccount)
                     _movements(context, l, store, goal, asOf: asOf),
@@ -261,7 +261,8 @@ class GoalDetailScreen extends StatelessWidget {
 
   // ── STARTED · TARGET · AT THIS RATE ────────────────────────────────────────
 
-  Widget _columns(AppLocalizations l, GoalMetrics m, DateTime today) {
+  Widget _columns(
+      AppLocalizations l, GoalMetrics m, DateTime today, GoalPace pace) {
     final now = today;
     final started = DateTime(now.year, now.month - m.monthsElapsed, now.day);
     // AT THIS RATE lands amber when it falls after TARGET, positive when before,
@@ -318,7 +319,7 @@ class GoalDetailScreen extends StatelessWidget {
             Align(
               alignment: Alignment.center,
               child: Text(
-                _averagingLine(l, m),
+                _averagingLine(l, m, pace),
                 textAlign: TextAlign.center,
                 // §2.2 — 12.5pt with an explicit 15pt line box (was 12pt on
                 // caption's implicit 1.3 leading). The half-point keeps the row
@@ -332,16 +333,25 @@ class GoalDetailScreen extends StatelessWidget {
     );
   }
 
-  String _averagingLine(AppLocalizations l, GoalMetrics m) {
+  String _averagingLine(AppLocalizations l, GoalMetrics m, GoalPace pace) {
     if (m.reached) return l.goalReachedSummary;
     if (m.actualRate == null) return l.goalNotMovingYet;
     final needs = m.requiredRate;
-    if (needs == null) return l.goalAveragingOnly(money(m.actualRate!));
+    // The rates read in the goal's own period (task 066 §5c): the engine's
+    // monthly figures are converted for display.
+    final per = l.goalPer(pace.name);
+    if (needs == null) {
+      return l.goalAveragingOnly(
+        money(goalPaceRate(m.actualRate!, pace)),
+        l.goalAPeriod(pace.name),
+      );
+    }
     // §4c — no cents on either figure. The current rate rounds normally; the
     // required rate ceils, because paying the rounded-down figure lands short.
     return l.goalAveraging(
-      money(m.actualRate!, noDecimals: true),
-      money(needs, roundUp: true),
+      money(goalPaceRate(m.actualRate!, pace), noDecimals: true),
+      per,
+      money(goalPaceRate(needs, pace), roundUp: true),
     );
   }
 

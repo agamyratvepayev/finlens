@@ -1523,6 +1523,9 @@ class AppLocalizationsTr extends AppLocalizations {
   String get emptyPickMonth => 'Ay seç';
 
   @override
+  String get emptyPickDate => 'Tarih seç';
+
+  @override
   String get emptyPickDay => 'Gün seç';
 
   @override
@@ -3753,34 +3756,115 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
-  String plGoalRateSave(Object rate) {
-    return 'aylık $rate biriktir';
+  String plGoalRateSave(Object rate, Object per) {
+    return '$rate$per biriktir';
   }
 
   @override
-  String plGoalRatePay(Object rate) {
-    return 'aylık $rate öde';
+  String plGoalRatePay(Object rate, Object per) {
+    return '$rate$per öde';
   }
 
   @override
-  String plGoalRateCollect(Object rate) {
-    return 'aylık $rate tahsil et';
+  String plGoalRateCollect(Object rate, Object per) {
+    return '$rate$per tahsil et';
   }
 
   @override
-  String plGoalRateEarn(Object rate) {
-    return 'aylık $rate kazan';
+  String plGoalRateEarn(Object rate, Object per) {
+    return '$rate$per kazan';
   }
 
   @override
-  String goalAhead(Object rate) {
-    return 'Önde · aylık $rate';
+  String goalAhead(Object rate, Object per) {
+    return 'Önde · $rate$per';
   }
 
   @override
-  String goalOnTrack(Object rate) {
-    return 'Yolunda · aylık $rate';
+  String goalOnTrack(Object rate, Object per) {
+    return 'Yolunda · $rate$per';
   }
+
+  @override
+  String goalPer(String period) {
+    String _temp0 = intl.Intl.selectLogic(period, {
+      'day': '/gün',
+      'week': '/hf',
+      'month': '/ay',
+      'quarter': '/çyr',
+      'year': '/yıl',
+      'other': '/ay',
+    });
+    return '$_temp0';
+  }
+
+  @override
+  String goalAPeriod(String period) {
+    String _temp0 = intl.Intl.selectLogic(period, {
+      'day': 'günde',
+      'week': 'haftada',
+      'month': 'ayda',
+      'quarter': 'çeyrekte',
+      'year': 'yılda',
+      'other': 'ayda',
+    });
+    return '$_temp0';
+  }
+
+  @override
+  String get goalDaily => 'Günlük';
+
+  @override
+  String get goalWeekly => 'Haftalık';
+
+  @override
+  String get goalQuarterly => 'Üç aylık';
+
+  @override
+  String get goalYearly => 'Yıllık';
+
+  @override
+  String get goalAuto => 'oto';
+
+  @override
+  String get goalPaceTitle => 'Kaydet';
+
+  @override
+  String goalPaceToGo(Object amount, Object date) {
+    return '$date tarihine $amount kaldı';
+  }
+
+  @override
+  String get goalEveryDay => 'Her gün';
+
+  @override
+  String get goalEveryWeek => 'Her hafta';
+
+  @override
+  String get goalEveryMonth => 'Her ay';
+
+  @override
+  String get goalEveryQuarter => 'Her çeyrek';
+
+  @override
+  String get goalEveryYear => 'Her yıl';
+
+  @override
+  String goalNewAccountFor(Object name) {
+    return '“$name”';
+  }
+
+  @override
+  String get goalSourceAccounts => 'Hesaplar';
+
+  @override
+  String get goalBlockSource => 'Bir hesap seç';
+
+  @override
+  String get goalBlockTarget => 'Bir hedef tutar gir';
+
+  @override
+  String get goalBlockDateOrPace => 'Bir tarih veya tempo seç';
 
   @override
   String get plGoalFilterButton => 'Hedef filtresi';
@@ -3869,7 +3953,7 @@ class AppLocalizationsTr extends AppLocalizations {
   String get goalNewTitle => 'Yeni hedef';
 
   @override
-  String get goalWatching => 'İzleniyor';
+  String get goalWatching => 'Şuradan ilerleme';
 
   @override
   String get goalSource => 'Kaynak';
@@ -3928,7 +4012,7 @@ class AppLocalizationsTr extends AppLocalizations {
       'Bu hesabı izleyen başka bir hedef var. Sorun değil — ikisi de aynı bakiyeyi okur.';
 
   @override
-  String get goalNewAccountOption => 'Yeni hesap';
+  String get goalNewAccountOption => 'Yeni birikim hesabı';
 
   @override
   String get goalNewAccountOptionDesc =>
@@ -4030,13 +4114,13 @@ class AppLocalizationsTr extends AppLocalizations {
   String get goalNotMovingYet => 'Henüz hareket yok';
 
   @override
-  String goalAveragingOnly(Object rate) {
-    return 'Ayda ortalama $rate';
+  String goalAveragingOnly(Object rate, Object aPeriod) {
+    return '$aPeriod ortalama $rate';
   }
 
   @override
-  String goalAveraging(Object actual, Object needs) {
-    return 'Şimdi aylık $actual · zamanında bitirmek için aylık $needs gerek';
+  String goalAveraging(Object actual, Object per, Object needs) {
+    return 'Şimdi $actual$per · zamanında bitirmek için $needs$per gerek';
   }
 
   @override

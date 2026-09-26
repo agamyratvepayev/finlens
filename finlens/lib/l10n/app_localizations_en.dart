@@ -1534,6 +1534,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get emptyPickMonth => 'Pick month';
 
   @override
+  String get emptyPickDate => 'Pick a date';
+
+  @override
   String get emptyPickDay => 'Pick day';
 
   @override
@@ -3768,34 +3771,115 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String plGoalRateSave(Object rate) {
-    return 'save $rate/mo';
+  String plGoalRateSave(Object rate, Object per) {
+    return 'save $rate$per';
   }
 
   @override
-  String plGoalRatePay(Object rate) {
-    return 'pay $rate/mo';
+  String plGoalRatePay(Object rate, Object per) {
+    return 'pay $rate$per';
   }
 
   @override
-  String plGoalRateCollect(Object rate) {
-    return 'collect $rate/mo';
+  String plGoalRateCollect(Object rate, Object per) {
+    return 'collect $rate$per';
   }
 
   @override
-  String plGoalRateEarn(Object rate) {
-    return 'earn $rate/mo';
+  String plGoalRateEarn(Object rate, Object per) {
+    return 'earn $rate$per';
   }
 
   @override
-  String goalAhead(Object rate) {
-    return 'Ahead · $rate/mo left';
+  String goalAhead(Object rate, Object per) {
+    return 'Ahead · $rate$per left';
   }
 
   @override
-  String goalOnTrack(Object rate) {
-    return 'On track · $rate/mo';
+  String goalOnTrack(Object rate, Object per) {
+    return 'On track · $rate$per';
   }
+
+  @override
+  String goalPer(String period) {
+    String _temp0 = intl.Intl.selectLogic(period, {
+      'day': '/day',
+      'week': '/wk',
+      'month': '/mo',
+      'quarter': '/qtr',
+      'year': '/yr',
+      'other': '/mo',
+    });
+    return '$_temp0';
+  }
+
+  @override
+  String goalAPeriod(String period) {
+    String _temp0 = intl.Intl.selectLogic(period, {
+      'day': 'a day',
+      'week': 'a week',
+      'month': 'a month',
+      'quarter': 'a quarter',
+      'year': 'a year',
+      'other': 'a month',
+    });
+    return '$_temp0';
+  }
+
+  @override
+  String get goalDaily => 'Daily';
+
+  @override
+  String get goalWeekly => 'Weekly';
+
+  @override
+  String get goalQuarterly => 'Quarterly';
+
+  @override
+  String get goalYearly => 'Yearly';
+
+  @override
+  String get goalAuto => 'auto';
+
+  @override
+  String get goalPaceTitle => 'Save';
+
+  @override
+  String goalPaceToGo(Object amount, Object date) {
+    return '$amount to go by $date';
+  }
+
+  @override
+  String get goalEveryDay => 'Every day';
+
+  @override
+  String get goalEveryWeek => 'Every week';
+
+  @override
+  String get goalEveryMonth => 'Every month';
+
+  @override
+  String get goalEveryQuarter => 'Every quarter';
+
+  @override
+  String get goalEveryYear => 'Every year';
+
+  @override
+  String goalNewAccountFor(Object name) {
+    return '“$name”';
+  }
+
+  @override
+  String get goalSourceAccounts => 'Accounts';
+
+  @override
+  String get goalBlockSource => 'Choose an account';
+
+  @override
+  String get goalBlockTarget => 'Enter a target amount';
+
+  @override
+  String get goalBlockDateOrPace => 'Pick a date or a pace';
 
   @override
   String get plGoalFilterButton => 'Goal filter';
@@ -3884,7 +3968,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get goalNewTitle => 'New goal';
 
   @override
-  String get goalWatching => 'Watching';
+  String get goalWatching => 'Progress from';
 
   @override
   String get goalSource => 'Source';
@@ -3942,7 +4026,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Another goal already watches this account. That\'s allowed — both read the same balance.';
 
   @override
-  String get goalNewAccountOption => 'New account';
+  String get goalNewAccountOption => 'New savings account';
 
   @override
   String get goalNewAccountOptionDesc =>
@@ -4045,13 +4129,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get goalNotMovingYet => 'Not moving yet';
 
   @override
-  String goalAveragingOnly(Object rate) {
-    return 'Averaging $rate a month';
+  String goalAveragingOnly(Object rate, Object aPeriod) {
+    return 'Averaging $rate $aPeriod';
   }
 
   @override
-  String goalAveraging(Object actual, Object needs) {
-    return 'Now $actual/mo · needs $needs/mo to land on time';
+  String goalAveraging(Object actual, Object per, Object needs) {
+    return 'Now $actual$per · needs $needs$per to land on time';
   }
 
   @override

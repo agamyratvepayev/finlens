@@ -172,16 +172,17 @@ void main() {
   });
 
   group('the row in the Planner', () {
-    testWidgets('renders above the segmented control on a touched Planner',
-        (tester) async {
+    // Task 066 §1 — the forecast row is off screen on every tab (redesign
+    // pending). The widget and engine stay; the Planner just stops drawing it.
+    testWidgets('a touched Planner no longer draws the row', (tester) async {
       sized(tester, 390);
       final s = buildSeedStore();
       await tester.pumpWidget(wrapScreen(s, const PlannerScreen()));
       await tester.pumpAndSettle();
-      expect(find.byType(ForecastRow), findsOneWidget);
+      expect(find.byType(ForecastRow), findsNothing);
     });
 
-    testWidgets('a never-touched Planner hides the row', (tester) async {
+    testWidgets('a never-touched Planner has no row either', (tester) async {
       sized(tester, 390);
       final s = store(); // no budgets, goals, tasks, or archive
       await tester.pumpWidget(wrapScreen(s, const PlannerScreen()));
@@ -189,9 +190,7 @@ void main() {
       expect(find.byType(ForecastRow), findsNothing);
     });
 
-    testWidgets(
-        'Schedule summary drops left-after-commitments but keeps the caption',
-        (tester) async {
+    testWidgets('the Schedule tab draws no forecast row', (tester) async {
       sized(tester, 390);
       final s = buildSeedStore();
       await tester.pumpWidget(wrapScreen(s, const PlannerScreen()));
@@ -200,8 +199,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('left after commitments'), findsNothing);
       expect(find.text('short after commitments'), findsNothing);
-      // The row is still there on the Schedule tab.
-      expect(find.byType(ForecastRow), findsOneWidget);
+      expect(find.byType(ForecastRow), findsNothing);
     });
 
     testWidgets('no overflow at 320 and 360 on any tab', (tester) async {

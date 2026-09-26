@@ -713,6 +713,8 @@ class CurrencyChip extends StatelessWidget {
     required this.currency,
     required this.onTap,
     this.locked = false,
+    this.showIndicator = true,
+    this.semanticsHint,
   });
 
   final String currency;
@@ -723,16 +725,31 @@ class CurrencyChip extends StatelessWidget {
   /// geometry is otherwise the chevron chip's exactly, so widths still match.
   final bool locked;
 
+  /// The trailing glyph (task 066 §3). True → the chevron (or padlock when
+  /// [locked]). False → no glyph at all: the app's plain currency chip, a
+  /// label rather than a button, for a unit the user cannot change on this
+  /// screen but that is not "locked" behind a padlock (the goal form). The
+  /// [onTap] still fires — the goal uses it for its explanatory snackbar.
+  final bool showIndicator;
+
+  /// Appended to the semantics label after the currency (task 066 §3) — the
+  /// goal passes "amounts follow the source's currency". Null keeps the
+  /// default "{code} · currency".
+  final String? semanticsHint;
+
   @override
   Widget build(BuildContext context) {
     final s = formScale(context);
+    // A button only when it can change (a chevron chip). Locked or indicator-
+    // less, it is a label that still names the currency in words so a token-
+    // less number is announced with its unit.
+    final isButton = !locked && showIndicator;
     return Semantics(
-      // Locked, it is a label, not a button; either way it names the currency
-      // in words so the token-less number is still announced with its unit.
-      button: !locked,
-      label: '$currency · ${AppLocalizations.of(context).eaCurrency}',
+      button: isButton,
+      label:
+          '$currency · ${semanticsHint ?? AppLocalizations.of(context).eaCurrency}',
       child: GestureDetector(
-        onTap: locked ? null : onTap,
+        onTap: (locked && showIndicator) ? null : onTap,
         child: Container(
           padding: EdgeInsets.symmetric(horizontal: 10 * s, vertical: 6 * s),
           decoration: BoxDecoration(
@@ -751,14 +768,16 @@ class CurrencyChip extends StatelessWidget {
                   color: AppColors.chipText,
                 ),
               ),
-              SizedBox(width: 2 * s),
-              Icon(
-                locked
-                    ? Icons.lock_rounded
-                    : Icons.keyboard_arrow_down_rounded,
-                size: 8 * s,
-                color: AppColors.chipText.withValues(alpha: 0.5),
-              ),
+              if (showIndicator) ...[
+                SizedBox(width: 2 * s),
+                Icon(
+                  locked
+                      ? Icons.lock_rounded
+                      : Icons.keyboard_arrow_down_rounded,
+                  size: 8 * s,
+                  color: AppColors.chipText.withValues(alpha: 0.5),
+                ),
+              ],
             ],
           ),
         ),

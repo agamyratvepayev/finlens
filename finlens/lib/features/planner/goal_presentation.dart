@@ -49,31 +49,49 @@ import '../../theme/app_colors.dart';
         attention: false);
   }
 
-  // The required monthly rate rounds *up*: paying the rounded-down figure lands
-  // short of the target, so the only safe direction is up ($969.13 → $970).
-  final rate = money(m.requiredRate ?? 0, roundUp: true);
+  // The rate reads in the goal's own period (task 066 §5c): the engine keeps
+  // the monthly figure; the display converts and appends the period suffix. It
+  // rounds *up*: paying the rounded-down figure lands short ($969.13 → $970).
+  final rate =
+      money(goalPaceRate(m.requiredRate ?? 0, goal.pace), roundUp: true);
+  final per = l.goalPer(goal.pace.name);
   // Behind leads with the section's own verb ("pay" / "save" / "collect" /
   // "earn"), never a passive "needed" — the verb tells the user what to do.
   if (m.behind) {
-    return (text: l.goalBehind(_rateVerb(l, m.section, rate)), attention: true);
+    return (
+      text: l.goalBehind(_rateVerb(l, m.section, rate, per)),
+      attention: true
+    );
   }
 
   final ahead =
       m.projectedEnd != null && m.projectedEnd!.isBefore(m.targetDate!);
-  if (ahead) return (text: l.goalAhead(rate), attention: false);
-  return (text: l.goalOnTrack(rate), attention: false);
+  if (ahead) return (text: l.goalAhead(rate, per), attention: false);
+  return (text: l.goalOnTrack(rate, per), attention: false);
 }
 
-/// The section's verb applied to a formatted monthly rate ("pay $970/mo"),
+/// A monthly rate converted to [pace]'s period (task 066 §5c). The verdict
+/// engine computes monthly; every pace surface converts here so the two never
+/// diverge.
+double goalPaceRate(double monthly, GoalPace pace) => switch (pace) {
+      GoalPace.day => monthly * 12 / 365,
+      GoalPace.week => monthly * 12 / 52,
+      GoalPace.month => monthly,
+      GoalPace.quarter => monthly * 3,
+      GoalPace.year => monthly * 12,
+    };
+
+/// The section's verb applied to a formatted period rate ("pay $970/mo"),
 /// chosen from the goal's own section — never a string comparison on the label.
 /// `waitingOn` never reaches this (it returns early with no rate), but it maps
 /// to "collect" for completeness.
-String _rateVerb(AppLocalizations l, GoalSection section, String rate) =>
+String _rateVerb(
+        AppLocalizations l, GoalSection section, String rate, String per) =>
     switch (section) {
-      GoalSection.saving => l.plGoalRateSave(rate),
-      GoalSection.payingOff => l.plGoalRatePay(rate),
-      GoalSection.waitingOn => l.plGoalRateCollect(rate),
-      GoalSection.earning => l.plGoalRateEarn(rate),
+      GoalSection.saving => l.plGoalRateSave(rate, per),
+      GoalSection.payingOff => l.plGoalRatePay(rate, per),
+      GoalSection.waitingOn => l.plGoalRateCollect(rate, per),
+      GoalSection.earning => l.plGoalRateEarn(rate, per),
     };
 
 /// The verdict's colour: green when reached, amber when it needs attention,

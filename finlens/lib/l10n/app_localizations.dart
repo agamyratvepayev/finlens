@@ -2362,6 +2362,12 @@ abstract class AppLocalizations {
   /// **'Pick month'**
   String get emptyPickMonth;
 
+  /// No description provided for @emptyPickDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick a date'**
+  String get emptyPickDate;
+
   /// Empty-row placeholder for a required day field, imperative, no article.
   ///
   /// In en, this message translates to:
@@ -5923,38 +5929,152 @@ abstract class AppLocalizations {
   /// No description provided for @plGoalRateSave.
   ///
   /// In en, this message translates to:
-  /// **'save {rate}/mo'**
-  String plGoalRateSave(Object rate);
+  /// **'save {rate}{per}'**
+  String plGoalRateSave(Object rate, Object per);
 
   /// No description provided for @plGoalRatePay.
   ///
   /// In en, this message translates to:
-  /// **'pay {rate}/mo'**
-  String plGoalRatePay(Object rate);
+  /// **'pay {rate}{per}'**
+  String plGoalRatePay(Object rate, Object per);
 
   /// No description provided for @plGoalRateCollect.
   ///
   /// In en, this message translates to:
-  /// **'collect {rate}/mo'**
-  String plGoalRateCollect(Object rate);
+  /// **'collect {rate}{per}'**
+  String plGoalRateCollect(Object rate, Object per);
 
   /// No description provided for @plGoalRateEarn.
   ///
   /// In en, this message translates to:
-  /// **'earn {rate}/mo'**
-  String plGoalRateEarn(Object rate);
+  /// **'earn {rate}{per}'**
+  String plGoalRateEarn(Object rate, Object per);
 
   /// No description provided for @goalAhead.
   ///
   /// In en, this message translates to:
-  /// **'Ahead · {rate}/mo left'**
-  String goalAhead(Object rate);
+  /// **'Ahead · {rate}{per} left'**
+  String goalAhead(Object rate, Object per);
 
   /// No description provided for @goalOnTrack.
   ///
   /// In en, this message translates to:
-  /// **'On track · {rate}/mo'**
-  String goalOnTrack(Object rate);
+  /// **'On track · {rate}{per}'**
+  String goalOnTrack(Object rate, Object per);
+
+  /// No description provided for @goalPer.
+  ///
+  /// In en, this message translates to:
+  /// **'{period, select, day{/day} week{/wk} month{/mo} quarter{/qtr} year{/yr} other{/mo}}'**
+  String goalPer(String period);
+
+  /// No description provided for @goalAPeriod.
+  ///
+  /// In en, this message translates to:
+  /// **'{period, select, day{a day} week{a week} month{a month} quarter{a quarter} year{a year} other{a month}}'**
+  String goalAPeriod(String period);
+
+  /// No description provided for @goalDaily.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily'**
+  String get goalDaily;
+
+  /// No description provided for @goalWeekly.
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly'**
+  String get goalWeekly;
+
+  /// No description provided for @goalQuarterly.
+  ///
+  /// In en, this message translates to:
+  /// **'Quarterly'**
+  String get goalQuarterly;
+
+  /// No description provided for @goalYearly.
+  ///
+  /// In en, this message translates to:
+  /// **'Yearly'**
+  String get goalYearly;
+
+  /// No description provided for @goalAuto.
+  ///
+  /// In en, this message translates to:
+  /// **'auto'**
+  String get goalAuto;
+
+  /// No description provided for @goalPaceTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get goalPaceTitle;
+
+  /// No description provided for @goalPaceToGo.
+  ///
+  /// In en, this message translates to:
+  /// **'{amount} to go by {date}'**
+  String goalPaceToGo(Object amount, Object date);
+
+  /// No description provided for @goalEveryDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Every day'**
+  String get goalEveryDay;
+
+  /// No description provided for @goalEveryWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'Every week'**
+  String get goalEveryWeek;
+
+  /// No description provided for @goalEveryMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Every month'**
+  String get goalEveryMonth;
+
+  /// No description provided for @goalEveryQuarter.
+  ///
+  /// In en, this message translates to:
+  /// **'Every quarter'**
+  String get goalEveryQuarter;
+
+  /// No description provided for @goalEveryYear.
+  ///
+  /// In en, this message translates to:
+  /// **'Every year'**
+  String get goalEveryYear;
+
+  /// No description provided for @goalNewAccountFor.
+  ///
+  /// In en, this message translates to:
+  /// **'“{name}”'**
+  String goalNewAccountFor(Object name);
+
+  /// No description provided for @goalSourceAccounts.
+  ///
+  /// In en, this message translates to:
+  /// **'Accounts'**
+  String get goalSourceAccounts;
+
+  /// No description provided for @goalBlockSource.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose an account'**
+  String get goalBlockSource;
+
+  /// No description provided for @goalBlockTarget.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a target amount'**
+  String get goalBlockTarget;
+
+  /// No description provided for @goalBlockDateOrPace.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick a date or a pace'**
+  String get goalBlockDateOrPace;
 
   /// No description provided for @plGoalFilterButton.
   ///
@@ -6061,7 +6181,7 @@ abstract class AppLocalizations {
   /// No description provided for @goalWatching.
   ///
   /// In en, this message translates to:
-  /// **'Watching'**
+  /// **'Progress from'**
   String get goalWatching;
 
   /// No description provided for @goalSource.
@@ -6169,7 +6289,7 @@ abstract class AppLocalizations {
   /// No description provided for @goalNewAccountOption.
   ///
   /// In en, this message translates to:
-  /// **'New account'**
+  /// **'New savings account'**
   String get goalNewAccountOption;
 
   /// No description provided for @goalNewAccountOptionDesc.
@@ -6313,14 +6433,14 @@ abstract class AppLocalizations {
   /// No description provided for @goalAveragingOnly.
   ///
   /// In en, this message translates to:
-  /// **'Averaging {rate} a month'**
-  String goalAveragingOnly(Object rate);
+  /// **'Averaging {rate} {aPeriod}'**
+  String goalAveragingOnly(Object rate, Object aPeriod);
 
   /// No description provided for @goalAveraging.
   ///
   /// In en, this message translates to:
-  /// **'Now {actual}/mo · needs {needs}/mo to land on time'**
-  String goalAveraging(Object actual, Object needs);
+  /// **'Now {actual}{per} · needs {needs}{per} to land on time'**
+  String goalAveraging(Object actual, Object per, Object needs);
 
   /// Screen-reader label for an inbound movement amount; direction stated in words because colour is its only visual cue (§6).
   ///

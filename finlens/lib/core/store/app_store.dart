@@ -4585,6 +4585,7 @@ class AppStore extends ChangeNotifier {
     required GoalSource source,
     required double targetAmount,
     DateTime? targetDate,
+    GoalPace pace = GoalPace.month,
     bool endsWhenReached = true,
     String note = '',
   }) {
@@ -4604,6 +4605,7 @@ class AppStore extends ChangeNotifier {
       targetAmount: targetAmount,
       currency: goalCur,
       targetDate: targetDate,
+      pace: pace,
       endsWhenReached: endsWhenReached,
       note: note,
       createdAt: today,
@@ -4626,6 +4628,7 @@ class AppStore extends ChangeNotifier {
     double? targetAmount,
     DateTime? targetDate,
     bool clearTargetDate = false,
+    GoalPace? pace,
     bool? endsWhenReached,
     String? note,
   }) {
@@ -4657,6 +4660,7 @@ class AppStore extends ChangeNotifier {
       ..name = name ?? goal.name
       ..targetAmount = targetAmount ?? goal.targetAmount
       ..targetDate = newDate
+      ..pace = pace ?? goal.pace
       ..endsWhenReached = endsWhenReached ?? goal.endsWhenReached
       ..note = note ?? goal.note;
     _syncGoalLatches();

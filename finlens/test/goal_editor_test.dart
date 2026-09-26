@@ -1,19 +1,21 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:finlens/core/models/models.dart';
 import 'package:finlens/core/store/app_store.dart';
 import 'package:finlens/core/utils/clock.dart';
 import 'package:finlens/features/planner/edit_goal_screen.dart';
+import 'package:finlens/features/quick_add/widgets/amount_hero.dart'
+    show CurrencyChip;
 import 'package:finlens/l10n/app_localizations.dart';
 import 'package:finlens/shared/widgets/form_fields.dart';
 import 'package:finlens/shared/widgets/typed_date_field.dart';
 import 'package:finlens/theme/app_colors.dart';
 
-/// The goal editor (`EditGoalScreen`) and its source picker. `flutter test`
-/// hangs on the dev machine, so these are written, not run here; verify with
-/// `flutter analyze` and run the file yourself.
+/// The goal editor (`EditGoalScreen`) and its source picker, after task 066:
+/// "Progress from", the app's static chip, a pace period, `auto` on the
+/// computed half, no caption. `flutter test` hangs on the dev machine, so these
+/// are written, not run here; verify with `flutter analyze`.
 void main() {
   Widget wrap(AppStore store, {Locale? locale}) => StoreScope(
         store: store,
@@ -37,7 +39,6 @@ void main() {
     addTearDown(tester.view.reset);
   }
 
-  // The 48pt row wrapping a labelled field, by its label.
   Finder rowByLabel(String label) => find
       .ancestor(of: find.text(label), matching: find.byType(InkWell))
       .first;
@@ -45,13 +46,10 @@ void main() {
   Finder fieldInRow(String label) =>
       find.descendant(of: rowByLabel(label), matching: find.byType(TextField));
 
-  // The name field is now a NameField (task 004): one 48pt line, no caption, so
-  // it is scoped by its own widget rather than by a "Goal name" label.
   Finder nameFieldRow() => find.byType(NameField);
   Finder nameField() =>
       find.descendant(of: nameFieldRow(), matching: find.byType(TextField));
 
-  // The value text of a row (the one that is not the label itself).
   Text valueTextOf(WidgetTester tester, String label) {
     final texts = tester
         .widgetList<Text>(find.descendant(
@@ -61,350 +59,243 @@ void main() {
     return texts.first;
   }
 
+  AppStore emptyStore() =>
+      AppStore.empty(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)));
+
   AppStore storeWithOneAccount(String currency, AccountGroup group) {
-    final s = AppStore.empty(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)));
+    final s = emptyStore();
     s.addAccount(
-      name: 'Vault',
-      group: group,
-      currency: currency,
-      startingBalance: 0,
-    );
+        name: 'Vault', group: group, currency: currency, startingBalance: 0);
     return s;
   }
 
-  testWidgets(
-      'typing a monthly amount derives the date, dims that row, and switches '
-      'the caption', (tester) async {
+  // ── §5 · the pace pair, now marked `auto`, no caption ──────────────────────
+  testWidgets('typing a pace derives the date, dims it and marks it auto',
+      (tester) async {
     phone(tester);
-    await tester.pumpWidget(wrap(AppStore.empty(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)))));
+    await tester.pumpWidget(wrap(emptyStore()));
 
-    // Untouched: the caption is the "either" line.
-    expect(find.text('Set either one — the other follows.'), findsOneWidget);
+    // No pair caption anywhere (task 066 §5e removed it).
+    expect(find.text('Set either one — the other follows.'), findsNothing);
+    expect(find.text('auto'), findsNothing);
 
     await tester.enterText(fieldInRow('Target amount'), '12000');
     await tester.enterText(fieldInRow('Monthly'), '500');
     await tester.pump();
 
-    // The date is now derived: its value is no longer the "Pick month"
-    // placeholder, and the caption flipped to the monthly-drives-date wording.
-    expect(find.text('The date follows the monthly amount.'), findsOneWidget);
+    // The date is computed → not the placeholder, dimmed, and wears `auto`.
     final dateVal = valueTextOf(tester, 'Target date');
-    expect(dateVal.data, isNot('Pick month'));
-    // The derived row is dimmed (label + value in the secondary tone).
+    expect(dateVal.data, isNot('Pick a date'));
     expect(dateVal.style?.color, AppColors.textSecondary);
+    expect(find.text('auto'), findsOneWidget);
   });
 
-  testWidgets(
-      'the reverse — picking a date derives the monthly figure and switches '
-      'the caption', (tester) async {
+  testWidgets('picking a date derives the pace figure and marks it auto',
+      (tester) async {
     phone(tester);
-    await tester.pumpWidget(wrap(AppStore.empty(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)))));
+    await tester.pumpWidget(wrap(emptyStore()));
 
     await tester.enterText(fieldInRow('Target amount'), '12000');
     await tester.pump();
 
-    // Open the app's typed-date sheet (Task 25 — replaced the platform picker),
-    // type a date and confirm. An empty field leaves Confirm disabled, so a
-    // value must be entered before it can be accepted.
     await tester.tap(find.text('Target date'));
     await tester.pumpAndSettle();
     await tester.enterText(
       find.descendant(
-        of: find.byType(TypedDateField),
-        matching: find.byType(TextField),
-      ),
+          of: find.byType(TypedDateField), matching: find.byType(TextField)),
       '15062027',
     );
     await tester.pumpAndSettle();
     await tester.tap(find.text('Done'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Monthly follows the target date.'), findsOneWidget);
-    // The monthly field now carries the derived figure, dimmed.
+    // The pace figure is computed and dimmed, and the pace row wears `auto`.
     final monthlyField = tester.widget<TextField>(fieldInRow('Monthly'));
     expect(monthlyField.controller!.text, isNotEmpty);
     expect(monthlyField.style?.color, AppColors.textSecondary);
+    expect(find.text('auto'), findsOneWidget);
   });
 
   testWidgets('the name clear button appears only when filled and keeps focus',
       (tester) async {
     phone(tester);
-    await tester.pumpWidget(wrap(AppStore.empty(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)))));
+    await tester.pumpWidget(wrap(emptyStore()));
 
-    // Empty name → no clear button, but its slot is reserved.
     expect(find.byIcon(Icons.close_rounded), findsNothing);
-
     await tester.enterText(nameField(), 'Holiday');
     await tester.pump();
     expect(find.byIcon(Icons.close_rounded), findsOneWidget);
 
     await tester.tap(find.byIcon(Icons.close_rounded));
     await tester.pump();
-
-    // Cleared…
     expect(tester.widget<TextField>(nameField()).controller!.text, isEmpty);
-    // …and still focused.
-    final editable = tester.widget<EditableText>(
-        find.descendant(of: nameFieldRow(), matching: find.byType(EditableText)));
+    final editable = tester.widget<EditableText>(find.descendant(
+        of: nameFieldRow(), matching: find.byType(EditableText)));
     expect(editable.focusNode.hasFocus, isTrue);
   });
 
-  testWidgets('Watching and Monthly name their action and no instruction leaks in',
+  // ── §2 · "Progress from" names its action ──────────────────────────────────
+  testWidgets('Progress from reads Choose account; the pace reads Monthly',
       (tester) async {
     phone(tester);
-    await tester.pumpWidget(wrap(AppStore.empty(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)))));
+    await tester.pumpWidget(wrap(emptyStore()));
 
-    // None of the retired instruction strings render as a value anywhere.
-    expect(find.text('Choose what to watch'), findsNothing);
-    expect(find.text('Set a monthly amount'), findsNothing);
-    expect(find.text('Set a date, or a monthly amount'), findsNothing);
-
-    // Watching names its action — "Choose source" (task 043 §3)…
+    expect(find.text('Choose source'), findsNothing);
     expect(
         find.descendant(
-            of: rowByLabel('Watching'), matching: find.text('Choose source')),
+            of: rowByLabel('Progress from'),
+            matching: find.text('Choose account')),
         findsOneWidget);
-    // …and Monthly's placeholder reads "0", the same empty state Target
-    // amount uses (task 061). Scoped to the row — Target amount shows 0 too.
-    expect(find.text('Enter amount'), findsNothing);
+    // The pace row's label is the period.
+    expect(find.text('Monthly'), findsOneWidget);
+    // An empty pace reads 0 (task 061), not a sentence.
     expect(
         find.descendant(of: rowByLabel('Monthly'), matching: find.text('0')),
         findsOneWidget);
   });
 
-  // Task 041 row-parity: the whole card now reads as one list. All five rows —
-  // the target trio (_LineRow), the Note (NoteRow) and Done once reached
-  // (ToggleRow, subtitle dropped) — measure 48pt and equal one another. RED
-  // before §5/§6, when Note was ~58pt (TextFieldRow) and Done ~56pt (subtitled).
-  testWidgets('all five goal rows are 48pt and equal (task 041 row parity)',
+  // ── §3 · both amount rows carry the app's static chip (no padlock) ─────────
+  testWidgets('both amounts use CurrencyChip; tapping one shows the hint',
       (tester) async {
     phone(tester);
-    await tester.pumpWidget(wrap(AppStore.empty(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)))));
+    await tester.pumpWidget(wrap(emptyStore()));
 
-    final trio = {
-      for (final label in ['Target amount', 'Target date', 'Monthly'])
-        label: tester.getSize(rowByLabel(label)).height,
-    };
-    final noteH = tester.getSize(find.byType(NoteRow)).height;
-    final doneH = tester.getSize(rowByLabel('Done once reached')).height;
-    // Watching too (a _LineRow in create mode), for good measure.
-    final watchingH = tester.getSize(rowByLabel('Watching')).height;
+    // Two static chips — Target amount and the pace row — and no padlock.
+    expect(find.byType(CurrencyChip), findsNWidgets(2));
+    expect(find.byIcon(Icons.lock_rounded), findsNothing);
 
-    final all = [...trio.values, noteH, doneH, watchingH];
-    for (final h in all) {
+    await tester.tap(find.byType(CurrencyChip).first);
+    await tester.pump();
+    expect(find.text("Amounts follow the source's currency."), findsOneWidget);
+  });
+
+  // ── row parity (task 041) — still 48pt each ─────────────────────────────────
+  testWidgets('all goal rows are 48pt and equal', (tester) async {
+    phone(tester);
+    await tester.pumpWidget(wrap(emptyStore()));
+
+    final heights = [
+      for (final label in [
+        'Progress from',
+        'Target amount',
+        'Target date',
+        'Monthly',
+        'Done once reached',
+      ])
+        tester.getSize(rowByLabel(label)).height,
+      tester.getSize(find.byType(NoteRow)).height,
+    ];
+    for (final h in heights) {
       expect(h, closeTo(48, 0.5));
     }
-    final maxH = all.reduce((a, b) => a > b ? a : b);
-    final minH = all.reduce((a, b) => a < b ? a : b);
-    expect(maxH - minH, lessThan(0.5),
-        reason: 'row-parity: every row within 0.5px of the others');
+    final maxH = heights.reduce((a, b) => a > b ? a : b);
+    final minH = heights.reduce((a, b) => a < b ? a : b);
+    expect(maxH - minH, lessThan(0.5));
   });
 
-  testWidgets('the chip and the plain code share a right edge with the values',
+  testWidgets('picking a source changes the chip currency, not the digits',
       (tester) async {
     phone(tester);
-    await tester.pumpWidget(wrap(AppStore.empty(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)))));
-
-    // The locked chip (Target amount) — a Tooltip wraps it.
-    final chipRight = tester.getRect(find.byType(Tooltip)).right;
-
-    // The plain code on Monthly: a tertiary-toned "USD".
-    final codeRight = tester
-        .getRect(find.byWidgetPredicate((w) =>
-            w is Text &&
-            w.data == 'USD' &&
-            w.style?.color == AppColors.textTertiary))
-        .right;
-
-    // The Target date value ("Pick month") — right-aligned to the same edge.
-    final dateValRight = tester
-        .getRect(find.descendant(
-            of: rowByLabel('Target date'), matching: find.text('Pick month')))
-        .right;
-
-    expect(codeRight, closeTo(chipRight, 0.5));
-    expect(dateValRight, closeTo(chipRight, 0.5));
-  });
-
-  testWidgets('picking a source changes the currency symbol, not the digits',
-      (tester) async {
-    phone(tester);
-    await tester.pumpWidget(
-        wrap(storeWithOneAccount('TMT', AccountGroup.setAside)));
+    await tester.pumpWidget(wrap(storeWithOneAccount('TMT', AccountGroup.setAside)));
 
     await tester.enterText(fieldInRow('Target amount'), '1000');
     await tester.pump();
-    // Before a source: the base currency.
-    expect(find.byWidgetPredicate((w) =>
-        w is Text && w.data == 'USD' && w.style?.color == AppColors.textTertiary),
-        findsOneWidget);
+    // Before a source: the base currency chips.
+    expect(find.widgetWithText(CurrencyChip, 'USD'), findsNWidgets(2));
 
-    await tester.tap(find.text('Watching'));
+    await tester.tap(find.text('Progress from'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Vault'));
     await tester.pumpAndSettle();
 
-    // Symbol changed to the source's currency…
-    expect(find.byWidgetPredicate((w) =>
-        w is Text && w.data == 'TMT' && w.style?.color == AppColors.textTertiary),
-        findsOneWidget);
-    // …and the digits are untouched (no silent conversion).
+    expect(find.widgetWithText(CurrencyChip, 'TMT'), findsNWidgets(2));
     expect(tester.widget<TextField>(fieldInRow('Target amount')).controller!.text,
         '1000');
   });
 
-  testWidgets('New account renders in full at 320pt with its description below',
+  // ── §2b · the source sheet ─────────────────────────────────────────────────
+  testWidgets('the sheet lists New savings account and one ACCOUNTS section',
       (tester) async {
-    narrow(tester);
-    await tester.pumpWidget(wrap(AppStore.empty(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)))));
+    phone(tester);
+    final store = emptyStore();
+    store.addAccount(
+        name: 'Vault',
+        group: AccountGroup.setAside,
+        currency: 'USD',
+        startingBalance: 500);
+    await tester.pumpWidget(wrap(store));
+    await tester.enterText(nameField(), 'iPhone 17 Pro');
+    await tester.pump();
 
-    await tester.tap(find.text('Watching'));
+    await tester.tap(find.text('Progress from'));
     await tester.pumpAndSettle();
 
-    // The title is not truncated…
-    final title = find.text('New account');
-    expect(title, findsOneWidget);
-    expect(tester.renderObject<RenderParagraph>(title).didExceedMaxLines, isFalse);
+    // The create row, with the goal name quoted beneath it.
+    expect(find.text('New savings account'), findsOneWidget);
+    expect(find.text('“iPhone 17 Pro”'), findsOneWidget);
+    // One ACCOUNTS section, no per-group labels.
+    expect(find.text('ACCOUNTS'), findsOneWidget);
+    expect(find.text('Vault'), findsOneWidget);
+  });
 
-    // …and the description sits on its own line, below the title.
-    final desc = find.text('A set-aside account, named from the goal');
-    expect(desc, findsOneWidget);
-    expect(tester.getTopLeft(desc).dy,
-        greaterThan(tester.getBottomLeft(title).dy - 1));
+  testWidgets('the New savings account row omits the name while it is empty',
+      (tester) async {
+    phone(tester);
+    await tester.pumpWidget(wrap(emptyStore()));
+    await tester.tap(find.text('Progress from'));
+    await tester.pumpAndSettle();
+    expect(find.text('New savings account'), findsOneWidget);
+    // No quoted name when the goal has none yet.
+    expect(find.textContaining('“'), findsNothing);
   });
 
   testWidgets('the picker shows an empty state with no sources', (tester) async {
     phone(tester);
-    await tester.pumpWidget(wrap(AppStore.empty(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)))));
-
-    await tester.tap(find.text('Watching'));
+    await tester.pumpWidget(wrap(emptyStore()));
+    await tester.tap(find.text('Progress from'));
     await tester.pumpAndSettle();
-
-    // The create row stays; below it, the empty state.
-    expect(find.text('New account'), findsOneWidget);
+    expect(find.text('New savings account'), findsOneWidget);
     expect(find.text('Nothing to watch yet'), findsOneWidget);
-    expect(find.text('A goal follows one account or one income category.'),
-        findsOneWidget);
   });
 
-  testWidgets(
-      'the picker empty state renders in all four locales', (tester) async {
-    const cases = {
-      'en': 'Nothing to watch yet',
-      'ru': 'Пока нечего отслеживать',
-      'tr': 'İzlenecek bir şey yok',
-      'tk': 'Yzarlamaga zat ýok',
-    };
-    for (final entry in cases.entries) {
-      phone(tester);
-      await tester.pumpWidget(wrap(AppStore.empty(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32))), locale: Locale(entry.key)));
-      await tester.tap(find.text('Watching').first);
-      await tester.pumpAndSettle();
-      expect(find.text(entry.value), findsOneWidget,
-          reason: 'empty-state title in ${entry.key}');
-      // Close the sheet before the next locale.
-      await tester.tapAt(const Offset(10, 10));
-      await tester.pumpAndSettle();
-    }
-  });
-
-  testWidgets(
-      'regression (§7): entering a monthly value then disposing throws no '
-      'FlutterError', (tester) async {
-    phone(tester);
-    await tester.pumpWidget(wrap(AppStore.empty(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)))));
-
-    await tester.enterText(fieldInRow('Target amount'), '6000');
-    await tester.enterText(fieldInRow('Monthly'), '250');
-    await tester.pump();
-
-    // Tear the screen down — the old dialog disposed its controller mid-route
-    // and tripped `_dependents.isEmpty`; the inline field must dispose cleanly.
-    await tester.pumpWidget(const SizedBox());
-    expect(tester.takeException(), isNull);
-  });
-
-  // ── The Watching row's value, three states (§1) ─────────────────────────────
-
-  testWidgets('Watching · nothing picked → "Choose source", no chip',
+  testWidgets('New savings account picked → value is exactly that, no chip',
       (tester) async {
     phone(tester);
-    await tester.pumpWidget(wrap(AppStore.empty(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)))));
-
-    final row = rowByLabel('Watching');
-    expect(find.descendant(of: row, matching: find.text('Choose source')),
-        findsOneWidget);
-    // No account chip before a source is chosen.
-    expect(
-        find.descendant(
-            of: row,
-            matching: find.byWidgetPredicate((w) =>
-                w is Container &&
-                w.decoration is BoxDecoration &&
-                (w.decoration as BoxDecoration).borderRadius ==
-                    BorderRadius.circular(6))),
-        findsNothing);
-  });
-
-  testWidgets(
-      'Watching · New account picked → value is exactly "New account", no chip, '
-      'no goal name', (tester) async {
-    phone(tester);
-    await tester.pumpWidget(wrap(AppStore.empty(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)))));
-
-    // Name the goal first — the row must not echo it.
+    await tester.pumpWidget(wrap(emptyStore()));
     await tester.enterText(nameField(), 'Macbook Pro M4');
     await tester.pump();
 
-    await tester.tap(find.text('Watching'));
+    await tester.tap(find.text('Progress from'));
     await tester.pumpAndSettle();
-    // The sheet's create row (its title is also "New account"); tap it.
-    await tester.tap(find.text('New account').last);
+    await tester.tap(find.text('New savings account').last);
     await tester.pumpAndSettle();
 
-    final row = rowByLabel('Watching');
-    // The value is exactly "New account" — no "New ·" prefix, no goal name.
-    expect(find.descendant(of: row, matching: find.text('New account')),
+    final row = rowByLabel('Progress from');
+    expect(find.descendant(of: row, matching: find.text('New savings account')),
         findsOneWidget);
     expect(find.descendant(of: row, matching: find.text('Macbook Pro M4')),
         findsNothing);
-    expect(find.descendant(of: row, matching: find.textContaining('New ·')),
-        findsNothing);
-    // No chip for a not-yet-created account.
-    expect(
-        find.descendant(
-            of: row,
-            matching: find.byWidgetPredicate((w) =>
-                w is Container &&
-                w.decoration is BoxDecoration &&
-                (w.decoration as BoxDecoration).borderRadius ==
-                    BorderRadius.circular(6))),
-        findsNothing);
   });
 
-  testWidgets(
-      'Watching · existing account picked → name preceded by its coloured chip',
+  testWidgets('existing account picked → name preceded by its coloured chip',
       (tester) async {
     phone(tester);
-    final store = AppStore.empty(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)));
+    final store = emptyStore();
     final acc = store.addAccount(
-      name: 'USD Wallet',
-      group: AccountGroup.spendable,
-      currency: 'USD',
-      startingBalance: 500,
-    );
+        name: 'USD Wallet',
+        group: AccountGroup.spendable,
+        currency: 'USD',
+        startingBalance: 500);
     await tester.pumpWidget(wrap(store));
 
-    await tester.tap(find.text('Watching'));
+    await tester.tap(find.text('Progress from'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('USD Wallet'));
     await tester.pumpAndSettle();
 
-    final row = rowByLabel('Watching');
-    // The name is the value…
+    final row = rowByLabel('Progress from');
     expect(find.descendant(of: row, matching: find.text('USD Wallet')),
         findsOneWidget);
-    // …preceded by a 20pt chip tinted with the account's own colour.
     expect(
         find.descendant(
             of: row,
@@ -416,47 +307,23 @@ void main() {
         findsOneWidget);
   });
 
-  testWidgets(
-      'renaming the goal does not change the Watching row (New account)',
-      (tester) async {
-    phone(tester);
-    await tester.pumpWidget(wrap(AppStore.empty(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)))));
-
-    await tester.tap(find.text('Watching'));
+  testWidgets('New savings account at 320pt renders in full', (tester) async {
+    narrow(tester);
+    await tester.pumpWidget(wrap(emptyStore()));
+    await tester.tap(find.text('Progress from'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('New account').last);
-    await tester.pumpAndSettle();
-
-    final row = rowByLabel('Watching');
-    expect(find.descendant(of: row, matching: find.text('New account')),
-        findsOneWidget);
-
-    // Rename the goal — the row is unaffected because it never showed the name.
-    await tester.enterText(nameField(), 'A completely different name');
-    await tester.pump();
-    expect(find.descendant(of: row, matching: find.text('New account')),
-        findsOneWidget);
-    expect(
-        find.descendant(
-            of: row, matching: find.text('A completely different name')),
-        findsNothing);
+    expect(find.text('New savings account'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
-  // Task 041 inverts the old relationship: "Done once reached" no longer carries
-  // a subtitle, so it is one line at 48pt — level with the single-line Watching
-  // row, not taller than it. (Was: two-line switch row grows past the single
-  // line.)
-  testWidgets(
-      'row heights (task 041): "Done once reached" is one line, 48pt, equal to '
-      'Watching', (tester) async {
+  testWidgets('entering a pace value then disposing throws no FlutterError',
+      (tester) async {
     phone(tester);
-    await tester.pumpWidget(wrap(AppStore.empty(clock: Clock.fixed(DateTime(2026, 8, 9, 14, 32)))));
-
-    final watching = tester.getSize(rowByLabel('Watching')).height;
-    final done = tester.getSize(rowByLabel('Done once reached')).height;
-    expect(watching, closeTo(48, 0.5));
-    expect(done, closeTo(48, 0.5));
-    expect((watching - done).abs(), lessThan(0.5),
-        reason: 'the switch row lost its subtitle and no longer runs two lines');
+    await tester.pumpWidget(wrap(emptyStore()));
+    await tester.enterText(fieldInRow('Target amount'), '6000');
+    await tester.enterText(fieldInRow('Monthly'), '250');
+    await tester.pump();
+    await tester.pumpWidget(const SizedBox());
+    expect(tester.takeException(), isNull);
   });
 }

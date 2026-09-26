@@ -287,6 +287,7 @@ Map<String, Object?> goalToMap(Goal g) => {
       'source_id': g.source.id,
       'target_amount': g.targetAmount,
       'target_date': _dt(g.targetDate),
+      'pace_name': g.pace.name,
       'ends_when_reached': _b(g.endsWhenReached),
       'status_name': g.status.name,
       'note': g.note,
@@ -311,6 +312,8 @@ Goal goalFromMap(Map<String, Object?> m) {
     targetAmount: _d(m['target_amount']),
     createdAt: _dtn(m['created_at'])!,
     targetDate: _dtn(m['target_date']),
+    // Pre-task-066 rows lack the column → default month (task 066 §5a).
+    pace: _enumByName(GoalPace.values, m['pace_name'], GoalPace.month),
     endsWhenReached: _bf(m['ends_when_reached']),
     status: _enumByName(GoalStatus.values, m['status_name'], GoalStatus.active),
     note: (m['note'] as String?) ?? '',

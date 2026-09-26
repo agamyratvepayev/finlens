@@ -26,8 +26,8 @@ AppStore _storeWith(Category c) => AppStore(clock: Clock.fixed(DateTime(2026, 8,
     );
 
 void main() {
-  test('schemaVersion is 10 (task payments carry their settled occurrence)', () {
-    expect(LocalDatabase.schemaVersion, 10);
+  test('schemaVersion is 12 (goals carry a saving pace)', () {
+    expect(LocalDatabase.schemaVersion, 12);
   });
 
   test('a custom icon + colour + emoji category round-trips', () {

@@ -47,7 +47,7 @@ class LocalDatabase {
   // v11 (task 064 §7a) adds the tasks' `amount_overrides` column — per-
   // occurrence expected amounts as a JSON object of epochMs → amount. Nullable:
   // a pre-11 row reads back null, which the mapper coalesces to {}.
-  static const int schemaVersion = 11;
+  static const int schemaVersion = 12;
 
   static const String accountsTable = 'accounts';
   static const String categoriesTable = 'categories';
@@ -210,7 +210,8 @@ class LocalDatabase {
         stopped_at INTEGER,
         created_at INTEGER NOT NULL,
         currency TEXT,
-        history TEXT NOT NULL
+        history TEXT NOT NULL,
+        pace_name TEXT
       )''');
     batch.execute('''
       CREATE TABLE $tasksTable(
@@ -388,6 +389,11 @@ class LocalDatabase {
       // back null and the mapper coalesces it to an empty map.
       await db.execute(
           'ALTER TABLE $tasksTable ADD COLUMN amount_overrides TEXT');
+    }
+    if (oldVersion < 12) {
+      // Task 066 §5a — a goal's saving pace period. Nullable: a pre-12 row
+      // reads back null and the mapper coalesces it to GoalPace.month.
+      await db.execute('ALTER TABLE $goalsTable ADD COLUMN pace_name TEXT');
     }
   }
 }

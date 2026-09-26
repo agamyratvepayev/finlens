@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../core/l10n/enum_labels.dart';
 import '../../core/models/models.dart';
 import '../../core/store/app_store.dart';
 import '../../core/utils/formatters.dart';
@@ -17,6 +16,7 @@ import '../balance/balance_screen.dart' show EmptyState;
 import '../quick_add/creation_host.dart';
 import '../quick_add/pickers.dart';
 import '../quick_add/type_menu.dart';
+import '../quick_add/widgets/amount_hero.dart' show CurrencyChip;
 import '../quick_add/widgets/form_kit.dart';
 import 'edit_scaffold.dart';
 import 'goal_presentation.dart';
@@ -70,7 +70,8 @@ class _SourceChoice {
 /// convenience that derives one — so nothing here changes what the Planner reads.
 enum _Pair { none, date, monthly }
 
-class _EditGoalScreenState extends State<EditGoalScreen> {
+class _EditGoalScreenState extends State<EditGoalScreen>
+    with SingleTickerProviderStateMixin {
   late final AppStore _store = StoreScope.read(context);
   late final Goal? _goal =
       widget.goalId == null ? null : _store.goalById(widget.goalId);
@@ -102,7 +103,20 @@ class _EditGoalScreenState extends State<EditGoalScreen> {
   late DateTime? _targetDate = _goal?.targetDate;
   late _Pair _primary = _goal?.targetDate != null ? _Pair.date : _Pair.none;
 
+  /// The period the pace is stated in (§5). Chosen from the pace row's own
+  /// sheet; recomputes the derived half whenever it changes.
+  late GoalPace _pace = _goal?.pace ?? GoalPace.month;
+
   late bool _endsWhenReached = _goal?.endsWhenReached ?? true;
+
+  /// Creation only (§6): which row a failed Save is flashing — 'name',
+  /// 'source', 'target' or 'date' — with a pulse behind it and a message under
+  /// its card. Null when nothing is flashing.
+  String? _flashTarget;
+  late final AnimationController _pulse = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 900),
+  );
 
   /// Latches out the monthly controller's listener while we drive its text
   /// programmatically (the derived-display path), so a computed figure is never
@@ -132,6 +146,7 @@ class _EditGoalScreenState extends State<EditGoalScreen> {
     _note.dispose();
     _nameFocus.dispose();
     _monthlyFocus.dispose();
+    _pulse.dispose();
     super.dispose();
   }
 
@@ -186,17 +201,53 @@ class _EditGoalScreenState extends State<EditGoalScreen> {
   int _monthsTo(DateTime date) =>
       (date.year - _today.year) * 12 + (date.month - _today.month);
 
-  double _perMonthFromDate(DateTime date) {
-    final months = _monthsTo(date);
-    final gap = (_targetValue - _startAmount).abs();
-    if (months <= 0) return gap;
-    return gap / months;
+  /// Whole periods of the current [_pace] between today and [date] (§5c). One
+  /// rule per pace, so day/week/month/quarter/year all share the arithmetic.
+  int _periodsTo(DateTime date) {
+    switch (_pace) {
+      case GoalPace.day:
+        return DateTime(date.year, date.month, date.day)
+            .difference(DateTime(_today.year, _today.month, _today.day))
+            .inDays;
+      case GoalPace.week:
+        return DateTime(date.year, date.month, date.day)
+                .difference(DateTime(_today.year, _today.month, _today.day))
+                .inDays ~/
+            7;
+      case GoalPace.month:
+        return _monthsTo(date);
+      case GoalPace.quarter:
+        return _monthsTo(date) ~/ 3;
+      case GoalPace.year:
+        return _monthsTo(date) ~/ 12;
+    }
   }
 
+  /// The pace figure a target date implies: the gap over the periods left,
+  /// or the whole gap when under one period remains (§5c).
+  double _perPeriodFromDate(DateTime date) {
+    final periods = _periodsTo(date);
+    final gap = (_targetValue - _startAmount).abs();
+    if (periods <= 0) return gap;
+    return gap / periods;
+  }
+
+  /// The date a pace figure implies: today plus ⌈gap / rate⌉ periods (§5c).
   DateTime _dateFromRate(double rate) {
     final gap = (_targetValue - _startAmount).abs();
-    final months = (gap / rate).ceil().clamp(1, 1200);
-    return DateTime(_today.year, _today.month + months, _today.day);
+    final n = (gap / rate).ceil().clamp(1, 4000);
+    switch (_pace) {
+      case GoalPace.day:
+        return DateTime(_today.year, _today.month, _today.day + n);
+      case GoalPace.week:
+        return DateTime(_today.year, _today.month, _today.day + n * 7);
+      case GoalPace.month:
+        return DateTime(_today.year, _today.month + n, _today.day);
+      case GoalPace.quarter:
+        return DateTime(_today.year, _today.month + n * 3, _today.day);
+      case GoalPace.year:
+        return DateTime(_today.year + n, _today.month, _today.day);
+    }
   }
 
   /// The effective target date the goal will store — typed directly, or the one
@@ -222,12 +273,12 @@ class _EditGoalScreenState extends State<EditGoalScreen> {
 
   // ── Listeners / pair mechanics ──────────────────────────────────────────
 
-  void _onNameChanged() => setState(() {});
+  void _onNameChanged() => setState(_clearFlashIfFixed);
 
   void _onTargetChanged() {
     // A new gap re-derives whichever half is computed.
     _syncMonthlyDisplay();
-    setState(() {});
+    setState(_clearFlashIfFixed);
   }
 
   void _onMonthlyChanged() {
@@ -236,6 +287,7 @@ class _EditGoalScreenState extends State<EditGoalScreen> {
     // it returns the pair to "Not set" (§10).
     setState(() {
       _primary = _monthly.text.trim().isEmpty ? _Pair.none : _Pair.monthly;
+      _clearFlashIfFixed();
     });
   }
 
@@ -252,7 +304,7 @@ class _EditGoalScreenState extends State<EditGoalScreen> {
   void _syncMonthlyDisplay() {
     if (_primary == _Pair.monthly) return;
     final d = _primary == _Pair.date && _targetDate != null
-        ? _perMonthFromDate(_targetDate!)
+        ? _perPeriodFromDate(_targetDate!)
         : null;
     final text = d == null ? '' : d.round().toString();
     if (_monthly.text == text) return;
@@ -284,27 +336,12 @@ class _EditGoalScreenState extends State<EditGoalScreen> {
       // reopen it; editing an existing goal has nothing to switch to (§2).
       type: _isEditing ? null : QuickAddType.newGoal,
       onTypeTap: _isEditing ? null : _showTypeMenu,
-      onSave: _canSave ? _save : null,
+      // Creation always answers (§6): Save is enabled (accent) and, on a
+      // missing field, flashes it instead of saving. Editing keeps the
+      // disabled-when-invalid TextButton.
+      onSave: _isEditing ? (_canSave ? _save : null) : _saveOrFlash,
       header: _isEditing ? _progressHeader(l) : null,
-      hero: _isEditing
-          ? null
-          : NameField(
-              controller: _name,
-              focusNode: _nameFocus,
-              hint: l.qaExampleGoal,
-              semanticsLabel: l.egGoalName,
-              leadingIcon: Icons.flag_rounded,
-              // Quick Add's pinned geometry, so the field is byte-identical to
-              // the one Schedule / the transaction types draw (§5b).
-              surface: AppColors.surfaceAlt,
-              radius: 14,
-              scale: formScale(context),
-              textScale: formTextScale(context),
-              fixedHeight: 48 * formScale(context),
-              horizontalPadding: kRowPadding,
-              iconColumn: kIconColumn,
-              iconGap: kIconGap,
-            ),
+      hero: _isEditing ? null : _nameHero(l),
       children: [
         // ── Name (edit only — creation draws it as the hero above) ──
         if (_isEditing)
@@ -347,9 +384,12 @@ class _EditGoalScreenState extends State<EditGoalScreen> {
                   color: AppColors.textTertiary,
                 ),
                 onTap: _pickSource,
+                flash: _flashTarget == 'source',
+                pulse: _pulse,
               ),
           ],
         ),
+        if (_flashTarget == 'source') _blockerLine(l.goalBlockSource, cardMargin),
         if (!_isEditing && _twoGoalsWarning(l) != null)
           NoticeBanner(
             text: _twoGoalsWarning(l)!,
@@ -363,24 +403,34 @@ class _EditGoalScreenState extends State<EditGoalScreen> {
             _LineRow(
               icon: Icons.adjust_rounded,
               label: l.egTargetAmount,
+              flash: _flashTarget == 'target',
+              pulse: _pulse,
               value: _amountValue(
                 controller: _target,
                 dim: false,
                 hint: '0',
-                token: _currencyChip(l, code),
+                token: _staticChip(l, code),
               ),
             ),
             _LineRow(
               icon: Icons.event_rounded,
               label: l.egTargetDate,
               dimLabel: effective == _Pair.monthly,
+              flash: _flashTarget == 'date',
+              pulse: _pulse,
               onTap: _pickTargetDate,
-              value: _dateValue(l, derived: effective == _Pair.monthly),
+              // The date is the computed half when the pace is typed → it wears
+              // the `auto` pill (§5e).
+              value: _dateValue(l, computed: effective == _Pair.monthly),
             ),
             _LineRow(
               icon: Icons.speed_rounded,
-              label: l.goalMonthly,
+              // The label IS the period, with an accent chevron opening the
+              // pace sheet (§5b); tapping it never focuses the amount.
+              label: _paceLabel(l),
+              labelWidget: _paceLabelWidget(l, dim: effective == _Pair.date),
               dimLabel: effective == _Pair.date,
+              onTap: _pickPace,
               value: _amountValue(
                 controller: _monthly,
                 focusNode: _monthlyFocus,
@@ -388,14 +438,17 @@ class _EditGoalScreenState extends State<EditGoalScreen> {
                 // The same 0 Target amount uses (task 061): an empty amount is
                 // a zero in its unit, never a sentence.
                 hint: '0',
-                token: _currencyCode(code),
+                token: _staticChip(l, code),
+                // The pace is the computed half when the date is typed → pill.
+                auto: effective == _Pair.date,
               ),
             ),
           ],
         ),
-        _PairCaption(
-            text: _pairCaption(l),
-            startInset: _isEditing ? null : kFormMargin),
+        if (_flashTarget == 'target')
+          _blockerLine(l.goalBlockTarget, cardMargin)
+        else if (_flashTarget == 'date')
+          _blockerLine(l.goalBlockDateOrPace, cardMargin),
 
         // ── Options ──
         FormSection(
@@ -441,6 +494,7 @@ class _EditGoalScreenState extends State<EditGoalScreen> {
     required bool dim,
     required String hint,
     required Widget token,
+    bool auto = false,
   }) {
     return Row(
       // Baseline, not centre (task 041). Centre matches the two children's line
@@ -477,32 +531,44 @@ class _EditGoalScreenState extends State<EditGoalScreen> {
         ),
         const SizedBox(width: Insets.sm),
         token,
+        if (auto) ...[
+          const SizedBox(width: Insets.sm),
+          _autoPill(),
+        ],
       ],
     );
   }
 
-  Widget _dateValue(AppLocalizations l, {required bool derived}) {
+  Widget _dateValue(AppLocalizations l, {required bool computed}) {
     final d = _effectiveTargetDate;
-    return Text(
-      d == null ? l.emptyPickMonth : monthYear(d, l),
+    final text = Text(
+      d == null ? l.emptyPickDate : dayMonthYear(d, l),
       textAlign: TextAlign.right,
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
       style: AppText.amount.copyWith(
-        color: (derived || d == null)
+        color: (computed || d == null)
             ? AppColors.textSecondary
             : AppColors.textPrimary,
       ),
     );
+    if (!computed) return text;
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        Flexible(child: text),
+        const SizedBox(width: Insets.sm),
+        _autoPill(),
+      ],
+    );
   }
 
-  /// The locked currency chip on Target amount (§5.3): a bordered pill with a
-  /// small padlock and the source's code. Not a button — a tap explains that
-  /// the currency follows the source.
-  Widget _currencyChip(AppLocalizations l, String code) {
-    return Semantics(
-      label: '$code · ${l.goalCurrencyLockedHint}',
-      child: GestureDetector(
+  /// The app's plain currency chip (§3): the source's code, no chevron and no
+  /// padlock. Tapping it explains that amounts follow the source's currency.
+  Widget _staticChip(AppLocalizations l, String code) => CurrencyChip(
+        currency: code,
+        showIndicator: false,
+        semanticsHint: l.goalCurrencyLockedHint,
         onTap: () {
           ScaffoldMessenger.of(context)
             ..hideCurrentSnackBar()
@@ -511,48 +577,109 @@ class _EditGoalScreenState extends State<EditGoalScreen> {
               behavior: SnackBarBehavior.floating,
             ));
         },
-        child: Tooltip(
-          message: l.goalCurrencyLockedHint,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(Radii.sm),
-              border: Border.all(color: AppColors.surfaceHigh),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.lock_rounded,
-                    size: 10, color: AppColors.textSecondary),
-                const SizedBox(width: 3),
-                Text(code,
-                    style:
-                        AppText.caption.copyWith(color: AppColors.textSecondary)),
-              ],
-            ),
+      );
+
+  /// The `auto` pill on the computed half (§5e).
+  Widget _autoPill() => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+        decoration: BoxDecoration(
+          color: AppColors.tint(AppColors.accent, 0.18),
+          borderRadius: BorderRadius.circular(Radii.pill),
+        ),
+        child: Text(
+          AppLocalizations.of(context).goalAuto,
+          style: const TextStyle(
+            fontSize: 10.5,
+            fontWeight: FontWeight.w600,
+            color: AppColors.accentLight,
           ),
         ),
-      ),
+      );
+
+  // ── Pace ─────────────────────────────────────────────────────────────────
+
+  /// The pace period's own label — the row's title (§5b).
+  String _paceLabel(AppLocalizations l) => switch (_pace) {
+        GoalPace.day => l.goalDaily,
+        GoalPace.week => l.goalWeekly,
+        GoalPace.month => l.goalMonthly,
+        GoalPace.quarter => l.goalQuarterly,
+        GoalPace.year => l.goalYearly,
+      };
+
+  /// The pace label with a small accent chevron after it, marking it a chooser.
+  Widget _paceLabelWidget(AppLocalizations l, {required bool dim}) => Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Flexible(
+            child: Text(
+              _paceLabel(l),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppText.body.copyWith(
+                fontSize: 14.5,
+                color: dim ? AppColors.textSecondary : AppColors.textPrimary,
+              ),
+            ),
+          ),
+          const SizedBox(width: 3),
+          const Icon(Icons.keyboard_arrow_down_rounded,
+              size: 14, color: AppColors.accentLight),
+        ],
+      );
+
+  /// The creation name field, wrapped so a missing-name Save flashes it (§6).
+  Widget _nameHero(AppLocalizations l) {
+    final field = NameField(
+      controller: _name,
+      focusNode: _nameFocus,
+      hint: l.qaExampleGoal,
+      semanticsLabel: l.egGoalName,
+      leadingIcon: Icons.flag_rounded,
+      // Quick Add's pinned geometry, so the field is byte-identical to the one
+      // Schedule / the transaction types draw (§5b).
+      surface: AppColors.surfaceAlt,
+      radius: 14,
+      scale: formScale(context),
+      textScale: formTextScale(context),
+      fixedHeight: 48 * formScale(context),
+      horizontalPadding: kRowPadding,
+      iconColumn: kIconColumn,
+      iconGap: kIconGap,
+    );
+    if (_flashTarget != 'name') return field;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        AnimatedBuilder(
+          animation: _pulse,
+          builder: (context, child) => DecoratedBox(
+            decoration: BoxDecoration(
+              color: AppColors.tint(
+                  AppColors.negative, 0.12 * _LineRow._hump(_pulse.value)),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: child,
+          ),
+          child: field,
+        ),
+        _blockerLine(l.qaBlockNameGoal, const EdgeInsets.only(left: kFormMargin)),
+      ],
     );
   }
 
-  /// The same code as plain text on Monthly (§5.3) — no border, no lock — so the
-  /// figure is unambiguous while the target row alone carries the "locked" cue.
-  Widget _currencyCode(String code) => Text(
-        code,
-        style: AppText.caption.copyWith(color: AppColors.textTertiary),
-      );
-
-  String _pairCaption(AppLocalizations l) {
-    switch (_effectivePair) {
-      case _Pair.date:
-        return l.goalPairHintFromDate;
-      case _Pair.monthly:
-        return l.goalPairHintFromMonthly;
-      case _Pair.none:
-        return l.goalPairHintEither;
-    }
+  /// The message under a flashed row's card (§D.3): 6 pt below, negative.
+  Widget _blockerLine(String message, EdgeInsetsGeometry? cardMargin) {
+    final left = (cardMargin is EdgeInsets ? cardMargin.left : Insets.gutter) +
+        Insets.xs;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(left, 6, Insets.gutter, 0),
+      child: Text(
+        message,
+        style: const TextStyle(fontSize: 12.5, color: AppColors.negative),
+      ),
+    );
   }
 
   // ── Header (edit only) ──────────────────────────────────────────────────
@@ -631,7 +758,9 @@ class _EditGoalScreenState extends State<EditGoalScreen> {
       // account and carries no chip elsewhere on this screen.
       text = _store.refName(_source!.id);
     } else {
-      text = l.emptyChooseSource;
+      // The empty value is the app's shared "Choose account" imperative (§2a),
+      // not the retired "Choose source".
+      text = l.emptyChooseAccount;
     }
     return Text(
       text,
@@ -639,7 +768,7 @@ class _EditGoalScreenState extends State<EditGoalScreen> {
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
       style: AppText.amount.copyWith(
-        color: _sourceChosen ? AppColors.textPrimary : AppColors.textSecondary,
+        color: _sourceChosen ? AppColors.textPrimary : AppColors.textTertiary,
       ),
     );
   }
@@ -673,8 +802,10 @@ class _EditGoalScreenState extends State<EditGoalScreen> {
     final choice = await showAppSheet<_SourceChoice>(
       context,
       title: AppLocalizations.of(context).goalWatching,
-      builder: (sheetContext, controller) =>
-          _SourcePicker(store: _store, controller: controller),
+      builder: (sheetContext, controller) => _SourcePicker(
+          store: _store,
+          controller: controller,
+          goalName: _name.text.trim()),
     );
     if (choice == null || !mounted) return;
     setState(() {
@@ -694,6 +825,7 @@ class _EditGoalScreenState extends State<EditGoalScreen> {
           }
         }
       }
+      _clearFlashIfFixed();
     });
     // Changing the source changes the symbol, never the digits (§5.3) — so the
     // amounts are untouched; only the derived monthly readout is refreshed.
@@ -717,7 +849,86 @@ class _EditGoalScreenState extends State<EditGoalScreen> {
     setState(() {
       _targetDate = picked;
       _primary = _Pair.date;
+      _clearFlashIfFixed();
     });
+    _syncMonthlyDisplay();
+  }
+
+  /// The period sheet (§5d): pick day / week / month / quarter / year. Keeps
+  /// whichever half the user typed and recomputes the other.
+  Future<void> _pickPace() async {
+    _monthlyFocus.unfocus();
+    final picked = await showAppSheet<GoalPace>(
+      context,
+      title: AppLocalizations.of(context).goalPaceTitle,
+      contentSized: true,
+      cancelLabel: AppLocalizations.of(context).actionCancel,
+      builder: (sheetContext, controller) {
+        final l = AppLocalizations.of(sheetContext);
+        // The date drives the per-period figures — only when it is known.
+        final date = _effectiveTargetDate;
+        final gap = (_targetValue - _startAmount).abs();
+        String? amountFor(GoalPace p) {
+          if (date == null || gap <= 0) return null;
+          final saved = _pace;
+          _pace = p;
+          final periods = _periodsTo(date);
+          _pace = saved;
+          final per = periods <= 0 ? gap : gap / periods;
+          final rounded = per.round();
+          final prefix = (per - rounded).abs() > 0.005 ? '~' : '';
+          return '$prefix${money(rounded.toDouble(), currency: _sourceCurrency)}';
+        }
+
+        return ListView(
+          controller: controller,
+          shrinkWrap: true,
+          padding: const EdgeInsets.only(bottom: Insets.xxl),
+          children: [
+            if (date != null && gap > 0)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                    Insets.gutter, 0, Insets.gutter, Insets.sm),
+                child: Text(
+                  l.goalPaceToGo(
+                      money(gap, currency: _sourceCurrency),
+                      dayMonthYear(date, l)),
+                  style: AppText.caption.copyWith(color: AppColors.textTertiary),
+                ),
+              ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: Insets.gutter),
+              child: AppCard(
+                color: AppColors.sheetCard,
+                child: Column(
+                  children: [
+                    for (final entry in <(GoalPace, String)>[
+                      (GoalPace.day, l.goalEveryDay),
+                      (GoalPace.week, l.goalEveryWeek),
+                      (GoalPace.month, l.goalEveryMonth),
+                      (GoalPace.quarter, l.goalEveryQuarter),
+                      (GoalPace.year, l.goalEveryYear),
+                    ]) ...[
+                      if (entry.$1 != GoalPace.day)
+                        const RowDivider(indent: Insets.md),
+                      _PaceOption(
+                        label: entry.$2,
+                        amount: amountFor(entry.$1),
+                        selected: entry.$1 == _pace,
+                        onTap: () => Navigator.of(sheetContext).pop(entry.$1),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+    if (picked == null || !mounted) return;
+    setState(() => _pace = picked);
+    // Keep the typed half; the other recomputes off the new period.
     _syncMonthlyDisplay();
   }
 
@@ -775,10 +986,49 @@ class _EditGoalScreenState extends State<EditGoalScreen> {
       source: source,
       targetAmount: _targetValue,
       targetDate: date,
+      pace: _pace,
       endsWhenReached: _endsWhenReached,
       note: note,
     );
     Navigator.of(context).pop();
+  }
+
+  /// §6 — creation Save always answers: it saves, or flashes the first missing
+  /// field and names it. The order is name → source → target → date/pace.
+  void _saveOrFlash() {
+    final missing = _firstMissing();
+    if (missing != null) {
+      FocusManager.instance.primaryFocus?.unfocus();
+      setState(() => _flashTarget = missing);
+      _pulse.forward(from: 0);
+      return;
+    }
+    _save();
+  }
+
+  /// The first unmet requirement, in §6's order, or null when the goal is ready.
+  String? _firstMissing() {
+    if (_name.text.trim().isEmpty) return 'name';
+    if (!_hasSource) return 'source';
+    if (_targetValue <= 0) return 'target';
+    if (_endsWhenReached && _effectiveTargetDate == null) return 'date';
+    return null;
+  }
+
+  /// Whether the currently-flashed field is still missing — so a correction
+  /// clears the flash rather than leaving a stale red label.
+  bool _stillMissing(String t) => switch (t) {
+        'name' => _name.text.trim().isEmpty,
+        'source' => !_hasSource,
+        'target' => _targetValue <= 0,
+        'date' => _endsWhenReached && _effectiveTargetDate == null,
+        _ => false,
+      };
+
+  void _clearFlashIfFixed() {
+    if (_flashTarget != null && !_stillMissing(_flashTarget!)) {
+      _flashTarget = null;
+    }
   }
 
   Future<void> _delete() async {
@@ -800,12 +1050,20 @@ class _LineRow extends StatelessWidget {
     required this.label,
     required this.value,
     this.trailing,
+    this.labelWidget,
     this.dimLabel = false,
     this.onTap,
+    this.flash = false,
+    this.pulse,
   });
 
   final IconData icon;
   final String label;
+
+  /// An optional rich label (the pace row's period name + accent chevron, §5b).
+  /// When set it replaces the plain [label] Text; [label] still carries the
+  /// semantics and the ellipsis budget lives in the widget itself.
+  final Widget? labelWidget;
 
   /// The value slot — right-aligned static text or an inline field.
   final Widget value;
@@ -817,83 +1075,129 @@ class _LineRow extends StatelessWidget {
   final bool dimLabel;
   final VoidCallback? onTap;
 
+  /// Creation-Save flash (§6): the row pulses [AppColors.negative] behind it and
+  /// its icon and label turn negative until the missing field is filled.
+  final bool flash;
+  final Animation<double>? pulse;
+
+  // Two triangular humps across t ∈ [0,1], matching Quick Add's field flash.
+  static double _hump(double t) {
+    final phase = (t * 2) % 1.0;
+    return phase < 0.5 ? phase * 2 : (1 - phase) * 2;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final iconColor = flash
+        ? AppColors.negative
+        : (dimLabel ? AppColors.textTertiary : AppColors.textSecondary);
+    final labelColor = flash
+        ? AppColors.negative
+        : (dimLabel ? AppColors.textSecondary : AppColors.textPrimary);
+    Widget content = ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: 48),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: Insets.md,
+          vertical: Insets.sm,
+        ),
+        child: Row(
+          children: [
+            SizedBox(
+              // Task 042: the icon column is the glyph (18), so the gap is the
+              // gap and the text starts at the shared 42.
+              width: 18,
+              child: Icon(icon, size: 18, color: iconColor),
+            ),
+            const SizedBox(width: Insets.md),
+            Expanded(
+              flex: 4,
+              child: labelWidget ??
+                  Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppText.body.copyWith(
+                      fontSize: 14.5,
+                      color: labelColor,
+                    ),
+                  ),
+            ),
+            const SizedBox(width: Insets.sm),
+            Expanded(flex: 5, child: value),
+            if (trailing != null) ...[
+              const SizedBox(width: 2),
+              trailing!,
+            ],
+          ],
+        ),
+      ),
+    );
+    if (flash && pulse != null) {
+      content = AnimatedBuilder(
+        animation: pulse!,
+        builder: (context, child) => DecoratedBox(
+          decoration: BoxDecoration(
+            color:
+                AppColors.tint(AppColors.negative, 0.12 * _hump(pulse!.value)),
+          ),
+          child: child,
+        ),
+        child: content,
+      );
+    }
+    return InkWell(onTap: onTap, child: content);
+  }
+}
+
+/// One 46 pt row in the pace sheet (§5d): the period name, its per-period
+/// amount when a date is known, and a check when it is the current pace.
+class _PaceOption extends StatelessWidget {
+  const _PaceOption({
+    required this.label,
+    required this.amount,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final String? amount;
+  final bool selected;
+  final VoidCallback onTap;
+
   @override
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 48),
+      child: SizedBox(
+        height: 46,
         child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: Insets.md,
-            vertical: Insets.sm,
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: Insets.md),
           child: Row(
             children: [
-              SizedBox(
-                // Task 042: the icon column is the glyph (18), so the gap is the
-                // gap and the text starts at the shared 42.
-                width: 18,
-                child: Icon(
-                  icon,
-                  size: 18,
-                  color: dimLabel
-                      ? AppColors.textTertiary
-                      : AppColors.textSecondary,
-                ),
-              ),
-              const SizedBox(width: Insets.md),
               Expanded(
-                flex: 4,
                 child: Text(
                   label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                   style: AppText.body.copyWith(
-                    fontSize: 14.5,
-                    color: dimLabel
-                        ? AppColors.textSecondary
-                        : AppColors.textPrimary,
+                    fontSize: 15,
+                    fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
                   ),
                 ),
               ),
-              const SizedBox(width: Insets.sm),
-              Expanded(flex: 5, child: value),
-              if (trailing != null) ...[
-                const SizedBox(width: 2),
-                trailing!,
-              ],
+              if (amount != null)
+                Text(amount!,
+                    style: AppText.caption.copyWith(
+                        fontSize: 13.5, color: AppColors.textSecondary)),
+              SizedBox(
+                width: 24,
+                child: selected
+                    ? const Icon(Icons.check_rounded,
+                        size: 18, color: AppColors.accentLight)
+                    : null,
+              ),
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-/// The single caption under the trio (§4): one line, one job, never two.
-class _PairCaption extends StatelessWidget {
-  const _PairCaption({required this.text, this.startInset});
-
-  final String text;
-
-  /// The left edge in creation mode (§5c) — [kFormMargin] there, the default
-  /// gutter in edit. The +[Insets.xs] optical indent under the trio is kept.
-  final double? startInset;
-
-  @override
-  Widget build(BuildContext context) {
-    final left = (startInset ?? Insets.gutter) + Insets.xs;
-    return Padding(
-      padding: EdgeInsets.fromLTRB(
-        left,
-        0,
-        startInset ?? Insets.gutter,
-        Insets.md,
-      ),
-      child: Text(
-        text,
-        style: AppText.caption.copyWith(color: AppColors.textTertiary),
       ),
     );
   }
@@ -935,30 +1239,39 @@ Future<bool> confirmGoalDelete(
 /// the account pickers group them, then income categories. With neither, an
 /// empty state sits under the create row (§8.2).
 class _SourcePicker extends StatelessWidget {
-  const _SourcePicker({required this.store, required this.controller});
+  const _SourcePicker({
+    required this.store,
+    required this.controller,
+    required this.goalName,
+  });
 
   final AppStore store;
   final ScrollController controller;
+
+  /// The goal's current name — shown in quotes under the New-account row (§2b),
+  /// omitted while empty.
+  final String goalName;
 
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     final incomeCategories = store.categoriesOfType(CategoryType.income);
-    final hasAccounts =
-        AccountGroup.values.any((g) => store.accountsIn(g).isNotEmpty);
-    final empty = !hasAccounts && incomeCategories.isEmpty;
+    // One flat list in the app's account order — no per-group labels (§2b).
+    final accounts = [
+      for (final group in AccountGroup.values) ...store.accountsIn(group),
+    ];
+    final empty = accounts.isEmpty && incomeCategories.isEmpty;
 
     return ListView(
       controller: controller,
       padding: const EdgeInsets.only(bottom: Insets.xxl),
       children: [
-        // 1 · New account, named from the goal.
+        // 1 · New savings account, named from the goal (§2b).
         _SourceTile(
           icon: Icons.add_rounded,
           color: AppColors.accent,
           title: l.goalNewAccountOption,
-          subtitle: l.goalNewAccountOptionDesc,
-          // A description, not a value — it belongs beneath the title (§8.1).
+          subtitle: goalName.isEmpty ? null : l.goalNewAccountFor(goalName),
           descriptive: true,
           onTap: () =>
               Navigator.of(context).pop(const _SourceChoice.newAccount()),
@@ -974,21 +1287,20 @@ class _SourcePicker extends StatelessWidget {
               iconBackdrop: true,
             ),
           ),
-        // 2 · Existing accounts, grouped.
-        for (final group in AccountGroup.values)
-          if (store.accountsIn(group).isNotEmpty) ...[
-            SectionLabelSmall(group.label(l)),
-            for (final a in store.accountsIn(group))
-              _SourceTile(
-                icon: a.displayIcon,
-                color: a.color,
-                title: a.name,
-                subtitle: formatAmount(store.balanceOf(a.id), a.currency,
-                    kind: AmountKind.magnitude),
-                onTap: () => Navigator.of(context)
-                    .pop(_SourceChoice.existing(GoalSource.account(a.id))),
-              ),
-          ],
+        // 2 · Every account, one ACCOUNTS section (§2b/§D.6).
+        if (accounts.isNotEmpty) ...[
+          SectionLabelSmall(l.goalSourceAccounts),
+          for (final a in accounts)
+            _SourceTile(
+              icon: a.displayIcon,
+              color: a.color,
+              title: a.name,
+              subtitle: formatAmount(store.balanceOf(a.id), a.currency,
+                  kind: AmountKind.magnitude),
+              onTap: () => Navigator.of(context)
+                  .pop(_SourceChoice.existing(GoalSource.account(a.id))),
+            ),
+        ],
         // 3 · Income categories.
         if (incomeCategories.isNotEmpty) ...[
           SectionLabelSmall(l.goalIncomeCategories),

@@ -57,10 +57,11 @@ void main() {
     await tester.pumpAndSettle();
 
     // Monthly's empty state is a 0 like Target amount's (task 061), so the
-    // Enter amount imperative is gone; the non-amount rows keep theirs.
+    // Enter amount imperative is gone; the non-amount rows name their action —
+    // now "Pick a date" and "Choose account" (task 066 §2/§4).
     expect(find.text('Enter amount'), findsNothing);
-    expect(find.text('Pick month'), findsOneWidget); // Target date
-    expect(find.text('Choose source'), findsOneWidget); // Watching
+    expect(find.text('Pick a date'), findsOneWidget); // Target date
+    expect(find.text('Choose account'), findsOneWidget); // Progress from
     _noNotSet(tester);
   });
 

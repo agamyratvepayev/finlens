@@ -1568,6 +1568,9 @@ class AppLocalizationsRu extends AppLocalizations {
   String get emptyPickMonth => 'Выберите месяц';
 
   @override
+  String get emptyPickDate => 'Выберите дату';
+
+  @override
   String get emptyPickDay => 'Выберите день';
 
   @override
@@ -3839,34 +3842,115 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
-  String plGoalRateSave(Object rate) {
-    return 'откладывать $rate/мес';
+  String plGoalRateSave(Object rate, Object per) {
+    return 'откладывать $rate$per';
   }
 
   @override
-  String plGoalRatePay(Object rate) {
-    return 'платить $rate/мес';
+  String plGoalRatePay(Object rate, Object per) {
+    return 'платить $rate$per';
   }
 
   @override
-  String plGoalRateCollect(Object rate) {
-    return 'получать $rate/мес';
+  String plGoalRateCollect(Object rate, Object per) {
+    return 'получать $rate$per';
   }
 
   @override
-  String plGoalRateEarn(Object rate) {
-    return 'зарабатывать $rate/мес';
+  String plGoalRateEarn(Object rate, Object per) {
+    return 'зарабатывать $rate$per';
   }
 
   @override
-  String goalAhead(Object rate) {
-    return 'Опережение · $rate/мес';
+  String goalAhead(Object rate, Object per) {
+    return 'Опережение · $rate$per';
   }
 
   @override
-  String goalOnTrack(Object rate) {
-    return 'В графике · $rate/мес';
+  String goalOnTrack(Object rate, Object per) {
+    return 'В графике · $rate$per';
   }
+
+  @override
+  String goalPer(String period) {
+    String _temp0 = intl.Intl.selectLogic(period, {
+      'day': '/дн',
+      'week': '/нед',
+      'month': '/мес',
+      'quarter': '/кв',
+      'year': '/год',
+      'other': '/мес',
+    });
+    return '$_temp0';
+  }
+
+  @override
+  String goalAPeriod(String period) {
+    String _temp0 = intl.Intl.selectLogic(period, {
+      'day': 'в день',
+      'week': 'в неделю',
+      'month': 'в месяц',
+      'quarter': 'в квартал',
+      'year': 'в год',
+      'other': 'в месяц',
+    });
+    return '$_temp0';
+  }
+
+  @override
+  String get goalDaily => 'Ежедневно';
+
+  @override
+  String get goalWeekly => 'Еженедельно';
+
+  @override
+  String get goalQuarterly => 'Ежеквартально';
+
+  @override
+  String get goalYearly => 'Ежегодно';
+
+  @override
+  String get goalAuto => 'авто';
+
+  @override
+  String get goalPaceTitle => 'Сохранить';
+
+  @override
+  String goalPaceToGo(Object amount, Object date) {
+    return '$amount до $date';
+  }
+
+  @override
+  String get goalEveryDay => 'Каждый день';
+
+  @override
+  String get goalEveryWeek => 'Каждую неделю';
+
+  @override
+  String get goalEveryMonth => 'Каждый месяц';
+
+  @override
+  String get goalEveryQuarter => 'Каждый квартал';
+
+  @override
+  String get goalEveryYear => 'Каждый год';
+
+  @override
+  String goalNewAccountFor(Object name) {
+    return '«$name»';
+  }
+
+  @override
+  String get goalSourceAccounts => 'Счета';
+
+  @override
+  String get goalBlockSource => 'Выберите счёт';
+
+  @override
+  String get goalBlockTarget => 'Введите целевую сумму';
+
+  @override
+  String get goalBlockDateOrPace => 'Выберите дату или темп';
 
   @override
   String get plGoalFilterButton => 'Фильтр целей';
@@ -3963,7 +4047,7 @@ class AppLocalizationsRu extends AppLocalizations {
   String get goalNewTitle => 'Новая цель';
 
   @override
-  String get goalWatching => 'Отслеживает';
+  String get goalWatching => 'Прогресс по';
 
   @override
   String get goalSource => 'Источник';
@@ -4021,7 +4105,7 @@ class AppLocalizationsRu extends AppLocalizations {
       'Этот счёт уже отслеживает другая цель. Это допустимо — обе читают один баланс.';
 
   @override
-  String get goalNewAccountOption => 'Новый счёт';
+  String get goalNewAccountOption => 'Новый накопительный счёт';
 
   @override
   String get goalNewAccountOptionDesc => 'Отложенный счёт, названный по цели';
@@ -4127,13 +4211,13 @@ class AppLocalizationsRu extends AppLocalizations {
   String get goalNotMovingYet => 'Пока без движения';
 
   @override
-  String goalAveragingOnly(Object rate) {
-    return 'В среднем $rate в месяц';
+  String goalAveragingOnly(Object rate, Object aPeriod) {
+    return 'В среднем $rate $aPeriod';
   }
 
   @override
-  String goalAveraging(Object actual, Object needs) {
-    return 'Сейчас $actual/мес · нужно $needs/мес, чтобы успеть в срок';
+  String goalAveraging(Object actual, Object per, Object needs) {
+    return 'Сейчас $actual$per · нужно $needs$per, чтобы успеть в срок';
   }
 
   @override

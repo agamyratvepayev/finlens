@@ -660,6 +660,7 @@ class Goal {
     required this.createdAt,
     String? currency,
     this.targetDate,
+    this.pace = GoalPace.month,
     this.endsWhenReached = true,
     this.status = GoalStatus.active,
     this.note = '',
@@ -689,6 +690,11 @@ class Goal {
   /// `AppStore.goalCurrencyOf`. Set at creation and locked with [source].
   final String currency;
   DateTime? targetDate;
+
+  /// The period the saving pace is stated in (task 066 §5). The stored target
+  /// *date* is unaffected — this only chooses how the derived rate reads (per
+  /// day / week / month / quarter / year). Defaults to [GoalPace.month].
+  GoalPace pace;
 
   /// §4 — when true, the goal latches to "reached" the moment `current` first
   /// meets `target` and never un-reaches. When false (the emergency-fund case)

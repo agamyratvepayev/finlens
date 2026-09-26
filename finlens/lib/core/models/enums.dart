@@ -158,6 +158,11 @@ enum RepeatFrequency {
 /// otherwise. Stored by `.name`, so members may be reordered safely.
 enum RepeatUnit { day, week, month, year }
 
+/// The period a goal's saving pace is stated in (task 066 §5). Persisted by
+/// `.name`, defaulting to [month] for goals saved before this task. The verdict
+/// engine still computes a monthly rate; the display converts to this period.
+enum GoalPace { day, week, month, quarter, year }
+
 /// Comparison window for the Balance header selector (spec 1.1). Label +
 /// caption localized — see `ComparePeriodL10n`.
 enum ComparePeriod { today, week, month }

@@ -185,7 +185,7 @@ void main() {
         .dy;
     final c2 = tester
         .getRect(find.descendant(
-            of: rowByLabel('Target date'), matching: find.text('Pick month')))
+            of: rowByLabel('Target date'), matching: find.text('Pick a date')))
         .center
         .dy;
     final c3 = tester

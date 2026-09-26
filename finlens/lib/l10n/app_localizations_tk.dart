@@ -1524,6 +1524,9 @@ class AppLocalizationsTk extends AppLocalizations {
   String get emptyPickMonth => 'Aý saýla';
 
   @override
+  String get emptyPickDate => 'Sene saýla';
+
+  @override
   String get emptyPickDay => 'Gün saýla';
 
   @override
@@ -3757,34 +3760,115 @@ class AppLocalizationsTk extends AppLocalizations {
   }
 
   @override
-  String plGoalRateSave(Object rate) {
-    return 'aýda $rate ýygna';
+  String plGoalRateSave(Object rate, Object per) {
+    return '$rate$per ýygna';
   }
 
   @override
-  String plGoalRatePay(Object rate) {
-    return 'aýda $rate töle';
+  String plGoalRatePay(Object rate, Object per) {
+    return '$rate$per töle';
   }
 
   @override
-  String plGoalRateCollect(Object rate) {
-    return 'aýda $rate al';
+  String plGoalRateCollect(Object rate, Object per) {
+    return '$rate$per al';
   }
 
   @override
-  String plGoalRateEarn(Object rate) {
-    return 'aýda $rate gazan';
+  String plGoalRateEarn(Object rate, Object per) {
+    return '$rate$per gazan';
   }
 
   @override
-  String goalAhead(Object rate) {
-    return 'Öňde · aýda $rate';
+  String goalAhead(Object rate, Object per) {
+    return 'Öňde · $rate$per';
   }
 
   @override
-  String goalOnTrack(Object rate) {
-    return 'Meýilnamada · aýda $rate';
+  String goalOnTrack(Object rate, Object per) {
+    return 'Meýilnamada · $rate$per';
   }
+
+  @override
+  String goalPer(String period) {
+    String _temp0 = intl.Intl.selectLogic(period, {
+      'day': '/gün',
+      'week': '/hep',
+      'month': '/aý',
+      'quarter': '/çär',
+      'year': '/ýyl',
+      'other': '/aý',
+    });
+    return '$_temp0';
+  }
+
+  @override
+  String goalAPeriod(String period) {
+    String _temp0 = intl.Intl.selectLogic(period, {
+      'day': 'günde',
+      'week': 'hepdede',
+      'month': 'aýda',
+      'quarter': 'çärýekde',
+      'year': 'ýylda',
+      'other': 'aýda',
+    });
+    return '$_temp0';
+  }
+
+  @override
+  String get goalDaily => 'Günlük';
+
+  @override
+  String get goalWeekly => 'Hepdelik';
+
+  @override
+  String get goalQuarterly => 'Çärýeklik';
+
+  @override
+  String get goalYearly => 'Ýyllyk';
+
+  @override
+  String get goalAuto => 'awto';
+
+  @override
+  String get goalPaceTitle => 'Ýatda sakla';
+
+  @override
+  String goalPaceToGo(Object amount, Object date) {
+    return '$date çenli $amount galdy';
+  }
+
+  @override
+  String get goalEveryDay => 'Her gün';
+
+  @override
+  String get goalEveryWeek => 'Her hepde';
+
+  @override
+  String get goalEveryMonth => 'Her aý';
+
+  @override
+  String get goalEveryQuarter => 'Her çärýek';
+
+  @override
+  String get goalEveryYear => 'Her ýyl';
+
+  @override
+  String goalNewAccountFor(Object name) {
+    return '“$name”';
+  }
+
+  @override
+  String get goalSourceAccounts => 'Hasaplar';
+
+  @override
+  String get goalBlockSource => 'Hasap saýla';
+
+  @override
+  String get goalBlockTarget => 'Maksat möçberi giriz';
+
+  @override
+  String get goalBlockDateOrPace => 'Sene ýa-da depgin saýla';
 
   @override
   String get plGoalFilterButton => 'Maksat süzgüçi';
@@ -3873,7 +3957,7 @@ class AppLocalizationsTk extends AppLocalizations {
   String get goalNewTitle => 'Täze maksat';
 
   @override
-  String get goalWatching => 'Yzarlanýar';
+  String get goalWatching => 'Şundan ilerleme';
 
   @override
   String get goalSource => 'Çeşme';
@@ -3933,7 +4017,7 @@ class AppLocalizationsTk extends AppLocalizations {
       'Bu hasaby yzarlaýan başga maksat bar. Rugsat berilýär — ikisi hem bir balansy okaýar.';
 
   @override
-  String get goalNewAccountOption => 'Täze hasap';
+  String get goalNewAccountOption => 'Täze ýygym hasaby';
 
   @override
   String get goalNewAccountOptionDesc => 'Maksatdan atlandyrylan aýrylan hasap';
@@ -4035,13 +4119,13 @@ class AppLocalizationsTk extends AppLocalizations {
   String get goalNotMovingYet => 'Heniz hereket ýok';
 
   @override
-  String goalAveragingOnly(Object rate) {
-    return 'Aýda ortaça $rate';
+  String goalAveragingOnly(Object rate, Object aPeriod) {
+    return '$aPeriod ortaça $rate';
   }
 
   @override
-  String goalAveraging(Object actual, Object needs) {
-    return 'Häzir aýda $actual · wagtynda ýetmek üçin aýda $needs gerek';
+  String goalAveraging(Object actual, Object per, Object needs) {
+    return 'Häzir $actual$per · wagtynda ýetmek üçin $needs$per gerek';
   }
 
   @override

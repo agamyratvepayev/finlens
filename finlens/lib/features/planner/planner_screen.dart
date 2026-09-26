@@ -23,6 +23,8 @@ import 'goal_detail_screen.dart';
 import 'goal_presentation.dart';
 import 'schedule_horizon.dart';
 import 'schedule_tab.dart';
+// ForecastRow is off screen (task 066 §1) but kept for its redesign.
+// ignore: unused_import
 import 'widgets/forecast_row.dart';
 import 'widgets/goal_scope_sheet.dart';
 import 'widgets/month_picker_sheet.dart';
@@ -133,6 +135,8 @@ class _PlannerScreenState extends State<PlannerScreen> {
   /// The forecast row's date — the end of the period the header already names,
   /// so the row and the header can never disagree (task 057 §4). The window
   /// always starts today; a **past** Budgets month returns null (row hidden).
+  // Kept for the forecast row's redesign (task 066 §1); no live caller today.
+  // ignore: unused_element
   DateTime? _forecastDate(AppStore store) {
     final today = store.today;
     switch (_tab) {
@@ -288,17 +292,10 @@ class _PlannerScreenState extends State<PlannerScreen> {
                         ),
                       ),
               ),
-              // The one forecast row (task 057 §3/§4): identical on all three
-              // tabs, hidden on a never-touched Planner and on a past Budgets
-              // month. Its date is the header period's end; it carries no
-              // control and no tap.
-              if (!untouched)
-                Builder(builder: (context) {
-                  final date = _forecastDate(store);
-                  return date == null
-                      ? const SizedBox.shrink()
-                      : ForecastRow(store: store, date: date);
-                }),
+              // The forecast row is off screen (task 066 §1): it is being
+              // redesigned separately, so the segmented control follows the
+              // header directly. ForecastRow, _forecastDate and the projection
+              // engine all stay for when it returns.
               // Row 2 вЂ” a segmented control, above the summary (spec В§1). Margin 14
               // each side (not the 20 gutter) per the container spec.
               Padding(
