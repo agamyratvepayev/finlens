@@ -4921,6 +4921,11 @@ class AppLocalizationsTr extends AppLocalizations {
   }
 
   @override
+  String histPausedArchivedDeleted(int paused, int archived, int deleted) {
+    return 'Bu dönemde $paused duraklatıldı, $archived arşivlendi, $deleted silindi · Arşiv ›';
+  }
+
+  @override
   String get mpTitlePaid => 'Ödendi olarak işaretle';
 
   @override
@@ -5034,6 +5039,9 @@ class AppLocalizationsTr extends AppLocalizations {
   @override
   String get tmPauseSub =>
       'Şimdilik durur. İstediğiniz zaman sürdürün — hiçbir şey kaybolmaz.';
+
+  @override
+  String get tmResumeSub => 'Bir sonraki tarihten yeniden başlar.';
 
   @override
   String get tmArchive => 'Arşivle';

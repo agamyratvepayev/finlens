@@ -1297,6 +1297,7 @@
   "histDidntHappen": "НЕ СОСТОЯЛОСЬ",
   "histNothingHere": "Здесь ничего нет за этот период",
   "histPausedDeleted": "{paused} приостановлено, {deleted} удалено за период · Архив ›",
+  "histPausedArchivedDeleted": "{paused} приостановлено, {archived} архивировано, {deleted} удалено за период · Архив ›",
 
   "mpTitlePaid": "Отметить оплаченным",
   "mpTitleReceived": "Отметить полученным",
@@ -1329,6 +1330,7 @@
   "tmSkipSub": "{date} пропущено. В Реестр ничего не пишется; серия продолжится {next}.",
   "tmPause": "Приостановить",
   "tmPauseSub": "Останавливается на время. Возобновите когда угодно — ничего не теряется.",
+  "tmResumeSub": "Возобновится со следующей даты.",
   "tmArchive": "В архив",
   "tmArchiveSub": "После сегодня дат больше нет. {count, plural, one{Выполненное ({count}) остаётся в истории.} few{Выполненные ({count}) остаются в истории.} other{Выполненные ({count}) остаются в истории.}}",
   "@tmArchiveSub": { "placeholders": { "count": { "type": "int" } } },

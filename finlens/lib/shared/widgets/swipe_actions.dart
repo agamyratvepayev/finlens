@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -48,6 +49,10 @@ final ValueNotifier<Object?> _openRow = ValueNotifier<Object?>(null);
 /// Closes whichever row is open. The list calls this on scroll and on taps
 /// outside the strip.
 void closeOpenSwipeRow() => _openRow.value = null;
+
+/// Read-only view of which row is open (task 070 B5) — the Budgets tab listens so
+/// opening a swipe closes an open note. Nothing else in this file changes.
+ValueListenable<Object?> get openSwipeRow => _openRow;
 
 /// Whether any row's action strip is currently open. Read-only — the back
 /// gesture uses it to close an open menu instead of popping on the first drag.

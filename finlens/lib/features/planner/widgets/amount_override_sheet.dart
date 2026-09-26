@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 
-import '../../core/models/currency_def.dart';
-import '../../core/utils/arithmetic.dart';
-import '../../core/utils/formatters.dart';
-import '../../l10n/app_localizations.dart';
-import '../../theme/app_colors.dart';
-import '../../theme/app_theme.dart';
-import '../../theme/app_typography.dart';
-import '../../features/quick_add/widgets/amount_hero.dart';
+import '../../../core/models/currency_def.dart';
+import '../../../core/utils/arithmetic.dart';
+import '../../../core/utils/formatters.dart';
+import '../../../l10n/app_localizations.dart';
+import '../../../theme/app_colors.dart';
+import '../../../theme/app_theme.dart';
+import '../../../theme/app_typography.dart';
+import '../../quick_add/widgets/amount_hero.dart';
 
 /// One magnitude typed on the app keypad with the expression operators, with a
 /// "this one" / "this one and after" choice and a Reset back to the usual value.
@@ -23,6 +23,7 @@ Future<void> showAmountOverrideSheet(
   required double usualMagnitude,
   required String currencyCode,
   required bool hasOverride,
+  required bool masked,
   required String onlyLabel,
   required String andAfterLabel,
   required void Function(double magnitude, bool andAfter) onSave,
@@ -39,6 +40,7 @@ Future<void> showAmountOverrideSheet(
       usualMagnitude: usualMagnitude,
       currencyCode: currencyCode,
       hasOverride: hasOverride,
+      masked: masked,
       onlyLabel: onlyLabel,
       andAfterLabel: andAfterLabel,
       onSave: onSave,
@@ -55,6 +57,7 @@ class _AmountOverrideSheet extends StatefulWidget {
     required this.usualMagnitude,
     required this.currencyCode,
     required this.hasOverride,
+    required this.masked,
     required this.onlyLabel,
     required this.andAfterLabel,
     required this.onSave,
@@ -67,6 +70,7 @@ class _AmountOverrideSheet extends StatefulWidget {
   final double usualMagnitude;
   final String currencyCode;
   final bool hasOverride;
+  final bool masked;
   final String onlyLabel;
   final String andAfterLabel;
   final void Function(double magnitude, bool andAfter) onSave;
@@ -105,8 +109,9 @@ class _AmountOverrideSheetState extends State<_AmountOverrideSheet> {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
+    // The anchor line honours the privacy eye (task 070 A5): "usually ••••".
     final usual = money(widget.usualMagnitude.abs(),
-        masked: false, withSymbol: false, signless: true);
+        masked: widget.masked, withSymbol: false, signless: true);
     final pendingResult = _expr.hasOperator && _canSave ? _value : null;
 
     return SafeArea(
@@ -171,21 +176,33 @@ class _AmountOverrideSheetState extends State<_AmountOverrideSheet> {
                     crossAxisAlignment: CrossAxisAlignment.baseline,
                     textBaseline: TextBaseline.alphabetic,
                     children: [
-                      Text(
-                        _expr.hasOperator
-                            ? expressionDisplay(_expr)
-                            : money(_value ?? 0,
-                                masked: false,
-                                signless: true,
-                                withSymbol: false,
-                                forceDecimals: (_value ?? 0) % 1 != 0),
-                        style: const TextStyle(
-                          fontSize: 34,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: -0.8,
-                          fontFeatures: [FontFeature.tabularFigures()],
-                        ),
-                      ),
+                      _expr.hasOperator
+                          // A pending expression draws its operator in accentLight
+                          // (064 §7b / task 070 B4).
+                          ? Text.rich(
+                              TextSpan(
+                                  children:
+                                      _expressionSpans(expressionDisplay(_expr))),
+                              style: const TextStyle(
+                                fontSize: 34,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: -0.8,
+                                fontFeatures: [FontFeature.tabularFigures()],
+                              ),
+                            )
+                          : Text(
+                              money(_value ?? 0,
+                                  masked: false,
+                                  signless: true,
+                                  withSymbol: false,
+                                  forceDecimals: (_value ?? 0) % 1 != 0),
+                              style: const TextStyle(
+                                fontSize: 34,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: -0.8,
+                                fontFeatures: [FontFeature.tabularFigures()],
+                              ),
+                            ),
                       const SizedBox(width: 8),
                       Text(
                         widget.currencyCode,
@@ -277,6 +294,30 @@ class _AmountOverrideSheetState extends State<_AmountOverrideSheet> {
         ),
       ),
     );
+  }
+
+  /// The expression's display, split so its operators (+ − × ÷) render in
+  /// accentLight while operands stay default (064 §7b / task 070 B4). Built from
+  /// [expressionDisplay]'s output so that function is untouched for its other
+  /// callers.
+  static const _ops = {'+', '−', '×', '÷'};
+  List<InlineSpan> _expressionSpans(String s) {
+    final spans = <InlineSpan>[];
+    final buf = StringBuffer();
+    for (final ch in s.characters) {
+      if (_ops.contains(ch)) {
+        if (buf.isNotEmpty) {
+          spans.add(TextSpan(text: buf.toString()));
+          buf.clear();
+        }
+        spans.add(TextSpan(
+            text: ch, style: const TextStyle(color: AppColors.accentLight)));
+      } else {
+        buf.write(ch);
+      }
+    }
+    if (buf.isNotEmpty) spans.add(TextSpan(text: buf.toString()));
+    return spans;
   }
 
   /// One 48 pt radio row: a 20 pt ring, filled with a 10 pt dot when selected.

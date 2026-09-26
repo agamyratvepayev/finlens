@@ -4,7 +4,7 @@ import '../../core/models/models.dart';
 import '../../core/store/app_store.dart';
 import '../../core/utils/formatters.dart';
 import '../../l10n/app_localizations.dart';
-import '../../shared/widgets/amount_override_sheet.dart';
+import 'widgets/amount_override_sheet.dart';
 
 /// Task 064 §7b — change one occurrence's amount, or that one and every one
 /// after it, typed on the app keypad with the expression operators. Writes
@@ -29,6 +29,7 @@ Future<void> showOccurrenceAmountSheet(
     usualMagnitude: task.expectedAmount.abs(),
     currencyCode: currency,
     hasOverride: task.hasOverrideOn(d),
+    masked: store.masked,
     onlyLabel: l.tdOnlyThis(dayMonthYear(d, l)),
     andAfterLabel: l.tdThisAndAfter(dayMonthYear(d, l)),
     onSave: (magnitude, andAfter) =>

@@ -77,7 +77,10 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
                 padding: const EdgeInsets.only(bottom: Insets.xxl),
                 children: archived
                     ? [
-                        _header(context, store, l, task),
+                        // The archived header fades with the rest (task 070 B1).
+                        Opacity(
+                            opacity: 0.55,
+                            child: _header(context, store, l, task)),
                         _archivedBanner(l, task),
                         _archivedStrip(context, store, l, task, payments),
                         if ((task.note ?? '').trim().isNotEmpty) _note(l, task),
@@ -771,26 +774,56 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
   /// §6b — one true sentence about what marking done will change, above the
   /// button. Booking is untouched; this line describes what [markTaskPaid]
   /// already does, using the occurrence's own amount.
-  String? _resultLine(AppStore store, AppLocalizations l, Task task) {
+  /// The pre-Mark-as-paid result line, laid out so the **account name** shortens
+  /// first and the amount is never cut (task 070 B4) — the same sentinel split as
+  /// the Schedule empty state's next line.
+  Widget? _resultLine(AppStore store, AppLocalizations l, Task task) {
     final account = store.accountById(task.linkedAccountId);
     if (account == null) return null;
     final amount = money(task.amountOn(task.dueDate).abs(),
         currency: account.currency, masked: store.masked);
+    const sentinel = '\u{E000}'; // private-use; cannot occur in a name
+    final String name;
+    final String full;
     if (!task.isPayOut) {
       // A pay-in into a liability has no dedicated line; "will go up" is the
       // nearest honest one (the balance moves toward zero).
-      return account.group == AccountGroup.receivables
-          ? l.tdOwesMore(account.name, amount)
-          : l.tdResultUp(account.name, amount);
+      name = account.name;
+      full = account.group == AccountGroup.receivables
+          ? l.tdOwesMore(sentinel, amount)
+          : l.tdResultUp(sentinel, amount);
+    } else if (task.payToAccountId != null) {
+      name = store.accountById(task.payToAccountId)?.name ?? '—';
+      full = l.tdResultDebtDown(sentinel, amount);
+    } else if (account.group.isLiability) {
+      name = account.name;
+      full = l.tdResultOweMore(sentinel, amount);
+    } else {
+      name = account.name;
+      full = l.tdResultDown(sentinel, amount);
     }
-    if (task.payToAccountId != null) {
-      final liability = store.accountById(task.payToAccountId)?.name ?? '—';
-      return l.tdResultDebtDown(liability, amount);
+    const style = TextStyle(fontSize: 12, color: AppColors.textSecondary);
+    final i = full.indexOf(sentinel);
+    if (i < 0) {
+      return Text(full,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.center,
+          style: style);
     }
-    if (account.group.isLiability) {
-      return l.tdResultOweMore(account.name, amount);
-    }
-    return l.tdResultDown(account.name, amount);
+    final prefix = full.substring(0, i);
+    final suffix = full.substring(i + sentinel.length);
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        if (prefix.isNotEmpty) Text(prefix, maxLines: 1, style: style),
+        Flexible(
+          child: Text(name,
+              maxLines: 1, overflow: TextOverflow.ellipsis, style: style),
+        ),
+        if (suffix.isNotEmpty) Text(suffix, maxLines: 1, style: style),
+      ],
+    );
   }
 
   Widget _actions(BuildContext context, AppStore store, AppLocalizations l,
@@ -804,14 +837,7 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
           if (result != null)
             Padding(
               padding: const EdgeInsets.only(bottom: 10),
-              child: Text(
-                result,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                    fontSize: 12, color: AppColors.textSecondary),
-              ),
+              child: result,
             ),
           SizedBox(
             width: double.infinity,
@@ -921,16 +947,14 @@ class _TaskDetailScreenState extends State<TaskDetailScreen> {
         final messenger = ScaffoldMessenger.of(context);
         Navigator.of(context).maybePop();
         final snapshot = store.deleteTaskForGood(task);
-        messenger
-          ..hideCurrentSnackBar()
-          ..showSnackBar(SnackBar(
-            content: Text(l.tdDeletedBar(task.title)),
-            duration: undoBarWindow,
-            action: SnackBarAction(
-              label: l.actionUndo,
-              onPressed: () => store.undoDeleteForGood(snapshot),
-            ),
-          ));
+        // The shared bar, on the captured messenger — persist:false, so it
+        // dismisses (task 070 A4).
+        showUndoBarOn(
+          messenger,
+          message: l.tdDeletedBar(task.title),
+          onUndo: () => store.undoDeleteForGood(snapshot),
+          actionLabel: l.actionUndo,
+        );
     }
   }
 

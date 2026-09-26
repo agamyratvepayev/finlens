@@ -7558,6 +7558,12 @@ abstract class AppLocalizations {
   /// **'{paused} paused, {deleted} deleted in this period · Archive ›'**
   String histPausedDeleted(int paused, int deleted);
 
+  /// No description provided for @histPausedArchivedDeleted.
+  ///
+  /// In en, this message translates to:
+  /// **'{paused} paused, {archived} archived, {deleted} deleted in this period · Archive ›'**
+  String histPausedArchivedDeleted(int paused, int archived, int deleted);
+
   /// No description provided for @mpTitlePaid.
   ///
   /// In en, this message translates to:
@@ -7737,6 +7743,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Stops for now. Resume any time — nothing is lost.'**
   String get tmPauseSub;
+
+  /// No description provided for @tmResumeSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Starts again from the next date.'**
+  String get tmResumeSub;
 
   /// No description provided for @tmArchive.
   ///

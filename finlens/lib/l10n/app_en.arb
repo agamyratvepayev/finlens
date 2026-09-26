@@ -1694,6 +1694,8 @@
   "histNothingHere": "Nothing here for this period",
   "histPausedDeleted": "{paused} paused, {deleted} deleted in this period · Archive ›",
   "@histPausedDeleted": { "placeholders": { "paused": { "type": "int" }, "deleted": { "type": "int" } } },
+  "histPausedArchivedDeleted": "{paused} paused, {archived} archived, {deleted} deleted in this period · Archive ›",
+  "@histPausedArchivedDeleted": { "placeholders": { "paused": { "type": "int" }, "archived": { "type": "int" }, "deleted": { "type": "int" } } },
 
   "mpTitlePaid": "Mark as paid",
   "mpTitleReceived": "Mark as received",
@@ -1738,6 +1740,7 @@
   "@tmSkipSub": { "placeholders": { "date": {}, "next": {} } },
   "tmPause": "Pause",
   "tmPauseSub": "Stops for now. Resume any time — nothing is lost.",
+  "tmResumeSub": "Starts again from the next date.",
   "tmArchive": "Archive",
   "tmArchiveSub": "No more dates after today. {count, plural, one{The {count} done stays in its history.} other{The {count} done stay in its history.}}",
   "@tmArchiveSub": { "placeholders": { "count": { "type": "int" } } },

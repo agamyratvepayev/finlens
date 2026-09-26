@@ -125,7 +125,8 @@ class _PlannerScreenState extends State<PlannerScreen> {
   /// Archive is part of the test on purpose: a store whose only goals are
   /// archived reads as empty everywhere else, and hiding ••• there would strand
   /// the one route to them (`archivedCount` counts archived goals, removed
-  /// budgets, archived accounts, and paused/completed/deleted tasks).
+  /// budgets, archived accounts, archived series, and paused/completed/deleted
+  /// tasks).
   ///
   /// Planner-wide, never per tab — the header sits above the segmented control,
   /// so a per-tab test would make the ••• flicker as the user swipes.
@@ -706,11 +707,13 @@ class _BudgetSummary extends StatelessWidget {
           ),
           // The hero sums monthly, reporting-currency category budgets; anything
           // on its own clock — weekly, one-off, foreign — is not prorated in but
-          // counted here so the total declares its scope (spec §4c).
-          if (store.budgetsOffMonthHero > 0) ...[
+          // counted here so the total declares its scope. Scoped to the month on
+          // screen (task 067.2 §5g / task 070 A6): a budget that ended last month
+          // or has not started is not counted.
+          if (store.budgetsOffMonthHeroFor(month) > 0) ...[
             const SizedBox(height: 4),
             Text(
-              l.plBudgetsOther(store.budgetsOffMonthHero),
+              l.plBudgetsOther(store.budgetsOffMonthHeroFor(month)),
               style: AppText.caption
                   .copyWith(fontSize: 11.5, color: AppColors.textTertiary),
               maxLines: 2,
@@ -743,6 +746,17 @@ class _BudgetsTabState extends State<_BudgetsTab> {
   DateTime get month => widget.month;
 
   @override
+  void initState() {
+    super.initState();
+    // Opening a swipe on any row closes an open note (task 070 B5).
+    openSwipeRow.addListener(_onSwipeOpened);
+  }
+
+  void _onSwipeOpened() {
+    if (openSwipeRow.value != null) _closeNote();
+  }
+
+  @override
   void didUpdateWidget(_BudgetsTab old) {
     super.didUpdateWidget(old);
     // Changing the month closes an open note and any open swipe (§3).
@@ -754,6 +768,7 @@ class _BudgetsTabState extends State<_BudgetsTab> {
 
   @override
   void dispose() {
+    openSwipeRow.removeListener(_onSwipeOpened);
     _scroll.dispose();
     super.dispose();
   }
@@ -867,10 +882,15 @@ class _BudgetsTabState extends State<_BudgetsTab> {
                 '${_budgetCardLabel(store, b, month, l)}, ${l.bgPosition(i + 1, n)}',
             onReorder: (moved, target) => store.moveBudget(moved,
                 before: target < running.length ? running[target] : null),
-            itemBuilder: (ctx, b, lifted) => Padding(
-              padding: const EdgeInsets.only(bottom: 6),
-              child: _wrapCard(ctx, b, lifted: lifted, inGroup: true),
-            ),
+            // The 6 pt gap belongs between resting cards, not to the lifted
+            // proxy — so a dragged card is exactly the card, 50/71 pt, with no
+            // sheetCard under a gap (task 070 B6).
+            itemBuilder: (ctx, b, lifted) => lifted
+                ? _wrapCard(ctx, b, lifted: true, inGroup: true)
+                : Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: _wrapCard(ctx, b, lifted: false, inGroup: true),
+                  ),
           ),
         ),
       for (final b in pastEnd)
@@ -886,6 +906,7 @@ class _BudgetsTabState extends State<_BudgetsTab> {
   Widget _wrapCard(BuildContext context, Budget b,
       {required bool lifted, required bool inGroup}) {
     final l = AppLocalizations.of(context);
+    final dimmed = _budgetDimmed(store, b, month);
     final card = _BudgetCard(
       store: store,
       budget: b,
@@ -896,7 +917,7 @@ class _BudgetsTabState extends State<_BudgetsTab> {
           b.note.trim().isEmpty ? _openBudget(context, b) : _toggleNote(b),
       onTapFigure: () => _openBudget(context, b),
     );
-    if (lifted) return card;
+    if (lifted) return dimmed ? Opacity(opacity: 0.55, child: card) : card;
     final swipe = ClipRRect(
       borderRadius: BorderRadius.circular(14),
       child: SwipeActions(
@@ -905,6 +926,8 @@ class _BudgetsTabState extends State<_BudgetsTab> {
         child: card,
       ),
     );
+    // The whole card fades when dimmed (task 070 B6), not just its content.
+    final dimmedSwipe = dimmed ? Opacity(opacity: 0.55, child: swipe) : swipe;
     // In the group the label + position + move actions come from
     // ReorderableGroup; here we add only the swipe actions. A past-end card is
     // outside the group, so it carries its own label too (§5d).
@@ -912,7 +935,7 @@ class _BudgetsTabState extends State<_BudgetsTab> {
       container: !inGroup,
       label: inGroup ? null : _budgetCardLabel(store, b, month, l),
       customSemanticsActions: _cardActions(context, b),
-      child: swipe,
+      child: dimmedSwipe,
     );
   }
 
@@ -1170,112 +1193,146 @@ class _BudgetCard extends StatelessWidget {
       );
     }
 
-    final row = Row(
-      children: [
-        _BudgetRing(
-          ratio: notStarted ? 0.0 : ratio,
-          color: color,
-          icon: tile.icon,
-          iconColor: tile.color,
-          over: over && !dimmed,
-        ),
-        const SizedBox(width: 11),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
+    // Left tap target — the ring and the text — opens the note (or the budget
+    // with no note, §2).
+    final left = InkWell(
+      onTap: onTapCard,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(10, 7, 0, 7),
+        child: Row(
+          children: [
+            _BudgetRing(
+              ratio: notStarted ? 0.0 : ratio,
+              color: color,
+              icon: tile.icon,
+              iconColor: tile.color,
+              over: over && !dimmed,
+            ),
+            const SizedBox(width: 11),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Flexible(
-                    child: Text(
-                      b.name,
-                      style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          height: 1.2),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          b.name,
+                          style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              height: 1.2),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (suffix != null) ...[
+                        const SizedBox(width: 5),
+                        Text('· $suffix',
+                            style: const TextStyle(
+                                fontSize: 11.5,
+                                color: AppColors.textTertiary)),
+                      ],
+                      if (hasNote) ...[
+                        const SizedBox(width: 6),
+                        Icon(Icons.notes_rounded,
+                            size: 12,
+                            color: open
+                                ? AppColors.accentLight
+                                : AppColors.textTertiary),
+                      ],
+                    ],
                   ),
-                  if (suffix != null) ...[
-                    const SizedBox(width: 5),
-                    Text('· $suffix',
-                        style: const TextStyle(
-                            fontSize: 11.5, color: AppColors.textTertiary)),
-                  ],
-                  if (hasNote) ...[
-                    const SizedBox(width: 6),
-                    Icon(Icons.notes_rounded,
-                        size: 12,
-                        color: open
-                            ? AppColors.accentLight
-                            : AppColors.textTertiary),
-                  ],
+                  const SizedBox(height: 1),
+                  lineTwo(),
                 ],
               ),
-              const SizedBox(height: 1),
-              lineTwo(),
-            ],
-          ),
+            ),
+          ],
         ),
-        const SizedBox(width: 8),
-        // The right column is its own tap target: it always opens the budget
-        // (§2), whether or not the card has a note.
-        InkWell(
-          onTap: onTapFigure,
+      ),
+    );
+
+    // Right tap target — the figure, its 11 pt left gap included — always opens
+    // the budget (§2 / task 070 B6), and covers the full card height.
+    final right = InkWell(
+      onTap: onTapFigure,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(11, 7, 12, 7),
+        child: Center(
+          widthFactor: 1,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             mainAxisSize: MainAxisSize.min,
             children: [figure(), const SizedBox(height: 1), subLine()],
           ),
         ),
-      ],
+      ),
     );
 
-    final content = Container(
-      color: open && !lifted ? AppColors.surfaceAlt : Colors.transparent,
-      child: AnimatedSize(
-        duration: const Duration(milliseconds: 180),
-        curve: Curves.easeOut,
-        alignment: Alignment.topCenter,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+    final rowLine = ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: 50),
+      child: IntrinsicHeight(
+        child: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            InkWell(
-              onTap: onTapCard,
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(minHeight: 50),
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(10, 7, 12, 7),
-                  child: row,
-                ),
-              ),
-            ),
-            if (open && hasNote)
-              Transform.translate(
-                offset: const Offset(0, -3),
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(55, 0, 12, 8),
-                  child: Text(
-                    b.note.trim(),
-                    style: const TextStyle(
-                        fontSize: 12.5,
-                        height: 1.28,
-                        color: AppColors.amountChild),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ),
-          ],
+          children: [Expanded(child: left), right],
         ),
       ),
     );
 
-    return dimmed ? Opacity(opacity: 0.55, child: content) : content;
+    final content = Container(
+      color: open && !lifted ? AppColors.surfaceAlt : Colors.transparent,
+      // A Material above SwipeActions' opaque ColoredBox, so the InkWells' ink
+      // shows (task 070 B6).
+      child: Material(
+        type: MaterialType.transparency,
+        child: AnimatedSize(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOut,
+          alignment: Alignment.topCenter,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              rowLine,
+              if (open && hasNote)
+                Transform.translate(
+                  // Paint 3 up; layout still reads 50 + 16 + 5 = 71 (task 070 B5).
+                  offset: const Offset(0, -3),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(55, 0, 12, 5),
+                    child: Text(
+                      b.note.trim(),
+                      style: const TextStyle(
+                          fontSize: 12.5,
+                          height: 1.28,
+                          color: AppColors.amountChild),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    // One screen-reader node per card (task 070 B5): the visible content is
+    // excluded; the label and custom actions live on the group / wrapper node.
+    // Dimming is applied by the wrapper so the whole card fades (B6), not here.
+    return ExcludeSemantics(child: content);
   }
+}
+
+/// Whether a budget's card is dimmed on [month] (task 070 B6): a one-off past
+/// its end, or a budget that has not started yet. Applied to the whole card.
+bool _budgetDimmed(AppStore store, Budget b, DateTime month) {
+  if (store.budgetPastEnd(b)) return true;
+  final startsLater = store.budgetStartsLater(b);
+  final monthEnd = DateTime(month.year, month.month + 1, 0);
+  return startsLater != null && monthEnd.isBefore(startsLater);
 }
 
 /// The card's right-column facts (task 067.3 §1e), computed once so the visible

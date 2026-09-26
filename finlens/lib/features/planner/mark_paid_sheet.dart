@@ -8,6 +8,7 @@ import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/app_card.dart';
 import '../../shared/widgets/destructive_sheet.dart';
 import '../../shared/widgets/typed_date_sheet.dart';
+import '../../shared/widgets/undo_bar.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_theme.dart';
 import '../../theme/app_typography.dart';
@@ -41,18 +42,12 @@ void showMarkPaidUndoBar(
   final next = result.task.isRecurring
       ? l.mpRecordedNext(result.task.title, dayMonth(result.task.dueDate, l))
       : l.mpRecorded(result.task.title);
-  ScaffoldMessenger.of(context)
-    ..clearSnackBars()
-    ..showSnackBar(
-      SnackBar(
-        content: Text(next),
-        duration: const Duration(seconds: 5),
-        action: SnackBarAction(
-          label: l.actionUndo,
-          onPressed: () => store.undoMarkTaskPaid(result),
-        ),
-      ),
-    );
+  // The shared undo bar (persist:false) so it dismisses (task 070 A4).
+  showUndoBar(
+    context,
+    message: next,
+    onUndo: () => store.undoMarkTaskPaid(result),
+  );
 }
 
 /// Undo a completed payment at any time (§6b) — the durable path, opened from a

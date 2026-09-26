@@ -610,8 +610,9 @@ class _EditGoalScreenState extends State<EditGoalScreen>
             ),
           ),
           const SizedBox(width: 3),
+          // The pace chevron is 10, not 14 (task 070 B8).
           const Icon(Icons.keyboard_arrow_down_rounded,
-              size: 14, color: AppColors.accentLight),
+              size: 10, color: AppColors.accentLight),
         ],
       );
 
@@ -949,6 +950,7 @@ class _EditGoalScreenState extends State<EditGoalScreen>
         clearTargetDate: date == null,
         endsWhenReached: _endsWhenReached,
         note: note,
+        pace: _pace,
       );
       Navigator.of(context).pop();
       return;

@@ -4,7 +4,7 @@ import '../../core/models/models.dart';
 import '../../core/store/app_store.dart';
 import '../../core/utils/formatters.dart';
 import '../../l10n/app_localizations.dart';
-import '../../shared/widgets/amount_override_sheet.dart';
+import 'widgets/amount_override_sheet.dart';
 import '../../shared/widgets/amount_text.dart';
 import '../../shared/widgets/app_card.dart';
 import '../../shared/widgets/change_row.dart';
@@ -138,6 +138,7 @@ class BudgetDetailScreen extends StatelessWidget {
       usualMagnitude: store.budgetUsualLimitFor(budget, ps),
       currencyCode: store.budgetCurrencyOf(budget),
       hasOverride: store.budgetLimitIsOwn(budget, ps),
+      masked: store.masked,
       onlyLabel: l.tdOnlyThis(label),
       andAfterLabel: l.tdThisAndAfter(label),
       onSave: (magnitude, andAfter) =>
@@ -439,56 +440,61 @@ class BudgetDetailScreen extends StatelessWidget {
         ? l.bdOfOver(limitStr, money(spent - effectiveLimit, masked: store.masked))
         : l.bdOfLeft(limitStr, money(effectiveLimit - spent, masked: store.masked));
 
-    final card = AppCard(
-      padding: const EdgeInsets.fromLTRB(14, 11, 14, 10),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
+    // The tint rides on the card itself while the sheet is up (task 070 B7), not
+    // a box behind it — an opaque AppCard would hide a box.
+    Widget cardWith(bool tapped) => AppCard(
+          color: tapped ? AppColors.tint(AppColors.accent, 0.14) : null,
+          padding: const EdgeInsets.fromLTRB(14, 11, 14, 10),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              AmountText(
-                spent,
-                style: AppText.hero.copyWith(fontSize: 27),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
+                children: [
+                  AmountText(
+                    spent,
+                    style: AppText.hero.copyWith(fontSize: 27),
+                    color: color,
+                  ),
+                  const SizedBox(width: Insets.sm),
+                  Flexible(
+                    child: _ownAwareCaption(caption, limitStr, isOwn),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 9),
+              ProgressBar(
+                value: ratio,
                 color: color,
+                paceMarker: isCurrent ? store.monthProgressFor(month) : null,
+                height: 3,
+                markerWidth: 1.5,
+                markerOverhang: 1.5,
               ),
-              const SizedBox(width: Insets.sm),
-              Flexible(
-                child: _ownAwareCaption(caption, limitStr, isOwn),
+              const SizedBox(height: Insets.sm),
+              Row(
+                children: [
+                  Text(
+                    isCurrent
+                        ? '${percent(ratio, decimals: 0)} · '
+                            '${l.bdDayOfMonth(store.dayOfMonthFor(month), store.daysInMonthOf(month))}'
+                        : percent(ratio, decimals: 0),
+                    style: AppText.caption.copyWith(fontSize: 11.5),
+                  ),
+                  if (isCurrent) ...[
+                    const Spacer(),
+                    Container(
+                        width: 1.5, height: 9, color: AppColors.textPrimary),
+                    const SizedBox(width: 5),
+                    Text(l.plPace,
+                        style: AppText.caption.copyWith(fontSize: 11.5)),
+                  ],
+                ],
               ),
             ],
           ),
-          const SizedBox(height: 9),
-          ProgressBar(
-            value: ratio,
-            color: color,
-            paceMarker: isCurrent ? store.monthProgressFor(month) : null,
-            height: 3,
-            markerWidth: 1.5,
-            markerOverhang: 1.5,
-          ),
-          const SizedBox(height: Insets.sm),
-          Row(
-            children: [
-              Text(
-                isCurrent
-                    ? '${percent(ratio, decimals: 0)} · '
-                        '${l.bdDayOfMonth(store.dayOfMonthFor(month), store.daysInMonthOf(month))}'
-                    : percent(ratio, decimals: 0),
-                style: AppText.caption.copyWith(fontSize: 11.5),
-              ),
-              if (isCurrent) ...[
-                const Spacer(),
-                Container(width: 1.5, height: 9, color: AppColors.textPrimary),
-                const SizedBox(width: 5),
-                Text(l.plPace, style: AppText.caption.copyWith(fontSize: 11.5)),
-              ],
-            ],
-          ),
-        ],
-      ),
-    );
+        );
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(Insets.gutter, 0, Insets.gutter, Insets.lg),
@@ -500,12 +506,12 @@ class BudgetDetailScreen extends StatelessWidget {
           // Tapping opens §4's sheet for this period — unless the month on screen
           // is before the current one, whose limit is history (§5c).
           if (budget == null || beforeCurrent)
-            card
+            cardWith(false)
           else
             _PeriodTap(
               onTap: () => _openPeriodSheet(
                   context, store, budget, store.budgetWindow(budget, month).start),
-              builder: (tapped) => card,
+              builder: cardWith,
               radius: Radii.card,
             ),
         ],
@@ -1154,23 +1160,14 @@ class _PeriodTapState extends State<_PeriodTap> {
 
   @override
   Widget build(BuildContext context) {
-    final child = widget.builder(_tapped);
-    // The THIS MONTH card paints its own surface; the tint sits behind it via a
-    // decorated wrapper only when the card is rounded (radius > 0). An UPCOMING
-    // row (radius 0) tints its own background inside the builder.
+    // The tint is applied by the builder — on the card's own surface for the
+    // THIS MONTH card (task 070 B7), and on the row's background for an UPCOMING
+    // row — so nothing is drawn behind an opaque card here.
     return InkWell(
       onTap: _run,
       borderRadius:
           widget.radius > 0 ? BorderRadius.circular(widget.radius) : null,
-      child: widget.radius > 0 && _tapped
-          ? DecoratedBox(
-              decoration: BoxDecoration(
-                color: AppColors.tint(AppColors.accent, 0.14),
-                borderRadius: BorderRadius.circular(widget.radius),
-              ),
-              child: child,
-            )
-          : child,
+      child: widget.builder(_tapped),
     );
   }
 }

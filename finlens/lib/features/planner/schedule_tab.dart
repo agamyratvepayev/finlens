@@ -409,16 +409,7 @@ class _EmptyWindow extends StatelessWidget {
           ),
           if (next != null) ...[
             const SizedBox(height: 8),
-            Text(
-              _nextLine(l, next),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontSize: 14,
-                height: 18 / 14,
-                color: AppColors.textSecondary,
-              ),
-            ),
+            _nextLine(l, next),
             const SizedBox(height: 22),
             Semantics(
               button: true,
@@ -457,7 +448,10 @@ class _EmptyWindow extends StatelessWidget {
   /// year only when it is not this year; the amount unsigned, in the task's
   /// own currency (its account's), masked mode respected. Same-day ties read
   /// `and {count} more` with the first task's amount.
-  String _nextLine(
+  /// The next-occurrence line, laid out so only the **name** shortens — the date
+  /// and amount stay whole (task 070 B3). The localized string is formatted with
+  /// a sentinel for {name}, then split around it into prefix · name · suffix.
+  Widget _nextLine(
       AppLocalizations l, ({Task task, DateTime date, int sameDay}) next) {
     final task = next.task;
     final account = store.accountById(task.linkedAccountId);
@@ -466,9 +460,33 @@ class _EmptyWindow extends StatelessWidget {
     final date = next.date.year == store.today.year
         ? dayMonth(next.date, l)
         : dayMonthYear(next.date, l);
-    return next.sameDay > 0
-        ? l.schNextLineMore(task.title, next.sameDay, date, amount)
-        : l.schNextLine(task.title, date, amount);
+    const sentinel = ''; // private-use; cannot occur in real copy
+    final full = next.sameDay > 0
+        ? l.schNextLineMore(sentinel, next.sameDay, date, amount)
+        : l.schNextLine(sentinel, date, amount);
+    const style = TextStyle(
+      fontSize: 14,
+      height: 18 / 14,
+      color: AppColors.textSecondary,
+    );
+    final i = full.indexOf(sentinel);
+    if (i < 0) {
+      return Text(full,
+          maxLines: 1, overflow: TextOverflow.ellipsis, style: style);
+    }
+    final prefix = full.substring(0, i);
+    final suffix = full.substring(i + sentinel.length);
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        if (prefix.isNotEmpty) Text(prefix, maxLines: 1, style: style),
+        Flexible(
+          child: Text(task.title,
+              maxLines: 1, overflow: TextOverflow.ellipsis, style: style),
+        ),
+        if (suffix.isNotEmpty) Text(suffix, maxLines: 1, style: style),
+      ],
+    );
   }
 }
 
@@ -635,16 +653,13 @@ class _OccurrenceRow extends StatelessWidget {
     if (!ok || !context.mounted) return;
     final messenger = ScaffoldMessenger.of(context);
     final snapshot = store.deleteTaskForGood(task);
-    messenger
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(
-        content: Text(l.tdDeletedBar(task.title)),
-        duration: undoBarWindow,
-        action: SnackBarAction(
-          label: l.actionUndo,
-          onPressed: () => store.undoDeleteForGood(snapshot),
-        ),
-      ));
+    // The shared bar (persist:false) so it dismisses (task 070 A4).
+    showUndoBarOn(
+      messenger,
+      message: l.tdDeletedBar(task.title),
+      onUndo: () => store.undoDeleteForGood(snapshot),
+      actionLabel: l.actionUndo,
+    );
   }
 
   /// One unbreakable line, the repeat glyph moved to the **front** so truncation

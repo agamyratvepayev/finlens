@@ -4965,6 +4965,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String histPausedArchivedDeleted(int paused, int archived, int deleted) {
+    return '$paused paused, $archived archived, $deleted deleted in this period · Archive ›';
+  }
+
+  @override
   String get mpTitlePaid => 'Mark as paid';
 
   @override
@@ -5077,6 +5082,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get tmPauseSub => 'Stops for now. Resume any time — nothing is lost.';
+
+  @override
+  String get tmResumeSub => 'Starts again from the next date.';
 
   @override
   String get tmArchive => 'Archive';

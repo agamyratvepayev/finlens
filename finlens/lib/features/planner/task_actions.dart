@@ -80,7 +80,8 @@ class _TaskMenu extends StatelessWidget {
                   ? Icons.play_arrow_rounded
                   : Icons.pause_circle_outline_rounded,
               label: paused ? l.tdResume : l.tmPause,
-              subtitle: l.tmPauseSub,
+              // Resume gets its own line — it starts, not pauses (task 070 B1).
+              subtitle: paused ? l.tmResumeSub : l.tmPauseSub,
               action: TaskMenuAction.pause,
             ),
             _item(
@@ -209,7 +210,8 @@ Future<bool> confirmArchiveTask(
   return showDestructiveConfirm(
     context,
     title: l.taArchiveTitle(task.title),
-    message: l.taArchiveBody(dayMonthYear(task.dueDate, l)),
+    // Archiving happens now, so the body dates today, not the due date (B1).
+    message: l.taArchiveBody(dayMonthYear(store.today, l)),
     impact: [
       if (done > 0) ImpactLine.kept(l.taKeptHistory(done)),
       ImpactLine.kept(l.taLedgerUnchanged),

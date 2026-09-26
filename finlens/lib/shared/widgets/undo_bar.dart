@@ -27,9 +27,30 @@ ScaffoldFeatureController<SnackBar, SnackBarClosedReason> showUndoBar(
   required VoidCallback onUndo,
   String? actionLabel,
 }) {
-  return (ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar())
-      .showSnackBar(
+  return showUndoBarOn(
+    ScaffoldMessenger.of(context),
+    message: message,
+    onUndo: onUndo,
+    // Defaults to "Undo"; Insight's out-of-window notice passes "Go to date" —
+    // the same transient-bar mechanism carrying a non-undo action (§8).
+    actionLabel: actionLabel ?? AppLocalizations.of(context).actionUndo,
+  );
+}
+
+/// The same bar, built against a [ScaffoldMessengerState] captured up front —
+/// for callers that pop their route before showing it (a delete grabs the
+/// app-level messenger, pops, then shows the bar on the screen it returned to,
+/// task 070 A4). It carries the same `persist: false`, [undoBarWindow] and
+/// live-region text every undo bar must get right, so a hand-built SnackBar can
+/// never drift from it again. [actionLabel] is required here — there is no
+/// context to resolve the default from.
+ScaffoldFeatureController<SnackBar, SnackBarClosedReason> showUndoBarOn(
+  ScaffoldMessengerState messenger, {
+  required String message,
+  required VoidCallback onUndo,
+  required String actionLabel,
+}) {
+  return (messenger..hideCurrentSnackBar()).showSnackBar(
     SnackBar(
       content: Semantics(
         liveRegion: true,
@@ -40,12 +61,7 @@ ScaffoldFeatureController<SnackBar, SnackBarClosedReason> showUndoBar(
       ),
       persist: false,
       duration: undoBarWindow,
-      action: SnackBarAction(
-        // Defaults to "Undo"; Insight's out-of-window notice passes "Go to date"
-        // — the same transient-bar mechanism carrying a non-undo action (§8).
-        label: actionLabel ?? AppLocalizations.of(context).actionUndo,
-        onPressed: onUndo,
-      ),
+      action: SnackBarAction(label: actionLabel, onPressed: onUndo),
     ),
   );
 }

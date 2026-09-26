@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../../../core/utils/formatters.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../shared/widgets/form_fields.dart';
 import '../../../theme/app_colors.dart';
 import '../../../theme/app_theme.dart';
 import '../../../theme/app_typography.dart';
@@ -116,9 +117,10 @@ class _RunsSheetState extends State<_RunsSheet> {
         : (widget.mode == RunsMode.months
             ? DateTime(widget.initialUntil!.year, widget.initialUntil!.month)
             : _dayOnly(widget.initialUntil!));
-    // Open aimed at UNTIL when FROM is fixed (edit mode) or already complete;
-    // otherwise at FROM so the first tap starts a fresh window.
-    _editing = (widget.fromLocked || _until != null || _noEnd)
+    // Open aimed at UNTIL when FROM is fixed (edit mode) or a concrete end is
+    // already set; otherwise at FROM so the first tap starts a fresh window —
+    // including when No end is on and FROM is free (task 070 A7 / 067.1 §6c).
+    _editing = (widget.fromLocked || _until != null)
         ? _Editing.until
         : _Editing.from;
     final anchor = _until ?? _from;
@@ -158,6 +160,13 @@ class _RunsSheetState extends State<_RunsSheet> {
         : _dayOnly(value);
     HapticFeedback.selectionClick();
     setState(() {
+      // No end on: a tap only ever moves FROM, never UNTIL, and never turns No
+      // end off — only the switch does (task 070 A7). With FROM locked the grid
+      // is inert until the switch is off.
+      if (_noEnd) {
+        if (!widget.fromLocked) _from = v;
+        return;
+      }
       if (_editing == _Editing.from && !widget.fromLocked) {
         _from = v;
         if (_until != null && !_until!.isAfter(v)) _until = null;
@@ -173,7 +182,6 @@ class _RunsSheetState extends State<_RunsSheet> {
         _editing = _Editing.until;
         return;
       }
-      _noEnd = false;
       _until = v;
     });
   }
@@ -302,13 +310,15 @@ class _RunsSheetState extends State<_RunsSheet> {
 
   String _fromLabel(AppLocalizations l) => widget.mode == RunsMode.months
       ? monthYear(_from, l)
-      : dayMonth(_from, l);
+      : dayMonthYear(_from, l); // days-mode pills carry the year (A7 / D.5)
 
   String _untilLabel(AppLocalizations l) {
     if (_noEnd) return l.bgNoEnd;
     final u = _roundedUntil;
     if (u == null) return '—';
-    return widget.mode == RunsMode.months ? monthYear(u, l) : dayMonth(u, l);
+    return widget.mode == RunsMode.months
+        ? monthYear(u, l)
+        : dayMonthYear(u, l);
   }
 
   Widget _pill({
@@ -351,9 +361,13 @@ class _RunsSheetState extends State<_RunsSheet> {
                     fontSize: 15,
                     height: 1.2,
                     fontWeight: FontWeight.w600,
-                    color: locked || muted
+                    // A locked FROM is textTertiary; UNTIL's "No end" value is
+                    // textSecondary, not tertiary (task 070 A7).
+                    color: locked
                         ? AppColors.textTertiary
-                        : AppColors.textPrimary)),
+                        : (muted
+                            ? AppColors.textSecondary
+                            : AppColors.textPrimary))),
           ],
         ),
       ),
@@ -562,20 +576,8 @@ class _RunsSheetState extends State<_RunsSheet> {
                   style: const TextStyle(
                       fontSize: 15, color: AppColors.textPrimary)),
             ),
-            SizedBox(
-              width: 40,
-              height: 24,
-              child: FittedBox(
-                fit: BoxFit.contain,
-                child: Switch.adaptive(
-                  value: _noEnd,
-                  onChanged: _toggleNoEnd,
-                  activeThumbColor: Colors.white,
-                  activeTrackColor: AppColors.accent,
-                  inactiveTrackColor: AppColors.surfaceHigh,
-                ),
-              ),
-            ),
+            // The app's one switch (task 070 A7), not a bare Switch.adaptive.
+            FormSwitch(value: _noEnd, onChanged: _toggleNoEnd),
           ],
         ),
       ),

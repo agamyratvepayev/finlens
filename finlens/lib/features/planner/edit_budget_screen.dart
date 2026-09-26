@@ -75,6 +75,12 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
 
   late final TextEditingController _limit;
   late final TextEditingController _name;
+
+  /// The editor's name is seeded once, in [didChangeDependencies] — not
+  /// [initState] — because deciding "stored name == the derived one?" reads
+  /// [AppLocalizations], and an inherited lookup in initState throws (task 070
+  /// A2). This latches that one-time seed.
+  bool _nameSeeded = false;
   late final TextEditingController _note;
   final FocusNode _nameFocus = FocusNode();
   late bool _rollover;
@@ -114,9 +120,9 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
       _runsTouched = true;
       _limit = TextEditingController(
           text: edit.limit > 0 ? edit.limit.toStringAsFixed(0) : '');
-      // A stored name equal to the derived one reads as `auto`: open empty.
-      _name = TextEditingController(
-          text: edit.name == _derivedName() ? '' : edit.name);
+      // The name is seeded in didChangeDependencies (§A2): comparing it to the
+      // derived name needs AppLocalizations, which initState cannot read.
+      _name = TextEditingController();
       _note = TextEditingController(text: edit.note);
       _rollover = edit.rollover;
       _warn = edit.warnThreshold;
@@ -133,6 +139,18 @@ class _EditBudgetScreenState extends State<EditBudgetScreen> {
       _resetRunsDefault();
     }
     _name.addListener(_onNameChanged);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Seed the editor's name once (§A2). A stored name equal to the derived one
+    // reads as `auto`, so the field opens empty; a custom name prefills.
+    final edit = _editBudget;
+    if (edit != null && !_nameSeeded) {
+      _nameSeeded = true;
+      if (edit.name != _derivedName()) _name.text = edit.name;
+    }
   }
 
   @override

@@ -1490,14 +1490,16 @@ class AppStore extends ChangeNotifier {
   /// What the Archive holds — and only that. A thing with a management screen of
   /// its own keeps its archived items there and stays out of this count: tags
   /// always have, categories now do (§2.4). The Archive is for what has nowhere
-  /// else to go.
+  /// else to go. Archived series (task 065) live here too, so they are counted
+  /// (task 070 A3).
   int get archivedCount =>
       archivedGoals.length +
       removedBudgets.length +
       archivedAccounts.length +
       pausedTasks.length +
       completedTasks.length +
-      deletedTasks.length;
+      deletedTasks.length +
+      archivedTasks.length;
 
   /// Open tasks that book into [categoryId] — a scheduled item whose
   /// "Mark as paid" would otherwise write a fresh Ledger entry against an
@@ -2637,14 +2639,15 @@ class AppStore extends ChangeNotifier {
   double budgetedSpend(DateTime month) => budgetedCategories
       .fold(0.0, (sum, c) => sum + spentInCategory(c.id, month));
 
-  /// [budgetedSpend] restricted to categories whose monthly budget actually
-  /// runs in [month] (task 067.1 §2e) — a not-yet-started budget's category is
-  /// excluded, so the hero total and its spend describe the same budget set.
+  /// [budgetedSpend] restricted to exactly the budgets [totalBudgetFor] counts —
+  /// monthly category budgets in the reporting currency that run in [month]
+  /// (task 070 B7). So `left` never subtracts spend whose limit is not in the
+  /// total: a foreign-currency or not-yet-started budget's category is excluded.
   double budgetedSpendFor(DateTime month) {
     final window = DateRange(_monthStart(month), _monthEnd(month));
     return budgetedCategories.where((c) {
       final b = monthlyBudgetForCategory(c.id);
-      return b != null && budgetRunsIn(b, window);
+      return b != null && _countsInMonthHero(b) && budgetRunsIn(b, window);
     }).fold(0.0, (sum, c) => sum + spentInCategory(c.id, month));
   }
 
@@ -4581,6 +4584,10 @@ class AppStore extends ChangeNotifier {
     final d = budgetWindow(b, periodStart).start;
     final bc = b.currency.isEmpty ? null : b.currency;
     final oldLimit = budgetLimitFor(b, d);
+    // The usual limit at D before the change — the "…and after" row logs against
+    // this, not D's own override, so a row appears whenever the usual limit
+    // moves even if D already carried that figure (task 070 B7).
+    final usualAtD = budgetUsualLimitFor(b, d);
     if (!andAfter) {
       final usual = budgetUsualLimitFor(b, d);
       if ((limit - usual).abs() < 0.005) {
@@ -4610,14 +4617,16 @@ class AppStore extends ChangeNotifier {
       b.limit = limit;
       // Overrides from D on are superseded by the new usual limit.
       b.limitOverrides.removeWhere((k, _) => !k.isBefore(d));
-      if ((limit - oldLimit).abs() >= 0.005) {
+      // Log whenever the *usual* limit at D changed (§B7), from the usual, not
+      // D's override.
+      if ((limit - usualAtD).abs() >= 0.005) {
         b.history.add(BudgetEdit(
           at: today,
           field: 'limit',
           period: d,
-          from: money(oldLimit, currency: bc),
+          from: money(usualAtD, currency: bc),
           to: money(limit, currency: bc),
-          amber: limit > oldLimit,
+          amber: limit > usualAtD,
         ));
       }
     }
@@ -4640,6 +4649,8 @@ class AppStore extends ChangeNotifier {
         period: d,
         from: money(old, currency: bc),
         to: money(usual, currency: bc),
+        // A reset that returns to a higher usual limit is a raise (task 070 B7).
+        amber: usual > old,
       ));
     }
     _pruneRedundantOverrides(b);

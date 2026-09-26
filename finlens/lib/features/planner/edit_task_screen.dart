@@ -81,6 +81,12 @@ class _EditTaskScreenState extends State<EditTaskScreen> {
     if (_isReceivable) {
       _payOut = false;
       _payToAccountId = null;
+      // A receivable is an earning, so an expense category no longer fits (task
+      // 070 B2). Clear it; an income category stays.
+      if (_categoryId != null &&
+          _store.categoryById(_categoryId!)?.type == CategoryType.expense) {
+        _categoryId = null;
+      }
     }
   }
 

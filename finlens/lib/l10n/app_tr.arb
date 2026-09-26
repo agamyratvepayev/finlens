@@ -1297,6 +1297,7 @@
   "histDidntHappen": "GERÇEKLEŞMEDİ",
   "histNothingHere": "Bu dönemde bir şey yok",
   "histPausedDeleted": "Bu dönemde {paused} duraklatıldı, {deleted} silindi · Arşiv ›",
+  "histPausedArchivedDeleted": "Bu dönemde {paused} duraklatıldı, {archived} arşivlendi, {deleted} silindi · Arşiv ›",
 
   "mpTitlePaid": "Ödendi olarak işaretle",
   "mpTitleReceived": "Alındı olarak işaretle",
@@ -1329,6 +1330,7 @@
   "tmSkipSub": "{date} atlandı. Deftere bir şey yazılmaz; seri {next} tarihinde devam eder.",
   "tmPause": "Duraklat",
   "tmPauseSub": "Şimdilik durur. İstediğiniz zaman sürdürün — hiçbir şey kaybolmaz.",
+  "tmResumeSub": "Bir sonraki tarihten yeniden başlar.",
   "tmArchive": "Arşivle",
   "tmArchiveSub": "Bugünden sonra tarih yok. {count, plural, one{Yapılan {count} tanesi geçmişinde kalır.} other{Yapılan {count} tanesi geçmişinde kalır.}}",
   "@tmArchiveSub": { "placeholders": { "count": { "type": "int" } } },

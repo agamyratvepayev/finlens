@@ -99,6 +99,7 @@ void main() {
           store.pausedTasks.length + //              CAN COME BACK
           store.removedBudgets.length + //            CAN COME BACK
           store.archivedAccounts.length + //          CAN COME BACK
+          store.archivedTasks.length + //             ARCHIVED SERIES (task 070 A3)
           store.deletedTasks.length; //               RECENTLY DELETED
       expect(store.archivedCount, rows);
 

@@ -4127,7 +4127,7 @@ class AppLocalizationsTk extends AppLocalizations {
   String get goalNewTitle => 'Täze maksat';
 
   @override
-  String get goalWatching => 'Şundan ilerleme';
+  String get goalWatching => 'Ösüş çeşmesi';
 
   @override
   String get goalSource => 'Çeşme';
@@ -4878,6 +4878,11 @@ class AppLocalizationsTk extends AppLocalizations {
   }
 
   @override
+  String histPausedArchivedDeleted(int paused, int archived, int deleted) {
+    return 'Bu döwürde $paused duruzyldy, $archived arhiwlendi, $deleted pozuldy · Arhiw ›';
+  }
+
+  @override
   String get mpTitlePaid => 'Tölenen diýip belle';
 
   @override
@@ -4992,6 +4997,9 @@ class AppLocalizationsTk extends AppLocalizations {
   @override
   String get tmPauseSub =>
       'Häzirlikçe durýar. Islän wagtyňyz dowam ediň — hiç zat ýitmeýär.';
+
+  @override
+  String get tmResumeSub => 'Indiki senesinden täzeden başlar.';
 
   @override
   String get tmArchive => 'Arhiwle';

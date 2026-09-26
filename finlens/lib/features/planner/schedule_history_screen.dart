@@ -352,7 +352,13 @@ class _ScheduleHistoryScreenState extends State<ScheduleHistoryScreen> {
     final deleted = store.deletedTasks
         .where((t) => inPeriod(t.statusChangedAt))
         .length;
-    if (paused == 0 && deleted == 0) return const SizedBox.shrink();
+    // Series archived in the period sit next to paused and deleted ones (A3).
+    final archived = store.archivedTasks
+        .where((t) => inPeriod(t.statusChangedAt))
+        .length;
+    if (paused == 0 && deleted == 0 && archived == 0) {
+      return const SizedBox.shrink();
+    }
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(Insets.gutter, Insets.md, Insets.gutter, 0),
@@ -361,7 +367,9 @@ class _ScheduleHistoryScreenState extends State<ScheduleHistoryScreen> {
           MaterialPageRoute(builder: (_) => const ArchiveScreen()),
         ),
         child: Text(
-          l.histPausedDeleted(paused, deleted),
+          archived == 0
+              ? l.histPausedDeleted(paused, deleted)
+              : l.histPausedArchivedDeleted(paused, archived, deleted),
           style: AppText.caption.copyWith(color: AppColors.textTertiary),
         ),
       ),

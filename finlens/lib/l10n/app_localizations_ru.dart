@@ -5058,6 +5058,11 @@ class AppLocalizationsRu extends AppLocalizations {
   }
 
   @override
+  String histPausedArchivedDeleted(int paused, int archived, int deleted) {
+    return '$paused приостановлено, $archived архивировано, $deleted удалено за период · Архив ›';
+  }
+
+  @override
   String get mpTitlePaid => 'Отметить оплаченным';
 
   @override
@@ -5171,6 +5176,9 @@ class AppLocalizationsRu extends AppLocalizations {
   @override
   String get tmPauseSub =>
       'Останавливается на время. Возобновите когда угодно — ничего не теряется.';
+
+  @override
+  String get tmResumeSub => 'Возобновится со следующей даты.';
 
   @override
   String get tmArchive => 'В архив';
